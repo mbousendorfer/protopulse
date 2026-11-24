@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { X } from 'lucide-react'
 import { Btn } from './index'
 
 /**
@@ -70,21 +69,19 @@ export function SelectAll({ sel, label = 'Select all' }: { sel: Selection; label
 
 export type BulkAction = { label: ReactNode; onRun: () => void; primary?: boolean; note?: string; disabled?: boolean; icon?: ReactNode }
 
-/** Floating bar at the bottom of a list while something is selected. */
+/** Selection toolbar: sits at the top of the list it acts on, replacing nothing else, one line. */
 export function BulkBar({ count, noun = 'selected', actions, onClear }: { count: number; noun?: string; actions: BulkAction[]; onClear: () => void }) {
   if (!count) return null
   return (
     <div className="bulk-bar" role="toolbar" aria-label="Actions on the selection">
       <b className="num">{count} {noun}</b>
-      <span className="sep" aria-hidden />
       {actions.map((a, i) => (
-        <Btn key={i} size="sm" variant={a.primary ? 'primary' : 'secondary'} disabled={a.disabled} onClick={a.onRun} title={a.note}>
+        <Btn key={i} size="sm" variant={a.primary ? 'primary' : 'ghost'} disabled={a.disabled} onClick={a.onRun} title={a.note}>
           {a.icon}{a.label}
         </Btn>
       ))}
       <span className="spacer" />
-      <Btn size="sm" variant="ghost" icon aria-label="Clear the selection" onClick={onClear}><X size={14} /></Btn>
-      {actions.find(a => a.note) && <span className="bulk-note">{actions.find(a => a.note)!.note}</span>}
+      <Btn size="sm" variant="ghost" onClick={onClear}>Cancel</Btn>
     </div>
   )
 }

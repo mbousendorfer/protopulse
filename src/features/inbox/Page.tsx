@@ -145,13 +145,41 @@ export default function InboxPage() {
         </nav>
 
         <section className="ib-list card" aria-label="Conversations">
-          <div className="ib-list-head">
-            <SelectAll sel={sel} label="Select every conversation in this view" />
-            <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
-            <span className="faint num">{list.length}</span>
-            <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
-              items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
-          </div>
+          {sel.count > 0 ? (
+            // While something is selected, the list header becomes the toolbar for the selection.
+            <div className="ib-list-head ib-selecting" role="toolbar" aria-label="Actions on the selected conversations">
+              <SelectAll sel={sel} label="Select every conversation in this view" />
+              <b className="num ib-sel-count">{sel.count} selected</b>
+              <Btn size="sm" variant="primary" disabled={!drafts} onClick={() => run({ op: 'approve' })}
+                title={drafts < sel.count ? `${sel.count - drafts} of them have no draft to send` : undefined}>
+                <Send size={14} />{drafts === sel.count ? `Approve ${drafts}` : `Approve ${drafts} of ${sel.count}`}
+              </Btn>
+              <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Not reviewed' : 'Mark reviewed'}</Btn>
+              <Menu align="start" trigger={<Btn size="sm" variant="ghost"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
+              <Menu align="start" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} items={labelItems(labels, l => run({ op: 'label', value: l }))} />
+              <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="More actions">More<ChevronDown size={12} /></Btn>} items={[
+                { heading: 'Sentiment' }, ...(Object.keys(SENT) as Sentiment[]).map(x => ({ label: `Mark ${SENT[x].toLowerCase()}`, onSelect: () => run({ op: 'sentiment', value: x }) })), 'sep',
+                { label: allHidden ? 'Unhide' : 'Hide', icon: allHidden ? <Eye size={14} /> : <EyeOff size={14} />, onSelect: () => run({ op: allHidden ? 'unhide' : 'hide' }) },
+              ]} />
+              <span className="spacer" />
+              <Btn size="sm" variant="ghost" onClick={sel.clear}>Cancel</Btn>
+            </div>
+          ) : (
+            <div className="ib-list-head">
+              <SelectAll sel={sel} label="Select every conversation in this view" />
+              <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
+              <span className="faint num">{list.length}</span>
+              <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
+                items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
+            </div>
+          )}
+          {!sel.count && undo && (
+            <div className="ib-undo-strip" role="status">
+              <span>{undo.label}</span>
+              <Btn size="xs" onClick={() => d({ type: 'inbox/undo' })}><Undo2 size={13} />Undo</Btn>
+              <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'inbox/dismissUndo' })}><X size={13} /></Btn>
+            </div>
+          )}
 
           {!list.length ? (
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
@@ -177,30 +205,6 @@ export default function InboxPage() {
             </ul>
           )}
 
-          {sel.count > 0 && (
-            <div className="bulk-bar" role="toolbar" aria-label="Actions on the selected conversations">
-              <b className="num">{sel.count} selected</b>
-              <span className="sep" aria-hidden />
-              <Btn size="sm" variant="primary" disabled={!drafts} onClick={() => run({ op: 'approve' })} title={drafts < sel.count ? `${sel.count - drafts} without a draft` : undefined}>
-                <Send size={14} />{drafts === sel.count ? `Approve ${drafts}` : `Approve ${drafts} of ${sel.count}`}
-              </Btn>
-              <Btn size="sm" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Not reviewed' : 'Mark reviewed'}</Btn>
-              <Menu align="start" trigger={<Btn size="sm"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
-              <Menu align="start" trigger={<Btn size="sm"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} items={labelItems(labels, l => run({ op: 'label', value: l }))} />
-              <Menu align="start" trigger={<Btn size="sm">Sentiment<ChevronDown size={12} /></Btn>} items={(Object.keys(SENT) as Sentiment[]).map(x => ({ label: SENT[x], onSelect: () => run({ op: 'sentiment', value: x }) }))} />
-              <Btn size="sm" variant="ghost" onClick={() => run({ op: allHidden ? 'unhide' : 'hide' })}>{allHidden ? <><Eye size={14} />Unhide</> : <><EyeOff size={14} />Hide</>}</Btn>
-              <span className="spacer" />
-              {drafts > 0 && drafts < sel.count && <span className="bulk-note">{sel.count - drafts} have no draft</span>}
-              <Btn size="sm" variant="ghost" icon aria-label="Clear the selection" onClick={sel.clear}><X size={14} /></Btn>
-            </div>
-          )}
-          {!sel.count && undo && (
-            <div className="bulk-bar ib-undo" role="status">
-              <span>{undo.label}</span>
-              <Btn size="sm" onClick={() => d({ type: 'inbox/undo' })}><Undo2 size={14} />Undo</Btn>
-              <Btn size="sm" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'inbox/dismissUndo' })}><X size={14} /></Btn>
-            </div>
-          )}
         </section>
 
         {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} /> : null}

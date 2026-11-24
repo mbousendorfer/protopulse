@@ -273,6 +273,10 @@ function Anomalies() {
           { value: 'closed', label: 'Handled', count: list.filter(a => !a.open).length },
         ]} />
       </div>
+      <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={view === 'open' ? [
+        { label: 'Mark handled', icon: <Check size={14} />, primary: true, onRun: () => bulk('handle') },
+        { label: 'Snooze a week', icon: <Clock size={14} />, onRun: () => bulk('snooze') },
+      ] : [{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => bulk('reopen') }]} />
       {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing handled yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
       {shown.map(a => (
         <article key={a.id} className={`card anomaly ${sel.has(a.id) ? 'in-picked' : ''}`}>
@@ -302,10 +306,6 @@ function Anomalies() {
           )}
         </article>
       ))}
-      <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={view === 'open' ? [
-        { label: 'Mark handled', icon: <Check size={14} />, primary: true, onRun: () => bulk('handle') },
-        { label: 'Snooze a week', icon: <Clock size={14} />, onRun: () => bulk('snooze') },
-      ] : [{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => bulk('reopen') }]} />
       <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris raises an anomaly on your Desk when a rule fires, and copies Claire when you ask."
         subjects={[{ value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' }, { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' }]}
         conditions={['drops by more than', 'rises above', 'falls below']} units={['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']}

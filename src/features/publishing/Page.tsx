@@ -128,6 +128,7 @@ function Calendar() {
         </div>
       </div>
 
+      <PostsBulk sel={sel} posts={visible} />
       {view === 'week' ? (
         <div className="cal-week">
           {cells.map(day => {
@@ -170,7 +171,6 @@ function Calendar() {
         </div>
         ) : <PostTable posts={visible} sel={sel} onOpen={open} />
       )}
-      <PostsBulk sel={sel} posts={visible} />
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
     </div>
   )
@@ -253,6 +253,8 @@ function Drafts() {
         </section>
       )}
       {!posts.length ? <Empty icon={<FileText size={18} />} title="No drafts" body="Drafts you save and posts Atlas prepares without a slot show up here." action={<Btn onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>} /> : (
+        <div>
+        <PostsBulk sel={sel} posts={posts} />
         <section className="card">
           <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every draft" /><h2>Drafts</h2><span className="faint num">{posts.length}</span></span></div>
           <ul className="rows">{posts.map(p => (
@@ -271,8 +273,8 @@ function Drafts() {
             </li>
           ))}</ul>
         </section>
+        </div>
       )}
-      <PostsBulk sel={sel} posts={posts} />
     </div>
   )
 }

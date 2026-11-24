@@ -133,6 +133,14 @@ export default function Desk() {
               ]} />
           </div>
 
+          <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
+            { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,
+              note: approvable.length < picked.length ? 'decisions and missing info need you one by one' : undefined,
+              onRun: () => runBulk(approvable.map(h => h.id), { decision: { kind: 'approve' } }, `Approved ${approvable.length} items from your Desk`) },
+            { label: 'Snooze to tomorrow', onRun: () => tomorrow && runBulk(picked.map(h => h.id), { snooze: { until: tomorrow.until, label: tomorrow.label } }, `Snoozed ${picked.length} items until tomorrow 08:00`) },
+            { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
+            { label: 'Reject', onRun: () => runBulk(picked.filter(h => !h.options).map(h => h.id), { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${picked.length} items`) },
+          ]} />
           {GROUPS.map(g => {
             const rows = entries.filter(e => e.group === g.id)
             if (!rows.length) return null
@@ -167,14 +175,6 @@ export default function Desk() {
               )}
             </section>
           )}
-          <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
-            { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,
-              note: approvable.length < picked.length ? 'decisions and missing info need you one by one' : undefined,
-              onRun: () => runBulk(approvable.map(h => h.id), { decision: { kind: 'approve' } }, `Approved ${approvable.length} items from your Desk`) },
-            { label: 'Snooze to tomorrow', onRun: () => tomorrow && runBulk(picked.map(h => h.id), { snooze: { until: tomorrow.until, label: tomorrow.label } }, `Snoozed ${picked.length} items until tomorrow 08:00`) },
-            { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
-            { label: 'Reject', onRun: () => runBulk(picked.filter(h => !h.options).map(h => h.id), { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${picked.length} items`) },
-          ]} />
           <div className="day-foot faint"><Kbd>↑</Kbd><Kbd>↓</Kbd> move · <Kbd>A</Kbd> approve · <Kbd>F</Kbd> full screen</div>
         </nav>
 

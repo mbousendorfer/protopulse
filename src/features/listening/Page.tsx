@@ -348,6 +348,11 @@ function Mentions() {
         <Switch checked={hidden} onChange={setHidden} label="Hidden" />
         <Btn size="sm" onClick={exportCSV} disabled={!list.length}><Download size={14} />Export CSV</Btn>
       </div>
+      <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
+        { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
+        hidden ? { label: 'Bring back', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
+        { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
+      ]} />
       {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can bring them back.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
         <section className="card">
           <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}</h2></span></div>
@@ -379,11 +384,6 @@ function Mentions() {
           </ul>
         </section>
       )}
-      <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
-        { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
-        hidden ? { label: 'Bring back', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
-        { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
-      ]} />
       {sel.count > 0 && (
         <div className="row ls-bulk-more">
           <Menu align="center" trigger={<Btn size="sm"><Tag size={14} />Tag<ChevronDown size={14} /></Btn>} items={MENTION_TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
