@@ -172,7 +172,7 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 
 **All clear** : quand plus rien n'est dans Needs you, une illustration (tente sous un ciel calme), « Nothing needs you right now. Your agents will tap you when something does. » et trois chiffres : traités par toi, ton temps passé, traités seuls par les agents. Worth a look et Good news restent accessibles.
 
-**Colonne Live** (droite, sous le détail sur écran étroit) : fil des actions autonomes avec Undo, état de l'équipe, et le bouton « Process in Focus ».
+**Live et Team, en bas du Desk** (derniers éléments, côte à côte) : le fil des actions autonomes avec Undo et l'état de l'équipe. Ils restent secondaires par rapport à ce qui demande Sam. « Focus » est un bouton de l'en-tête de Your day.
 
 **Mode Focus** (F) : plein écran, uniquement les Needs you, une à la fois, mêmes raccourcis, J/K et Z (annuler la dernière décision). Fin de file = l'écran All clear.
 

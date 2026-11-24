@@ -125,6 +125,7 @@ export default function Desk() {
             <h2>Your day</h2>
             <span className="faint num">{done.length} done</span>
             <span className="spacer" />
+            <Btn size="xs" variant="ghost" onClick={() => nav('/focus')} disabled={!needCount} title="Process what needs you one at a time, full screen (F)"><FocusIcon size={13} />Focus</Btn>
             <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter the list"><ListFilter size={13} />{[agent !== 'all' && agentName(agent), kind !== 'all' && KIND_LABEL[kind], urgency !== 'all' && urgency].filter(Boolean).join(' · ') || 'Filter'}</Btn>}
               items={[
                 { heading: 'Agent' }, { label: 'All agents', onSelect: () => setAgent('all') }, ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) })), 'sep',
@@ -185,11 +186,12 @@ export default function Desk() {
             : <AllClear />}
         </section>
 
-        <aside className="day-side">
-          <Btn variant="primary" onClick={() => nav('/focus')} disabled={!needCount} kbd="F"><FocusIcon size={14} />Process in Focus</Btn>
-          <LiveFeed />
-          <Team />
-        </aside>
+      </div>
+
+      {/* What the agents are doing right now: useful, but below the work that needs you. */}
+      <div className="desk-bottom">
+        <LiveFeed />
+        <Team />
       </div>
 
       <Thread id={thread} onClose={() => setThread(null)} />

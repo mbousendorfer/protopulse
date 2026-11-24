@@ -1,6 +1,6 @@
 .today { max-width: 1480px; display: flex; flex-direction: column; gap: var(--s4); }
 .shift-wrap { display: flex; flex-direction: column; gap: var(--s3); }
-.today-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr) 300px; gap: var(--s4); align-items: start; }
+.today-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: var(--s4); align-items: start; }
 
 /* Your day */
 .day-list { position: sticky; top: calc(var(--topbar) + var(--s4)); max-height: calc(100vh - var(--topbar) - var(--s8)); overflow-y: auto; padding: var(--s2) 0; }
@@ -68,19 +68,14 @@
 .clear-stats dd { margin: 0; font-size: var(--t-2xl); font-weight: 600; }
 
 /* Side */
-.day-side { display: flex; flex-direction: column; gap: var(--s4); position: sticky; top: calc(var(--topbar) + var(--s4)); }
-.day-side > .btn { align-self: flex-start; }
 
 @media (max-width: 1360px) {
   .today-grid { grid-template-columns: 300px minmax(0, 1fr); }
-  .day-list { position: static; max-height: 720px; }
-  .day-side { grid-column: 1 / -1; position: static; display: grid; grid-template-columns: auto 1fr 1fr; align-items: start; }
 }
 @media (max-width: 900px) {
   .today-grid { grid-template-columns: 1fr; }
   .day-list { position: static; max-height: none; }
   .day-pane { padding: var(--s4); min-height: 0; }
-  .day-side { grid-template-columns: 1fr; }
   .detail-title { font-size: var(--t-xl); }
 }
 @media (prefers-reduced-motion: reduce) { .detail > * { animation: none; } }
@@ -136,3 +131,9 @@
 .day-list .bulk-bar { position: sticky; bottom: var(--s2); margin: var(--s3) var(--s2) 0; width: auto; }
 .day-list .bulk-bar .sep { display: none; }
 .day-list .bulk-bar > b { flex-basis: 100%; }
+
+/* Live and Team sit at the bottom of the Desk, side by side */
+.desk-bottom { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--s4); align-items: start; margin-top: var(--s4); }
+.desk-bottom .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: var(--s5); }
+.desk-bottom .feed li:nth-child(-n+3) { border-top: 0; }
+@media (max-width: 1000px) { .desk-bottom { grid-template-columns: 1fr; } }
