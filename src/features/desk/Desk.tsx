@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter, Undo2 } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter, Undo2 } from 'lucide-react'
 import type { AgentId, Decision, DoneItem, Handoff, Kind, Urgency } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
@@ -181,8 +181,14 @@ export default function Desk() {
 
         <section className="day-pane card" aria-live="polite">
           {doneSel ? <DoneView x={doneSel} onNext={() => setSelected(null)} />
-            : current?.b ? <BatchDetail b={current.b} onBulk={() => setSelected(null)} onDiscuss={setThread} />
-            : current?.h ? <Detail key={current.h.id} h={current.h} position={position} onDiscuss={setThread} onSettled={() => setSelected(null)} />
+            : current?.b ? <>
+                <BatchDetail b={current.b} onBulk={() => setSelected(null)} onDiscuss={setThread} />
+                <UpNext entries={actionable.slice(actionable.indexOf(current) + 1).filter(e => e.group === 'need').slice(0, 4)} onPick={setSelected} />
+              </>
+            : current?.h ? <>
+                <Detail key={current.h.id} h={current.h} position={position} onDiscuss={setThread} onSettled={() => setSelected(null)} />
+                <UpNext entries={actionable.slice(actionable.indexOf(current) + 1).filter(e => e.group === 'need').slice(0, 4)} onPick={setSelected} />
+              </>
             : <AllClear />}
         </section>
 
@@ -227,6 +233,32 @@ function Row({ e, active, onClick, select }: { e: Entry; active: boolean; onClic
         {e.group === 'later' && <Clock size={12} className="faint" aria-hidden />}
       </button>
     </li>
+  )
+}
+
+/** What comes after the current item, so the pane never ends on empty space. */
+function UpNext({ entries, onPick }: { entries: Entry[]; onPick: (key: string) => void }) {
+  if (!entries.length) return null
+  return (
+    <section className="up-next" aria-label="Up next">
+      <h3>Up next</h3>
+      <ul>
+        {entries.map(e => {
+          const title = e.b?.title ?? e.h!.title
+          const agent = e.b?.agent ?? e.h!.agent
+          return (
+            <li key={e.key}>
+              <button className="up-next-row" onClick={() => onPick(e.key)}>
+                <TopicIcon agent={agent} kind={e.h?.kind} topic={e.b ? (e.b.id === 'rules' ? 'rule' : e.b.id === 'nova' ? 'reply' : 'post') : e.h!.topic} size={26} />
+                <span className="txt"><span className="ellipsis">{title}</span><span className="faint ellipsis">{e.b ? e.b.meta : `${agentName(agent)} · ${e.h!.topic}`}</span></span>
+                {(e.b?.urgency ?? e.h!.urgency) === 'urgent' && <span className="dot urgent" aria-label="Urgent" />}
+                <ArrowRight size={15} className="go" aria-hidden />
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 
