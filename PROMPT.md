@@ -221,6 +221,7 @@ Onglets : **Reports** · **Explore** · **Anomalies**.
 
 Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veille concurrentielle est le cœur, avec deux sous-vues aussi profondes l'une que l'autre.
 
+- **Gérer les concurrents** (« Manage competitors ») : liste des concurrents suivis avec site, comptes par réseau (icône + handle), date de début de suivi, nombre d'événements ; ajouter (nom, site, comptes), modifier, mettre en pause ou retirer (avec confirmation). Les événements et filtres ne montrent que les concurrents suivis.
 - **Competitors · Events** (réagir) :
   - fil d'événements détectés chez les 4 concurrents : lancement produit, baisse de prix, nouvelle campagne, post viral, bad buzz, partenariat créateur, changement de cadence ;
   - chaque événement : concurrent, type, preuve (post ou page source avec aperçu), impact estimé, ce qu'Echo en pense ;

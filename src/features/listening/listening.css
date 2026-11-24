@@ -85,3 +85,12 @@
 .ls-facts dt { font-size: var(--t-sm); color: var(--ink-3); }
 .ls-facts dd { margin: 2px 0 0; }
 .ls-risk { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--alert-tint); color: var(--alert-strong); font-size: var(--t-sm); }
+
+/* Manage competitors */
+.ls-watch { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto auto; gap: var(--s3); align-items: center; padding: var(--s3) var(--s4); }
+.ls-watch-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ls-watch-main b { font-weight: 600; font-size: var(--t-lg); }
+.ls-watch-main .chip { gap: 6px; }
+.ls-watch-meta { font-size: var(--t-sm); }
+.ls-watch.ls-paused .ls-watch-main { opacity: 0.6; }
+@media (max-width: 820px) { .ls-watch { grid-template-columns: 40px minmax(0, 1fr) auto; } .ls-watch > :nth-child(n+4) { display: none; } }

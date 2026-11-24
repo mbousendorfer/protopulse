@@ -5,6 +5,16 @@ import { EVENTS, LESSONS, MENTIONS, SEARCHES, TRENDS, type CompEvent, type Menti
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
+/** A competitor Echo watches, with the accounts it follows on each network. */
+export type Watched = { id: string; name: string; website: string; accounts: { network: Network; handle: string }[]; tracking: boolean; since: number; custom?: boolean }
+
+const WATCH: Watched[] = [
+  { id: 'peakline', name: 'Peakline', website: 'peakline.eu', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'instagram', handle: '@peakline' }, { network: 'tiktok', handle: '@peakline' }, { network: 'facebook', handle: 'Peakline' }, { network: 'youtube', handle: '@peaklineoutdoor' }] },
+  { id: 'norro', name: 'Norrø', website: 'norro.no', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'instagram', handle: '@norro_official' }, { network: 'linkedin', handle: 'Norrø AS' }, { network: 'youtube', handle: '@norrofilms' }] },
+  { id: 'trailkind', name: 'Trailkind', website: 'trailkind.com', tracking: true, since: Date.UTC(2026, 6, 14), accounts: [{ network: 'tiktok', handle: '@trailkind' }, { network: 'instagram', handle: '@trailkind' }, { network: 'x', handle: '@trailkind' }] },
+  { id: 'basecamp', name: 'Basecamp Co.', website: 'basecamp-co.fr', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'facebook', handle: 'Basecamp Co.' }, { network: 'instagram', handle: '@basecampco' }, { network: 'x', handle: '@basecampco' }] },
+]
+
 export type EventState = { status: 'handed' | 'done' | 'dismissed'; move: string; result: string; at: number }
 
 export type ListeningState = {
@@ -17,6 +27,7 @@ export type ListeningState = {
   sentiment: Record<string, Sentiment>
   tags: Record<string, string[]>
   alerts: Alert[]
+  watch: Watched[]
 }
 
 const ALERTS: Alert[] = [
@@ -25,7 +36,7 @@ const ALERTS: Alert[] = [
   { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
 ]
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS) })
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH) })
 
 export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
@@ -33,6 +44,9 @@ export type MentionOp = 'nova' | 'hide' | 'unhide' | 'tag' | 'sentiment' | 'atla
 
 export type ListeningAction =
   | { type: 'listening/move'; event: string; index: number }
+  | { type: 'listening/watchSave'; w: Watched }
+  | { type: 'listening/watchToggle'; id: string }
+  | { type: 'listening/watchDelete'; id: string }
   | { type: 'listening/lesson'; id: string; test: boolean }
   | { type: 'listening/trend'; id: string; hand: boolean }
   | { type: 'listening/mention'; id: string; action: 'replied' | 'hidden' }
@@ -105,6 +119,21 @@ function handTrend(s: State, id: string): State {
 
 export function reduceListening(s: State, a: ListeningAction): State {
   switch (a.type) {
+    case 'listening/watchSave': {
+      const exists = s.listening.watch.some(w => w.id === a.w.id)
+      const watch = exists ? s.listening.watch.map(w => (w.id === a.w.id ? a.w : w)) : [...s.listening.watch, a.w]
+      const next = { ...s, listening: { ...s.listening, watch } }
+      return exists ? next : pushToast(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), { agent: 'echo', text: `Echo is watching ${a.w.name}. First events within the hour, benchmark after 7 days.` })
+    }
+    case 'listening/watchToggle': {
+      const w = s.listening.watch.find(x => x.id === a.id)!
+      const next = { ...s, listening: { ...s.listening, watch: s.listening.watch.map(x => (x.id === a.id ? { ...x, tracking: !x.tracking } : x)) } }
+      return pushLog(next, { agent: 'echo', text: w.tracking ? `Paused watching ${w.name}` : `Resumed watching ${w.name}`, status: 'done', reason: 'You changed the competitor list' })
+    }
+    case 'listening/watchDelete': {
+      const w = s.listening.watch.find(x => x.id === a.id)!
+      return pushLog({ ...s, listening: { ...s.listening, watch: s.listening.watch.filter(x => x.id !== a.id) } }, { agent: 'echo', text: `Stopped watching ${w.name} and removed it`, status: 'done', reason: 'You changed the competitor list' })
+    }
     case 'listening/move': {
       const ev = EVENTS.find(e => e.id === a.event)
       const move = ev?.moves[a.index]

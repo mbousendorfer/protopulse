@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
+import ManageCompetitors from './Manage'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Tag, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -29,7 +30,7 @@ export default function ListeningPage() {
   const openEvents = EVENTS.filter(e => eventState(s.listening.events[e.id], e) === null).length
   return (
     <div className="page listening">
-      <PageHead agent="echo" title="Listening" lede="Echo watches your four competitors, your mentions and the trends around you, and turns each signal into a move." />
+      <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
       <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
         { value: 'competitors', label: 'Competitors', count: openEvents },
         { value: 'mentions', label: 'Mentions', count: MENTIONS.length },
@@ -40,6 +41,7 @@ export default function ListeningPage() {
         <Route index element={<Competitors view="events" />} />
         <Route path="competitors" element={<Competitors view="events" />} />
         <Route path="competitors/benchmark" element={<Competitors view="benchmark" />} />
+        <Route path="competitors/manage" element={<ManageCompetitors />} />
         <Route path="competitors/profile/:cid" element={<Profile />} />
         <Route path="competitors/:id" element={<EventView />} />
         <Route path="mentions" element={<Mentions />} />
@@ -63,14 +65,13 @@ const IMPACT_TONE = { High: 'alert', Medium: 'caution', Low: undefined } as cons
 /* ---------- Competitors ---------- */
 function Competitors({ view }: { view: 'events' | 'benchmark' }) {
   const nav = useNavigate()
+  const { s } = useStore()
   return (
     <div className="stack lg">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
           items={[{ value: 'events', label: 'Events: react' }, { value: 'benchmark', label: 'Benchmark: learn' }]} />
-        <div className="comp-chips">
-          {COMPETITORS.map(c => <Link key={c.id} to={`/listening/competitors/profile/${c.id}`} className="chip comp-chip">{c.name}</Link>)}
-        </div>
+        <Link to="/listening/competitors/manage" className="btn sm"><Settings2 size={14} />Manage competitors<span className="faint num">{s.listening.watch.filter(w => w.tracking).length}</span></Link>
       </div>
       {view === 'events' ? <Events /> : <Benchmark />}
     </div>
@@ -82,7 +83,8 @@ function Events() {
   const now = useNow()
   const [comp, setComp] = useState<'all' | CompetitorId>('all')
   const [status, setStatus] = useState<'open' | 'handled' | 'all'>('open')
-  const list = EVENTS.filter(e => comp === 'all' || e.competitor === comp)
+  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
+  const list = EVENTS.filter(e => watched.has(e.competitor) && (comp === 'all' || e.competitor === comp))
     .filter(e => { const st = eventState(s.listening.events[e.id], e); return status === 'all' || (status === 'open' ? !st : !!st) })
     .sort((a, b) => b.at - a.at)
   return (
@@ -90,7 +92,7 @@ function Events() {
       <div className="row">
         <Filters label="Status" value={status} onChange={setStatus} items={[{ value: 'open', label: 'Needs a move' }, { value: 'handled', label: 'Handled' }, { value: 'all', label: 'All' }]} />
         <span className="spacer" />
-        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...COMPETITORS.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...COMPETITORS.filter(c => watched.has(c.id)).map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
       </div>
       {!list.length && <Empty icon={<Check size={18} />} title={status === 'open' ? 'Every competitor move has an answer' : 'Nothing here'} body="Echo raises launches, price changes, campaigns and viral posts as they happen." />}
       <ul className="events">
