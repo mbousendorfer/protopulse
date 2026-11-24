@@ -156,7 +156,7 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 - Dans l'onglet Needs you, en bas : **Waiting on Claire**, **Later** (reportés, « Back at 14:00 ») et **Done** (coche + ce qui a été fait, cliquable pour revoir ou annuler).
 - Chaque ligne : icône teintée du type (couleur de l'agent), titre, ligne de contexte, pastille d'urgence. Filtre par agent dans un menu compact.
 
-**Liste et panneau à hauteur d'écran**, chacun avec son propre défilement. **Panneau de détail** (une remontée à la fois, « 3 of 12 », suivie d'un bloc « Up next » avec les 4 prochaines remontées cliquables) :
+**Liste et panneau à hauteur d'écran**, chacun avec son propre défilement. **Panneau de détail** (une remontée à la fois, « 3 of 12 », avec en bas une seule ligne discrète « Next : <titre> → » vers la suivante du même onglet) :
 - Phrase de routage : avatar(s) + « **Nova** needs you · Complaint · 07:41 » (relais = avatars empilés « Echo → Atlas »).
 - Titre, contexte, aperçu selon le type (message + brouillon dans la couleur de l'agent, post avec aperçu réseau, mini-graphe, options numérotées avec une **Recommended**, champ à compléter, preuves pour une demande d'autonomie).
 - **Sources** citées sous le brouillon (« Order #48213 · Shopify », « Exchange limit €150 · Playbook »). Sur les infos manquantes : « Atlas won’t guess. Tell it once and it goes into the Playbook facts » — la réponse devient un fait du Playbook.

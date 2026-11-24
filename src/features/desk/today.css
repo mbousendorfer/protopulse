@@ -142,17 +142,6 @@
 .today-grid { height: calc(100vh - var(--topbar) - var(--s6)); min-height: 560px; align-items: stretch; }
 .day-list { position: static; height: 100%; max-height: none; overflow-y: auto; }
 .day-pane { height: 100%; overflow-y: auto; min-height: 0; display: flex; flex-direction: column; }
-.up-next { margin-top: var(--s6); padding-top: var(--s4); border-top: 1px solid var(--line); }
-.up-next h3 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
-.up-next ul { display: flex; flex-direction: column; gap: 4px; }
-.up-next-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: var(--r-ctl); border: 0; background: none; text-align: left; color: var(--ink); cursor: pointer; }
-.up-next-row:hover { background: var(--row-hover); }
-.up-next-row .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
-.up-next-row .txt > :first-child { font-weight: 500; }
-.up-next-row .txt .faint { font-size: var(--t-sm); }
-.up-next-row .go { color: var(--action-ink); opacity: 0; transition: opacity var(--fast) var(--ease); }
-.up-next-row:hover .go, .up-next-row:focus-visible .go { opacity: 1; }
-.up-next-row .dot.urgent { color: var(--alert); }
 @media (max-width: 900px) {
   .today-grid { height: auto; }
   .day-list { height: auto; max-height: 420px; }
@@ -168,3 +157,6 @@
 .day-tab.need .num { background: var(--alert-tint); color: var(--alert-strong); }
 .day-tab.good .num { background: var(--ok-tint); color: var(--ok-strong); }
 .day-empty { padding: var(--s5) var(--s4); font-size: var(--t-sm); }
+.next-link { margin-top: auto; align-self: flex-end; display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 8px 4px 0; border: 0; background: none; color: var(--action-ink); font-weight: 600; font-size: var(--t-sm); cursor: pointer; }
+.next-link .ellipsis { max-width: 420px; }
+.next-link:hover .ellipsis { text-decoration: underline; text-underline-offset: 3px; }
