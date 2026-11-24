@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, EyeOff, Hand, Inbox as InboxIcon, Paperclip, Search, Send, ShoppingBag, Undo2, UserRound, X } from 'lucide-react'
+import { ArrowLeft, AtSign, Check, ChevronDown, EyeOff, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare, Paperclip, Search, Send, ShoppingBag, Smile, Star, Undo2, UserRound, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm } from '../../app/time'
@@ -26,6 +26,19 @@ const STATUS: Record<ConvStatus, { label: string; tone?: 'alert' | 'caution' | '
 }
 const TYPE_LABEL: Record<ConvType, string> = { comment: 'Comment', dm: 'Message', mention: 'Mention', review: 'Review', ad: 'Ad comment' }
 const SENT: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
+const TYPE_ICON: Record<ConvType, typeof Mail> = { comment: MessageSquare, dm: Mail, mention: AtSign, review: Star, ad: Megaphone }
+const SENT_ICON: Record<Sentiment, typeof Smile> = { positive: Smile, neutral: Meh, negative: Frown }
+
+/** What it is: a public comment, a private message, a review… */
+export function TypeTag({ t }: { t: ConvType }) {
+  const I = TYPE_ICON[t]
+  return <span className={`ib-tag type ${t}`}><I size={12} aria-hidden />{TYPE_LABEL[t]}</span>
+}
+/** How it feels, in colour and in words. */
+export function SentimentTag({ s }: { s: Sentiment }) {
+  const I = SENT_ICON[s]
+  return <span className={`ib-tag sent ${s}`}><I size={12} aria-hidden />{SENT[s]}</span>
+}
 
 export default function InboxPage() {
   const { s } = useStore()
@@ -94,9 +107,9 @@ export default function InboxPage() {
                       <p className="ellipsis">{c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text}</p>
                       <div className="row tight">
                         <Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>
-                        <span className="faint ib-meta">{TYPE_LABEL[c.type]}</span>
-                        {c.sentiment === 'negative' && <span className="faint ib-meta">· Negative</span>}
-                        {(c.intent ?? 0) >= 0.6 && <span className="faint ib-meta">· Buying intent</span>}
+                        <TypeTag t={c.type} />
+                        <SentimentTag s={c.sentiment} />
+                        {(c.intent ?? 0) >= 0.6 && <span className="ib-tag intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}
                       </div>
                     </div>
                   </Link>
@@ -137,7 +150,7 @@ function ConversationPane({ c, onBack }: { c: Conversation; onBack: () => void }
           <SocialAvatar name={c.author} network={c.network} size={40} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 className="ellipsis">{c.author}</h2>
-            <div className="faint row tight">{NETWORK_LABEL[c.network]} · {TYPE_LABEL[c.type]} · {ago(c.at, now)}</div>
+            <div className="row tight"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} /><span className="faint">on {NETWORK_LABEL[c.network]} · {ago(c.at, now)}</span></div>
           </div>
           <Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>
         </header>

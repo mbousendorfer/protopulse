@@ -85,3 +85,13 @@
   .ib-back { display: inline-flex; }
   .ib-msg { max-width: 100%; }
 }
+
+/* Type and sentiment tags: icon + word, sentiment in colour */
+.ib-tag { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: var(--t-xs); font-weight: 600; white-space: nowrap; }
+.ib-tag.type { background: var(--lift); color: var(--ink-2); }
+.ib-tag.type.dm { background: var(--a-atlas-wash); color: var(--a-atlas-ink); }
+.ib-tag.type.review { background: var(--caution-tint); color: var(--caution-strong); }
+.ib-tag.sent.negative { background: var(--alert-tint); color: var(--alert-strong); }
+.ib-tag.sent.positive { background: var(--ok-tint); color: var(--ok-strong); }
+.ib-tag.sent.neutral { background: transparent; color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.ib-tag.intent { background: var(--brand-soft); color: var(--signal-hover); }

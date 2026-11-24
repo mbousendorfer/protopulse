@@ -2,10 +2,11 @@ import { createContext, useContext, useEffect, useReducer, useRef, useState, typ
 import { initialState, STATE_VERSION, type State } from './state'
 import { reducer, type Action } from './reducer'
 import { appNow, DEMO_START } from './time'
+import { hasDueFollowUps } from '../features/chats/slice'
 
 const KEY = 'protopulse:state'
 
-const SLICES = ['inbox', 'publishing', 'insights', 'listening', 'strategy', 'playbook'] as const
+const SLICES = ['inbox', 'publishing', 'insights', 'listening', 'strategy', 'playbook', 'chats'] as const
 
 /** Saved state merged over a fresh one, slice by slice, so fields added since the save get their defaults. */
 function load(): State {
@@ -47,7 +48,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const due =
         (st.engine.live && t >= st.engine.nextAt) ||
         st.handoffs.some(h => (h.lane === 'claire' && h.claire && !h.claire.reply && h.claire.dueAt <= t) || (h.lane === 'snoozed' && (h.snoozedUntil ?? Infinity) <= t)) ||
-        st.agents.some(a => a.actions.some(x => x.trialUntil && x.trialUntil <= t))
+        st.agents.some(a => a.actions.some(x => x.trialUntil && x.trialUntil <= t)) ||
+        hasDueFollowUps(st, t)
       if (due) d({ type: 'core/heartbeat' })
     }, 1000)
     return () => clearInterval(id)

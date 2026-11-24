@@ -9,6 +9,7 @@ import { initialInsights, type InsightsState } from '../features/insights/slice'
 import { initialListening, type ListeningState } from '../features/listening/slice'
 import { initialStrategy, type StrategyState } from '../features/strategy/slice'
 import { initialPlaybook, type PlaybookState } from '../features/playbook/slice'
+import { initialChats, type ChatsState } from '../features/chats/slice'
 
 export type Engine = { live: boolean; cadence: number; nextAt: number; cursor: number }
 
@@ -30,6 +31,7 @@ export type State = {
   listening: ListeningState
   strategy: StrategyState
   playbook: PlaybookState
+  chats: ChatsState
 }
 
 export const STATE_VERSION = 1
@@ -56,5 +58,6 @@ export function initialState(): State {
     listening: initialListening(),
     strategy: initialStrategy(),
     playbook: initialPlaybook(),
+    chats: initialChats(),
   }
 }

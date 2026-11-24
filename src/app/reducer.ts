@@ -12,6 +12,7 @@ import { onResolveInsights, reduceInsights, type InsightsAction } from '../featu
 import { onResolveListening, reduceListening, type ListeningAction } from '../features/listening/slice'
 import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../features/strategy/slice'
 import { onResolvePlaybook, reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
+import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
 
 export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
@@ -42,7 +43,7 @@ export type CoreAction =
   | { type: 'core/hydrate'; state: State }
   | { type: 'core/restore'; handoff: Handoff }
 
-export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction
+export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction
 
 const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropToast', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
 
@@ -60,6 +61,7 @@ function reduceAll(s: State, a: Action): State {
   if (a.type.startsWith('listening/')) return reduceListening(s, a as ListeningAction)
   if (a.type.startsWith('strategy/')) return reduceStrategy(s, a as StrategyAction)
   if (a.type.startsWith('playbook/')) return reducePlaybook(s, a as PlaybookAction)
+  if (a.type.startsWith('chats/')) return reduceChats(s, a as ChatsAction, resolve)
   return reduceCore(s, a as CoreAction)
 }
 
@@ -337,6 +339,8 @@ function reduceCore(s: State, a: CoreAction): State {
           next = pushToast(next, { agent: ag.id, text: `${ag.name}’s trial week on “${x.label}” is over. Back to ${x.trialFrom}.` })
         }
       }
+      // Agents coming back in a conversation.
+      next = deliverFollowUps(next, t)
       // Proactive feed.
       if (next.engine.live && t >= next.engine.nextAt) {
         next = fire({ ...next, engine: { ...next.engine, nextAt: t + next.engine.cadence * 1000 } })

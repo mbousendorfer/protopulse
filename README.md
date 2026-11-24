@@ -25,6 +25,7 @@ The **Desk** lists the day in three groups (Needs you, Worth a look, Good news) 
 - The demo starts on Tuesday 25 November 2026 at 08:12 and the agents produce new events every ~30 s.
 - **⇧D** opens the moderator panel: reset, scenario presets, trigger any event, skip to tomorrow, export the tester log as JSON.
 - **?** lists the keyboard shortcuts. On the Desk: ↑/↓ to move, **A** approve, **E** edit, **R** reject, **S** snooze, **C** ask Claire, **F** full-screen Focus.
+- **Chat** (top bar) opens a conversation with the team from any page; **Chats** in the sidebar keeps them all. @mention an agent to pick who answers.
 - The sun/moon button in the top bar switches between the light (default) and dark themes.
 - State is kept in `localStorage`. Reset from the moderator panel.
 

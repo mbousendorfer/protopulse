@@ -102,3 +102,24 @@ describe('core reducer', () => {
     expect(s.log.find(l => l.text.startsWith(h.title))!.status).toBe('undone')
   })
 })
+
+describe('chats', () => {
+  it('routes a message, lets several agents answer, and scheduling a post lands it in Publishing with a follow-up', () => {
+    let s = reducer(initialState(), { type: 'chats/new', id: 'c1' })
+    s = reducer(s, { type: 'chats/send', id: 'c1', text: 'What is Peakline up to?' })
+    const chat = s.chats.list.find(c => c.id === 'c1')!
+    expect(chat.messages.map(m => m.from)).toEqual(['you', 'echo', 'atlas'])
+    const post = chat.messages.find(m => m.card?.type === 'post')!
+    s = reducer(s, { type: 'chats/act', id: 'c1', msg: post.id, action: 'schedule' })
+    const after = s.chats.list.find(c => c.id === 'c1')!
+    expect(after.messages.find(m => m.id === post.id)!.card).toMatchObject({ status: 'scheduled' })
+    expect(after.followUps.length).toBe(1)
+    expect(JSON.stringify(s.publishing)).toContain('Built to last')
+  })
+
+  it('an @mention picks who answers', () => {
+    let s = reducer(initialState(), { type: 'chats/new', id: 'c2' })
+    s = reducer(s, { type: 'chats/send', id: 'c2', text: '@Iris how are we doing?' })
+    expect(s.chats.list.find(c => c.id === 'c2')!.messages[1].from).toBe('iris')
+  })
+})

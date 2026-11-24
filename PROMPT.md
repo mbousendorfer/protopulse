@@ -128,7 +128,7 @@ Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes act
 - **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents, Activity, Playbook ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
 - **Barre supérieure** : fil d'Ariane, **barre de commande** (« Ask or brief an agent… » · ⌘K), pilule **Running now** (« 5 on shift · 7 need you », ouvre la liste des agents avec leur activité, pause et reprise), état de Claire (« Claire · usually replies in ~1 min »), centre de notifications.
 - **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/A/Y pour naviguer · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
-- **Toasts** pour les actions des agents qui arrivent en direct, avec Undo quand c'est réversible.
+- **Toasts** seulement pour les urgences et pour confirmer tes propres actions (avec Undo). Le travail des agents en arrière-plan arrive en silence dans la liste et le fil Live.
 
 ---
 
@@ -300,6 +300,17 @@ Parcours séparé, accessible depuis Settings et le panneau modérateur, en 5 é
 Comptes connectés (état, dernière synchro, reconnecter) · notifications in-app (quels types déclenchent un toast) · profil de Sam · Claire comme valideuse (sujets qui lui vont). Rien de plus.
 
 ---
+
+### 6.13 Chats — parler à l'équipe
+
+Pattern standard du marché (Hootsuite Wisdom, Sprout Trellis, Ask Vista, Emplifi Fuel AI), ici en version « équipe ».
+
+- **Où** : une entrée **Chats** dans la barre latérale (liste des conversations, non lus, « New chat ») et un **tiroir** ouvrable depuis n'importe quelle page (bouton « Chat » dans la barre du haut). Le tiroir démarre la conversation avec le **contexte** de la page (« the Inbox · Broken strap on a 3-week-old Ridge 28L »). ⌘K reste pour les commandes rapides.
+- **À qui** : à l'équipe. Protopulse route vers le bon agent ; une **@mention** (« @Atlas ») choisit. Plusieurs agents peuvent répondre dans le même fil (Echo repère Peakline, Atlas propose un contre-post).
+- **Réponses en cartes riches**, toujours avec les sources : graphe d'Iris, brouillon de post avec réseau et créneau, réponse client avec l'avatar de l'auteur, liste d'éléments cliquables, règle proposée, brief de campagne.
+- **Agir avec validation** : rien ne part sans un clic dans le fil. Schedule (le post rejoint le calendrier), Send (la réponse part, la carte du Desk se règle), Add to Playbook, Build the campaign plan (ouvre Sage), Boost. Edit et Shorter sur les brouillons.
+- **Suivis proactifs** : un agent revient dans la conversation plus tard (« Early read on the post Atlas scheduled… boost it with €100 ? »), sans toast : la conversation passe en non lu.
+- Deux conversations existent au départ (« Why is TikTok down? », « Weekend sale post »). Un état vide propose des exemples de demandes.
 
 ## 7. Proactivité simulée
 

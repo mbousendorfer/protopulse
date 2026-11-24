@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity, BookOpen, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
-  Radar, Search, Send, Settings, Target, Undo2, X, Bell, Sun, Moon,
+  Radar, Search, Send, Settings, Target, Undo2, X, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { useTheme } from './theme'
@@ -11,6 +11,7 @@ import { Btn, Kbd, Mark, Modal, Pop } from '../ui'
 import { ago } from './time'
 import CommandBar from '../features/command/CommandBar'
 import Boundary from './Boundary'
+import ChatDrawer from '../features/chats/Drawer'
 import { SocialAvatar } from '../ui/SocialAvatar'
 import Moderator from '../features/moderator/Moderator'
 
@@ -38,6 +39,9 @@ export default function Shell() {
   const [cmd, setCmd] = useState(false)
   const [mod, setMod] = useState(false)
   const [help, setHelp] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatId, setChatId] = useState<string | null>(null)
+  const unread = s.chats.list.reduce((n, c) => n + c.unread, 0)
   const gPressed = useRef(0)
 
   const open = s.handoffs.filter(h => !h.lane)
@@ -90,6 +94,7 @@ export default function Shell() {
         </div>
 
         <RailLink to="/" icon={<LayoutDashboard size={16} />} label="Desk" count={open.length} hot={open.some(h => h.urgency === 'urgent')} end />
+        <RailLink to="/chats" icon={<MessageCircle size={16} />} label="Chats" count={unread || undefined} />
 
         <div className="rail-group">
           <span className="label hide-collapsed">Departments</span>
@@ -133,6 +138,7 @@ export default function Shell() {
           <button className="cmd-trigger" onClick={() => setCmd(true)}>
             <Search size={14} aria-hidden /><span>Ask or brief an agent…</span><Kbd>⌘K</Kbd>
           </button>
+          <Btn size="sm" onClick={() => setChatOpen(true)} aria-label="Chat with your agents"><MessageCircle size={14} /><span className="hide-sm">Chat</span></Btn>
           <RunningNow />
           <ClaireStatus />
           <ThemeToggle />
@@ -147,6 +153,7 @@ export default function Shell() {
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
       <ShortcutHelp open={help} onOpenChange={setHelp} />
+      <ChatDrawer open={chatOpen} onOpenChange={setChatOpen} chatId={chatId} setChatId={setChatId} />
     </div>
   )
 }

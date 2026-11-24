@@ -20,6 +20,7 @@ import StrategyPage from './features/strategy/Page'
 import PlaybookPage from './features/playbook/Page'
 import SettingsPage from './features/settings/Page'
 import OnboardingPage from './features/onboarding/Page'
+import ChatsPage from './features/chats/Page'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -35,6 +36,8 @@ createRoot(document.getElementById('root')!).render(
               <Route path="insights/*" element={<InsightsPage />} />
               <Route path="listening/*" element={<ListeningPage />} />
               <Route path="strategy/*" element={<StrategyPage />} />
+              <Route path="chats" element={<ChatsPage />} />
+              <Route path="chats/:id" element={<ChatsPage />} />
               <Route path="agents" element={<Team />} />
               <Route path="agents/:id" element={<AgentProfile />} />
               <Route path="activity" element={<Activity />} />
