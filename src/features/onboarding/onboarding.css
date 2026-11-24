@@ -1,0 +1,49 @@
+.onb { min-height: 100vh; display: flex; flex-direction: column; background: var(--void); }
+.onb-top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 var(--s5); border-bottom: 1px solid var(--line); background: var(--deck); }
+.onb-top .logo { width: 24px; height: 24px; border-radius: 6px; background: var(--ink); display: grid; place-items: center; }
+.onb-top b { font-weight: 600; }
+.onb-body { flex: 1; display: grid; grid-template-columns: 240px minmax(0, 760px); gap: var(--s8); justify-content: center; padding: var(--s8) var(--s5) var(--s10); }
+.onb-steps { position: sticky; top: var(--s8); align-self: start; display: flex; flex-direction: column; gap: var(--s4); }
+.onb-progress { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
+.bar { flex: 1; height: 4px; border-radius: 2px; background: var(--lift-2); overflow: hidden; display: block; }
+.bar i { display: block; height: 100%; background: var(--ink); transition: width var(--slow) var(--ease); }
+.onb-steps ol { display: flex; flex-direction: column; gap: 2px; }
+.onb-steps li { display: flex; align-items: center; gap: 10px; height: 34px; color: var(--ink-3); font-weight: 500; }
+.onb-steps li.current { color: var(--ink); }
+.onb-steps li.done { color: var(--ink-2); }
+.onb-steps .dot { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font: 600 var(--t-xs) var(--mono); background: var(--lift); color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.onb-steps li.current .dot { background: var(--ink); color: var(--void); box-shadow: none; }
+.onb-steps li.done .dot { background: var(--ok-wash); color: var(--ok); box-shadow: none; }
+.onb-main { display: flex; flex-direction: column; gap: var(--s6); min-width: 0; }
+.onb-step { display: flex; flex-direction: column; gap: var(--s4); animation: fade-in var(--base) var(--ease); }
+.onb-step h1 { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.025em; }
+.onb-step .lede { color: var(--ink-2); font-size: var(--t-lg); max-width: 60ch; }
+.onb-group h2 { font-size: var(--t-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
+.onb-int { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4); min-height: 52px; }
+.onb-int b { font-weight: 600; }
+.onb-reading { display: flex; align-items: center; gap: var(--s4); }
+.onb-prop { display: flex; flex-direction: column; gap: var(--s3); align-items: flex-start; animation: fade-in var(--base) var(--ease); }
+.onb-prop .row { width: 100%; }
+.onb-prop-text { font-size: var(--t-xl); font-weight: 600; line-height: 1.35; }
+.onb-summary { display: flex; align-items: center; gap: var(--s3); }
+.onb-summary span { flex: 1; }
+.ok { color: var(--ok); }
+.onb-team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+.onb-agent { display: flex; flex-direction: column; gap: var(--s2); }
+.onb-agent h2 { font-size: var(--t-lg); font-weight: 600; }
+.onb-auto { display: flex; flex-direction: column; gap: var(--s3); }
+.onb-auto b { font-weight: 600; }
+.onb-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); font-size: var(--t-sm); }
+.onb-levels ul { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; color: var(--ink-2); }
+.onb-recap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3) var(--s6); margin: 0; }
+.onb-recap div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.onb-recap dt { color: var(--ink-2); }
+.onb-recap dd { margin: 0; font-weight: 600; }
+.onb-foot { display: flex; align-items: center; gap: var(--s3); padding-top: var(--s4); border-top: 1px solid var(--line); }
+@media (max-width: 900px) {
+  .onb-body { grid-template-columns: 1fr; gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
+  .onb-steps { position: static; }
+  .onb-steps ol { display: none; }
+  .onb-team, .onb-levels, .onb-recap { grid-template-columns: 1fr; }
+  .onb-step h1 { font-size: var(--t-2xl); }
+}

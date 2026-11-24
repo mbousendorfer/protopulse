@@ -1,0 +1,230 @@
+import { useMemo, useState } from 'react'
+import { AlertTriangle, CalendarPlus, Check, ChevronDown, ImagePlus, Scissors, Send, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import type { Network } from '../../app/types'
+import { useNow, useStore } from '../../app/store'
+import { uid } from '../../app/core'
+import { DAY, hhmm } from '../../app/time'
+import { NETWORK_LABEL } from '../../data/agents'
+import { BEST_SLOT, MEDIA, PILLARS, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
+import { Btn, Mark, Menu, Net, Pop, Seg, Sheet, Thinking, Tip } from '../../ui'
+import Photo from '../../ui/Photo'
+import { NetworkPreview } from './Previews'
+import { slotComment } from './slice'
+
+const LIMIT: Partial<Record<Network, number>> = { x: 280, instagram: 2200, tiktok: 2200, linkedin: 3000, facebook: 5000, youtube: 100 }
+const NEEDS_MEDIA: Network[] = ['instagram', 'tiktok', 'youtube']
+const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
+const EMOJI = /\p{Extended_Pictographic}/gu
+
+/** Banned words from the Playbook (rules of kind "word"), with a local fallback. */
+function useBannedWords() {
+  const { s } = useStore()
+  const rules = (s.playbook.rules ?? []).filter(r => r.kind === 'word' && !r.paused)
+  const fromRules = rules.flatMap(r => {
+    const quoted = [...r.text.matchAll(/[“"']([^”"']+)[”"']/g)].map(m => m[1])
+    return quoted.length ? quoted : [r.text.replace(/^(avoid|never say|don['’]t say|banned:?)\s*/i, '').trim()]
+  })
+  // The Playbook's Words tab keeps its banned list apart from the rules.
+  const words = [...((s.playbook as { banned?: string[] }).banned ?? []), ...fromRules].filter(Boolean).map(w => w.toLowerCase())
+  return words.length ? [...new Set(words)] : FALLBACK_WORDS
+}
+
+const pad = (n: number) => String(n).padStart(2, '0')
+const toDate = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
+
+const variantsOf = (text: string): { label: string; text: string }[] => {
+  const t = text.trim().replace(/\s+/g, ' ')
+  const first = t.split(/(?<=[.!?])\s/)[0]
+  const lower = t.charAt(0).toLowerCase() + t.slice(1)
+  return [
+    { label: 'Question hook', text: `Would you trust your gear on day 3 of the GR20? ${t}` },
+    { label: 'Number first', text: `3 days. 1 bag. ${first}` },
+    { label: 'Story', text: `Last week above Chamonix, ${lower}` },
+  ]
+}
+const shorten = (t: string) => { const first = t.split(/(?<=[.!?])\s/)[0]; return first.length > 100 ? first.slice(0, 97).replace(/\s\S*$/, '') + '…' : first }
+const forLinkedIn = (t: string) => `${t.replace(EMOJI, '').replace(/\s+/g, ' ').trim()}\n\nAt Fernway we build gear to last, and we repair what breaks. What would you add?`
+
+export default function Composer({ open, onClose, post, initial }: { open: boolean; onClose: () => void; post?: Post; initial?: { media?: string; text?: string; at?: number; network?: Network } }) {
+  const { s, d } = useStore()
+  const now = useNow()
+  const words = useBannedWords()
+  const editing = !!post
+  const startAt = post?.at ?? initial?.at ?? (() => { const b = new Date(now + DAY); return new Date(b.getFullYear(), b.getMonth(), b.getDate(), 18, 30).getTime() })()
+  const [accounts, setAccounts] = useState<Network[]>(post ? [post.network] : [initial?.network ?? 'instagram'])
+  const [text, setText] = useState(post?.text ?? initial?.text ?? '')
+  const [variants, setVariants] = useState<Partial<Record<Network, string>>>({})
+  const [media, setMedia] = useState<string | undefined>(post?.media ?? initial?.media)
+  const [date, setDate] = useState(toDate(startAt))
+  const [time, setTime] = useState(hhmm(startAt))
+  const [pillar, setPillar] = useState<Pillar>(post?.pillar ?? 'Trail stories')
+  const [preview, setPreview] = useState<Network>(post?.network ?? initial?.network ?? 'instagram')
+  const [busy, setBusy] = useState<string | null>(null)
+  const [ideas, setIdeas] = useState<{ label: string; text: string }[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const at = useMemo(() => { const [y, m, dd] = date.split('-').map(Number); const [h, mi] = time.split(':').map(Number); return new Date(y, m - 1, dd, h || 0, mi || 0).getTime() }, [date, time])
+  const textFor = (n: Network) => variants[n] ?? text
+  const previewNet = accounts.includes(preview) ? preview : accounts[0]
+
+  const checks = accounts.flatMap(n => {
+    const t = textFor(n), out: { ok: boolean; label: string }[] = []
+    const hits = words.filter(w => t.toLowerCase().includes(w))
+    out.push(hits.length ? { ok: false, label: `${NETWORK_LABEL[n]}: “${hits.join('”, “')}” is not allowed by the Playbook` } : { ok: true, label: `${NETWORK_LABEL[n]}: no banned words` })
+    const limit = n === 'tiktok' && (s.playbook.rules ?? []).some(r => /tiktok captions under 100/i.test(r.text) && !r.paused) ? 100 : LIMIT[n] ?? 2000
+    out.push(t.length > limit ? { ok: false, label: `${NETWORK_LABEL[n]}: ${t.length} characters, limit ${limit}` } : { ok: true, label: `${NETWORK_LABEL[n]}: ${t.length} of ${limit} characters` })
+    const emojis = (t.match(EMOJI) ?? []).length
+    if (emojis > 1) out.push({ ok: false, label: `${NETWORK_LABEL[n]}: ${emojis} emojis, the Playbook allows one` })
+    if (n === 'linkedin' && emojis > 0 && (s.playbook.rules ?? []).some(r => /emoji/i.test(r.text) && /linkedin/i.test(r.text) && !r.paused)) out.push({ ok: false, label: 'LinkedIn: no emojis (Playbook rule)' })
+    if (NEEDS_MEDIA.includes(n) && !media) out.push({ ok: false, label: `${NETWORK_LABEL[n]} needs a visual` })
+    return out
+  })
+  const blocking = checks.filter(c => !c.ok)
+
+  const think = (label: string, fn: () => void) => { setBusy(label); setTimeout(() => { fn(); setBusy(null) }, 700) }
+
+  const build = (status: Post['status']): Post[] => {
+    const group = accounts.length > 1 ? uid('g') : undefined
+    return accounts.map((n, i) => ({
+      id: editing && i === 0 ? post!.id : uid('p'), network: n, at, text: textFor(n).trim(), media, status, author: post?.author ?? 'you', pillar, group,
+      campaign: post?.campaign, note: undefined, handoff: post?.handoff,
+    }))
+  }
+  const validate = (forSchedule: boolean) => {
+    if (!text.trim()) return 'Write something first.'
+    if (!accounts.length) return 'Pick at least one account.'
+    if (forSchedule && blocking.length) return `Fix ${blocking.length} Playbook check${blocking.length > 1 ? 's' : ''} before scheduling.`
+    if (forSchedule && at < now) return 'Pick a time in the future.'
+    return null
+  }
+  const submit = (kind: 'schedule' | 'draft' | 'plan' | 'claire') => {
+    const err = validate(kind === 'schedule' || kind === 'claire')
+    if (err) { setError(err); return }
+    const posts = build(kind === 'schedule' ? 'scheduled' : 'draft')
+    if (kind === 'plan') posts.forEach(p => d({ type: 'publishing/addToPlan', post: p }))
+    else if (kind === 'claire') posts.forEach(p => d({ type: 'publishing/claire', post: p }))
+    else posts.forEach(p => d({ type: 'publishing/upsert', post: p }))
+    onClose()
+  }
+
+  const toggle = (n: Network) => setAccounts(a => (a.includes(n) ? a.filter(x => x !== n) : [...a, n]))
+  const best = BEST_SLOT[previewNet ?? 'instagram']
+
+  return (
+    <Sheet open={open} onOpenChange={o => !o && onClose()} wide title={editing ? 'Edit post' : 'New post'}
+      head={<Mark agent="atlas" />}
+      footer={<>
+        {editing && <Btn variant="ghost" className="danger" onClick={() => { d({ type: 'publishing/delete', id: post!.id }); onClose() }}><Trash2 size={14} />Delete</Btn>}
+        {error && <span className="cmp-error" role="alert"><AlertTriangle size={14} />{error}</span>}
+        <span className="spacer" />
+        <Btn variant="ghost" onClick={() => submit('draft')}>Save draft</Btn>
+        <Btn variant="ghost" onClick={() => submit('plan')}><CalendarPlus size={14} />Add to plan</Btn>
+        <Btn onClick={() => submit('claire')}><Send size={14} />Send to Claire</Btn>
+        <Btn variant="primary" onClick={() => submit('schedule')}>{editing && post?.status === 'scheduled' ? 'Save changes' : 'Schedule'}</Btn>
+      </>}>
+      <div className="cmp">
+        <div className="cmp-edit">
+          <fieldset className="cmp-accounts">
+            <legend className="label">Accounts</legend>
+            <div className="row tight">
+              {PUBLISH_NETWORKS.map(n => (
+                <button key={n} type="button" className={`cmp-acc ${accounts.includes(n) ? 'on' : ''}`} aria-pressed={accounts.includes(n)} onClick={() => !editing && toggle(n)} disabled={editing && !accounts.includes(n)}>
+                  <Net n={n} />{NETWORK_LABEL[n]}{accounts.includes(n) && <Check size={12} />}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          <div className="field">
+            <label htmlFor="cmp-text">Caption{accounts.length > 1 ? ' · shared by every account' : ''}</label>
+            <textarea id="cmp-text" className="textarea" rows={5} value={text} onChange={e => { setText(e.target.value); setError(null) }} placeholder="Packing the Ridge 28L for 3 days on the Tour du Mont Blanc." />
+          </div>
+
+          {accounts.length > 1 && (
+            <div className="cmp-variants">
+              {accounts.map(n => (
+                <div key={n} className="cmp-variant">
+                  <label className="switch">
+                    <input type="checkbox" checked={variants[n] !== undefined} onChange={e => setVariants(v => ({ ...v, [n]: e.target.checked ? text : undefined }))} />
+                    <span className="track" aria-hidden /><span className="row tight"><Net n={n} />Customize for {NETWORK_LABEL[n]}</span>
+                  </label>
+                  {variants[n] !== undefined && <textarea className="textarea" rows={3} value={variants[n]} onChange={e => setVariants(v => ({ ...v, [n]: e.target.value }))} aria-label={`${NETWORK_LABEL[n]} version`} />}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="cmp-row">
+            <div className="field">
+              <span className="label">Visual</span>
+              <div className="row nowrap">
+                {media ? <span className="cmp-thumb"><Photo name={media} /></span> : <span className="cmp-thumb empty"><ImagePlus size={16} /></span>}
+                <Pop align="start" trigger={<Btn size="sm">{media ? 'Change' : 'Pick from Media'}</Btn>}>
+                  <div className="cmp-picker" role="listbox" aria-label="Media library">
+                    {MEDIA.map(m => (
+                      <button key={m.id} role="option" aria-selected={media === m.name} className={media === m.name ? 'on' : ''} onClick={() => setMedia(m.name)} title={m.title}>
+                        <Photo name={m.name} />
+                      </button>
+                    ))}
+                  </div>
+                </Pop>
+                {media && <Btn size="sm" variant="ghost" onClick={() => setMedia(undefined)}><X size={14} />Remove</Btn>}
+              </div>
+            </div>
+            <div className="field">
+              <span className="label">Pillar</span>
+              <Menu align="start" trigger={<button className="ib-select cmp-select">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
+            </div>
+          </div>
+
+          <div className="cmp-row">
+            <div className="field"><label htmlFor="cmp-date">Date</label><input id="cmp-date" type="date" className="input" value={date} onChange={e => setDate(e.target.value)} /></div>
+            <div className="field"><label htmlFor="cmp-time">Time</label><input id="cmp-time" type="time" className="input" value={time} onChange={e => setTime(e.target.value)} /></div>
+          </div>
+          <div className="cmp-slot">
+            <Mark agent="atlas" />
+            <p><b>Atlas:</b> {time === best.time ? slotComment(previewNet ?? 'instagram', at) : `${best.time} is the best slot on ${NETWORK_LABEL[previewNet ?? 'instagram']}. ${best.reason}`}</p>
+            {time !== best.time && <Btn size="xs" onClick={() => setTime(best.time)}>Use {best.time}</Btn>}
+          </div>
+
+          <section className="cmp-check" aria-label="Playbook check">
+            <div className="section-title">Playbook check <span className="faint">· live</span></div>
+            <ul>{checks.map(c => <li key={c.label} className={c.ok ? 'ok' : 'bad'}>{c.ok ? <Check size={13} /> : <AlertTriangle size={13} />}{c.label}</li>)}</ul>
+          </section>
+        </div>
+
+        <div className="cmp-side">
+          {accounts.length > 0 ? (
+            <>
+              {accounts.length > 1 && <Seg name="pv" label="Preview network" size="sm" value={previewNet} onChange={setPreview} options={accounts.map(n => ({ value: n, label: NETWORK_LABEL[n] }))} />}
+              <NetworkPreview network={previewNet} text={textFor(previewNet)} media={media} words={words} />
+            </>
+          ) : <p className="faint">Pick an account to see the preview.</p>}
+
+          <section className="cmp-copilot" aria-label="Atlas copilot">
+            <div className="row tight"><Mark agent="atlas" /><b>Atlas</b><span className="faint">copilot</span></div>
+            <div className="row tight">
+              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Writing 3 variants', () => setIdeas(variantsOf(text)))}><Sparkles size={14} />3 variants</Btn>
+              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Shortening', () => setText(shorten(text)))}><Scissors size={14} />Shorten</Btn>
+              <Tip label="Adds a LinkedIn version: no emoji, one line of context, a question to close.">
+                <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Adapting for LinkedIn', () => { setAccounts(a => (a.includes('linkedin') ? a : [...a, 'linkedin'])); setVariants(v => ({ ...v, linkedin: forLinkedIn(text) })); setPreview('linkedin') })}><Wand2 size={14} />Adapt for LinkedIn</Btn>
+              </Tip>
+            </div>
+            {busy && <Thinking label={busy} />}
+            {ideas && !busy && (
+              <ul className="cmp-ideas">
+                {ideas.map(v => (
+                  <li key={v.label}>
+                    <span className="faint">{v.label}</span>
+                    <p>{v.text}</p>
+                    <Btn size="xs" onClick={() => { setText(v.text); setIdeas(null) }}>Use this</Btn>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      </div>
+    </Sheet>
+  )
+}

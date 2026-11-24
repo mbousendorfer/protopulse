@@ -1,0 +1,28 @@
+.focus { min-height: 100vh; display: flex; flex-direction: column; background: var(--void); }
+.focus-top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: var(--s4); height: 56px; padding: 0 var(--s5); border-bottom: 1px solid var(--line); background: var(--deck); }
+.focus-progress { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--s3); font-weight: 500; }
+.focus-progress .bar { width: 200px; height: 4px; border-radius: 2px; background: var(--lift-2); overflow: hidden; }
+.focus-progress .bar i { display: block; height: 100%; background: var(--ink); transition: width var(--slow) var(--ease); }
+.focus-body { flex: 1; display: grid; grid-template-columns: 280px minmax(0, 760px); gap: var(--s6); justify-content: center; padding: var(--s6) var(--s5) 80px; }
+.focus-queue { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 80px; align-self: start; max-height: calc(100vh - 110px); overflow-y: auto; }
+.focus-queue button { display: flex; align-items: center; gap: 8px; width: 100%; height: 34px; padding: 0 8px; border-radius: var(--r-ctl); background: none; border: 0; color: var(--ink-2); text-align: left; font-size: var(--t-md); }
+.focus-queue button:hover { background: var(--lift); color: var(--ink); }
+.focus-queue button[aria-current='true'] { background: var(--lift-2); color: var(--ink); }
+.focus-queue .ellipsis { flex: 1; }
+.focus-card { position: relative; padding: var(--s6); transition: opacity var(--base) var(--ease), transform var(--base) var(--ease); }
+.focus-card.leaving { opacity: 0.35; transform: translateX(12px); }
+.focus-card h1 { font-size: var(--t-2xl); font-weight: 600; line-height: 1.3; margin-top: var(--s1); }
+.focus-card .preview { font-size: var(--t-lg); }
+.focus-card .preview .by { font-size: var(--t-sm); }
+.focus-acts { margin-top: var(--s5); padding-top: var(--s4); border-top: 1px solid var(--line); }
+.focus-nav { margin-top: var(--s4); font-size: var(--t-sm); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.focus-stamp { position: absolute; top: var(--s4); right: var(--s4); display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--ok); color: var(--ok); font: 600 var(--t-sm) var(--mono); transform: rotate(-3deg); animation: float-in 160ms var(--ease); }
+.focus-summary { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s3); text-align: center; padding: var(--s8); }
+.focus-summary h1 { font-size: var(--t-3xl); font-weight: 600; }
+.focus-summary .glyph { width: 48px; height: 48px; border-radius: 12px; background: var(--ok-wash); color: var(--ok); display: grid; place-items: center; }
+@media (max-width: 900px) {
+  .focus-body { grid-template-columns: 1fr; padding: var(--s4); }
+  .focus-queue { display: none; }
+  .focus-card { padding: var(--s4); }
+  .focus-progress .bar { width: 80px; }
+}

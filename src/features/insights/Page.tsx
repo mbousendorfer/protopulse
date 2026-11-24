@@ -1,0 +1,303 @@
+import { useMemo, useState } from 'react'
+import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowUpDown, Check, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, Send, Smile, Timer, Users } from 'lucide-react'
+import { useNow, useStore } from '../../app/store'
+import { ago, dayLabel, hhmm, DAY } from '../../app/time'
+import { NETWORK_LABEL } from '../../data/agents'
+import {
+  ANOMALIES, DAILY_REACH, HEAT, HEAT_COLS, HEAT_ROWS, KPIS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, dayLabels,
+  type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
+} from '../../data/insights'
+import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
+import './insights.css'
+
+type Tab = 'reports' | 'explore' | 'anomalies'
+
+export default function InsightsPage() {
+  const loc = useLocation()
+  const nav = useNavigate()
+  const { s } = useStore()
+  const seg = loc.pathname.split('/')[2] ?? ''
+  const tab: Tab = seg === 'explore' ? 'explore' : seg === 'anomalies' ? 'anomalies' : 'reports'
+  const openAnomalies = ANOMALIES.filter(a => (s.insights.anomalies[a.id]?.open ?? a.open)).length
+
+  return (
+    <div className="page insights">
+      <PageHead agent="iris" title="Insights" lede="Iris writes the story first. Dig into the numbers underneath whenever you want." />
+      <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
+        { value: 'reports', label: 'Reports', count: REPORTS.length },
+        { value: 'explore', label: 'Explore' },
+        { value: 'anomalies', label: 'Anomalies', count: openAnomalies },
+      ]} />
+      <Routes>
+        <Route index element={<Reports />} />
+        <Route path="reports" element={<Reports />} />
+        <Route path="reports/:id" element={<ReportView />} />
+        <Route path="explore" element={<Explore />} />
+        <Route path="anomalies" element={<Anomalies />} />
+        <Route path="*" element={<Reports />} />
+      </Routes>
+    </div>
+  )
+}
+
+/* ---------- Sourced numbers ---------- */
+export function CitedText({ parts }: { parts: Cited[] }) {
+  return <>{parts.map((p, i) => typeof p === 'string' ? <span key={i}>{p}</span> : (
+    <Tip key={i} label={<><b>Source</b><br />{p.source}</>}><span className="cite" tabIndex={0}>{p.n}</span></Tip>
+  ))}</>
+}
+
+/* ---------- Reports ---------- */
+function Reports() {
+  const { s } = useStore()
+  const now = useNow()
+  const kindLabel: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap' }
+  return (
+    <div className="reports">
+      {REPORTS.map(r => {
+        const shared = s.insights.shared[r.id]
+        return (
+          <Link key={r.id} to={`/insights/reports/${r.id}`} className="card report-row">
+            <span className="report-icon" aria-hidden><FileText size={16} /></span>
+            <div className="report-main">
+              <div className="row tight"><span className="faint">{kindLabel[r.kind]}</span><span className="faint">· {r.period}</span></div>
+              <h2>{r.title}</h2>
+              <p className="muted">{r.summary}</p>
+            </div>
+            <div className="report-meta">
+              <span className="mono faint">Written {ago(r.writtenAt, now)}</span>
+              {shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
+            </div>
+          </Link>
+        )
+      })}
+    </div>
+  )
+}
+
+const ASK_SUGGEST = ['Why did TikTok drop?', 'Best time to post on LinkedIn?', 'Reels or carousels?', 'How are we doing against Peakline?']
+
+function ReportView() {
+  const { id } = useParams()
+  const { s, d } = useStore()
+  const now = useNow(5000)
+  const nav = useNavigate()
+  const [q, setQ] = useState('')
+  const r = REPORTS.find(x => x.id === id)
+  if (!r) return <Empty title="This report doesn’t exist" action={<Btn onClick={() => nav('/insights')}>All reports</Btn>} />
+  const shared = s.insights.shared[r.id]
+  const seen = shared && now - shared.at > 45_000
+  const follow = s.insights.followUps.filter(f => f.report === r.id)
+  const ask = (text: string) => { if (text.trim()) { d({ type: 'insights/ask', report: r.id, q: text.trim() }); setQ('') } }
+
+  return (
+    <div className="report-layout">
+      <article className="card report">
+        <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>
+        <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">Written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)} · {r.period}</span></div>
+        <h1>{r.title}</h1>
+        <p className="lede">{r.summary}</p>
+        {r.sections.map(sec => (
+          <section key={sec.heading}>
+            <h2>{sec.heading}</h2>
+            {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
+            {sec.chart === 'reach' && <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>}
+            {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
+          </section>
+        ))}
+        <p className="faint hint-cite">Point at an underlined number to see where it comes from.</p>
+      </article>
+
+      <aside className="report-side">
+        <section className="card pad stack">
+          <h2 className="side-title">Share</h2>
+          {shared ? (
+            <>
+              <div className="row tight"><Check size={14} className="ok" /><span>Shared with Claire at {hhmm(shared.at)}</span></div>
+              {seen ? <div className="claire-seen"><Mark agent="claire" /><p>“{r.id === 'w47' ? 'Clear, thanks. Can we talk about the TikTok dip on Thursday?' : 'Thanks, read it.'}”</p></div>
+                : <span className="faint">Not opened yet</span>}
+            </>
+          ) : (
+            <>
+              <p className="muted">Claire hasn’t seen this one.</p>
+              <Btn variant="primary" onClick={() => d({ type: 'insights/share', id: r.id, title: r.title })}><Send size={14} />Share with Claire</Btn>
+            </>
+          )}
+          <Btn variant="ghost" onClick={() => d({ type: 'insights/export', title: r.title })}><Download size={14} />Export PDF</Btn>
+        </section>
+        <section className="card pad stack">
+          <h2 className="side-title">Ask Iris a follow-up</h2>
+          {follow.map(f => (
+            <div key={f.id} className="qa">
+              <p className="q">{f.q}</p>
+              <div className="a"><Mark agent="iris" /><p>{f.a}</p></div>
+            </div>
+          ))}
+          <form onSubmit={e => { e.preventDefault(); ask(q) }} className="stack" style={{ gap: 8 }}>
+            <label htmlFor="ask-iris" className="sr-only">Question for Iris</label>
+            <input id="ask-iris" className="input" placeholder="Why did TikTok drop?" value={q} onChange={e => setQ(e.target.value)} />
+            <div className="row tight">{ASK_SUGGEST.map(x => <button key={x} type="button" className="filter" onClick={() => ask(x)}>{x}</button>)}</div>
+          </form>
+        </section>
+      </aside>
+    </div>
+  )
+}
+
+/* ---------- Explore ---------- */
+const fmtKpi = (k: Kpi, v: number) => k.fmt === 'k' ? (v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : `${Math.round(v / 1000)}k`) : k.fmt === 'pct' ? `${v.toFixed(1)}%` : k.fmt === 'min' ? `${v} min` : Math.round(v).toLocaleString('en-GB')
+
+type SortKey = 'date' | 'reach' | 'er' | 'clicks'
+
+function Explore() {
+  const now = useNow()
+  const [period, setPeriod] = useState<Period>(7)
+  const [net, setNet] = useState<NetFilter>('all')
+  const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'reach', desc: true })
+
+  const kpis = KPIS[period].map(k => {
+    if (net === 'all') return k
+    const f = NET_SHARE[net]
+    if (k.key === 'er') return { ...k, value: f.er, prev: f.er * 0.93 }
+    if (['reach', 'followers', 'clicks', 'replies'].includes(k.key)) return { ...k, value: k.value * f.share, prev: k.prev * f.share }
+    return k
+  })
+  const share = net === 'all' ? 1 : NET_SHARE[net].share
+  const cur = DAILY_REACH.slice(-period).map(v => +(v * share).toFixed(1))
+  const prev = period < 90 ? DAILY_REACH.slice(-period * 2, -period).map(v => +(v * share * 0.93).toFixed(1)) : []
+  const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= now - period * DAY)
+    .sort((a, b) => (sort.desc ? -1 : 1) * ((a[sort.key] as number) - (b[sort.key] as number))), [net, period, sort, now])
+  const best: [number, number] = [4, 6]
+
+  const th = (key: SortKey, label: string) => (
+    <th className={key === 'date' ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : true }))}>{label}<ArrowUpDown size={11} /></button>
+    </th>
+  )
+
+  return (
+    <div className="stack lg">
+      <div className="row explore-bar">
+        <Seg name="period" label="Period" value={String(period) as '7' | '30' | '90'} onChange={v => setPeriod(+v as Period)}
+          options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]} />
+        <Filters label="Network" value={net} onChange={setNet} items={[{ value: 'all', label: 'All networks' }, ...NETWORKS_SOCIAL.map(n => ({ value: n as NetFilter, label: NETWORK_LABEL[n] }))]} />
+      </div>
+
+      <dl className="kpi-grid">
+        {kpis.map(k => {
+          const diff = k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100
+          const good = k.lowerBetter ? diff < 0 : diff > 0
+          const txt = k.fmt === 'pct' ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pt` : k.fmt === 'min' ? `${diff > 0 ? '+' : '−'}${Math.abs(diff)} min` : `${diff > 0 ? '+' : '−'}${Math.abs(Math.round(diff))}%`
+          return (
+            <div key={k.key} className="kpi">
+              <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
+              <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
+              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {period} days</span>
+            </div>
+          )
+        })}
+      </dl>
+
+      <section className="card pad">
+        <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
+        <LineChart label="Daily reach" labels={dayLabels(period)} h={220} format={v => `${Math.round(v)}k`}
+          series={[{ name: `Last ${period} days`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${period} days`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
+      </section>
+
+      <div className="grid-2">
+        <section className="card pad">
+          <div className="section-title">Best times to post <span className="faint">· reach by day and hour, 30 days</span></div>
+          <Heatmap values={HEAT} rows={HEAT_ROWS} cols={HEAT_COLS} label="Reach by day and hour" best={best} />
+          <p className="muted heat-note">Best slot: <b>Friday 18:00</b>, 2.1× the median reach. Weekend mornings are second.</p>
+        </section>
+        <section className="card pad">
+          <div className="section-title">By pillar <span className="faint">· engagement rate, 30 days</span></div>
+          <HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} highlight="Community" color="var(--a-iris)" />
+          <table className="table pillar-table">
+            <thead><tr><th>Pillar</th><th className="r">Share of posts</th><th className="r">Saves rate</th></tr></thead>
+            <tbody>{PILLAR_PERF.map(p => <tr key={p.pillar}><td>{p.pillar}</td><td className="r">{p.share}%</td><td className="r">{p.saves}%</td></tr>)}</tbody>
+          </table>
+        </section>
+      </div>
+
+      <section className="card">
+        <div className="card-head"><h2>Posts <span className="faint num">{rows.length}</span></h2></div>
+        {rows.length ? (
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Post</th>{th('date', 'Date')}<th>Pillar</th><th>Author</th>{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
+              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} />)}</tbody>
+            </table>
+          </div>
+        ) : <Empty title="No posts in this period" body="Try a longer period or another network." />}
+      </section>
+    </div>
+  )
+}
+
+function PostTr({ p, now }: { p: PostRow; now: number }) {
+  return (
+    <tr>
+      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis" style={{ maxWidth: 320 }}>{p.title}</span></span></td>
+      <td className="mono faint">{dayLabel(p.date, now)}</td>
+      <td className="muted">{p.pillar}</td>
+      <td className="muted">{p.author}</td>
+      <td className="r">{p.reach.toLocaleString('en-GB')}</td>
+      <td className="r">{p.er.toFixed(1)}%</td>
+      <td className="r">{p.clicks.toLocaleString('en-GB')}</td>
+    </tr>
+  )
+}
+
+/* ---------- Anomalies ---------- */
+function Anomalies() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const [view, setView] = useState<'open' | 'closed'>('open')
+  const list = ANOMALIES.map(a => ({ ...a, ...(s.insights.anomalies[a.id] ?? {}) }))
+  const shown = list.filter(a => (view === 'open') === a.open)
+  return (
+    <div className="stack">
+      <Filters label="Status" value={view} onChange={setView} items={[
+        { value: 'open', label: 'Open', count: list.filter(a => a.open).length },
+        { value: 'closed', label: 'Handled', count: list.filter(a => !a.open).length },
+      ]} />
+      {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing handled yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
+      {shown.map(a => (
+        <article key={a.id} className="card anomaly">
+          <div className="anomaly-head">
+            <div>
+              <div className="row tight"><Net n={a.network} /><span className="mono faint">Detected {ago(a.detectedAt, now)}</span></div>
+              <h2>{a.title}</h2>
+            </div>
+            <div className="anomaly-metric">
+              <span className="faint">{a.metric}</span>
+              <span className="row tight"><b className="num">{a.value}</b><span className={`delta ${a.down ? 'down' : 'up'}`}>{a.delta}</span></span>
+              <Spark data={a.series} w={160} h={36} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} />
+            </div>
+          </div>
+          <div className="anomaly-cause"><Mark agent="iris" /><p><span className="faint">Likely cause:</span> {a.cause}</p></div>
+          <div className="row"><Confidence v={a.confidence} /></div>
+          {a.open ? (
+            <div className="row">
+              {a.actions.map((x, i) => <Btn key={x} variant={i === 0 ? 'primary' : 'secondary'} size="sm" onClick={() => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
+              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to="/" className="btn sm ghost">Also on your Desk</Link>}
+            </div>
+          ) : (
+            <div className="resolution row nowrap"><Check size={14} className="ok" /><span>{a.resolution}</span><span className="spacer" /><Btn size="xs" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn></div>
+          )}
+        </article>
+      ))}
+    </div>
+  )
+}
+
+/** A small icon per metric, in Iris’s colour. The label stays in text next to it. */
+function kpiIcon(label: string) {
+  const l = label.toLowerCase()
+  const I = /reach|views/.test(l) ? Eye : /engagement/.test(l) ? Heart : /follower/.test(l) ? Users : /click/.test(l) ? MousePointerClick
+    : /time/.test(l) ? Timer : /repl/.test(l) ? MessageCircle : /sentiment/.test(l) ? Smile : Eye
+  return <I size={14} />
+}

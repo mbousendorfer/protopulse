@@ -1,0 +1,456 @@
+import { useState } from 'react'
+import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Check, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { useNow, useStore } from '../../app/store'
+import { ago, dayLabel } from '../../app/time'
+import { NETWORK_LABEL } from '../../data/agents'
+import {
+  COMPETITORS, EVENTS, FERNWAY_ROW, LESSONS, MENTIONS, TOP_POSTS, TRENDS,
+  type CompEvent, type CompetitorId, type Search, type Sentiment,
+} from '../../data/listening'
+import type { EventState } from './slice'
+import { Btn, Empty, Filters, Mark, Modal, Net, PageHead, Pill, Switch, Tabs } from '../../ui'
+import { StackBar } from '../../ui/charts'
+import './listening.css'
+import { SocialAvatar } from '../../ui/SocialAvatar'
+import type { Network } from '../../app/types'
+
+const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
+
+type Tab = 'competitors' | 'mentions' | 'trends' | 'searches'
+const compName = (id: CompetitorId) => COMPETITORS.find(c => c.id === id)!.name
+
+export default function ListeningPage() {
+  const loc = useLocation()
+  const nav = useNavigate()
+  const { s } = useStore()
+  const seg = loc.pathname.split('/')[2] ?? ''
+  const tab: Tab = (['mentions', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
+  const openEvents = EVENTS.filter(e => eventState(s.listening.events[e.id], e) === null).length
+  return (
+    <div className="page listening">
+      <PageHead agent="echo" title="Listening" lede="Echo watches your four competitors, your mentions and the trends around you, and turns each signal into a move." />
+      <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
+        { value: 'competitors', label: 'Competitors', count: openEvents },
+        { value: 'mentions', label: 'Mentions', count: MENTIONS.length },
+        { value: 'trends', label: 'Trends', count: TRENDS.length },
+        { value: 'searches', label: 'Searches', count: s.listening.searches.length },
+      ]} />
+      <Routes>
+        <Route index element={<Competitors view="events" />} />
+        <Route path="competitors" element={<Competitors view="events" />} />
+        <Route path="competitors/benchmark" element={<Competitors view="benchmark" />} />
+        <Route path="competitors/profile/:cid" element={<Profile />} />
+        <Route path="competitors/:id" element={<EventView />} />
+        <Route path="mentions" element={<Mentions />} />
+        <Route path="trends" element={<Trends />} />
+        <Route path="searches" element={<Searches />} />
+        <Route path="*" element={<Competitors view="events" />} />
+      </Routes>
+    </div>
+  )
+}
+
+/** Current status of an event: from the slice, else seeded as already handled, else open (null). */
+function eventState(st: EventState | undefined, e: CompEvent): Omit<EventState, 'at'> | null {
+  if (st) return st
+  if (e.done) return { status: 'done', move: e.done.move, result: e.done.result }
+  return null
+}
+
+const IMPACT_TONE = { High: 'alert', Medium: 'caution', Low: undefined } as const
+
+/* ---------- Competitors ---------- */
+function Competitors({ view }: { view: 'events' | 'benchmark' }) {
+  const nav = useNavigate()
+  return (
+    <div className="stack lg">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
+          items={[{ value: 'events', label: 'Events: react' }, { value: 'benchmark', label: 'Benchmark: learn' }]} />
+        <div className="comp-chips">
+          {COMPETITORS.map(c => <Link key={c.id} to={`/listening/competitors/profile/${c.id}`} className="chip comp-chip">{c.name}</Link>)}
+        </div>
+      </div>
+      {view === 'events' ? <Events /> : <Benchmark />}
+    </div>
+  )
+}
+
+function Events() {
+  const { s } = useStore()
+  const now = useNow()
+  const [comp, setComp] = useState<'all' | CompetitorId>('all')
+  const [status, setStatus] = useState<'open' | 'handled' | 'all'>('open')
+  const list = EVENTS.filter(e => comp === 'all' || e.competitor === comp)
+    .filter(e => { const st = eventState(s.listening.events[e.id], e); return status === 'all' || (status === 'open' ? !st : !!st) })
+    .sort((a, b) => b.at - a.at)
+  return (
+    <div className="stack">
+      <div className="row">
+        <Filters label="Status" value={status} onChange={setStatus} items={[{ value: 'open', label: 'Needs a move' }, { value: 'handled', label: 'Handled' }, { value: 'all', label: 'All' }]} />
+        <span className="spacer" />
+        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...COMPETITORS.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+      </div>
+      {!list.length && <Empty icon={<Check size={18} />} title={status === 'open' ? 'Every competitor move has an answer' : 'Nothing here'} body="Echo raises launches, price changes, campaigns and viral posts as they happen." />}
+      <ul className="events">
+        {list.map(e => {
+          const st = eventState(s.listening.events[e.id], e)
+          return (
+            <li key={e.id}>
+              <Link to={`/listening/competitors/${e.id}`} className="card event-row">
+                <div className="event-top">
+                  <span className="row tight"><SocialAvatar name={compName(e.competitor)} network={e.proof.network} org size={24} /><b>{compName(e.competitor)}</b><span className="chip">{e.type}</span></span>
+                  <span className="mono faint">{ago(e.at, now)}</span>
+                </div>
+                <h3>{e.title}</h3>
+                <p className="muted ellipsis">{e.read}</p>
+                <div className="row">
+                  <Pill tone={IMPACT_TONE[e.impact]}>{e.impact} impact</Pill>
+                  {st ? <span className={`ev-status ${st.status}`}><Check size={13} />{st.result}</span> : <span className="ev-status open">{e.moves.length} counter-moves ready</span>}
+                </div>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+function EventView() {
+  const { id } = useParams()
+  const { s, d } = useStore()
+  const now = useNow()
+  const nav = useNavigate()
+  const e = EVENTS.find(x => x.id === id)
+  if (!e) return <Empty title="This event doesn’t exist" action={<Btn onClick={() => nav('/listening/competitors')}>All events</Btn>} />
+  const st = eventState(s.listening.events[e.id], e)
+  const c = COMPETITORS.find(x => x.id === e.competitor)!
+  return (
+    <div className="event-layout">
+      <div className="stack">
+        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />All events</Btn>
+        <div className="row tight"><Link to={`/listening/competitors/profile/${c.id}`}><b>{c.name}</b></Link><span className="chip">{e.type}</span><span className="mono faint">{dayLabel(e.at, now)} · {ago(e.at, now)}</span></div>
+        <h1 className="event-title">{e.title}</h1>
+        <section className="card pad proof">
+          <div className="faint proof-label row tight"><SocialAvatar name={c.handle} network={e.proof.network} org size={24} />Proof · {NETWORK_LABEL[e.proof.network]} · {c.handle}</div>
+          <blockquote>{e.proof.text}</blockquote>
+          <span className="mono">{e.proof.metric}</span>
+        </section>
+        <section className="card pad">
+          <div className="section-title">Estimated impact <Pill tone={IMPACT_TONE[e.impact]}>{e.impact}</Pill></div>
+          <p className="muted">{e.impactWhy}</p>
+        </section>
+        <section className="card pad echo-read">
+          <Mark agent="echo" />
+          <div><div className="section-title" style={{ marginBottom: 4 }}>Echo’s read</div><p>{e.read}</p></div>
+        </section>
+      </div>
+      <aside className="card pad stack moves">
+        <h2 className="side-title">Counter-moves</h2>
+        {st ? (
+          <div className={`move-done ${st.status}`}>
+            <Check size={16} />
+            <div><b>{st.move}</b><p>{st.result}</p>
+              {st.status === 'handed' && <Link to="/" className="btn sm">Open your Desk</Link>}
+            </div>
+          </div>
+        ) : (
+          <ol className="move-list">
+            {e.moves.map((m, i) => (
+              <li key={m.label}>
+                <button className={`option ${i === 0 && m.kind !== 'none' ? 'rec' : ''}`} onClick={() => d({ type: 'listening/move', event: e.id, index: i })}>
+                  <span className="kbd">{i + 1}</span>
+                  {m.kind !== 'none' && <Mark agent={m.agent} />}
+                  <span className="move-label">{m.label}</span>
+                  {i === 0 && m.kind !== 'none' && <Pill tone="signal">Recommended</Pill>}
+                </button>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="faint" style={{ fontSize: 12 }}>Anything that answers a competitor in public stays locked to Suggest: you publish it yourself.</p>
+      </aside>
+    </div>
+  )
+}
+
+function Benchmark() {
+  const { s, d } = useStore()
+  const [comp, setComp] = useState<'all' | CompetitorId>('all')
+  const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...COMPETITORS.map(c => ({ ...c, us: false }))]
+  const posts = TOP_POSTS.filter(p => comp === 'all' || p.competitor === comp)
+  return (
+    <div className="stack lg">
+      <section className="card">
+        <div className="card-head"><h2>Side by side <span className="faint" style={{ fontWeight: 400 }}>· last 30 days</span></h2></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Brand</th><th className="r">Followers</th><th className="r">Growth per month</th><th className="r">Posts per week</th><th className="r">Engagement rate</th><th>Main formats</th><th className="r">Share of voice</th></tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.name} className={r.us ? 'us' : ''}>
+                  <td>{r.us ? <b>{r.name}</b> : <Link to={`/listening/competitors/profile/${r.id}`}>{r.name}</Link>}</td>
+                  <td className="r">{(r.followers / 1000).toFixed(0)}k</td>
+                  <td className="r">+{r.growth}%</td>
+                  <td className="r">{r.cadence}</td>
+                  <td className="r">{r.er}%</td>
+                  <td className="muted">{r.formats}</td>
+                  <td className="r">{r.sov}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="card-body">
+          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Share of voice · mentions in the last 30 days</div>
+          <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--signal)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
+        </div>
+      </section>
+
+      <section className="card">
+        <div className="card-head"><h2 className="row tight"><Mark agent="echo" />Lessons</h2><span className="faint">What Echo would test, from what works for them</span></div>
+        <ul className="rows">
+          {LESSONS.map(l => {
+            const st = s.listening.lessons[l.id]
+            return (
+              <li key={l.id} className={`lesson ${st ?? ''}`}>
+                <div>
+                  <b>{l.text}</b>
+                  <p className="muted">{l.evidence}</p>
+                  <p className="faint">Idea: {l.idea}</p>
+                </div>
+                {st ? <Pill tone={st === 'tested' ? 'signal' : undefined}>{st === 'tested' ? 'Test on your Desk' : 'Dismissed'}</Pill> : (
+                  <div className="row nowrap">
+                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/lesson', id: l.id, test: true })}>Test it</Btn>
+                    <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/lesson', id: l.id, test: false })}>Dismiss</Btn>
+                  </div>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+
+      <section className="card">
+        <div className="card-head">
+          <h2>Their top posts <span className="faint" style={{ fontWeight: 400 }}>· 30 days</span></h2>
+          <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...COMPETITORS.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+        </div>
+        <ul className="top-posts">
+          {posts.map(p => (
+            <li key={p.id}>
+              <div className="row tight"><SocialAvatar name={compName(p.competitor)} network={p.network} org size={24} /><b>{compName(p.competitor)}</b><span className="faint">· {p.format}</span></div>
+              <p className="tp-title">{p.title}</p>
+              <p className="mono faint">{p.views} views · {p.er}% engagement</p>
+              <p className="tp-take"><Mark agent="echo" /><span>{p.takeaway}</span></p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  )
+}
+
+function Profile() {
+  const { cid } = useParams()
+  const { s } = useStore()
+  const now = useNow()
+  const nav = useNavigate()
+  const c = COMPETITORS.find(x => x.id === cid)
+  if (!c) return <Empty title="Unknown competitor" action={<Btn onClick={() => nav('/listening/competitors')}>Competitors</Btn>} />
+  const events = EVENTS.filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
+  return (
+    <div className="stack lg">
+      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />Benchmark</Btn>
+      <header>
+        <h1 className="event-title">{c.name} <span className="faint mono" style={{ fontSize: 14 }}>{c.handle}</span></h1>
+        <p className="muted" style={{ maxWidth: '70ch' }}>{c.positioning}</p>
+      </header>
+      <dl className="grid-4 comp-stats">
+        <div className="card pad stat"><dd><b className="num">{(c.followers / 1000).toFixed(0)}k</b></dd><dt className="label">Followers · you have {(FERNWAY_ROW.followers / 1000).toFixed(0)}k</dt></div>
+        <div className="card pad stat"><dd><b className="num">{c.er}%</b></dd><dt className="label">Engagement rate · you {FERNWAY_ROW.er}%</dt></div>
+        <div className="card pad stat"><dd><b className="num">{c.cadence}</b></dd><dt className="label">Posts per week · you {FERNWAY_ROW.cadence}</dt></div>
+        <div className="card pad stat"><dd><b className="num">{c.sov}%</b></dd><dt className="label">Share of voice · you {FERNWAY_ROW.sov}%</dt></div>
+      </dl>
+      <div className="grid-2">
+        <section className="card">
+          <div className="card-head"><h2>Recent events</h2></div>
+          <ul className="rows">
+            {events.map(e => {
+              const st = eventState(s.listening.events[e.id], e)
+              return (
+                <li key={e.id} className="prof-ev">
+                  <Link to={`/listening/competitors/${e.id}`}>{e.title}</Link>
+                  <span className="row tight"><span className="chip">{e.type}</span><span className="mono faint">{ago(e.at, now)}</span>{st ? <span className="faint">· {st.status === 'dismissed' ? 'Dismissed' : 'Handled'}</span> : <Pill tone="caution">Needs a move</Pill>}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+        <section className="card">
+          <div className="card-head"><h2>Their top posts</h2><span className="faint">Hero product: {c.hero} · {c.price}</span></div>
+          <ul className="rows">
+            {TOP_POSTS.filter(p => p.competitor === c.id).map(p => (
+              <li key={p.id} className="prof-ev">
+                <span className="row tight"><Net n={p.network} />{p.title}</span>
+                <span className="faint">{p.views} views · {p.er}% · {p.takeaway}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Mentions ---------- */
+function Mentions() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const [sent, setSent] = useState<'all' | Sentiment>('all')
+  const [product, setProduct] = useState('all')
+  const [risk, setRisk] = useState(false)
+  const all = MENTIONS.filter(m => s.listening.mentions[m.id] !== 'hidden')
+  const list = all.filter(m => (sent === 'all' || m.sentiment === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
+  const count = (x: Sentiment) => all.filter(m => m.sentiment === x).length
+  const products = ['Ridge 28L', 'Storm Jacket', 'Summit Bottle', 'Ember Fleece']
+  return (
+    <div className="stack">
+      <section className="card pad">
+        <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Sentiment of the last {all.length} mentions</div>
+        <StackBar h={10} parts={[
+          { label: 'Positive', value: count('positive'), color: 'var(--ok)' },
+          { label: 'Neutral', value: count('neutral'), color: 'var(--ink-3)' },
+          { label: 'Negative', value: count('negative'), color: 'var(--alert)' },
+        ]} />
+      </section>
+      <div className="row">
+        <Filters label="Sentiment" value={sent} onChange={setSent} items={[{ value: 'all', label: 'All' }, { value: 'positive', label: 'Positive', count: count('positive') }, { value: 'neutral', label: 'Neutral', count: count('neutral') }, { value: 'negative', label: 'Negative', count: count('negative') }]} />
+        <Filters label="Product" value={product} onChange={setProduct} items={[{ value: 'all', label: 'All products' }, ...products.map(p => ({ value: p, label: p }))]} />
+        <span className="spacer" />
+        <Switch checked={risk} onChange={setRisk} label="At risk only" />
+      </div>
+      {!list.length ? <Empty title="No mentions match" body="Try another sentiment or product." action={<Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn>} /> : (
+        <ul className="card mentions">
+          {list.map(m => {
+            const st = s.listening.mentions[m.id]
+            return (
+              <li key={m.id}>
+                <span className={`sent ${m.sentiment}`} aria-label={`${m.sentiment} sentiment`} />
+                <div className="mention-main">
+                  <div className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>{m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={11} />At risk</Pill>}</div>
+                  <p>{m.text}</p>
+                  <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
+                </div>
+                <div className="row nowrap">
+                  {st === 'replied' ? <Pill tone="ok"><Check size={11} />Nova replied</Pill> : (
+                    <Btn size="xs" onClick={() => d({ type: 'listening/mention', id: m.id, action: 'replied' })}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
+                  )}
+                  <Btn size="xs" variant="ghost" icon aria-label={`Hide ${m.author}’s mention`} onClick={() => d({ type: 'listening/mention', id: m.id, action: 'hidden' })}><EyeOff size={12} /></Btn>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/* ---------- Trends ---------- */
+function Trends() {
+  const { s, d } = useStore()
+  const [fit, setFit] = useState<'all' | 'High' | 'Medium' | 'Low'>('all')
+  const list = TRENDS.filter(t => fit === 'all' || t.fit === fit)
+  return (
+    <div className="stack">
+      <Filters label="Fit" value={fit} onChange={setFit} items={[{ value: 'all', label: 'All trends' }, { value: 'High', label: 'High fit' }, { value: 'Medium', label: 'Medium fit' }, { value: 'Low', label: 'Low fit' }]} />
+      <div className="trend-grid">
+        {list.map(t => {
+          const st = s.listening.trends[t.id]
+          return (
+            <article key={t.id} className="card pad trend">
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <h3>{t.name}</h3>
+                <Pill tone={t.fit === 'High' ? 'ok' : t.fit === 'Medium' ? 'caution' : undefined}>{t.fit} fit</Pill>
+              </div>
+              <p className="mono faint">{t.networks} · {t.growth}</p>
+              <p className="muted">{t.fitWhy}</p>
+              <ul className="examples">{t.examples.map(x => <li key={x} className="faint">{x}</li>)}</ul>
+              <div className="row">
+                {st === 'handed' ? <Pill tone="signal"><Check size={11} />With Atlas · draft on your Desk</Pill>
+                  : st === 'dismissed' ? <Pill>Not for us</Pill> : (
+                    <>
+                      <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Not for us</Btn>
+                    </>
+                  )}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Searches ---------- */
+function Searches() {
+  const { s, d } = useStore()
+  const [edit, setEdit] = useState<Search | null>(null)
+  const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
+  return (
+    <div className="stack">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</p>
+        <Btn variant="primary" onClick={() => setEdit(blank)}><Plus size={14} />New search</Btn>
+      </div>
+      <section className="card">
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Search</th><th>Keywords</th><th>Excluded</th><th className="r">Mentions, 7 days</th><th>Status</th><th /></tr></thead>
+            <tbody>
+              {s.listening.searches.map(x => (
+                <tr key={x.id} className={x.paused ? 'paused' : ''}>
+                  <td><b>{x.name}</b></td>
+                  <td className="muted kw">{x.keywords}</td>
+                  <td className="faint kw">{x.exclude || '–'}</td>
+                  <td className="r">{x.volume ? x.volume.toLocaleString('en-GB') : 'Collecting'}</td>
+                  <td>{x.paused ? <Pill>Paused</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
+                  <td>
+                    <span className="row nowrap tight" style={{ justifyContent: 'flex-end' }}>
+                      <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
+                      <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
+                      <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => d({ type: 'listening/searchDelete', id: x.id })}><Trash2 size={12} /></Btn>
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
+      </section>
+      {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
+    </div>
+  )
+}
+
+function SearchForm({ search, onClose }: { search: Search; onClose: () => void }) {
+  const { d } = useStore()
+  const [v, setV] = useState(search)
+  const valid = v.name.trim() && v.keywords.trim()
+  const save = () => { if (valid) { d({ type: 'listening/searchSave', search: { ...v, name: v.name.trim() } }); onClose() } }
+  return (
+    <Modal open onOpenChange={o => !o && onClose()} title={search.id ? `Edit “${search.name}”` : 'New search'}
+      footer={<><Btn variant="primary" onClick={save} disabled={!valid}>{search.id ? 'Save' : 'Start tracking'}</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></>}>
+      <form className="stack" onSubmit={e => { e.preventDefault(); save() }}>
+        <div className="field"><label htmlFor="sn">Name</label><input id="sn" className="input" autoFocus value={v.name} onChange={e => setV({ ...v, name: e.target.value })} placeholder="Winter campaign" /></div>
+        <div className="field"><label htmlFor="sk">Keywords</label><input id="sk" className="input" value={v.keywords} onChange={e => setV({ ...v, keywords: e.target.value })} placeholder="Storm Jacket, #fernwaywinter" /><span className="hint">Separate with commas. Echo matches any of them.</span></div>
+        <div className="field"><label htmlFor="se">Exclude</label><input id="se" className="input" value={v.exclude} onChange={e => setV({ ...v, exclude: e.target.value })} placeholder="storm warning" /></div>
+      </form>
+    </Modal>
+  )
+}
