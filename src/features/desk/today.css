@@ -158,3 +158,13 @@
   .day-list { height: auto; max-height: 420px; }
   .day-pane { height: auto; overflow: visible; }
 }
+
+/* Your day tabs: every group stays one click away, with its count */
+.day-tabs { display: flex; gap: 2px; padding: var(--s2) var(--s2) 0; border-bottom: 1px solid var(--line); }
+.day-tab { flex: 1 1 auto; justify-content: center; min-width: 0; display: inline-flex; align-items: center; gap: 5px; padding: 8px 6px; border: 0; background: none; color: var(--ink-2); font-weight: 600; font-size: var(--t-sm); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
+.day-tab .num { min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px; background: var(--lift-2); color: var(--ink-2); font-size: var(--t-xs); line-height: 18px; text-align: center; }
+.day-tab:hover { color: var(--ink); }
+.day-tab.on { color: var(--ink); border-bottom-color: var(--signal); }
+.day-tab.need .num { background: var(--alert-tint); color: var(--alert-strong); }
+.day-tab.good .num { background: var(--ok-tint); color: var(--ok-strong); }
+.day-empty { padding: var(--s5) var(--s4); font-size: var(--t-sm); }

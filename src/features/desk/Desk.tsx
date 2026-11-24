@@ -33,6 +33,7 @@ export default function Desk() {
   const [thread, setThread] = useState<string | null>(null)
   const [shift, setShift] = useState(false)
   const [showDone, setShowDone] = useState(false)
+  const [tab, setTab] = useState<'need' | 'look' | 'good'>('need')
 
   const entries = useMemo(() => {
     const mine = s.handoffs.filter(h => (agent === 'all' || h.agent === agent) && (kind === 'all' || h.kind === kind) && (urgency === 'all' || h.urgency === urgency))
@@ -92,7 +93,11 @@ export default function Desk() {
   // From the brief: jump to an agent's first item (its batch if any) or to a given card.
   const pick = useCallback((key: string) => {
     const k = key.startsWith('agent:') ? entries.find(e => e.group === 'need' && (e.b?.agent === key.slice(6) || e.h?.agent === key.slice(6)))?.key ?? entries.find(e => e.h?.agent === key.slice(6))?.key : key
-    if (k) { setSelected(k); document.querySelector('.today-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
+    if (k) {
+      const g = entries.find(e => e.key === k)?.group
+      if (g === 'need' || g === 'look' || g === 'good') setTab(g)
+      setSelected(k); document.querySelector('.today-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }, [entries])
 
   // Multi-select over the open items (a batch row selects all its cards).
@@ -133,6 +138,16 @@ export default function Desk() {
                 { heading: 'Urgency' }, { label: 'Any urgency', onSelect: () => setUrgency('all') }, { label: 'Urgent', onSelect: () => setUrgency('urgent') }, { label: 'Today', onSelect: () => setUrgency('today') }, { label: 'This week', onSelect: () => setUrgency('week') },
               ]} />
           </div>
+          <div className="day-tabs" role="tablist" aria-label="Your day">
+            {([['need', 'Needs you'], ['look', 'Worth a look'], ['good', 'Good news']] as const).map(([id, label]) => {
+              const n = entries.filter(e => e.group === id).reduce((k, e) => k + (e.b ? e.b.items.length : 1), 0)
+              return (
+                <button key={id} role="tab" aria-selected={tab === id} className={`day-tab ${tab === id ? 'on' : ''} ${id}`} onClick={() => { setTab(id); const first = entries.find(e => e.group === id); if (first) setSelected(first.key) }}>
+                  {label}<span className="num">{n}</span>
+                </button>
+              )
+            })}
+          </div>
 
           <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
             { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,
@@ -142,13 +157,13 @@ export default function Desk() {
             { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
             { label: 'Reject', onRun: () => runBulk(picked.filter(h => !h.options).map(h => h.id), { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${picked.length} items`) },
           ]} />
-          {GROUPS.map(g => {
+          {GROUPS.filter(g => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(g.id)).map(g => {
             const rows = entries.filter(e => e.group === g.id)
             if (!rows.length) return null
             const count = rows.reduce((n, e) => n + (e.b ? e.b.items.length : 1), 0)
             return (
               <section key={g.id} className="day-group">
-                <h3>{g.label}<span className="faint num">{count}</span></h3>
+                {g.id !== tab && <h3>{g.label}<span className="faint num">{count}</span></h3>}
                 <ul>
                   {rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)}
                     select={pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined} />)}
@@ -157,7 +172,10 @@ export default function Desk() {
             )
           })}
 
-          {done.length > 0 && (
+          {tab !== 'need' && !entries.some(e => e.group === tab) && (
+            <p className="day-empty faint">{tab === 'look' ? 'Nothing to look at right now. Signals from Iris and Echo land here.' : 'No good news yet today. Your agents post wins here as they happen.'}</p>
+          )}
+          {tab === 'need' && done.length > 0 && (
             <section className="day-group">
               <button className="lane-toggle" aria-expanded={showDone} onClick={() => setShowDone(o => !o)}>
                 {showDone ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Done <span className="faint num">{done.length}</span>
