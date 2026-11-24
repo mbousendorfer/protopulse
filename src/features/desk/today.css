@@ -45,7 +45,7 @@
 /* Batch */
 .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3); margin-top: var(--s4); }
 .lane-card { padding: var(--s4); border-radius: var(--r-card); background: var(--sunk); display: flex; flex-direction: column; gap: 4px; }
-.lane-card.main { background: var(--agent-wash); }
+.lane-card.main { background: var(--panel); box-shadow: inset 0 0 0 1.5px var(--agent); }
 .lane-card.main b { color: var(--agent-ink); }
 .lane-card b { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; }
 .lane-card p { font-size: var(--t-sm); min-height: 2.6em; }
@@ -95,7 +95,7 @@
 .agent-line .who .faint { font-size: var(--t-sm); }
 .agent-line .btn { justify-self: end; }
 .highlights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s5); }
-.hl-card { display: flex; flex-direction: column; border-radius: var(--r-card); background: var(--tint); overflow: hidden; }
+.hl-card { display: flex; flex-direction: column; border-radius: var(--r-card); background: var(--sunk); border: 1px solid var(--line); overflow: hidden; }
 .hl-body { flex: 1; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s4); border: 0; background: none; text-align: left; color: var(--ink); cursor: pointer; }
 .hl-body:hover .hl-title { text-decoration: underline; text-underline-offset: 3px; }
 .hl-body .faint { font-size: var(--t-sm); }
@@ -104,7 +104,7 @@
 .hl-metric b { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
 .hl-plan { display: flex; align-items: flex-end; gap: 6px; height: 48px; }
 .hl-plan span { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
-.hl-plan i { display: block; width: 100%; max-width: 18px; border-radius: 4px; background: var(--a-atlas); opacity: 0.75; }
+.hl-plan i { display: block; width: 100%; max-width: 16px; border-radius: 4px; background: var(--ink-off); }
 .hl-plan small { font-size: 10px; color: var(--ink-3); }
 .hl-comp { display: flex; gap: var(--s3); align-items: flex-start; }
 .hl-comp .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

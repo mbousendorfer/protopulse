@@ -145,10 +145,11 @@ function fire(s: State, eventId?: string): State {
   if (agent.status !== 'on' && !eventId) return next
   const level = actionOf(next, agent.id, ev.handoff.action)?.autonomy
   if (!ev.always && level === 'act' && ev.auto) {
-    next = pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
-    return pushToast(next, { agent: agent.id, text: ev.auto.text, undo: next.log[0].id })
+    // Work done alone shows up in the Live feed and the journal, without interrupting.
+    return pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
-  return pushHandoff(next, { ...structuredClone(ev.handoff), proposal: ev.rule }, `New on your Desk: ${ev.handoff.title}`)
+  // New cards land in Your day quietly; only urgent ones interrupt with a toast.
+  return pushHandoff(next, { ...structuredClone(ev.handoff), proposal: ev.rule }, ev.handoff.urgency === 'urgent' ? `Urgent: ${ev.handoff.title}` : undefined)
 }
 
 const AGENT_REPLY = (h: Handoff, text: string): ThreadMsg => ({ id: uid('m'), from: 'agent', text, at: h.at })

@@ -246,7 +246,7 @@ function Toasts() {
   const nav = useNavigate()
   useEffect(() => {
     if (!s.toasts.length) return
-    const t = setTimeout(() => d({ type: 'core/dropToast', id: s.toasts[0].id }), 6500)
+    const t = setTimeout(() => d({ type: 'core/dropToast', id: s.toasts[0].id }), s.toasts[0].undo ? 6000 : 4000)
     return () => clearTimeout(t)
   }, [s.toasts, d])
   const announce = useMemo(() => s.toasts[s.toasts.length - 1]?.text ?? '', [s.toasts])

@@ -88,7 +88,7 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
                   {p?.type === 'metric' ? (
                     <span className="hl-metric">
                       <span><b className="num">{p.value}</b> <span className={`delta ${p.down ? 'down' : 'up'}`}>{p.delta}</span><br /><span className="faint">{p.label}</span></span>
-                      <Spark data={p.series} w={110} h={40} color={p.down ? 'var(--alert)' : `var(--a-${h.agent})`} />
+                      <Spark data={p.series} w={110} h={40} color={p.down ? 'var(--alert)' : 'var(--ink-3)'} />
                     </span>
                   ) : p?.type === 'plan' ? (
                     <span className="hl-plan" aria-label="Posts per day next week">
@@ -100,8 +100,8 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
                   <span className="hl-title">{h.title}</span>
                 </button>
                 <div className="hl-act">
-                  {rec >= 0 ? <Btn size="sm" variant="primary" onClick={() => act.option(h, rec)}>{shortLabel(h.options![rec].label)}</Btn>
-                    : h.link ? <Btn size="sm" variant="primary" onClick={() => nav(h.link!)}>{p?.type === 'plan' ? 'Review the plan' : 'Open'}</Btn>
+                  {rec >= 0 ? <Btn size="sm" onClick={() => act.option(h, rec)}>{shortLabel(h.options![rec].label)}</Btn>
+                    : h.link ? <Btn size="sm" onClick={() => nav(h.link!)}>{p?.type === 'plan' ? 'Review the plan' : 'Open'}</Btn>
                     : <Btn size="sm" onClick={() => onPick(`h:${h.id}`)}>Open</Btn>}
                 </div>
               </article>
