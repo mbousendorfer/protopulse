@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -8,6 +8,7 @@ import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
 import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
+import { AlertsTable } from '../insights/alerts'
 import { AgentScene } from '../../ui/Illustrations'
 
 const RISK_LABEL = { safe: 'Low risk', risky: 'Medium risk', destructive: 'High risk' } as const
@@ -77,7 +78,7 @@ export function Team() {
 }
 
 /* ---------- Profile ---------- */
-type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'record' | 'activity'
+type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'alerts' | 'record' | 'activity'
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
@@ -99,7 +100,8 @@ export function AgentProfile() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const a = s.agents.find(x => x.id === id)
-  const [tab, setTab] = useState<Tab>('autonomy')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'autonomy')
   if (!a) return <div className="page"><Empty title="This agent doesn’t exist" action={<Link to="/agents" className="btn">Back to the team</Link>} /></div>
   const preset = presetOf(a)
 
@@ -125,6 +127,7 @@ export function AgentProfile() {
 
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length }, { value: 'escalation', label: 'Escalation', count: s.playbook.escalate.filter(e => e.agents.includes(a.id) && e.on).length },
+        ...(a.id === 'iris' || a.id === 'echo' ? [{ value: 'alerts' as Tab, label: 'Alerts', count: (a.id === 'iris' ? s.insights.alerts : s.listening.alerts).filter(x => x.on).length }] : []),
         { value: 'record', label: 'Track record' }, { value: 'activity', label: 'Activity' },
       ]} />
 
@@ -146,6 +149,7 @@ export function AgentProfile() {
       )}
       {tab === 'guardrails' && <Guardrails agent={a} />}
       {tab === 'escalation' && <Escalation agent={a} />}
+      {tab === 'alerts' && <AgentAlerts agent={a.id} />}
       {tab === 'record' && <Record agent={a} />}
       {tab === 'activity' && <AgentActivity agent={a.id} />}
     </div>
@@ -312,6 +316,23 @@ function Escalation({ agent }: { agent: Agent }) {
         </div>
       </div>
     </section>
+  )
+}
+
+/** Iris's and Echo's alert rules: when they raise something on the Desk, and to whom. */
+function AgentAlerts({ agent }: { agent: AgentId }) {
+  const { s, d } = useStore()
+  if (agent === 'iris') return (
+    <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris raises an anomaly on your Desk when a rule fires, and copies Claire when you ask."
+      subjects={[{ value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' }, { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' }]}
+      conditions={['drops by more than', 'rises above', 'falls below']} units={['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']}
+      onSave={alert => d({ type: 'insights/alertSave', alert })} onToggle={id => d({ type: 'insights/alertToggle', id })} onDelete={id => d({ type: 'insights/alertDelete', id })} />
+  )
+  return (
+    <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo raises these on your Desk as soon as they happen, and copies Claire when you ask."
+      subjects={[{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]}
+      conditions={['gets more than', 'grows faster than']} units={[' negative mentions in 1 h', ' mentions in 1 h', ' mention from press', '% in a day']}
+      onSave={alert => d({ type: 'listening/alertSave', alert })} onToggle={id => d({ type: 'listening/alertToggle', id })} onDelete={id => d({ type: 'listening/alertDelete', id })} />
   )
 }
 

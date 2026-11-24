@@ -11,7 +11,7 @@ import {
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, sentimentOf, type EventState, type MentionOp } from './slice'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { AlertsTable, downloadFile, toCSV } from '../insights/alerts'
+import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
@@ -496,10 +496,7 @@ function Searches() {
         </div>
         {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
       </section>
-      <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo raises these on your Desk as soon as they happen, and copies Claire when you ask."
-        subjects={[{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]}
-        conditions={['gets more than', 'grows faster than']} units={[' negative mentions in 1 h', ' mentions in 1 h', ' mention from press', '% in a day']}
-        onSave={alert => d({ type: 'listening/alertSave', alert })} onToggle={id => d({ type: 'listening/alertToggle', id })} onDelete={id => d({ type: 'listening/alertDelete', id })} />
+      <p className="faint" style={{ fontSize: 13 }}>Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
       {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
     </div>
   )

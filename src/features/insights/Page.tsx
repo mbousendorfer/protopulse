@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { AlertsTable, downloadFile, toCSV } from './alerts'
+import { downloadFile, toCSV } from './alerts'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -280,13 +280,12 @@ function Anomalies() {
       {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing handled yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
       {shown.map(a => (
         <article key={a.id} className={`card anomaly ${sel.has(a.id) ? 'in-picked' : ''}`}>
+          <SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />
+          <div className="anomaly-body">
           <div className="anomaly-head">
-            <div className="row nowrap" style={{ alignItems: 'flex-start' }}>
-              <SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />
-              <div>
-                <div className="row tight"><Net n={a.network} /><span className="mono faint">Detected {ago(a.detectedAt, now)}</span></div>
-                <h2>{a.title}</h2>
-              </div>
+            <div>
+              <div className="row tight"><Net n={a.network} /><span className="faint">Detected {ago(a.detectedAt, now)}</span></div>
+              <h2>{a.title}</h2>
             </div>
             <div className="anomaly-metric">
               <span className="faint">{a.metric}</span>
@@ -298,18 +297,16 @@ function Anomalies() {
           <div className="row"><Confidence v={a.confidence} /></div>
           {a.open ? (
             <div className="row">
-              {a.actions.map((x, i) => <Btn key={x} variant={i === 0 ? 'primary' : 'secondary'} size="sm" onClick={() => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
+              {a.actions.map(x => <Btn key={x} size="sm" onClick={() => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
               {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to="/" className="btn sm ghost">Also on your Desk</Link>}
             </div>
           ) : (
             <div className="resolution row nowrap"><Check size={14} className="ok" /><span>{a.resolution}</span><span className="spacer" /><Btn size="xs" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn></div>
           )}
+          </div>
         </article>
       ))}
-      <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris raises an anomaly on your Desk when a rule fires, and copies Claire when you ask."
-        subjects={[{ value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' }, { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' }]}
-        conditions={['drops by more than', 'rises above', 'falls below']} units={['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']}
-        onSave={alert => d({ type: 'insights/alertSave', alert })} onToggle={id => d({ type: 'insights/alertToggle', id })} onDelete={id => d({ type: 'insights/alertDelete', id })} />
+      <p className="faint in-rules-link">Iris raises anomalies from her alert rules. <Link to="/agents/iris?tab=alerts">Edit Iris’s alert rules</Link></p>
     </div>
   )
 }

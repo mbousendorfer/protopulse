@@ -213,7 +213,7 @@ Onglets : **Reports** · **Explore** · **Anomalies**.
 
 - **Reports** : liste (brief du jour, rapports hebdo des 4 dernières semaines, bilan de campagne). Un rapport se lit comme un texte : titre, résumé en 3 phrases, sections rédigées (ce qui a marché, ce qui n'a pas marché, ce qu'on change), graphes intégrés, **chiffres sourcés** (survol d'un chiffre = la donnée et la période, pattern *cited-answer*). Actions : Share with Claire (statut d'envoi, Claire réagit), Ask a follow-up, Export PDF (mock : toast).
 - **Explore** : sélecteur de période (7 j, 30 j, 90 j, personnalisé) et de réseaux ; KPI avec tendance et comparaison à la période précédente (Reach, Engagement rate, Followers, Link clicks, Replies handled, Median reply time, Sentiment) ; courbes ; **tableau des posts** triable (réseau, date, reach, ER, clics, pilier, auteur Atlas/Sam) ; **meilleurs créneaux** (heatmap jour × heure) ; performance par pilier.
-- **Alertes** (Anomalies) : liste éditable (métrique, condition, seuil, vers le Desk ou Claire, actif ou non). Sélection multiple des anomalies : Mark handled, Snooze a week, Reopen.
+- Sélection multiple des anomalies : Mark handled, Snooze a week, Reopen. Les **règles d'alerte** d'Iris se règlent sur sa fiche agent (onglet Alerts), pas ici ; un lien y mène.
 - **Anomalies** : liste avec graphe, explication d'Iris (cause probable, confiance), actions proposées (« Ask Atlas to test a new hook format », « Ignore for a week »), historique des anomalies passées et de ce qui a été fait.
 - **Questions à Iris** (barre de commande ou fil) : « How did TikTok do last week? », « Best time to post on LinkedIn? », « Compare reels vs carousels » → carte de réponse avec graphe, chiffres sourcés et relances proposées.
 
@@ -232,7 +232,7 @@ Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veil
   - **top posts des concurrents** (30 derniers jours) avec ce qu'Echo en tire : « Trailkind's 3-second hooks get 2× completion » ;
   - **leçons** d'Echo, chacune avec une action : « Test it » (envoie l'idée à Atlas) ou « Dismiss » ;
   - fiche concurrent : profil, comptes, derniers événements, posts, positionnement prix.
-- **Mentions** : sélection multiple (Ask Nova to reply crée des brouillons sur le Desk, Hide/Unhide, Tag, corriger le sentiment, Hand to Atlas), panneau de détail, export CSV. Les recherches portent des **alertes** éditables (seuil, destination).
+- **Mentions** : sélection multiple (Ask Nova to reply crée des brouillons sur le Desk, Hide/Unhide, Tag, corriger le sentiment, Hand to Atlas), panneau de détail, export CSV. Les **règles d'alerte** d'Echo (seuils sur la marque, les concurrents ou une recherche, vers le Desk ou Claire) se règlent sur sa fiche agent, onglet Alerts.
 - **Mentions** : fil avec sentiment, source, portée, filtres ; mentions de produits ; les mentions à risque montent sur le Desk.
 - **Trends** : tendances détectées avec croissance, réseaux, adéquation à la marque (High / Medium / Low avec raison), exemples ; **Hand to Atlas**.
 - **Searches** : recherches actives (marque, produits, concurrents, thèmes comme « PFAS rainwear », « GR20 »), mots-clés et exclusions, volume ; créer, éditer, mettre en pause une recherche.
@@ -260,6 +260,7 @@ Onglets : **Campaigns** · **Pillars & cadence**.
   - **Guardrails** : éditables (plafonds, horaires, sujets toujours remontés).
   - **Track record** : graphe des 30 derniers jours, taux d'approbation sans modification par action, dernières annulations.
   - **Recent activity** : les 20 dernières actions.
+- **Alerts** (Iris et Echo) : règles éditables (métrique ou recherche, condition, seuil, vers le Desk ou Claire, actif ou non).
 - **Garde-fous** ajoutables, modifiables, supprimables. **Escalation** : règles structurées à partir de conditions prêtes à l'emploi (blessure ou sécurité, presse, menace juridique, créateur au-delà de N abonnés, remboursement au-delà de N €, plus de N mentions négatives par heure, mention d'un concurrent, dépense au-delà de N €, métrique en baisse de plus de N %), envoyées à Sam ou à Claire, activables et supprimables ; ce sont les mêmes règles que l'onglet Escalation du Playbook.
 - **Demandes de promotion** (pattern *permission-request*) : un agent qui le mérite remonte une carte **Promotion request** sur le Desk : « Nova wants to answer complaints on her own. You approved 46 of her last 50 complaint replies without changes. » Preuves dépliables (les 50 réponses, les 4 modifiées avec le diff). Choix : **Allow** · **Try for a week** (revient automatiquement en Draft après 7 jours, avec un bilan) · **Not yet**.
 - **Rétrogradation** : après 2 annulations sur la même action en 24 h, l'agent propose lui-même : « You undid 2 of my shipping refunds today. I'll go back to drafting them until you say otherwise. » Choix : OK · Keep me on Act.

@@ -39,7 +39,9 @@
 .pillar-table { margin-top: var(--s4); }
 .table-wrap { overflow-x: auto; }
 
-.anomaly { padding: var(--s4); display: flex; flex-direction: column; gap: var(--s3); }
+.anomaly { padding: var(--s4) var(--s5) var(--s4) var(--s2); display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s2); align-items: start; }
+.anomaly-body { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+.in-rules-link { font-size: var(--t-sm); }
 .anomaly-head { display: flex; justify-content: space-between; gap: var(--s4); flex-wrap: wrap; }
 .anomaly h2 { font-size: var(--t-lg); font-weight: 600; margin-top: 4px; }
 .anomaly-metric { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: var(--t-sm); }
