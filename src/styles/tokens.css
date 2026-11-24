@@ -62,8 +62,10 @@
   --ink-off: #a39c91;
 
   /* Brand coral: primary actions, focus, selection */
-  --signal: #d4512a;
-  --signal-hover: #bb4421;
+  --signal: #c7502a;
+  --signal-hover: #b0441f;
+  /* Text colour of tertiary actions and links: AA on white, cream and the brand wash */
+  --action-ink: #b8441f;
   --signal-ink: #ffffff;
   --signal-wash: rgba(212, 81, 42, 0.1);
   --signal-edge: rgba(212, 81, 42, 0.35);
@@ -135,6 +137,7 @@
 
   --signal: #ff8a62;
   --signal-hover: #ffa07f;
+  --action-ink: #ff9a76;
   --signal-ink: #1d1209;
   --signal-wash: rgba(255, 138, 98, 0.13);
   --signal-edge: rgba(255, 138, 98, 0.4);

@@ -97,8 +97,12 @@ img { display: block; max-width: 100%; }
 .btn:active { transform: scale(0.97); }
 .btn.primary { background: var(--signal); border-color: var(--signal); color: var(--signal-ink); box-shadow: var(--btn-primary-shadow); }
 .btn.primary:hover { background: var(--signal-hover); border-color: var(--signal-hover); }
-.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--ink-2); font-weight: 500; }
-.btn.ghost:hover { background: var(--lift); color: var(--ink); }
+/* Tertiary action: no surface, but always in the action colour so it never reads as plain text */
+.btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--action-ink); font-weight: 600; }
+.btn.ghost:hover { background: var(--brand-soft); color: var(--action-ink); }
+/* Icon-only buttons (close, delete…) stay neutral: the icon already says it's a control */
+.btn.ghost.icon { color: var(--ink-3); font-weight: 500; }
+.btn.ghost.icon:hover { background: var(--lift); color: var(--ink); }
 .btn.danger { color: var(--alert); }
 .btn.sm { height: 30px; padding: 0 12px; font-size: var(--t-sm); }
 .btn.xs { height: 26px; padding: 0 9px; font-size: var(--t-sm); gap: 4px; }
@@ -109,8 +113,8 @@ img { display: block; max-width: 100%; }
 .btn .kbd { display: none; margin-left: 2px; }
 .btn:hover .kbd, .btn:focus-visible .kbd { display: inline-flex; }
 .btn.primary .kbd { color: var(--signal-ink); border-color: var(--kbd-on-signal); background: transparent; }
-.link-btn { background: none; border: 0; padding: 0; color: var(--signal); font-weight: 500; }
-.link-btn:hover { color: var(--signal-hover); }
+.link-btn { background: none; border: 0; padding: 0; color: var(--action-ink); font-weight: 600; }
+.link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .kbd {
   display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 4px;
@@ -133,13 +137,15 @@ img { display: block; max-width: 100%; }
 .topic-icon { display: inline-grid; place-items: center; flex: none; border-radius: 10px; }
 
 /* ---------- Pills, chips ---------- */
-.pill { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: var(--t-xs); font-weight: 600; background: var(--lift-2); color: var(--ink-2); border: 1px solid var(--line-strong); white-space: nowrap; }
-.pill.alert { background: var(--alert-tint); color: var(--alert-strong); border-color: var(--alert-edge); }
-.pill.caution { background: var(--caution-tint); color: var(--caution-strong); border-color: var(--caution-edge); }
-.pill.ok { background: var(--ok-tint); color: var(--ok-strong); border-color: var(--ok-edge); }
-.pill.signal { background: var(--brand-soft); color: var(--signal-hover); border-color: var(--signal-edge); }
+.pill { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 8px; border-radius: 999px; font-size: var(--t-xs); font-weight: 600; background: var(--lift-2); color: var(--ink-2); white-space: nowrap; }
+.pill.alert { background: var(--alert-tint); color: var(--alert-strong); }
+.pill.caution { background: var(--caution-tint); color: var(--caution-strong); }
+.pill.ok { background: var(--ok-tint); color: var(--ok-strong); }
+.pill.signal { background: var(--brand-soft); color: var(--action-ink); }
 .pill .dot, .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; display: inline-block; }
-.chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: var(--t-sm); color: var(--ink-2); background: var(--lift); white-space: nowrap; }
+/* Information, not an action: no surface, no border */
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; }
+.chip + .chip::before { content: '·'; color: var(--ink-off); margin-right: 4px; }
 .chip svg { color: var(--ink-3); }
 
 /* ---------- Surfaces ---------- */
@@ -352,3 +358,14 @@ a.card:hover, .card.hoverable:hover { border-color: var(--line-loud); }
 }
 .bulk-bar > b { margin-right: 8px; white-space: nowrap; }
 .bulk-note { flex-basis: 100%; font-size: var(--t-sm); color: var(--ink-3); padding: 0 2px; }
+
+/* ---------- Choice: an option you pick, always reads as a button ---------- */
+.choice {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 8px 12px; text-align: left;
+  border-radius: var(--r-ctl); border: 1px solid var(--line-loud); background: var(--btn-bg); color: var(--ink); font-weight: 500;
+  box-shadow: var(--btn-shadow); cursor: pointer; transition: border-color var(--fast) var(--ease), background-color var(--fast) var(--ease), transform var(--fast) var(--ease);
+}
+.choice:hover, .choice:focus-visible { border-color: var(--signal); background: var(--brand-soft); }
+.choice:active { transform: scale(0.99); }
+.choice .go { margin-left: auto; color: var(--action-ink); flex: none; }
+.rec-tag { display: inline-flex; align-items: center; gap: 4px; color: var(--action-ink); font-size: var(--t-sm); font-weight: 600; white-space: nowrap; }

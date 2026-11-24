@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpRight, Check, MessageSquare } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Check, MessageSquare, Star } from 'lucide-react'
 import type { Handoff } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago } from '../../app/time'
 import { agentName } from '../../data/agents'
-import { Btn, Kbd, Pill, Thinking } from '../../ui'
+import { Btn, Kbd, Thinking } from '../../ui'
 import { ClaireNote, PreviewBlock, REJECT_REASONS, SNOOZE, Slip, Sources, UrgencyPill, WhyLine, WontGuess, draftText, editable, useHandoffActions } from './parts'
 import { useDecisionKeys, type Mode, type Outcome } from './keys'
 
@@ -94,8 +94,8 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
         ) : h.options ? (
           <ol className="options">
             {h.options.map((o, i) => (
-              <li key={o.label}><button className={`option ${o.recommended ? 'rec' : ''}`} onClick={() => finish('decided', o.label, () => act.option(h, i))}>
-                <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <Pill tone="signal">Recommended · A</Pill>}
+              <li key={o.label}><button className={`choice ${o.recommended ? 'rec' : ''}`} onClick={() => finish('decided', o.label, () => act.option(h, i))}>
+                <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
               </button></li>
             ))}
           </ol>

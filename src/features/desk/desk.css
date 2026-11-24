@@ -66,11 +66,8 @@
 .why { display: flex; flex-wrap: wrap; gap: 6px var(--s4); align-items: center; margin-top: var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
 .acts { margin-top: var(--s4); }
 .options { display: flex; flex-direction: column; gap: 6px; }
-.option { display: flex; align-items: center; gap: 10px; width: 100%; height: 36px; padding: 0 10px; border-radius: var(--r-ctl); border: 1px solid var(--line-strong); background: var(--sunk); color: var(--ink); text-align: left; font-weight: 500; transition: border-color var(--fast) var(--ease), background-color var(--fast) var(--ease); }
-.option:hover { border-color: var(--signal); background: var(--lift); }
-.option:active { transform: scale(0.99); }
-.option .ellipsis { flex: 1; }
-.option.rec { border-color: var(--signal-edge); }
+.choice .ellipsis { flex: 1; }
+.choice.rec { border-color: var(--signal-edge); }
 .handoff.stamped { display: flex; align-items: center; gap: var(--s3); padding: 12px var(--s4); border-radius: var(--r-card); border: 1px dashed var(--line-strong); color: var(--ink-2); animation: stamp 520ms var(--ease) forwards; }
 .handoff.stamped .mono { color: var(--ok); }
 @keyframes stamp { 0% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: translateX(16px); } }

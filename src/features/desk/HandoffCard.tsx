@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpRight, ChevronDown, Clock, MessageSquare, UserRound } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, ChevronDown, Clock, MessageSquare, Star, UserRound } from 'lucide-react'
 import type { Handoff } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm } from '../../app/time'
-import { Btn, Menu, Pill, Thinking } from '../../ui'
+import { Btn, Menu, Thinking } from '../../ui'
 import { ClaireNote, PreviewBlock, REJECT_REASONS, SNOOZE, Slip, UrgencyPill, WhyLine, draftText, editable, useHandoffActions } from './parts'
 
 export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (id: string) => void }) {
@@ -62,8 +62,8 @@ export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (
               <ol className="options">
                 {h.options.map((o, i) => (
                   <li key={o.label}>
-                    <button className={`option ${o.recommended ? 'rec' : ''}`} onClick={() => settle(o.label, () => act.option(h, i))}>
-                      <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <Pill tone="signal">Recommended</Pill>}
+                    <button className={`choice ${o.recommended ? 'rec' : ''}`} onClick={() => settle(o.label, () => act.option(h, i))}>
+                      <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
                     </button>
                   </li>
                 ))}

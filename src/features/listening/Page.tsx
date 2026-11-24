@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Tag, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -162,11 +162,12 @@ function EventView() {
           <ol className="move-list">
             {e.moves.map((m, i) => (
               <li key={m.label}>
-                <button className={`option ${i === 0 && m.kind !== 'none' ? 'rec' : ''}`} onClick={() => d({ type: 'listening/move', event: e.id, index: i })}>
+                <button className={`choice ${i === 0 && m.kind !== 'none' ? 'rec' : ''}`} onClick={() => d({ type: 'listening/move', event: e.id, index: i })}>
                   <span className="kbd">{i + 1}</span>
                   {m.kind !== 'none' && <Mark agent={m.agent} />}
                   <span className="move-label">{m.label}</span>
-                  {i === 0 && m.kind !== 'none' && <Pill tone="signal">Recommended</Pill>}
+                  {i === 0 && m.kind !== 'none' && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}
+                  <ArrowRight size={16} className="go" aria-hidden />
                 </button>
               </li>
             ))}

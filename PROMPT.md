@@ -381,6 +381,11 @@ Un outil où l'on retrouve une équipe sympathique, pas un cockpit. Clair par d�
 - **Illustrations** plates et chaleureuses, construites avec les tokens (marchent dans les deux thèmes) : en-tête du brief (montagne, lac, soleil selon l'heure), All clear (tente), états vides (jumelles, plateau, calendrier, lune), onboarding (une scène par étape), fiches agents (l'agent dans son décor).
 - **Typographie** : Geist, corps 14, échelle 12 · 13 · 14 · 16 · 19 · 24 · 32. Mono seulement pour les horodatages et les raccourcis, jamais pour les phrases.
 - **Formes** : rayons 10 (contrôles), 16 (cartes), 20 (panneaux). Chips et pilules entièrement arrondies. Espacements généreux (cartes en 20 px).
+- **Ce qui se clique se voit** — trois apparences seulement :
+  - **Action** : bouton principal (corail plein, une seule par zone), secondaire (blanc, bordure, ombre douce), tertiaire (sans fond, texte et icône corail, souligné au survol). Les boutons icône seule (fermer, supprimer) restent gris.
+  - **Choix** (options d'une décision, ripostes) : ligne blanche avec bordure, ombre, touche numérique et flèche à droite ; survol = bordure corail et fond rosé ; « Recommended » en texte corail avec une étoile, sans pastille.
+  - **Information** : jamais de fond ni de bordure — texte avec icône ou séparateur « · » (sources, règles appliquées, métadonnées). Les statuts restent de petites pastilles teintées, sans bordure ni ombre, plus petites que les boutons.
+  - Contrastes vérifiés : corail principal 4,56:1 avec libellé blanc, texte d'action 5,1:1 sur crème.
 - **Règles conservées** : pas de labels en majuscules, pas de barre d'accent latérale sur un élément actif, boutons jamais pleine largeur, une métrique est toujours nommée en texte, couleurs de statut (urgent, attention, ok) réservées au statut.
 - **Mouvement** : < 250 ms, `cubic-bezier(.23,1,.32,1)`, transform et opacity seulement ; le détail monte en cascade (30 ms), les éléments traités sont tamponnés puis glissent, les nouveaux arrivent par le haut. `prefers-reduced-motion` respecté.
 - **Responsive** : pensé pour 1280-1600 px, utilisable à 375 px (barre latérale en tiroir, liste puis détail empilés, barre du haut compacte).
