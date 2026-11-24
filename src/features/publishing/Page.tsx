@@ -1,12 +1,15 @@
 import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Plus, Sparkles } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BEST_SLOT, CADENCE, MEDIA, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs } from '../../ui'
+import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
+import { SocialAvatar } from '../../ui/SocialAvatar'
+import { PostPreview, PostsBulk, useOpenPost } from './Bulk'
 import Photo from '../../ui/Photo'
 import Composer from './Composer'
 import PlanReview from './Plan'
@@ -48,6 +51,7 @@ export default function PublishingPage() {
       {tab === 'plan' && <PlanReview />}
       {tab === 'drafts' && <Drafts />}
       {tab === 'media' && <MediaLibrary />}
+      <PostPreview />
 
       {(creating || editId) && (
         editId && !editPost ? (
@@ -64,9 +68,9 @@ export default function PublishingPage() {
 /* ---------- Calendar ---------- */
 function Calendar() {
   const { s, d } = useStore()
-  const nav = useNavigate()
   const now = useNow(30000)
-  const [view, setView] = useState<'week' | 'month'>('week')
+  const [view, setView] = useState<'week' | 'month' | 'list'>('week')
+  const open = useOpenPost()
   const [anchor, setAnchor] = useState(MONDAY_THIS_WEEK)
   const [network, setNetwork] = useState<Network | 'all'>('all')
   const [asked, setAsked] = useState<string[]>([])
@@ -74,14 +78,14 @@ function Calendar() {
   const posts = s.publishing.posts.filter(p => network === 'all' || p.network === network).sort((a, b) => a.at - b.at)
   const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0)).getTime()
 
-  const days = view === 'week' ? 7 : 35
-  const start = view === 'week' ? anchor : (() => { const f = new Date(anchor); const first = new Date(f.getFullYear(), f.getMonth(), 1); const dow = (first.getDay() + 6) % 7; return first.getTime() - dow * DAY })()
+  const days = view === 'month' ? 35 : 7
+  const start = view !== 'month' ? anchor : (() => { const f = new Date(anchor); const first = new Date(f.getFullYear(), f.getMonth(), 1); const dow = (first.getDay() + 6) % 7; return first.getTime() - dow * DAY })()
   const cells = Array.from({ length: days }, (_, i) => start + i * DAY)
   const inDay = (t: number) => posts.filter(p => p.at >= t && p.at < t + DAY)
-  const label = view === 'week'
+  const label = view !== 'month'
     ? `${new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${new Date(start + 6 * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : new Date(anchor).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
-  const shift = (dir: number) => setAnchor(a => (view === 'week' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
+  const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
 
   /** For a future day with few posts, the network furthest below Sage's weekly cadence. */
   const recommend = (day: number): Network | null => {
@@ -91,6 +95,10 @@ function Calendar() {
     const taken = new Set(inDay(day).map(p => p.network))
     return gaps.find(g => !taken.has(g.n))?.n ?? null
   }
+
+  const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
+  const ids = useMemo(() => visible.map(p => p.id), [visible.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(ids, `${view}-${start}-${network}`)
 
   const drop = (e: DragEvent, day: number) => {
     e.preventDefault(); setOver(null)
@@ -115,7 +123,8 @@ function Calendar() {
         <div className="row">
           <Menu trigger={<button className="ib-select cmp-select">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
             items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...PUBLISH_NETWORKS.map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
-          <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
+          {view !== 'month' && <span className="row tight faint pub-selall"><SelectAll sel={sel} label="Select every post shown" />Select all</span>}
+          <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'list', label: 'List' }]} />
         </div>
       </div>
 
@@ -130,7 +139,7 @@ function Calendar() {
               <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
-                {items.map(p => <PostChip key={p.id} p={p} onOpen={() => nav(`/publishing/post/${p.id}`)} />)}
+                {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
                 {rec && !asked.includes(recKey) && (
                   <button className="cal-rec" onClick={() => { d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec }); setAsked(a => [...a, recKey]) }}>
                     <span className="row tight"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="faint">Recommended</span></span>
@@ -143,33 +152,37 @@ function Calendar() {
           })}
         </div>
       ) : (
+        view === 'month' ? (
         <div className="cal-month">
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => <div key={x} className="cal-dow faint">{x}</div>)}
           {cells.map(day => {
             const items = inDay(day)
             const other = new Date(day).getMonth() !== new Date(anchor).getMonth()
             return (
-              <button key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''}`}
-                onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }} aria-label={`${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${items.length} posts`}>
-                <span className="num">{new Date(day).getDate()}</span>
-                {items.slice(0, 3).map(p => <span key={p.id} className={`cal-mini ${p.status}`}><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span></span>)}
+              <div key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''}`}>
+                <button className="pub-cell-day num" onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }}
+                  aria-label={`Open the week of ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${items.length} posts`}>{new Date(day).getDate()}</button>
+                {items.slice(0, 3).map(p => <button key={p.id} className={`cal-mini ${p.status}`} onClick={() => open(p.id)} aria-label={`Preview: ${p.text}`}><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span></button>)}
                 {items.length > 3 && <span className="faint cal-more">+{items.length - 3} more</span>}
-              </button>
+              </div>
             )
           })}
         </div>
+        ) : <PostTable posts={visible} sel={sel} onOpen={open} />
       )}
+      <PostsBulk sel={sel} posts={visible} />
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
     </div>
   )
 }
 
-function PostChip({ p, onOpen }: { p: Post; onOpen: () => void }) {
+function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
   const draggable = p.status !== 'published'
   return (
-    <article className={`cal-post ${p.status}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
-      <button className="cal-post-btn" onClick={onOpen} aria-label={`${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
-        <div className="row nowrap tight"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <span className="avatar" style={{ width: 18, height: 18, fontSize: 9 }}>SR</span>}</div>
+    <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
+      <span className="pub-chip-check"><SelectBox checked={checked} visible={anySelected} onToggle={onToggle} label={`Select the ${NETWORK_LABEL[p.network]} post at ${hhmm(p.at)}`} /></span>
+      <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
+        <div className="row nowrap tight"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
         {p.media && <span className="cal-photo"><Photo name={p.media} /></span>}
         <p>{p.text}</p>
         {p.stats && <span className="faint cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
@@ -181,12 +194,48 @@ function PostChip({ p, onOpen }: { p: Post; onOpen: () => void }) {
   )
 }
 
+/* ---------- List ---------- */
+type SortKey = 'at' | 'network' | 'status' | 'pillar' | 'author'
+function PostTable({ posts, sel, onOpen }: { posts: Post[]; sel: ReturnType<typeof useSelection>; onOpen: (id: string) => void }) {
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'at', dir: 1 })
+  const rows = [...posts].sort((a, b) => (a[sort.key] > b[sort.key] ? 1 : a[sort.key] < b[sort.key] ? -1 : 0) * sort.dir)
+  const head = (key: SortKey, label: string) => (
+    <th aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+      <button onClick={() => setSort(x => ({ key, dir: x.key === key ? (-x.dir as 1 | -1) : 1 }))}>{label}{sort.key === key && (sort.dir === 1 ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</button>
+    </th>
+  )
+  if (!posts.length) return <Empty title="No posts this week" body="Move to another week, or ask Atlas to fill the recommended slots." />
+  return (
+    <div className="card pub-table-wrap">
+      <table className="table pub-table">
+        <thead><tr><th style={{ width: 40 }}><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
+        <tbody>
+          {rows.map(p => (
+            <tr key={p.id} className={sel.has(p.id) ? 'pub-picked' : ''} onClick={e => (e.shiftKey ? sel.toggle(p.id, true) : onOpen(p.id))}>
+              <td onClick={e => e.stopPropagation()}><SelectBox checked={sel.has(p.id)} visible onToggle={shift => sel.toggle(p.id, shift)} label={`Select: ${p.text}`} /></td>
+              <td className="mono">{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} {hhmm(p.at)}</td>
+              <td><Net n={p.network} size={20} /></td>
+              <td className="pub-table-text"><span className="ellipsis">{p.text}</span></td>
+              <td><Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill></td>
+              <td>{p.pillar}</td>
+              <td><span className="row tight nowrap">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={16} />You</>}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 /* ---------- Drafts ---------- */
 function Drafts() {
-  const { s, d } = useStore()
+  const { s } = useStore()
   const nav = useNavigate()
   const [who, setWho] = useState<'all' | 'atlas' | 'you'>('all')
   const posts = s.publishing.posts.filter(p => p.status === 'draft' && (who === 'all' || p.author === who)).sort((a, b) => a.at - b.at)
+  const open = useOpenPost()
+  const ids = useMemo(() => posts.map(p => p.id), [posts.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(ids, who)
   const onDesk = s.handoffs.filter(h => h.agent === 'atlas' && h.preview?.type === 'post' && (who === 'all' || who === 'atlas'))
   return (
     <div className="stack">
@@ -205,21 +254,25 @@ function Drafts() {
       )}
       {!posts.length ? <Empty icon={<FileText size={18} />} title="No drafts" body="Drafts you save and posts Atlas prepares without a slot show up here." action={<Btn onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>} /> : (
         <section className="card">
+          <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every draft" /><h2>Drafts</h2><span className="faint num">{posts.length}</span></span></div>
           <ul className="rows">{posts.map(p => (
-            <li key={p.id} className="draft-row">
-              <span className="draft-thumb">{p.media ? <Photo name={p.media} /> : <FileText size={16} />}</span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row tight"><Net n={p.network} /><span className="mono faint">{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {hhmm(p.at)}</span><span className="faint">· {p.pillar}</span></div>
-                <p className="ellipsis">{p.text}</p>
-                {p.note && <span className="faint" style={{ fontSize: 12 }}>{p.note}</span>}
-              </div>
-              {p.author === 'atlas' ? <Mark agent="atlas" /> : <span className="avatar" style={{ width: 22, height: 22, fontSize: 10 }}>SR</span>}
-              <Btn size="sm" onClick={() => nav(`/publishing/post/${p.id}`)}>Open</Btn>
-              <Btn size="sm" variant="ghost" icon aria-label="Delete draft" onClick={() => d({ type: 'publishing/delete', id: p.id })}><Trash2 size={14} /></Btn>
+            <li key={p.id} className={`draft-row ${sel.has(p.id) ? 'pub-picked' : ''}`}>
+              <SelectBox checked={sel.has(p.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} label={`Select: ${p.text}`} />
+              <button className="pub-draft-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(p.id, e.shiftKey) : open(p.id))}>
+                <span className="draft-thumb">{p.media ? <Photo name={p.media} /> : <FileText size={16} />}</span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span className="row tight"><Net n={p.network} /><span className="mono faint">{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {hhmm(p.at)}</span><span className="faint">· {p.pillar}</span></span>
+                  <span className="ellipsis pub-draft-text">{p.text}</span>
+                  {p.note && <span className="faint" style={{ fontSize: 12 }}>{p.note}</span>}
+                </span>
+              </button>
+              {p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={24} />}
+              <Btn size="sm" onClick={() => nav(`/publishing/post/${p.id}`)}>Edit</Btn>
             </li>
           ))}</ul>
         </section>
       )}
+      <PostsBulk sel={sel} posts={posts} />
     </div>
   )
 }

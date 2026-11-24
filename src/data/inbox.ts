@@ -28,7 +28,16 @@ export type Conversation = {
   note?: string
   handoff?: string
   unread?: boolean
+  /** Team work on top of Nova: absent on old saved states, so always read with a default. */
+  labels?: string[]
+  assignee?: Assignee
+  reviewed?: boolean
+  notes?: Note[]
 }
+
+export type Assignee = 'sam' | 'claire'
+export type Note = { id: string; at: number; text: string; by: Assignee }
+export const LABELS = ['Refund', 'Product issue', 'Press', 'Creator', 'Lead']
 
 export type Order = { id: string; date: string; items: string; total: number; status: 'Delivered' | 'In transit' | 'Late' | 'Returned' | 'Processing' | 'Refunded' }
 export type Contact = { id: string; name: string; handles: { network: Network; handle: string }[]; followers?: string; since?: string; location: string; tags: string[]; notes?: string; orders: Order[] }
@@ -103,7 +112,24 @@ const fromQ = ([id, author, network, type, sentiment, at, q, a, extra]: Q): Conv
   ...extra,
 })
 
-export const CONVERSATIONS: Conversation[] = [
+// Labels, assignments and notes the team already put on some conversations.
+const TEAM: Record<string, Partial<Conversation>> = {
+  'c-lea': { labels: ['Product issue'] },
+  'c-thomas': { labels: ['Refund'], assignee: 'sam' },
+  'c-sophie': { labels: ['Refund'], assignee: 'claire', notes: [{ id: 'n1', at: T(7, 20), by: 'claire', text: 'Checked with finance: the refund left on 12 Nov. Fine to tell her it’s on its way.' }] },
+  'c-ana': { labels: ['Product issue'] },
+  'c-max': { assignee: 'sam' },
+  'c-marc': { labels: ['Press'], assignee: 'claire' },
+  'c-pierre': { labels: ['Product issue'], notes: [{ id: 'n2', at: T(7, 5), by: 'sam', text: 'Called him yesterday evening, no injury. Product team has the clip photos.' }] },
+  'c-lawyer': { assignee: 'claire' },
+  'c-theo': { labels: ['Creator'], assignee: 'claire' },
+  'c-tom': { labels: ['Lead'], reviewed: true },
+}
+
+/** Conversations saved before labels existed get the seeded team data once (labels is always set afterwards). */
+export const withTeam = (c: Conversation): Conversation => (c.labels !== undefined ? c : { ...c, labels: [], ...TEAM[c.id] })
+
+export const CONVERSATIONS: Conversation[] = ([
   // Drafts waiting for you
   {
     id: 'c-lea', contact: 'k-lea', author: '@lea.hikes', network: 'instagram', type: 'comment', status: 'draft', sentiment: 'negative', at: T(7, 41), handoff: 'h-strap', unread: true,
@@ -179,4 +205,4 @@ export const CONVERSATIONS: Conversation[] = [
   { id: 'c-spam5', author: '@win.iphone.17', network: 'x', type: 'mention', status: 'hidden', sentiment: 'neutral', at: T(2, 12), messages: [m('them', '@fernway congrats you won an iPhone 17 claim here', T(2, 12))], note: 'Bot · hidden by Nova' },
   // Handled alone
   ...AUTO.map(fromQ),
-]
+] as Conversation[]).map(withTeam)

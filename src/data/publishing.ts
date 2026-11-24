@@ -19,6 +19,8 @@ export type Post = {
   handoff?: string
   note?: string
   group?: string
+  /** What happened to this post, newest last. */
+  history?: { at: number; text: string }[]
 }
 
 export type PlanTag = 'New' | 'Recycled' | 'Trend' | 'Campaign'

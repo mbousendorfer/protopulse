@@ -42,7 +42,6 @@ export const AGENTS: Agent[] = [
       { id: 'g1', label: 'Public replies per day', value: '200 max' },
       { id: 'g2', label: 'Quiet hours on LinkedIn', value: '23:00 – 07:00' },
       { id: 'g3', label: 'Refunds per day', value: '€300 max' },
-      { id: 'g4', label: 'Always escalates', value: 'Injury, lawyer, journalist, creator above 50k' },
     ],
   },
   {

@@ -5,6 +5,7 @@ import * as Tooltip from '@radix-ui/react-tooltip'
 import * as Popover from '@radix-ui/react-popover'
 import { BookOpen, CalendarDays, ChartLine, CircleHelp, Flame, Image as ImageIcon, Megaphone, MessageCircle, Radar, ShieldCheck, Sparkles, Star, Target, TrendingUp, TriangleAlert, X } from 'lucide-react'
 import { AgentAvatar } from './Avatar'
+import { Glyph, ROUND } from './SocialAvatar'
 import { EmptyScene, type EmptyKind } from './Illustrations'
 import type { AgentId, Autonomy, Flagged, Network } from '../app/types'
 import { AUTONOMY, AUTONOMY_LABEL, NETWORK_LABEL, agentName } from '../data/agents'
@@ -40,9 +41,11 @@ export function Mark({ agent, size, state }: { agent: AgentId | 'claire'; size?:
   )
 }
 
-const NET_SHORT: Record<Network, string> = { instagram: 'IG', tiktok: 'TT', linkedin: 'in', facebook: 'f', youtube: 'YT', x: 'X', google: 'G', trustpilot: 'TP' }
-export const Net = ({ n }: { n: Network }) => (
-  <span className="net" title={NETWORK_LABEL[n]} aria-label={NETWORK_LABEL[n]} style={{ ['--net' as string]: `var(--n-${n})` }}>{NET_SHORT[n]}</span>
+/** A network, shown as its own icon (name in the tooltip and for screen readers). */
+export const Net = ({ n, size = 18 }: { n: Network; size?: number }) => (
+  <span className="net" role="img" title={NETWORK_LABEL[n]} aria-label={NETWORK_LABEL[n]} style={{ width: size, height: size, borderRadius: ROUND[n] ?? '50%' }}>
+    <Glyph n={n} />
+  </span>
 )
 
 /** A tinted tile with an icon that says what kind of item this is. Colour = the agent who raised it. */

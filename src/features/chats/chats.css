@@ -53,11 +53,11 @@
 
 .chat-composer { border-top: 1px solid var(--line); padding: var(--s3) var(--s5) var(--s4); display: flex; flex-direction: column; gap: var(--s2); background: var(--panel); position: sticky; bottom: 0; border-radius: 0 0 var(--r-card) var(--r-card); }
 .chat.compact .chat-composer { padding: var(--s3) 0 0; border-radius: 0; background: var(--deck); }
-.mentions { display: flex; gap: 4px; flex-wrap: wrap; }
-.mention { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 4px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink-2); font-size: var(--t-sm); font-weight: 500; }
-.mention .mark { width: 18px; height: 18px; }
-.mention:hover { border-color: var(--line-loud); color: var(--ink); }
-.mention.on { border-color: var(--signal-edge); background: var(--brand-soft); color: var(--ink); }
+.chat-mentions { display: flex; gap: 4px; flex-wrap: wrap; }
+.chat-mention { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px 0 4px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel); color: var(--ink-2); font-size: var(--t-sm); font-weight: 500; }
+.chat-mention .mark { width: 18px; height: 18px; }
+.chat-mention:hover { border-color: var(--line-loud); color: var(--ink); }
+.chat-mention.on { border-color: var(--signal-edge); background: var(--brand-soft); color: var(--ink); }
 .route-hint { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); }
 .route-hint .mark { width: 16px; height: 16px; }
 

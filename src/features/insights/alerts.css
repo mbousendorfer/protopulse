@@ -1,0 +1,8 @@
+.in-alert-intro { padding: var(--s3) var(--s4) 0; font-size: var(--t-sm); }
+.in-alerts { padding: var(--s2) var(--s4) var(--s3); }
+.in-alerts li { display: flex; align-items: center; gap: var(--s3); padding: 8px 0; border-top: 1px solid var(--line); }
+.in-alerts li:first-child { border-top: 0; }
+.in-alerts li.off .in-alert-text { color: var(--ink-3); }
+.in-alert-text { flex: 1; min-width: 0; }
+.in-alert-text b { font-weight: 600; }
+.in-choice { display: inline-flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 160px; text-align: left; cursor: pointer; }

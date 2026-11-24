@@ -28,7 +28,9 @@ export type PlaybookAction =
   | { type: 'playbook/restoreRule'; rule: PlaybookRule; index: number }
   | { type: 'playbook/banned'; word: string; add: boolean }
   | { type: 'playbook/preferred'; use: string; instead?: string; add: boolean }
-  | { type: 'playbook/escalate'; id: string; on?: boolean; to?: 'sam' | 'claire' }
+  | { type: 'playbook/escalate'; id: string; on?: boolean; to?: 'sam' | 'claire'; label?: string }
+  | { type: 'playbook/escalateAdd'; rule: Escalation }
+  | { type: 'playbook/escalateDelete'; id: string }
   // ponytail: the command bar owns no slice, so its one write (a brief to Atlas) rides on this prefix. Move to a `command/` slice if it grows.
   | { type: 'playbook/briefAtlas'; title: string; network: Network; slot: string; text: string; brief: string }
 
@@ -63,7 +65,11 @@ export function reducePlaybook(s: State, a: PlaybookAction): State {
     case 'playbook/preferred':
       return set(s, { preferred: a.add ? [...pb.preferred.filter(p => p.use !== a.use), { use: a.use, instead: a.instead ?? '' }] : pb.preferred.filter(p => p.use !== a.use) })
     case 'playbook/escalate':
-      return set(s, { escalate: pb.escalate.map(e => (e.id === a.id ? { ...e, on: a.on ?? e.on, to: a.to ?? e.to } : e)) })
+      return set(s, { escalate: pb.escalate.map(e => (e.id === a.id ? { ...e, on: a.on ?? e.on, to: a.to ?? e.to, label: a.label ?? e.label } : e)) })
+    case 'playbook/escalateAdd':
+      return set(s, { escalate: [...pb.escalate, a.rule] })
+    case 'playbook/escalateDelete':
+      return set(s, { escalate: pb.escalate.filter(e => e.id !== a.id) })
     case 'playbook/briefAtlas':
       return pushHandoff(s, {
         agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Draft from your brief', action: 'atlas-fill',

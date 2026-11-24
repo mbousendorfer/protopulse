@@ -7,7 +7,7 @@ import Photo from '../../ui/Photo'
 export function Marked({ text, words }: { text: string; words: string[] }) {
   if (!words.length) return <>{text}</>
   const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
-  return <>{text.split(re).map((part, i) => (i % 2 ? <span key={i} className="pb-hit" title="Not allowed by the Playbook">{part}</span> : <span key={i}>{part}</span>))}</>
+  return <>{text.split(re).map((part, i) => (i % 2 ? <span key={i} className="pub-hit" title="Not allowed by the Playbook">{part}</span> : <span key={i}>{part}</span>))}</>
 }
 
 const Brand = ({ size = 28 }: { size?: number }) => (

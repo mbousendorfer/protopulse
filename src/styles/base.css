@@ -128,10 +128,8 @@ img { display: block; max-width: 100%; }
 .mark .state.off { background: var(--ink-off); }
 .avatar { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--lift-2); color: var(--ink-2); font: 600 var(--t-xs)/1 var(--font); }
 .avatar.lg { width: 44px; height: 44px; font-size: var(--t-md); }
-.net {
-  display: inline-grid; place-items: center; flex: none; height: 18px; min-width: 20px; padding: 0 5px; border-radius: 6px;
-  font: 700 10px/1 var(--font); color: var(--panel); background: var(--net, var(--ink-3)); letter-spacing: 0.01em;
-}
+.net { display: inline-block; flex: none; overflow: hidden; vertical-align: middle; }
+.net svg { display: block; width: 100%; height: 100%; }
 .topic-icon { display: inline-grid; place-items: center; flex: none; border-radius: 10px; }
 
 /* ---------- Pills, chips ---------- */
@@ -342,3 +340,15 @@ a.card:hover, .card.hoverable:hover { border-color: var(--line-loud); }
 .social-avatar .org { display: grid; place-items: center; width: 100%; height: 100%; background: var(--lift-2); color: var(--ink-2); font-weight: 700; }
 .social-avatar .badge { position: absolute; right: -2px; bottom: -2px; overflow: hidden; box-shadow: 0 0 0 1.5px var(--panel); }
 .social-avatar .badge svg { display: block; width: 100%; height: 100%; }
+
+/* ---------- Selection ---------- */
+.select-box { display: inline-grid; place-items: center; width: 32px; height: 32px; flex: none; opacity: 0; transition: opacity var(--fast) var(--ease); cursor: pointer; border-radius: var(--r-ctl); }
+.select-box.on, :hover > .select-box, :focus-within > .select-box, .select-box:focus-within { opacity: 1; }
+.select-box:hover { background: var(--lift); }
+.bulk-bar {
+  position: sticky; bottom: var(--s4); z-index: 20; display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap;
+  margin: var(--s3) auto 0; padding: 8px 8px 8px 16px; border-radius: 14px; background: var(--panel); box-shadow: var(--float);
+  animation: toast-in var(--slow) var(--ease); width: fit-content; max-width: 100%;
+}
+.bulk-bar .sep { width: 1px; height: 20px; background: var(--line-strong); margin: 0 4px; }
+.bulk-note { flex-basis: 100%; font-size: var(--t-sm); color: var(--ink-3); padding: 0 2px; }

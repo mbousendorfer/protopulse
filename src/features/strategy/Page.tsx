@@ -388,7 +388,7 @@ function Pillars() {
             <tbody>
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
-                  <td><span className="row nowrap"><Net n={c.network} />{NETWORK_LABEL[c.network]}</span></td>
+                  <td><Net n={c.network} size={20} /></td>
                   <td className="r">{c.actual}{c.actual < c.target && <span className="delta down"> −{c.target - c.actual}</span>}</td>
                   <td className="r">
                     <span className="stepper">

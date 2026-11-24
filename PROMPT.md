@@ -134,6 +134,15 @@ Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes act
 
 ## 6. Écrans
 
+### 6.0 Travail en volume (toutes les listes)
+
+- **Sélection multiple partout** où l'on traite des éléments : Your day, lignes des lots, Inbox, calendrier (semaine, mois, liste), brouillons, mentions, anomalies. Case visible au survol, shift-clic pour une plage, « Select all » avec état partiel, Échap pour vider.
+- **Barre d'actions groupées** flottante en bas de la liste : « 3 selected » puis les actions valables pour toute la sélection. Une action partielle le dit (« Approve 6 of 7 · decisions and missing info need you one by one »).
+- Chaque action groupée écrit **une** ligne au journal et se défait d'**un** Undo (bandeau 10 s ou toast).
+- **Tout se prévisualise au clic** : une ligne de lot s'ouvre sur le post rendu comme sur le réseau et sa carte de décision ; un post du calendrier ouvre un panneau d'aperçu (rendu réseau, stats, auteur, pilier, historique, actions).
+- **Réseaux** : affichés par leur icône officielle seule (nom en infobulle), jamais « IG Instagram ».
+- **Exports réels** : CSV des posts (Explore) et des mentions, rapport en Markdown.
+
 ### 6.1 Desk (accueil)
 
 L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** : on voit toute la journée à gauche, on traite une chose à la fois à droite.
@@ -171,15 +180,12 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 
 ### 6.2 Inbox — Nova
 
-Disposition en 3 colonnes : vues et filtres · liste des conversations · conversation + fiche contact.
-
-- **Vues** : **Needs you** · **Nova's drafts** · **Handled by Nova** (auditable) · **Hidden** · **All**. Filtres : réseau, type (comment, DM, mention, review, ad comment), sentiment, intention d'achat.
-- **Liste** : avatar, nom, réseau, extrait, horodatage, chip de statut agent (`Auto-replied` · `Draft ready` · `Escalated` · `Hidden` · `You replied` · `Waiting on Claire`), sentiment.
-- **Conversation** : fil complet (le post d'origine pour un commentaire), réponses de Nova marquées « Nova · auto » avec Undo dans la fenêtre, brouillon en cours éditable, règles appliquées, boutons **Approve & send** · **Edit** · **Take over** (Nova arrête de répondre dans ce fil) · **Hide** · **Ask Claire**.
-- **Actions e-commerce** proposées par Nova dans le brouillon, comme des pièces jointes éditables : « Exchange: Ridge 28L Moss → Ember, free shipping » · « Refund shipping: €9.90 » · « Code: SORRY15, single use ». Chaque action affiche son plafond (« within your €150 limit »). Au-delà du plafond, l'action devient une demande à Claire.
-- **Fiche contact** : nom, handles, réseaux, abonnés, client depuis, **commandes** (Shopify mocké : n°, date, produits, montant, statut de livraison), historique des conversations, notes, tags (VIP, creator, at-risk).
-- **Avis** : Google Reviews et Trustpilot dans la même liste, avec étoiles et réponse publique.
-- Données : 40 conversations minimum, dont 25 déjà gérées par Nova, 6 brouillons, 4 escalades, 5 masquées.
+- **Disposition** : barre latérale du module (vues Needs you, Nova's drafts, Handled by Nova, Hidden, All ; vues enregistrées Assigned to me, Assigned to Claire, Negative today ; labels avec compteurs ; filtres), puis une **liste pleine largeur** dense (case · avatar social avec badge réseau · auteur · extrait · type · sentiment · intention d'achat · statut · revu · labels · assigné · heure), triable (récent, ancien, urgence, intention d'achat).
+- **Panneau de conversation** ancré à droite (~620 px, ↑/↓ ou J/K pour passer à la suivante) avec une barre d'outils (assigner, sentiment, Mark reviewed, labels) et deux onglets : **Conversation** (fil, brouillon de Nova dans sa couleur, règles appliquées, pièces jointes e-commerce, Approve & send, Edit, Take over, Ask Claire, Hide) et **Contact** (commandes Shopify, historique, tags).
+- **Type et sentiment lisibles d'un coup d'œil** : tag avec icône (Comment, Message, Review, Mention) et sentiment en couleur avec visage (Positive, Neutral, Negative).
+- **Notes internes** : bascule « Reply / Note for the team » dans le composeur ; les notes (de Sam ou de Claire) ont leur propre style dans le fil.
+- **Actions groupées** : Approve Nova's drafts (seulement celles qui ont un brouillon ; règle aussi les cartes du Desk), Hide / Unhide, Mark as reviewed, Assign to Claire / to me, Add label, Set sentiment. Undo groupé.
+- Données : 40+ conversations, labels (Refund, Product issue, Press, Creator, Lead), assignations, notes.
 
 ### 6.3 Publishing — Atlas
 
@@ -207,6 +213,7 @@ Onglets : **Reports** · **Explore** · **Anomalies**.
 
 - **Reports** : liste (brief du jour, rapports hebdo des 4 dernières semaines, bilan de campagne). Un rapport se lit comme un texte : titre, résumé en 3 phrases, sections rédigées (ce qui a marché, ce qui n'a pas marché, ce qu'on change), graphes intégrés, **chiffres sourcés** (survol d'un chiffre = la donnée et la période, pattern *cited-answer*). Actions : Share with Claire (statut d'envoi, Claire réagit), Ask a follow-up, Export PDF (mock : toast).
 - **Explore** : sélecteur de période (7 j, 30 j, 90 j, personnalisé) et de réseaux ; KPI avec tendance et comparaison à la période précédente (Reach, Engagement rate, Followers, Link clicks, Replies handled, Median reply time, Sentiment) ; courbes ; **tableau des posts** triable (réseau, date, reach, ER, clics, pilier, auteur Atlas/Sam) ; **meilleurs créneaux** (heatmap jour × heure) ; performance par pilier.
+- **Alertes** (Anomalies) : liste éditable (métrique, condition, seuil, vers le Desk ou Claire, actif ou non). Sélection multiple des anomalies : Mark handled, Snooze a week, Reopen.
 - **Anomalies** : liste avec graphe, explication d'Iris (cause probable, confiance), actions proposées (« Ask Atlas to test a new hook format », « Ignore for a week »), historique des anomalies passées et de ce qui a été fait.
 - **Questions à Iris** (barre de commande ou fil) : « How did TikTok do last week? », « Best time to post on LinkedIn? », « Compare reels vs carousels » → carte de réponse avec graphe, chiffres sourcés et relances proposées.
 
@@ -224,6 +231,7 @@ Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veil
   - **top posts des concurrents** (30 derniers jours) avec ce qu'Echo en tire : « Trailkind's 3-second hooks get 2× completion » ;
   - **leçons** d'Echo, chacune avec une action : « Test it » (envoie l'idée à Atlas) ou « Dismiss » ;
   - fiche concurrent : profil, comptes, derniers événements, posts, positionnement prix.
+- **Mentions** : sélection multiple (Ask Nova to reply crée des brouillons sur le Desk, Hide/Unhide, Tag, corriger le sentiment, Hand to Atlas), panneau de détail, export CSV. Les recherches portent des **alertes** éditables (seuil, destination).
 - **Mentions** : fil avec sentiment, source, portée, filtres ; mentions de produits ; les mentions à risque montent sur le Desk.
 - **Trends** : tendances détectées avec croissance, réseaux, adéquation à la marque (High / Medium / Low avec raison), exemples ; **Hand to Atlas**.
 - **Searches** : recherches actives (marque, produits, concurrents, thèmes comme « PFAS rainwear », « GR20 »), mots-clés et exclusions, volume ; créer, éditer, mettre en pause une recherche.
@@ -251,6 +259,7 @@ Onglets : **Campaigns** · **Pillars & cadence**.
   - **Guardrails** : éditables (plafonds, horaires, sujets toujours remontés).
   - **Track record** : graphe des 30 derniers jours, taux d'approbation sans modification par action, dernières annulations.
   - **Recent activity** : les 20 dernières actions.
+- **Garde-fous** ajoutables, modifiables, supprimables. **Escalation** : règles structurées à partir de conditions prêtes à l'emploi (blessure ou sécurité, presse, menace juridique, créateur au-delà de N abonnés, remboursement au-delà de N €, plus de N mentions négatives par heure, mention d'un concurrent, dépense au-delà de N €, métrique en baisse de plus de N %), envoyées à Sam ou à Claire, activables et supprimables ; ce sont les mêmes règles que l'onglet Escalation du Playbook.
 - **Demandes de promotion** (pattern *permission-request*) : un agent qui le mérite remonte une carte **Promotion request** sur le Desk : « Nova wants to answer complaints on her own. You approved 46 of her last 50 complaint replies without changes. » Preuves dépliables (les 50 réponses, les 4 modifiées avec le diff). Choix : **Allow** · **Try for a week** (revient automatiquement en Draft après 7 jours, avec un bilan) · **Not yet**.
 - **Rétrogradation** : après 2 annulations sur la même action en 24 h, l'agent propose lui-même : « You undid 2 of my shipping refunds today. I'll go back to drafting them until you say otherwise. » Choix : OK · Keep me on Act.
 

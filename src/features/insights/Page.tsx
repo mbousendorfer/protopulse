@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpDown, Check, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, Send, Smile, Timer, Users } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
+import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
+import { AlertsTable, downloadFile, toCSV } from './alerts'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -125,7 +127,7 @@ function ReportView() {
               <Btn variant="primary" onClick={() => d({ type: 'insights/share', id: r.id, title: r.title })}><Send size={14} />Share with Claire</Btn>
             </>
           )}
-          <Btn variant="ghost" onClick={() => d({ type: 'insights/export', title: r.title })}><Download size={14} />Export PDF</Btn>
+          <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${r.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: r.title }) }}><Download size={14} />Download (.md)</Btn>
         </section>
         <section className="card pad stack">
           <h2 className="side-title">Ask Iris a follow-up</h2>
@@ -223,7 +225,8 @@ function Explore() {
       </div>
 
       <section className="card">
-        <div className="card-head"><h2>Posts <span className="faint num">{rows.length}</span></h2></div>
+        <div className="card-head"><h2>Posts <span className="faint num">{rows.length}</span></h2>
+          <Btn size="sm" disabled={!rows.length} onClick={() => downloadFile(`fernway-posts-${period}d.csv`, toCSV([['Date', 'Network', 'Post', 'Pillar', 'Author', 'Reach', 'Engagement rate %', 'Clicks'], ...rows.map(p => [new Date(p.date).toISOString().slice(0, 10), NETWORK_LABEL[p.network], p.title, p.pillar, p.author, p.reach, p.er, p.clicks])]))}><Download size={14} />Export CSV</Btn></div>
         {rows.length ? (
           <div className="table-wrap">
             <table className="table">
@@ -258,19 +261,28 @@ function Anomalies() {
   const [view, setView] = useState<'open' | 'closed'>('open')
   const list = ANOMALIES.map(a => ({ ...a, ...(s.insights.anomalies[a.id] ?? {}) }))
   const shown = list.filter(a => (view === 'open') === a.open)
+  const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(ids, view)
+  const bulk = (op: 'handle' | 'snooze' | 'reopen') => { d({ type: 'insights/anomalies', ids: [...sel.selected], op }); sel.clear() }
   return (
     <div className="stack">
-      <Filters label="Status" value={view} onChange={setView} items={[
-        { value: 'open', label: 'Open', count: list.filter(a => a.open).length },
-        { value: 'closed', label: 'Handled', count: list.filter(a => !a.open).length },
-      ]} />
+      <div className="row">
+        {shown.length > 0 && <span className="row tight faint in-selall"><SelectAll sel={sel} label="Select every anomaly shown" />Select all</span>}
+        <Filters label="Status" value={view} onChange={setView} items={[
+          { value: 'open', label: 'Open', count: list.filter(a => a.open).length },
+          { value: 'closed', label: 'Handled', count: list.filter(a => !a.open).length },
+        ]} />
+      </div>
       {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing handled yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
       {shown.map(a => (
-        <article key={a.id} className="card anomaly">
+        <article key={a.id} className={`card anomaly ${sel.has(a.id) ? 'in-picked' : ''}`}>
           <div className="anomaly-head">
-            <div>
-              <div className="row tight"><Net n={a.network} /><span className="mono faint">Detected {ago(a.detectedAt, now)}</span></div>
-              <h2>{a.title}</h2>
+            <div className="row nowrap" style={{ alignItems: 'flex-start' }}>
+              <SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />
+              <div>
+                <div className="row tight"><Net n={a.network} /><span className="mono faint">Detected {ago(a.detectedAt, now)}</span></div>
+                <h2>{a.title}</h2>
+              </div>
             </div>
             <div className="anomaly-metric">
               <span className="faint">{a.metric}</span>
@@ -290,8 +302,23 @@ function Anomalies() {
           )}
         </article>
       ))}
+      <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={view === 'open' ? [
+        { label: 'Mark handled', icon: <Check size={14} />, primary: true, onRun: () => bulk('handle') },
+        { label: 'Snooze a week', icon: <Clock size={14} />, onRun: () => bulk('snooze') },
+      ] : [{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => bulk('reopen') }]} />
+      <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris raises an anomaly on your Desk when a rule fires, and copies Claire when you ask."
+        subjects={[{ value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' }, { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' }]}
+        conditions={['drops by more than', 'rises above', 'falls below']} units={['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']}
+        onSave={alert => d({ type: 'insights/alertSave', alert })} onToggle={id => d({ type: 'insights/alertToggle', id })} onDelete={id => d({ type: 'insights/alertDelete', id })} />
     </div>
   )
+}
+
+const plainCited = (parts: Cited[]) => parts.map(x => (typeof x === 'string' ? x : x.n)).join('')
+
+/** The report as Markdown, for a real download. */
+function reportMarkdown(r: Report) {
+  return [`# ${r.title}`, '', `_${r.period} · written by Iris_`, '', r.summary, '', ...r.sections.flatMap(sec => [`## ${sec.heading}`, '', ...sec.paras.map(plainCited), ''])].join('\n')
 }
 
 /** A small icon per metric, in Iris’s colour. The label stays in text next to it. */

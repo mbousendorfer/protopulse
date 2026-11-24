@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { ChevronDown, ChevronRight, Redo2, Undo2 } from 'lucide-react'
 import type { AgentId, LogEntry, LogStatus } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -18,7 +18,8 @@ type StatusFilter = 'all' | 'alone' | 'you' | 'undone'
 export default function Activity() {
   const { s, d } = useStore()
   const now = useNow(10000)
-  const [agent, setAgent] = useState<'all' | AgentId>('all')
+  const [params] = useSearchParams()
+  const [agent, setAgent] = useState<'all' | AgentId>((params.get('agent') as AgentId) || 'all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [reversible, setReversible] = useState(false)
   const [open, setOpen] = useState<string | null>(null)

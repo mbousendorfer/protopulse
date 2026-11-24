@@ -4,7 +4,7 @@ import { ArrowUp, BookPlus, CalendarCheck, Check, Rocket, Scissors, Send, X } fr
 import type { AgentId } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
-import { AGENTS, NETWORK_LABEL, agentName } from '../../data/agents'
+import { AGENTS, agentName } from '../../data/agents'
 import { Btn, Mark, Net, Thinking, TopicIcon } from '../../ui'
 import { Spark, Bars } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -68,8 +68,8 @@ export default function ChatThread({ chat, compact }: { chat: Chat; compact?: bo
         <div ref={end} />
       </div>
       <form className="chat-composer" onSubmit={e => { e.preventDefault(); send(text) }}>
-        <div className="mentions" aria-label="Mention an agent">
-          {AGENTS.map(a => <button type="button" key={a.id} className={`mention ${next?.agent === a.id ? 'on' : ''}`} onClick={() => mention(a.id)} title={`Mention ${a.name}`}><Mark agent={a.id} />@{a.name}</button>)}
+        <div className="chat-mentions" aria-label="Mention an agent">
+          {AGENTS.map(a => <button type="button" key={a.id} className={`chat-mention ${next?.agent === a.id ? 'on' : ''}`} onClick={() => mention(a.id)} title={`Mention ${a.name}`}><Mark agent={a.id} />@{a.name}</button>)}
         </div>
         <div className="row nowrap">
           <label htmlFor={`chat-${chat.id}`} className="sr-only">Message the team</label>
@@ -121,7 +121,7 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
     )
     case 'post': return (
       <div className={`ccard ${card.status === 'discarded' ? 'dim' : ''}`}>
-        <div className="row tight faint"><Net n={card.network} />{NETWORK_LABEL[card.network]} · {card.slot}</div>
+        <div className="row tight faint"><Net n={card.network} />{card.slot}</div>
         {edit !== null ? <textarea className="textarea" rows={3} value={edit} onChange={e => setEdit(e.target.value)} aria-label="Edit the post" autoFocus /> : <p className="ctext">{card.text}</p>}
         {card.status === 'scheduled' ? <span className="pill ok"><CalendarCheck size={12} />Scheduled for {card.slot}</span>
           : card.status === 'discarded' ? <span className="pill">Discarded</span> : (

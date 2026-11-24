@@ -123,3 +123,32 @@ describe('chats', () => {
     expect(s.chats.list.find(c => c.id === 'c2')!.messages[1].from).toBe('iris')
   })
 })
+
+describe('depth pass', () => {
+  it('the feed never raises the same event twice, even after a full loop', () => {
+    let s = initialState()
+    for (let i = 0; i < 50; i++) s = reducer(s, { type: 'core/fire' })
+    const titles = s.handoffs.map(h => h.title)
+    expect(new Set(titles).size).toBe(titles.length)
+  })
+
+  it('bulk snooze and bulk Ask Claire move every card, and one undo brings them back', () => {
+    let s = reducer(initialState(), { type: 'core/bulk', ids: ['h-strap', 'h-review'], snooze: { until: Date.now() + 1e9, label: 'tomorrow 08:00' }, summary: 'Snoozed 2', agent: 'nova' })
+    expect(s.handoffs.filter(h => ['h-strap', 'h-review'].includes(h.id)).every(h => h.lane === 'snoozed')).toBe(true)
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.handoffs.filter(h => ['h-strap', 'h-review'].includes(h.id)).every(h => !h.lane)).toBe(true)
+    s = reducer(s, { type: 'core/bulk', ids: ['h-boost', 'h-creator'], claire: true, summary: 'Sent 2 to Claire', agent: 'iris' })
+    expect(s.handoffs.filter(h => ['h-boost', 'h-creator'].includes(h.id)).every(h => h.lane === 'claire')).toBe(true)
+  })
+
+  it('escalation rules can be added and removed, and guardrails too', () => {
+    let s = reducer(initialState(), { type: 'playbook/escalateAdd', rule: { id: 'e-x', label: 'Refunds above €80', to: 'claire', on: true, agents: ['nova'] } })
+    expect(s.playbook.escalate.some(e => e.id === 'e-x')).toBe(true)
+    s = reducer(s, { type: 'playbook/escalateDelete', id: 'e-x' })
+    expect(s.playbook.escalate.some(e => e.id === 'e-x')).toBe(false)
+    s = reducer(s, { type: 'core/guardrailAdd', agent: 'nova', label: 'Replies per hour', value: '30 max' })
+    const g = s.agents.find(a => a.id === 'nova')!.guardrails.find(x => x.label === 'Replies per hour')!
+    s = reducer(s, { type: 'core/guardrailDelete', agent: 'nova', id: g.id })
+    expect(s.agents.find(a => a.id === 'nova')!.guardrails.some(x => x.label === 'Replies per hour')).toBe(false)
+  })
+})

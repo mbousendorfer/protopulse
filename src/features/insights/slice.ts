@@ -1,6 +1,7 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
-import { now, pushHandoff, pushLog, pushToast } from '../../app/core'
+import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
+import type { Alert } from './alerts'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
 export type Share = { at: number }
@@ -12,9 +13,19 @@ export type InsightsState = {
   anomalies: Record<string, AnomalyState>
   boosts: Boost[]
   followUps: FollowUp[]
+  /** Iris's alert rules. */
+  alerts: Alert[]
 }
 
+const ALERTS: Alert[] = [
+  { id: 'ia1', subject: 'views', condition: 'drops by more than', threshold: 30, unit: '% over 3 posts', to: 'desk', on: true },
+  { id: 'ia2', subject: 'er', condition: 'rises above', threshold: 3, unit: '× the account average', to: 'desk', on: true },
+  { id: 'ia3', subject: 'followers', condition: 'rises above', threshold: 4, unit: '× usual daily growth', to: 'desk', on: true },
+  { id: 'ia4', subject: 'reply', condition: 'rises above', threshold: 30, unit: ' min median', to: 'claire', on: false },
+]
+
 export const initialInsights = (): InsightsState => ({
+  alerts: structuredClone(ALERTS),
   shared: { w46: { at: Date.UTC(2026, 10, 17, 9, 12) }, w45: { at: Date.UTC(2026, 10, 10, 9, 3) } },
   anomalies: {},
   boosts: [],
@@ -27,6 +38,10 @@ export type InsightsAction =
   | { type: 'insights/reopen'; id: string }
   | { type: 'insights/ask'; report: string; q: string }
   | { type: 'insights/export'; title: string }
+  | { type: 'insights/anomalies'; ids: string[]; op: 'handle' | 'snooze' | 'reopen' }
+  | { type: 'insights/alertSave'; alert: Alert }
+  | { type: 'insights/alertToggle'; id: string }
+  | { type: 'insights/alertDelete'; id: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
@@ -63,7 +78,24 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     case 'insights/ask':
       return patch(s, { followUps: [...s.insights.followUps, { id: `${a.report}-${s.insights.followUps.length}`, report: a.report, q: a.q, a: answer(a.q), at: now(s) }] })
     case 'insights/export':
-      return pushToast(s, { agent: 'iris', text: `“${a.title}” exported as PDF to your downloads` })
+      return pushLog(s, { agent: 'iris', text: `Exported “${a.title}”`, status: 'done', reason: 'Downloaded from Insights' })
+    case 'insights/anomalies': {
+      const t = now(s)
+      const anomalies = { ...s.insights.anomalies }
+      for (const id of a.ids) anomalies[id] = a.op === 'reopen' ? { open: true } : { open: false, resolution: a.op === 'handle' ? 'Marked handled by you' : 'Snoozed for a week. Iris checks again on Tue 2 Dec.', at: t }
+      const n = a.ids.length
+      const verb = a.op === 'handle' ? 'marked handled' : a.op === 'snooze' ? 'snoozed for a week' : 'reopened'
+      return pushLog(patch(s, { anomalies }), { agent: 'iris', text: `${n} anomal${n > 1 ? 'ies' : 'y'} ${verb}`, status: 'approved', reason: 'Your call from Insights' })
+    }
+    case 'insights/alertSave': {
+      const exists = s.insights.alerts.some(x => x.id === a.alert.id)
+      const alerts = exists ? s.insights.alerts.map(x => (x.id === a.alert.id ? a.alert : x)) : [...s.insights.alerts, { ...a.alert, id: uid('ia') }]
+      return pushToast(patch(s, { alerts }), { agent: 'iris', text: exists ? 'Alert updated' : 'Iris will raise this alert on your Desk' })
+    }
+    case 'insights/alertToggle':
+      return patch(s, { alerts: s.insights.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
+    case 'insights/alertDelete':
+      return patch(s, { alerts: s.insights.alerts.filter(x => x.id !== a.id) })
   }
 }
 

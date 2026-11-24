@@ -40,3 +40,32 @@ test('inbox: approving Léa’s draft takes the Desk card away; Desk approval up
   const b = onResolveInbox(s, s.handoffs.find(h => h.id === 'h-press')!, { kind: 'option', index: 0, option: 'Forward to Claire with a holding reply' })
   expect(b.inbox.convs.find(c => c.id === 'c-marc')!.status).toBe('claire')
 })
+
+test('bulk reschedule moves posts, delete removes them, and restore brings the snapshot back', () => {
+  let s = initialState()
+  const ids = s.publishing.posts.filter(p => p.status !== 'published').slice(0, 3).map(p => p.id)
+  const before = s.publishing.posts.filter(p => ids.includes(p.id)).map(p => p.at)
+  s = reducePublishing(s, { type: 'publishing/bulk', ids, op: 'reschedule', shiftDays: 1 })
+  expect(s.publishing.posts.filter(p => ids.includes(p.id)).map(p => p.at)).toEqual(before.map(t => t + 86_400_000))
+  expect(s.publishing.posts.find(p => p.id === ids[0])!.history!.at(-1)!.text).toMatch(/^Moved from/)
+  const count = s.publishing.posts.length
+  s = reducePublishing(s, { type: 'publishing/bulk', ids, op: 'delete' })
+  expect(s.publishing.posts.length).toBe(count - 3)
+  expect(s.log[0].text).toBe('3 posts deleted')
+  s = reducePublishing(s, { type: 'publishing/restore' })
+  expect(s.publishing.posts.length).toBe(count)
+  expect(s.publishing.undo).toBeUndefined()
+})
+
+test('mentions: asking Nova to reply puts reply cards on the Desk, skipping networks Nova can’t answer', async () => {
+  const { reduceListening } = await import('../listening/slice')
+  const { MENTIONS } = await import('../../data/listening')
+  const s = initialState()
+  const ig = MENTIONS.find(m => m.network === 'Instagram')!
+  const web = MENTIONS.find(m => m.network === 'Web')!
+  const after = reduceListening(s, { type: 'listening/mentions', ids: [ig.id, web.id], op: 'nova' })
+  const cards = after.handoffs.filter(h => h.topic === 'Mention reply')
+  expect(cards.length).toBe(1)
+  expect(cards[0].preview).toMatchObject({ type: 'reply', network: 'instagram', author: ig.author })
+  expect(after.listening.mentions[ig.id]).toBe('replied')
+})

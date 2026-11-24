@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter, Undo2 } from 'lucide-react'
-import type { AgentId, DoneItem, Handoff } from '../../app/types'
+import type { AgentId, Decision, DoneItem, Handoff, Kind, Urgency } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { groupOf } from '../../app/reducer'
@@ -10,7 +10,8 @@ import { Btn, Kbd, Menu, TopicIcon } from '../../ui'
 import Detail from './Detail'
 import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
-import { byPriority, useHandoffActions } from './parts'
+import { KIND_LABEL, SNOOZE, byPriority, useHandoffActions } from './parts'
+import { BulkBar, SelectBox, useSelection } from '../../ui/Selection'
 import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
 import './desk.css'
 import './today.css'
@@ -23,16 +24,18 @@ const GROUPS: { id: Entry['group']; label: string }[] = [
 ]
 
 export default function Desk() {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const nav = useNavigate()
   const [agent, setAgent] = useState<'all' | AgentId>('all')
+  const [kind, setKind] = useState<'all' | Kind>('all')
+  const [urgency, setUrgency] = useState<'all' | Urgency>('all')
   const [selected, setSelected] = useState<string | null>(null)
   const [thread, setThread] = useState<string | null>(null)
   const [shift, setShift] = useState(false)
   const [showDone, setShowDone] = useState(false)
 
   const entries = useMemo(() => {
-    const mine = s.handoffs.filter(h => agent === 'all' || h.agent === agent)
+    const mine = s.handoffs.filter(h => (agent === 'all' || h.agent === agent) && (kind === 'all' || h.kind === kind) && (urgency === 'all' || h.urgency === urgency))
     const open = mine.filter(h => !h.lane).sort(byPriority)
     const needOpen = open.filter(h => groupOf(h) === 'need')
     const { batches, rest } = batchesOf(needOpen)
@@ -47,7 +50,7 @@ export default function Desk() {
     out.push(...mine.filter(h => h.lane === 'claire').map(h => ({ key: `h:${h.id}`, group: 'claire' as const, h })))
     out.push(...mine.filter(h => h.lane === 'snoozed').map(h => ({ key: `h:${h.id}`, group: 'later' as const, h })))
     return out
-  }, [s.handoffs, agent])
+  }, [s.handoffs, agent, kind, urgency])
 
   const actionable = entries.filter(e => e.group === 'need' || e.group === 'look' || e.group === 'good' || e.group === 'claire')
   const needCount = entries.filter(e => e.group === 'need').reduce((n, e) => n + (e.b ? e.b.items.length : 1), 0)
@@ -92,6 +95,18 @@ export default function Desk() {
     if (k) { setSelected(k); document.querySelector('.today-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' }) }
   }, [entries])
 
+  // Multi-select over the open items (a batch row selects all its cards).
+  const pickable = useMemo(() => entries.filter(e => e.group === 'need' || e.group === 'look' || e.group === 'good').map(e => e.key), [entries])
+  const sel = useSelection(pickable, `${agent}|${kind}|${urgency}`)
+  const picked = entries.filter(e => sel.has(e.key)).flatMap(e => (e.b ? e.b.items : [e.h!]))
+  const approvable = picked.filter(h => (h.kind === 'approval' || h.kind === 'promotion' || h.kind === 'news') && !h.field && !h.options)
+  const runBulk = (ids: string[], extra: { decision?: Decision; snooze?: { until: number; label: string }; claire?: boolean }, summary: string) => {
+    if (!ids.length) return
+    d({ type: 'core/bulk', ids, ...extra, summary, agent: picked[0]?.agent ?? 'iris' })
+    sel.clear()
+  }
+  const tomorrow = SNOOZE(useHandoffActions().now()).find(x => x.label.startsWith('tomorrow'))
+
   const position = current ? `${Math.max(1, actionable.indexOf(current) + 1)} of ${actionable.length}` : undefined
 
   return (
@@ -110,8 +125,12 @@ export default function Desk() {
             <h2>Your day</h2>
             <span className="faint num">{done.length} done</span>
             <span className="spacer" />
-            <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter by agent"><ListFilter size={13} />{agent === 'all' ? 'All agents' : agentName(agent)}</Btn>}
-              items={[{ label: 'All agents', onSelect: () => setAgent('all') }, 'sep', ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) }))]} />
+            <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter the list"><ListFilter size={13} />{[agent !== 'all' && agentName(agent), kind !== 'all' && KIND_LABEL[kind], urgency !== 'all' && urgency].filter(Boolean).join(' · ') || 'Filter'}</Btn>}
+              items={[
+                { heading: 'Agent' }, { label: 'All agents', onSelect: () => setAgent('all') }, ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) })), 'sep',
+                { heading: 'Type' }, { label: 'All types', onSelect: () => setKind('all') }, ...(Object.keys(KIND_LABEL) as Kind[]).map(k => ({ label: KIND_LABEL[k], onSelect: () => setKind(k) })), 'sep',
+                { heading: 'Urgency' }, { label: 'Any urgency', onSelect: () => setUrgency('all') }, { label: 'Urgent', onSelect: () => setUrgency('urgent') }, { label: 'Today', onSelect: () => setUrgency('today') }, { label: 'This week', onSelect: () => setUrgency('week') },
+              ]} />
           </div>
 
           {GROUPS.map(g => {
@@ -122,7 +141,8 @@ export default function Desk() {
               <section key={g.id} className="day-group">
                 <h3>{g.label}<span className="faint num">{count}</span></h3>
                 <ul>
-                  {rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)} />)}
+                  {rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)}
+                    select={pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined} />)}
                 </ul>
               </section>
             )
@@ -147,12 +167,20 @@ export default function Desk() {
               )}
             </section>
           )}
+          <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
+            { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,
+              note: approvable.length < picked.length ? 'decisions and missing info need you one by one' : undefined,
+              onRun: () => runBulk(approvable.map(h => h.id), { decision: { kind: 'approve' } }, `Approved ${approvable.length} items from your Desk`) },
+            { label: 'Snooze to tomorrow', onRun: () => tomorrow && runBulk(picked.map(h => h.id), { snooze: { until: tomorrow.until, label: tomorrow.label } }, `Snoozed ${picked.length} items until tomorrow 08:00`) },
+            { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
+            { label: 'Reject', onRun: () => runBulk(picked.filter(h => !h.options).map(h => h.id), { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${picked.length} items`) },
+          ]} />
           <div className="day-foot faint"><Kbd>↑</Kbd><Kbd>↓</Kbd> move · <Kbd>A</Kbd> approve · <Kbd>F</Kbd> full screen</div>
         </nav>
 
         <section className="day-pane card" aria-live="polite">
           {doneSel ? <DoneView x={doneSel} onNext={() => setSelected(null)} />
-            : current?.b ? <BatchDetail b={current.b} onBulk={() => setSelected(null)} />
+            : current?.b ? <BatchDetail b={current.b} onBulk={() => setSelected(null)} onDiscuss={setThread} />
             : current?.h ? <Detail key={current.h.id} h={current.h} position={position} onDiscuss={setThread} onSettled={() => setSelected(null)} />
             : <AllClear />}
         </section>
@@ -169,9 +197,12 @@ export default function Desk() {
   )
 }
 
-function Row({ e, active, onClick }: { e: Entry; active: boolean; onClick: () => void }) {
+type RowSelect = { checked: boolean; any: boolean; toggle: (shift: boolean) => void }
+function Row({ e, active, onClick, select }: { e: Entry; active: boolean; onClick: () => void; select?: RowSelect }) {
+  const box = select && <SelectBox checked={select.checked} visible={select.any} onToggle={select.toggle} label={`Select ${e.b?.title ?? e.h?.title}`} />
   if (e.b) return (
-    <li>
+    <li className={`day-li ${select?.checked ? 'picked' : ''}`}>
+      {box}
       <button className={`day-row ${active ? 'active' : ''}`} onClick={onClick}>
         <TopicIcon agent={e.b.agent} topic={e.b.id === 'rules' ? 'rule' : e.b.id === 'nova' ? 'reply' : 'post'} />
         <span className="txt"><span className="ellipsis">{e.b.title}</span><span className="faint ellipsis">{e.b.meta}</span></span>
@@ -182,7 +213,8 @@ function Row({ e, active, onClick }: { e: Entry; active: boolean; onClick: () =>
   )
   const h = e.h!
   return (
-    <li>
+    <li className={`day-li ${select?.checked ? 'picked' : ''}`}>
+      {box}
       <button className={`day-row ${active ? 'active' : ''} ${h.fresh ? 'fresh' : ''}`} onClick={onClick}>
         <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} />
         <span className="txt">

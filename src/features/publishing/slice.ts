@@ -11,7 +11,9 @@ export type PlanState = {
   diff?: { added: string[]; removed: string[]; changed: string[] }
   request?: string
 }
-export type PublishingState = { posts: Post[]; plan: PlanState }
+/** Last bulk change, kept 10 s so it can be undone in one click. */
+export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo }
 export const initialPublishing = (): PublishingState => ({ posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) } })
 
 /** Monday 1 December, the plan's week. */
@@ -28,6 +30,10 @@ export type PublishingAction =
   | { type: 'publishing/askFill'; day: number; network: Network }
   | { type: 'publishing/claire'; post: Post }
   | { type: 'publishing/addToPlan'; post: Post }
+  | { type: 'publishing/bulk'; ids: string[]; op: BulkOp; shiftDays?: number; at?: number; network?: Network }
+  | { type: 'publishing/restore' }
+
+export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
 const plain = (p: Flagged[]) => p.map(x => (typeof x === 'string' ? x : x.text)).join('')
 const setPosts = (s: State, posts: Post[]): State => ({ ...s, publishing: { ...s.publishing, posts } })
@@ -104,7 +110,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const p = s.publishing.posts.find(x => x.id === a.id)
       if (!p || p.at === a.at) return s
       const comment = slotComment(p.network, a.at)
-      const next = pushLog(patchPost(s, a.id, { at: a.at, note: undefined }), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
+      const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: undefined }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
       return pushToast(next, { agent: 'atlas', text: comment })
     }
     case 'publishing/delete': {
@@ -149,18 +155,8 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       }, 'Atlas drafted a post for that slot. It’s on your Desk.')
       return next
     }
-    case 'publishing/claire': {
-      const t = now(s)
-      let next = setPosts(s, s.publishing.posts.some(p => p.id === a.post.id) ? s.publishing.posts.map(p => (p.id === a.post.id ? { ...a.post, status: 'needs', note: 'Waiting on Claire.' } : p)) : [...s.publishing.posts, { ...a.post, status: 'needs', note: 'Waiting on Claire.' }])
-      const hid = uid('h')
-      next = pushHandoff(next, {
-        id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Post', action: 'atlas-fill', ref: a.post.id, link: `/publishing/post/${a.post.id}`,
-        title: `Post for ${new Date(a.post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.post.at)}`, context: a.post.text, why: 'You sent this post to Claire from the composer.', confidence: 85,
-        preview: { type: 'post', network: a.post.network, slot: `${new Date(a.post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(a.post.at)}`, text: [a.post.text], media: a.post.media },
-      })
-      next = updateHandoff(next, hid, { lane: 'claire', claire: { askedAt: t, dueAt: t + (30 + Math.round(Math.random() * 30)) * 1000 } })
-      return pushToast(next, { agent: 'claire', text: 'Sent to Claire. The post stays on hold until she answers.' })
-    }
+    case 'publishing/claire':
+      return pushToast(toClaire(s, a.post).s, { agent: 'claire', text: 'Sent to Claire. The post stays on hold until she answers.' })
     case 'publishing/addToPlan': {
       const d = new Date(a.post.at)
       const day = Math.max(0, Math.min(6, Math.floor((a.post.at - PLAN_MONDAY) / DAY)))
@@ -168,8 +164,81 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const next = setPlan(s, { items: [...s.publishing.plan.items, item], status: 'proposed' })
       return pushToast(next, { agent: 'atlas', text: `Added to next week’s plan (${d.toLocaleDateString('en-GB', { weekday: 'long' })}).`, link: '/publishing/plan' })
     }
+    case 'publishing/bulk':
+      return bulk(s, a)
+    case 'publishing/restore': {
+      const u = s.publishing.undo
+      if (!u) return s
+      const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, undo: undefined } }
+      return pushLog(next, { agent: 'atlas', text: `Undone: ${u.label}`, status: 'undone', link: '/publishing' })
+    }
   }
 }
+
+const day = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} ${hhmm(t)}`
+const note = (p: Post, at: number, text: string): Post => ({ ...p, history: [...(p.history ?? []), { at, text }] })
+
+/** Send one post to Claire: on hold, plus a card in Claire's lane. */
+function toClaire(s: State, post: Post): { s: State; hid: string } {
+  const t = now(s)
+  const held = note({ ...post, status: 'needs', note: 'Waiting on Claire.' }, t, 'Sent to Claire')
+  let next = setPosts(s, s.publishing.posts.some(p => p.id === post.id) ? s.publishing.posts.map(p => (p.id === post.id ? held : p)) : [...s.publishing.posts, held])
+  const hid = uid('h')
+  next = pushHandoff(next, {
+    id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Post', action: 'atlas-fill', ref: post.id, link: `/publishing?post=${post.id}`,
+    title: `Post for ${day(post.at)}`, context: post.text, why: 'You sent this post to Claire.', confidence: 85,
+    preview: { type: 'post', network: post.network, slot: `${new Date(post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(post.at)}`, text: [post.text], media: post.media },
+  })
+  next = updateHandoff(next, hid, { lane: 'claire', claire: { askedAt: t, dueAt: t + (30 + Math.round(Math.random() * 30)) * 1000 } })
+  return { s: next, hid }
+}
+
+/** One bulk change = one journal line + a 10 s undo snapshot. */
+function bulk(s: State, a: Extract<PublishingAction, { type: 'publishing/bulk' }>): State {
+  const t = now(s)
+  const picked = s.publishing.posts.filter(p => a.ids.includes(p.id))
+  if (!picked.length) return s
+  const snapshot = s.publishing.posts
+  const n = picked.length
+  const many = (w: string) => `${n} post${n > 1 ? 's' : ''} ${w}`
+  let next = s
+  let label = ''
+  const handoffs: string[] = []
+  switch (a.op) {
+    case 'approve': {
+      const ok = picked.filter(p => p.status === 'needs' || p.status === 'draft')
+      next = setPosts(s, s.publishing.posts.map(p => (ok.includes(p) ? note({ ...p, status: 'scheduled', note: undefined }, t, 'Approved by you') : p)))
+      label = `${ok.length} post${ok.length > 1 ? 's' : ''} approved and scheduled`
+      break
+    }
+    case 'delete':
+      next = setPosts(s, s.publishing.posts.filter(p => !a.ids.includes(p.id)))
+      label = many('deleted')
+      break
+    case 'reschedule': {
+      const move = (p: Post) => (a.at !== undefined ? a.at : p.at + (a.shiftDays ?? 0) * DAY)
+      next = setPosts(s, s.publishing.posts.map(p => (a.ids.includes(p.id) && p.status !== 'published' ? note({ ...p, at: move(p) }, t, `Moved from ${day(p.at)} to ${day(move(p))}`) : p)))
+      label = a.at !== undefined ? `${many('moved')} to ${day(a.at)}` : `${many('moved')} ${Math.abs(a.shiftDays ?? 0)} day${Math.abs(a.shiftDays ?? 0) > 1 ? 's' : ''} ${(a.shiftDays ?? 0) > 0 ? 'later' : 'earlier'}`
+      break
+    }
+    case 'duplicate': {
+      const net = a.network ?? 'instagram'
+      const copies = picked.map(p => note({ ...p, id: uid('p'), network: net, status: 'draft', author: 'you', stats: undefined, handoff: undefined, history: [], note: `Copy of the ${NET[p.network] ?? p.network} post.` }, t, `Duplicated from ${NET[p.network] ?? p.network}`))
+      next = setPosts(s, [...s.publishing.posts, ...copies])
+      label = `${many('duplicated')} to ${NET[net] ?? net} as drafts`
+      break
+    }
+    case 'claire':
+      for (const p of picked) { const r = toClaire(next, p); next = r.s; handoffs.push(r.hid) }
+      label = `${many('sent')} to Claire`
+      break
+  }
+  next = { ...next, publishing: { ...next.publishing, undo: { label, posts: snapshot, handoffs, until: t + 10_000 } } }
+  return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason: 'Your call from Publishing', link: '/publishing' })
+}
+
+const NET: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
+
 
 /** Desk decisions that touch the calendar or the plan. */
 export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {

@@ -1,7 +1,8 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, Network } from '../../app/types'
 import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
-import { EVENTS, LESSONS, MENTIONS, SEARCHES, TRENDS, type CompEvent, type Move, type Search } from '../../data/listening'
+import { EVENTS, LESSONS, MENTIONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
+import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
 export type EventState = { status: 'handed' | 'done' | 'dismissed'; move: string; result: string; at: number }
@@ -10,11 +11,25 @@ export type ListeningState = {
   events: Record<string, EventState>
   lessons: Record<string, 'tested' | 'dismissed'>
   trends: Record<string, 'handed' | 'dismissed'>
-  mentions: Record<string, 'replied' | 'hidden'>
+  mentions: Record<string, 'replied' | 'hidden' | 'handed'>
   searches: Search[]
+  /** Your corrections and tags on mentions. */
+  sentiment: Record<string, Sentiment>
+  tags: Record<string, string[]>
+  alerts: Alert[]
 }
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES) })
+const ALERTS: Alert[] = [
+  { id: 'la1', subject: 'brand', condition: 'gets more than', threshold: 15, unit: ' negative mentions in 1 h', to: 'claire', on: true },
+  { id: 'la2', subject: 'competitors', condition: 'gets more than', threshold: 200, unit: ' mentions in 1 h', to: 'desk', on: true },
+  { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
+]
+
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS) })
+
+export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
+export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
+export type MentionOp = 'nova' | 'hide' | 'unhide' | 'tag' | 'sentiment' | 'atlas'
 
 export type ListeningAction =
   | { type: 'listening/move'; event: string; index: number }
@@ -24,6 +39,10 @@ export type ListeningAction =
   | { type: 'listening/searchSave'; search: Search }
   | { type: 'listening/searchToggle'; id: string }
   | { type: 'listening/searchDelete'; id: string }
+  | { type: 'listening/mentions'; ids: string[]; op: MentionOp; tag?: string; sentiment?: Sentiment }
+  | { type: 'listening/alertSave'; alert: Alert }
+  | { type: 'listening/alertToggle'; id: string }
+  | { type: 'listening/alertDelete'; id: string }
 
 const patch = (s: State, p: Partial<ListeningState>): State => ({ ...s, listening: { ...s.listening, ...p } })
 const setEvent = (s: State, id: string, e: Omit<EventState, 'at'>): State => patch(s, { events: { ...s.listening.events, [id]: { ...e, at: now(s) } } })
@@ -125,6 +144,88 @@ export function reduceListening(s: State, a: ListeningAction): State {
       return patch(s, { searches: s.listening.searches.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
     case 'listening/searchDelete':
       return patch(s, { searches: s.listening.searches.filter(x => x.id !== a.id) })
+    case 'listening/mentions':
+      return mentionsBulk(s, a)
+    case 'listening/alertSave': {
+      const exists = s.listening.alerts.some(x => x.id === a.alert.id)
+      const alerts = exists ? s.listening.alerts.map(x => (x.id === a.alert.id ? a.alert : x)) : [...s.listening.alerts, { ...a.alert, id: uid('la') }]
+      return pushToast(patch(s, { alerts }), { agent: 'echo', text: exists ? 'Alert updated' : 'Echo will raise this alert on your Desk' })
+    }
+    case 'listening/alertToggle':
+      return patch(s, { alerts: s.listening.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
+    case 'listening/alertDelete':
+      return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
+  }
+}
+
+/** The sentiment you see: your correction if you made one, Echo's otherwise. */
+export const sentimentOf = (s: State, m: Mention): Sentiment => s.listening.sentiment[m.id] ?? m.sentiment
+
+const firstName = (author: string) => author.replace(/^@/, '').split(/[._\s]/)[0].replace(/^\w/, c => c.toUpperCase())
+
+/** Nova's first draft for a mention, by mood. */
+function novaDraft(m: Mention, mood: Sentiment) {
+  const n = firstName(m.author)
+  if (mood === 'positive') return `Thanks ${n}, that made the team’s day. ${m.product ? `Enjoy the ${m.product} out there.` : 'See you on the trail.'}`
+  if (mood === 'negative') return `${n}, sorry to read this. ${m.product ? `That’s not how the ${m.product} should behave.` : 'That’s not the experience we want for you.'} Can you send us a DM with your order number? We’ll sort it out today.`
+  return `Hi ${n}, thanks for the mention. Happy to help if you have any question about ${m.product ?? 'our gear'}.`
+}
+
+function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/mentions' }>): State {
+  const ms = MENTIONS.filter(m => a.ids.includes(m.id))
+  if (!ms.length) return s
+  const n = ms.length
+  const noun = `${n} mention${n > 1 ? 's' : ''}`
+  switch (a.op) {
+    case 'nova': {
+      let next = s
+      const skipped: string[] = []
+      for (const m of ms) {
+        const network = MENTION_NET[m.network]
+        if (!network || s.listening.mentions[m.id] === 'replied') { if (!network) skipped.push(m.network); continue }
+        const mood = sentimentOf(s, m)
+        next = pushHandoff(next, {
+          agent: 'nova', kind: 'approval', urgency: mood === 'negative' ? 'today' : 'week', topic: 'Mention reply', action: mood === 'negative' ? 'nova-complaint' : 'nova-faq',
+          chain: ['echo', 'nova'], ref: `mention:${m.id}`, title: `Reply to ${m.author}’s mention`, context: `${m.network} · reach ${m.reach.toLocaleString('en-GB')}${m.product ? ` · ${m.product}` : ''}`,
+          why: 'You asked Nova to reply from Listening.', confidence: mood === 'negative' ? 76 : 88, link: '/listening/mentions',
+          preview: { type: 'reply', network, author: m.author, text: m.text, draft: [novaDraft(m, mood)] },
+        })
+        next = patch(next, { mentions: { ...next.listening.mentions, [m.id]: 'replied' } })
+      }
+      const made = n - skipped.length
+      next = pushLog(next, { agent: 'nova', text: `Drafted ${made} repl${made === 1 ? 'y' : 'ies'} to mentions, waiting on your Desk`, status: 'done', reason: 'You asked from Listening' })
+      return pushToast(next, { agent: 'nova', text: `${made} draft${made === 1 ? '' : 's'} on your Desk${skipped.length ? `. ${skipped.length} on ${[...new Set(skipped)].join(' and ')} can’t be answered from here.` : '.'}`, link: '/' })
+    }
+    case 'hide':
+    case 'unhide': {
+      const mentions = { ...s.listening.mentions }
+      for (const m of ms) { if (a.op === 'hide') mentions[m.id] = 'hidden'; else delete mentions[m.id] }
+      return pushLog(patch(s, { mentions }), { agent: 'echo', text: `${a.op === 'hide' ? 'Hid' : 'Brought back'} ${noun}`, status: 'done', reason: 'Your call from Listening' })
+    }
+    case 'tag': {
+      if (!a.tag) return s
+      const tags = { ...s.listening.tags }
+      for (const m of ms) tags[m.id] = [...new Set([...(tags[m.id] ?? []), a.tag])]
+      return pushToast(patch(s, { tags }), { agent: 'echo', text: `Tagged ${noun} “${a.tag}”` })
+    }
+    case 'sentiment': {
+      if (!a.sentiment) return s
+      const sentiment = { ...s.listening.sentiment }
+      for (const m of ms) sentiment[m.id] = a.sentiment
+      return pushLog(patch(s, { sentiment }), { agent: 'echo', text: `You marked ${noun} as ${a.sentiment}. Echo learns from it.`, status: 'edited', reason: 'Sentiment correction' })
+    }
+    case 'atlas': {
+      let next = s
+      for (const m of ms) {
+        next = pushHandoff(next, {
+          agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Mention to post', action: 'atlas-fill', chain: ['echo', 'atlas'], ref: `mention-post:${m.id}`,
+          title: `Post from ${m.author}’s mention`, context: m.text, why: 'You handed this mention to Atlas from Listening.', confidence: 72, link: '/publishing',
+          preview: { type: 'post', network: MENTION_NET[m.network] ?? 'instagram', slot: 'Tomorrow, 18:00', text: [`“${m.text}” Thanks ${m.author}. ${m.product ? `The ${m.product}, ` : ''}seen by you.`] },
+        })
+        next = patch(next, { mentions: { ...next.listening.mentions, [m.id]: next.listening.mentions[m.id] ?? 'handed' } })
+      }
+      return pushToast(next, { agent: 'atlas', text: `Atlas drafted ${n} post${n > 1 ? 's' : ''} from these mentions. They’re on your Desk.`, link: '/' })
+    }
   }
 }
 

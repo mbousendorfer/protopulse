@@ -1,11 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Lock, Pause, Pencil, Play, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, DAY } from '../../app/time'
 import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
-import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AgentScene } from '../../ui/Illustrations'
@@ -77,7 +77,7 @@ export function Team() {
 }
 
 /* ---------- Profile ---------- */
-type Tab = 'autonomy' | 'guardrails' | 'record' | 'activity'
+type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'record' | 'activity'
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
@@ -124,7 +124,7 @@ export function AgentProfile() {
       </div>
 
       <Tabs value={tab} onChange={setTab} items={[
-        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length },
+        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length }, { value: 'escalation', label: 'Escalation', count: s.playbook.escalate.filter(e => e.agents.includes(a.id) && e.on).length },
         { value: 'record', label: 'Track record' }, { value: 'activity', label: 'Activity' },
       ]} />
 
@@ -145,6 +145,7 @@ export function AgentProfile() {
         </div>
       )}
       {tab === 'guardrails' && <Guardrails agent={a} />}
+      {tab === 'escalation' && <Escalation agent={a} />}
       {tab === 'record' && <Record agent={a} />}
       {tab === 'activity' && <AgentActivity agent={a.id} />}
     </div>
@@ -225,6 +226,9 @@ function Guardrails({ agent }: { agent: Agent }) {
   const { d } = useStore()
   const [editing, setEditing] = useState<string | null>(null)
   const [v, setV] = useState('')
+  const [adding, setAdding] = useState(false)
+  const [label, setLabel] = useState('')
+  const [value, setValue] = useState('')
   return (
     <section className="card">
       <div className="card-head"><h2>Guardrails</h2><span className="faint">Limits {agent.name} never crosses, whatever its autonomy.</span></div>
@@ -241,11 +245,72 @@ function Guardrails({ agent }: { agent: Agent }) {
               <>
                 <b>{g.value}</b>
                 <Btn size="xs" variant="ghost" onClick={() => { setEditing(g.id); setV(g.value) }} aria-label={`Edit ${g.label}`}><Pencil size={12} />Edit</Btn>
+                <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/guardrailDelete', agent: agent.id, id: g.id })} aria-label={`Remove ${g.label}`}><Trash2 size={12} /></Btn>
               </>
             )}
           </li>
         ))}
       </ul>
+      <div className="card-body">
+        {adding ? (
+          <form className="row" onSubmit={e => { e.preventDefault(); if (!label.trim() || !value.trim()) return; d({ type: 'core/guardrailAdd', agent: agent.id, label: label.trim(), value: value.trim() }); setAdding(false); setLabel(''); setValue('') }}>
+            <input className="input" autoFocus placeholder="What it limits (e.g. Replies per hour)" value={label} onChange={e => setLabel(e.target.value)} aria-label="Guardrail" style={{ width: 280 }} />
+            <input className="input" placeholder="The limit (e.g. 30 max)" value={value} onChange={e => setValue(e.target.value)} aria-label="Limit" style={{ width: 180 }} />
+            <Btn type="submit" size="sm" variant="primary" disabled={!label.trim() || !value.trim()}>Add</Btn>
+            <Btn size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Btn>
+          </form>
+        ) : <Btn size="sm" onClick={() => setAdding(true)}><Plus size={14} />Add a guardrail</Btn>}
+      </div>
+    </section>
+  )
+}
+
+/** Ready-made escalation conditions. "N" is replaced by the number the user types. */
+const CONDITIONS: { id: string; label: string; n?: string; agents: AgentId[] }[] = [
+  { id: 'injury', label: 'Injury, safety or product recall', agents: ['nova', 'echo'] },
+  { id: 'press', label: 'Journalists and press', agents: ['nova', 'echo'] },
+  { id: 'legal', label: 'Lawyers and legal threats', agents: ['nova'] },
+  { id: 'creator', label: 'Creators above N followers', n: '50k', agents: ['nova', 'echo'] },
+  { id: 'refund', label: 'Refunds above €N', n: '150', agents: ['nova'] },
+  { id: 'spike', label: 'More than N negative mentions in an hour', n: '20', agents: ['echo'] },
+  { id: 'competitor', label: 'Anything that names a competitor', agents: ['atlas', 'echo'] },
+  { id: 'budget', label: 'Spending above €N', n: '100', agents: ['iris', 'sage'] },
+  { id: 'drop', label: 'A metric dropping more than N% in a week', n: '30', agents: ['iris'] },
+]
+
+function Escalation({ agent }: { agent: Agent }) {
+  const { s, d } = useStore()
+  const rules = s.playbook.escalate.filter(e => e.agents.includes(agent.id))
+  const [cond, setCond] = useState(CONDITIONS.find(c => c.agents.includes(agent.id)) ?? CONDITIONS[0])
+  const [n, setN] = useState(cond.n ?? '')
+  const [to, setTo] = useState<'sam' | 'claire'>('sam')
+  const label = cond.n ? cond.label.replace('N', n || cond.n) : cond.label
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy. Shared with the Playbook.</span></div>
+      <ul className="rows">
+        {rules.map(e => (
+          <li key={e.id} className="guard">
+            <Switch checked={e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, on })} label={e.label} hideLabel />
+            <span className={e.on ? '' : 'faint'} style={{ flex: 1 }}>{e.label}</span>
+            <Seg name={`esc-${agent.id}-${e.id}`} label={`Who decides: ${e.label}`} size="sm" value={e.to} onChange={v => d({ type: 'playbook/escalate', id: e.id, to: v })}
+              options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
+            <Btn size="xs" variant="ghost" aria-label={`Delete ${e.label}`} onClick={() => d({ type: 'playbook/escalateDelete', id: e.id })}><Trash2 size={12} /></Btn>
+          </li>
+        ))}
+        {!rules.length && <li className="guard faint">No escalation rule yet. {agent.name} decides within its autonomy and guardrails.</li>}
+      </ul>
+      <div className="card-body">
+        <div className="section-title">Add a rule</div>
+        <div className="row">
+          <Menu align="start" trigger={<Btn size="sm">{cond.label.replace('N', '…')}<ChevronDown size={14} /></Btn>}
+            items={CONDITIONS.map(c => ({ label: c.label.replace('N', '…'), hint: c.agents.includes(agent.id) ? 'Suggested' : undefined, onSelect: () => { setCond(c); setN(c.n ?? '') } }))} />
+          {cond.n && <input className="input" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" style={{ width: 90 }} />}
+          <span className="faint">goes to</span>
+          <Seg name={`new-esc-${agent.id}`} label="Who decides" size="sm" value={to} onChange={setTo} options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
+          <Btn size="sm" variant="primary" onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: [agent.id] } })}><Plus size={14} />Add “{label}”</Btn>
+        </div>
+      </div>
     </section>
   )
 }
@@ -291,7 +356,7 @@ function AgentActivity({ agent }: { agent: AgentId }) {
   const items = s.log.filter(l => l.agent === agent).slice(0, 20)
   return (
     <section className="card">
-      <div className="card-head"><h2>Last 20 actions</h2><Link to="/activity" className="btn sm ghost">Full journal</Link></div>
+      <div className="card-head"><h2>Last 20 actions</h2><Link to={`/activity?agent=${agent}`} className="btn sm ghost">Full journal for this agent</Link></div>
       <ul className="rows hist">
         {items.map(l => <li key={l.id}><span style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined }}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
       </ul>

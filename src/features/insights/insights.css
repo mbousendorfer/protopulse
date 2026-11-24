@@ -49,3 +49,8 @@
 
 @media (max-width: 1100px) { .report-layout { grid-template-columns: 1fr; } .report-side { position: static; } }
 @media (max-width: 820px) { .report { padding: var(--s4); } .report-row { grid-template-columns: 1fr; } .report-icon { display: none; } .report-meta { align-items: flex-start; } }
+
+/* ---------- Anomaly selection ---------- */
+.anomaly.in-picked { border-color: var(--signal-edge); background: var(--brand-soft); }
+.in-selall { font-size: var(--t-sm); }
+.in-selall .select-box { width: 26px; height: 26px; }

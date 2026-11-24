@@ -2,10 +2,16 @@ import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff } from '../../app/types'
 import { MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, pushToast, removeHandoff, uid, updateHandoff } from '../../app/core'
-import { CONVERSATIONS, type ConvStatus, type Conversation } from '../../data/inbox'
+import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type Conversation, type Sentiment } from '../../data/inbox'
 
-export type InboxState = { convs: Conversation[] }
+/** The last group action, kept so it can be undone in one click for a few seconds. */
+export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo }
 export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS) })
+
+export type BulkOp =
+  | { op: 'approve' } | { op: 'hide' } | { op: 'unhide' } | { op: 'reviewed'; value: boolean }
+  | { op: 'assign'; value?: Assignee } | { op: 'label'; value: string } | { op: 'unlabel'; value: string } | { op: 'sentiment'; value: Sentiment }
 
 export type InboxAction =
   | { type: 'inbox/approve'; id: string; text?: string }
@@ -16,18 +22,35 @@ export type InboxAction =
   | { type: 'inbox/undoAuto'; id: string; msg: string }
   | { type: 'inbox/attach'; id: string; att: string }
   | { type: 'inbox/read'; id: string }
+  | ({ type: 'inbox/bulk'; ids: string[] } & BulkOp)
+  | { type: 'inbox/undo' }
+  | { type: 'inbox/dismissUndo' }
+  | { type: 'inbox/note'; id: string; text: string }
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
 /** Nova reply cards from the Desk that have no conversation yet show up in the Inbox as virtual conversations. */
 export function virtualConvs(s: State): Conversation[] {
   const known = new Set(s.inbox.convs.map(c => c.handoff).concat(s.inbox.convs.map(c => c.id)))
+  // Same author + same message = same conversation, whatever card raised it.
+  const said = new Set(s.inbox.convs.map(c => `${c.author}|${c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''}`))
+  const seen = new Set<string>()
   return s.handoffs
     .filter(h => h.agent === 'nova' && h.preview?.type === 'reply' && !known.has(h.id) && !(h.ref && known.has(h.ref)))
+    .filter(h => {
+      const p = h.preview as Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
+      const key = `${p.author}|${p.text}`
+      if (said.has(key) || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
     .map(h => {
       const p = h.preview as Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
       return {
-        id: `h:${h.id}`, author: p.author, network: p.network, type: 'dm', sentiment: 'negative', at: h.at, handoff: h.id, unread: true,
+        id: `h:${h.id}`, author: p.author, network: p.network, at: h.at, handoff: h.id, unread: true,
+        // Read the kind and the mood from the card instead of assuming an angry DM.
+        type: p.network === 'google' || p.network === 'trustpilot' ? 'review' : /comment|reel|post/i.test(h.context) ? 'comment' : 'dm',
+        sentiment: /complaint|review|refund|wrong|late|broken|safety/i.test(`${h.topic} ${h.title}`) ? 'negative' : /intent|question|warranty/i.test(`${h.topic} ${h.title}`) ? 'neutral' : 'neutral',
         status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
         messages: [{ id: `${h.id}-q`, from: 'them', text: p.text, at: h.at - MIN }],
         draft: p.draft, rules: h.rules,
@@ -42,11 +65,11 @@ function materialize(s: State, id: string): [State, Conversation | undefined] {
   if (c) return [s, c]
   const v = virtualConvs(s).find(x => x.id === id)
   if (!v) return [s, undefined]
-  return [{ ...s, inbox: { convs: [v, ...s.inbox.convs] } }, v]
+  return [{ ...s, inbox: { ...s.inbox, convs: [v, ...s.inbox.convs] } }, v]
 }
 
 const patch = (s: State, id: string, p: Partial<Conversation> | ((c: Conversation) => Partial<Conversation>)): State => ({
-  ...s, inbox: { convs: s.inbox.convs.map(c => (c.id === id ? { ...c, ...(typeof p === 'function' ? p(c) : p) } : c)) },
+  ...s, inbox: { ...s.inbox, convs: s.inbox.convs.map(c => (c.id === id ? { ...withTeam(c), ...(typeof p === 'function' ? p(withTeam(c)) : p) } : c)) },
 })
 
 /** Settling a conversation linked to a Desk card takes the card off the Desk. */
@@ -57,7 +80,67 @@ function settleCard(s: State, c: Conversation, text: string, status: 'approved' 
 
 const attachmentNote = (c: Conversation) => (c.attachments ?? []).filter(a => !a.removed).map(a => a.label).join(' · ')
 
+const hasDraft = (c: Conversation) => (c.status === 'draft' || c.status === 'escalated') && !!c.draft?.length
+const NAME: Record<Assignee, string> = { sam: 'you', claire: 'Claire' }
+
+/** One action on many conversations: one journal line, one Undo. */
+function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State {
+  const existing = new Set(s0.inbox.convs.map(c => c.id))
+  let s = s0
+  const targets: Conversation[] = []
+  for (const id of a.ids) { const [n, c] = materialize(s, id); s = n; if (c) targets.push(c) }
+  const picked = a.op === 'approve' ? targets.filter(hasDraft) : targets
+  if (!picked.length) return s0
+  const t = now(s)
+  const ids = new Set(picked.map(c => c.id))
+  const cards = s.handoffs.filter(h => picked.some(c => c.handoff === h.id))
+  const change = (c: Conversation): Partial<Conversation> => {
+    switch (a.op) {
+      case 'approve': return { status: 'you', draft: undefined, unread: false, messages: [...c.messages, { id: uid('m'), from: 'nova', text: plain(c.draft), at: t, approved: true }] }
+      case 'hide': return { status: 'hidden', note: 'Hidden by you' }
+      case 'unhide': return { status: c.draft?.length ? 'draft' : 'auto', note: undefined }
+      case 'reviewed': return { reviewed: a.value, unread: false }
+      case 'assign': return { assignee: a.value }
+      case 'label': return { labels: [...new Set([...(c.labels ?? []), a.value])] }
+      case 'unlabel': return { labels: (c.labels ?? []).filter(l => l !== a.value) }
+      case 'sentiment': return { sentiment: a.value }
+    }
+  }
+  const n = picked.length, them = n === 1 ? picked[0].author : `${n} conversations`
+  const label = {
+    approve: `Sent ${n === 1 ? `the reply to ${picked[0].author}` : `${n} replies Nova drafted`}`,
+    hide: `Hid ${them}`, unhide: `Unhid ${them}`,
+    reviewed: `Marked ${them} as ${a.op === 'reviewed' && a.value ? 'reviewed' : 'not reviewed'}`,
+    assign: a.op === 'assign' ? (a.value ? `Assigned ${them} to ${NAME[a.value]}` : `Unassigned ${them}`) : '',
+    label: a.op === 'label' ? `Labelled ${them} “${a.value}”` : '', unlabel: a.op === 'unlabel' ? `Removed “${a.value}” from ${them}` : '',
+    sentiment: a.op === 'sentiment' ? `Set ${them} to ${a.value}` : '',
+  }[a.op]
+  // Sending or hiding settles the linked Desk cards, like doing it one by one.
+  const settles = a.op === 'approve' || a.op === 'hide'
+  let next: State = { ...s, handoffs: settles ? s.handoffs.filter(h => !cards.includes(h)) : s.handoffs, inbox: { ...s.inbox, convs: s.inbox.convs.map(c => (ids.has(c.id) ? { ...withTeam(c), ...change(withTeam(c)) } : c)) } }
+  next = pushLog(next, { agent: 'nova', text: label, status: a.op === 'approve' ? 'approved' : 'done', reason: n > 1 ? 'Your call from the Inbox, in one go' : 'Your call from the Inbox', link: '/inbox' })
+  const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id)), created: picked.map(c => c.id).filter(id => !existing.has(id)), cards: settles ? cards : [] }
+  return { ...next, inbox: { ...next.inbox, undo } }
+}
+
+function undoBulk(s: State): State {
+  const u = s.inbox.undo
+  if (!u) return s
+  const before = new Map(u.before.map(c => [c.id, c]))
+  const convs = s.inbox.convs.filter(c => !u.created.includes(c.id)).map(c => before.get(c.id) ?? c)
+  const cardIds = new Set(s.handoffs.map(h => h.id))
+  return {
+    ...s,
+    handoffs: [...u.cards.filter(h => !cardIds.has(h.id)), ...s.handoffs],
+    log: s.log.map(l => (l.id === u.logId ? { ...l, status: 'undone' as const } : l)),
+    inbox: { convs, undo: undefined },
+  }
+}
+
 export function reduceInbox(s0: State, a: InboxAction): State {
+  if (a.type === 'inbox/bulk') return bulk(s0, a)
+  if (a.type === 'inbox/undo') return undoBulk(s0)
+  if (a.type === 'inbox/dismissUndo') return s0.inbox.undo ? { ...s0, inbox: { ...s0.inbox, undo: undefined } } : s0
   const [s, c] = materialize(s0, a.id)
   if (!c) return s0
   const t = now(s)
@@ -109,6 +192,10 @@ export function reduceInbox(s0: State, a: InboxAction): State {
       return patch(s, c.id, x => ({ attachments: x.attachments?.map(at => (at.id === a.att ? { ...at, removed: !at.removed } : at)) }))
     case 'inbox/read':
       return c.unread ? patch(s, c.id, { unread: false }) : s0
+    case 'inbox/note': {
+      if (!a.text.trim()) return s0
+      return patch(s, c.id, x => ({ notes: [...(x.notes ?? []), { id: uid('n'), at: t, by: 'sam', text: a.text.trim() }] }))
+    }
   }
 }
 
@@ -125,7 +212,7 @@ export function onResolveInbox(s: State, h: Handoff, d: Decision): State {
       messages: [{ id: uid('m'), from: 'them', text: p.text, at: h.at - MIN }, { id: uid('m'), from: 'nova', text: plain(p.draft), at: t, approved: true }],
       rules: h.rules, note: p.attachments?.length ? `Sent with: ${p.attachments.join(' · ')}` : undefined,
     }
-    return { ...s, inbox: { convs: [conv, ...s.inbox.convs] } }
+    return { ...s, inbox: { ...s.inbox, convs: [conv, ...s.inbox.convs] } }
   }
   const draft = p ? plain(p.draft) : plain(c.draft)
   const send = (status: ConvStatus, text = draft): Partial<Conversation> => ({ status, unread: false, draft: undefined, messages: [...c.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] })
@@ -141,5 +228,5 @@ export function onResolveInbox(s: State, h: Handoff, d: Decision): State {
     case 'answer': change = { status: 'takeover' }; break
     case 'trial': break
   }
-  return change ? { ...s, inbox: { convs: s.inbox.convs.map(x => (x.id === c.id ? { ...x, ...change } : x)) } } : s
+  return change ? { ...s, inbox: { ...s.inbox, convs: s.inbox.convs.map(x => (x.id === c.id ? { ...x, ...change } : x)) } } : s
 }

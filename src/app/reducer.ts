@@ -16,7 +16,7 @@ import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/cha
 
 export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
-  | { type: 'core/bulk'; ids: string[]; decision: Decision; summary: string; agent: AgentId }
+  | { type: 'core/bulk'; ids: string[]; decision?: Decision; snooze?: { until: number; label: string }; claire?: boolean; summary: string; agent: AgentId }
   | { type: 'core/snooze'; id: string; until: number; label: string }
   | { type: 'core/askClaire'; id: string; note?: string }
   | { type: 'core/thread'; id: string; text: string }
@@ -28,6 +28,8 @@ export type CoreAction =
   | { type: 'core/preset'; agent: AgentId; preset: 'cautious' | 'balanced' | 'autonomous' }
   | { type: 'core/agentStatus'; agent: AgentId; status: 'on' | 'paused'; until?: string }
   | { type: 'core/guardrail'; agent: AgentId; id: string; value: string }
+  | { type: 'core/guardrailAdd'; agent: AgentId; label: string; value: string }
+  | { type: 'core/guardrailDelete'; agent: AgentId; id: string }
   | { type: 'core/fire'; eventId?: string }
   | { type: 'core/heartbeat' }
   | { type: 'core/engine'; live?: boolean; cadence?: number }
@@ -143,6 +145,13 @@ function fire(s: State, eventId?: string): State {
   const ev = SCRIPT[idx]
   if (!ev) return s
   let next: State = eventId ? s : { ...s, engine: { ...s.engine, cursor: s.engine.cursor + 1 } }
+  // Never raise the same thing twice: skip it if it's already on the Desk or was settled since the brief.
+  const seen = next.handoffs.some(h => h.ref === ev.id || h.title === ev.handoff.title) || next.desk.done.some(x => x.title === ev.handoff.title)
+  if (seen && !eventId) {
+    // Once the script has played, the feed keeps the day alive with quiet work done alone.
+    if (!ev.auto) return next
+    return next.log.some(l => l.text === ev.auto!.text) ? next : pushLog(next, { agent: ev.handoff.agent, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
+  }
   const agent = agentOf(next, ev.handoff.agent)
   if (agent.status !== 'on' && !eventId) return next
   const level = actionOf(next, agent.id, ev.handoff.action)?.autonomy
@@ -151,7 +160,7 @@ function fire(s: State, eventId?: string): State {
     return pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
   // New cards land in Your day quietly; only urgent ones interrupt with a toast.
-  return pushHandoff(next, { ...structuredClone(ev.handoff), proposal: ev.rule }, ev.handoff.urgency === 'urgent' ? `Urgent: ${ev.handoff.title}` : undefined)
+  return pushHandoff(next, { ...structuredClone(ev.handoff), ref: ev.handoff.ref ?? ev.id, proposal: ev.rule }, ev.handoff.urgency === 'urgent' ? `Urgent: ${ev.handoff.title}` : undefined)
 }
 
 const AGENT_REPLY = (h: Handoff, text: string): ThreadMsg => ({ id: uid('m'), from: 'agent', text, at: h.at })
@@ -222,7 +231,11 @@ function reduceCore(s: State, a: CoreAction): State {
       const cards = s.handoffs.filter(h => a.ids.includes(h.id))
       if (!cards.length) return s
       let next = s
-      for (const h of cards) next = resolve(next, h.id, a.decision, { quiet: true })
+      for (const h of cards) {
+        if (a.snooze) next = updateHandoff(next, h.id, { lane: 'snoozed', snoozedUntil: a.snooze.until })
+        else if (a.claire) next = reduceCore(next, { type: 'core/askClaire', id: h.id })
+        else if (a.decision) next = resolve(next, h.id, a.decision, { quiet: true })
+      }
       next = pushLog(next, { agent: a.agent, text: a.summary, status: 'approved', reason: 'Your call from the Desk, in one go', undoMinutes: 10, restore: cards })
       return pushToast(next, { agent: a.agent, text: a.summary, undo: next.log[0].id })
     }
@@ -309,6 +322,12 @@ function reduceCore(s: State, a: CoreAction): State {
 
     case 'core/guardrail':
       return { ...s, agents: s.agents.map(x => (x.id !== a.agent ? x : { ...x, guardrails: x.guardrails.map(g => (g.id === a.id ? { ...g, value: a.value } : g)) })) }
+
+    case 'core/guardrailAdd':
+      return { ...s, agents: s.agents.map(x => (x.id !== a.agent ? x : { ...x, guardrails: [...x.guardrails, { id: uid('g'), label: a.label, value: a.value }] })) }
+
+    case 'core/guardrailDelete':
+      return { ...s, agents: s.agents.map(x => (x.id !== a.agent ? x : { ...x, guardrails: x.guardrails.filter(g => g.id !== a.id) })) }
 
     case 'core/fire':
       return fire(s, a.eventId)

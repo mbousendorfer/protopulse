@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowUpRight } from 'lucide-react'
+import { ArrowUpRight, ChevronDown } from 'lucide-react'
 import type { AgentId, Handoff, Urgency } from '../../app/types'
 import { useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Btn, Mark, Net, Pill, Sheet, Tabs, TopicIcon } from '../../ui'
 import HandoffCard from './HandoffCard'
+import Detail from './Detail'
+import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
+import { NetworkPreview } from '../publishing/Previews'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { draftText } from './parts'
 
@@ -65,10 +68,15 @@ export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] 
 
 type Lane = 'all' | 'leads' | 'ready' | 'decide'
 
-export default function BatchDetail({ b, onBulk }: { b: Batch; onBulk: () => void }) {
+export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk: () => void; onDiscuss: (id: string) => void }) {
   const { s, d } = useStore()
   const nav = useNavigate()
   const [review, setReview] = useState<Lane | null>(null)
+  const [open, setOpen] = useState<string | null>(null)
+  // Ready items start selected; the ones to decide wait for a look.
+  const sel = useSelection(b.items.map(h => h.id), b.id)
+  useEffect(() => { sel.set(b.ready.map(h => h.id)) }, [b.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const chosen = b.items.filter(h => sel.has(h.id))
   const decide = b.items.filter(h => !b.ready.includes(h))
   const leads = b.items.filter(isLead)
   const hidden = ((s.inbox as { convs?: { status: string }[] }).convs ?? []).filter(c => c.status === 'hidden').length
@@ -124,15 +132,34 @@ export default function BatchDetail({ b, onBulk }: { b: Batch; onBulk: () => voi
         )}
       </div>
 
+      <div className="batch-head row">
+        <SelectAll sel={sel} label="Select every item" />
+        <span className="faint">{sel.count} of {b.items.length} selected · click a row to see it in full</span>
+      </div>
       <ul className="batch-rows">
-        {b.items.slice(0, 6).map(h => (
-          <li key={h.id}>
-            {h.preview?.type === 'reply' ? <SocialAvatar name={h.preview.author.split(' · ')[0]} network={h.preview.network} size={24} /> : h.preview?.type === 'post' ? <Net n={h.preview.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
-            <span className="ellipsis">“{h.proposal?.text ?? (h.preview?.type === 'reply' ? h.preview.text : draftText(h)) ?? h.title}”</span>
-            <span className="faint">{h.proposal ? 'rule' : b.ready.includes(h) ? (h.preview?.type === 'post' ? `ready · ${NETWORK_LABEL[h.preview.network]}` : 'reply ready') : 'to decide'}</span>
-          </li>
-        ))}
-        {b.items.length > 6 && <li className="faint">and {b.items.length - 6} more</li>}
+        {b.items.map(h => {
+          const isOpen = open === h.id
+          const p = h.preview
+          return (
+            <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
+              <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
+                <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
+                {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
+                <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
+                <span className="faint">{h.proposal ? 'rule' : b.ready.includes(h) ? (p?.type === 'post' ? `ready · ${NETWORK_LABEL[p.network]}` : 'reply ready') : 'to decide'}</span>
+                <ChevronDown size={14} className="faint chev" aria-hidden />
+              </div>
+              {isOpen && (
+                <div className="batch-open">
+                  {p?.type === 'post' && (
+                    <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} /></div>
+                  )}
+                  <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ul>
 
       <footer className="detail-foot">
@@ -140,7 +167,7 @@ export default function BatchDetail({ b, onBulk }: { b: Batch; onBulk: () => voi
         <span className="spacer" />
         <Btn size="sm" variant="ghost" onClick={() => setReview('all')}>Review one by one</Btn>
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {b.ready.length > 0 && b.id !== 'rules' && <Btn variant="primary" onClick={() => bulk(b.ready, b.verb.done(b.ready.length))}>{b.verb.many(b.ready.length)}</Btn>}
+        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.one} {chosen.length} selected</Btn>}
       </footer>
 
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>
@@ -150,7 +177,7 @@ export default function BatchDetail({ b, onBulk }: { b: Batch; onBulk: () => voi
           ...(b.id !== 'rules' ? [{ value: 'ready' as Lane, label: 'Ready', count: b.ready.length }, { value: 'decide' as Lane, label: 'To decide', count: decide.length }] : []),
         ]} />
         <div className="cards">
-          {shown.length ? shown.map(h => <HandoffCard key={h.id} h={h} onDiscuss={() => nav(h.link ?? '/')} />) : <p className="faint">Nothing left in this lane.</p>}
+          {shown.length ? shown.map(h => <HandoffCard key={h.id} h={h} onDiscuss={id => { setReview(null); onDiscuss(id) }} />) : <p className="faint">Nothing left in this lane.</p>}
         </div>
       </Sheet>
     </article>

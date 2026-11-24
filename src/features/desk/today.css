@@ -51,7 +51,6 @@
 .lane-card p { font-size: var(--t-sm); min-height: 2.6em; }
 .lane-card .row { margin-top: 6px; }
 .batch-rows { margin-top: var(--s4); border-top: 1px solid var(--line); }
-.batch-rows li { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: var(--t-md); }
 .batch-rows li .faint:last-child { font-size: var(--t-sm); }
 
 /* Done view & all clear */
@@ -114,3 +113,26 @@
   .agent-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
   .agent-line .spark-cell { display: none; }
 }
+
+/* Batch rows: select, expand to the full preview */
+.batch-head { margin-top: var(--s4); gap: var(--s2); font-size: var(--t-sm); }
+.batch-rows { margin-top: var(--s2); border-top: 1px solid var(--line); }
+.batch-rows > li { border-bottom: 1px solid var(--line); }
+.batch-row { display: grid; grid-template-columns: 32px 24px minmax(0, 1fr) auto 16px; gap: 10px; align-items: center; padding: 6px 4px; cursor: pointer; border-radius: var(--r-ctl); }
+.batch-row:hover { background: var(--row-hover); }
+.batch-row .faint { font-size: var(--t-sm); white-space: nowrap; }
+.batch-rows > li.open .chev { transform: rotate(180deg); }
+.batch-rows > li:not(.picked) .batch-row .ellipsis { color: var(--ink-2); }
+.batch-open { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--s5); padding: var(--s3) var(--s2) var(--s5) 42px; align-items: start; }
+.batch-open:not(:has(.batch-pv)) { grid-template-columns: minmax(0, 1fr); }
+.batch-open .detail-title { font-size: var(--t-lg); }
+@media (max-width: 900px) { .batch-open { grid-template-columns: 1fr; padding-left: var(--s2); } }
+
+/* Your day rows with a selection box */
+.day-li { display: flex; align-items: center; gap: 2px; }
+.day-li > .day-row { flex: 1; min-width: 0; }
+.day-li > .select-box { margin-left: -4px; width: 28px; }
+.day-li.picked > .day-row { background: var(--brand-soft); }
+.day-list .bulk-bar { position: sticky; bottom: var(--s2); margin: var(--s3) var(--s2) 0; width: auto; }
+.day-list .bulk-bar .sep { display: none; }
+.day-list .bulk-bar > b { flex-basis: 100%; }

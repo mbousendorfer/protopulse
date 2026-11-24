@@ -44,7 +44,7 @@ function Portrait({ seed }: { seed: number }) {
 }
 
 /** Official-looking network glyphs, drawn small. Colours come from the --n-* tokens. */
-function Glyph({ n }: { n: Network }) {
+export function Glyph({ n }: { n: Network }) {
   const c = `var(--n-${n})`
   const W = 'var(--panel)'
   switch (n) {
@@ -59,7 +59,7 @@ function Glyph({ n }: { n: Network }) {
   }
 }
 
-const ROUND: Partial<Record<Network, string>> = { instagram: '28%', linkedin: '6%', google: '0', trustpilot: '4px' }
+export const ROUND: Partial<Record<Network, string>> = { instagram: '28%', linkedin: '6%', google: '0', trustpilot: '4px' }
 
 export function SocialAvatar({ name, network, size = 32, org }: { name: string; network?: Network; size?: Size; org?: boolean }) {
   const seed = hash(name)

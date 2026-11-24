@@ -1,21 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Check, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
   COMPETITORS, EVENTS, FERNWAY_ROW, LESSONS, MENTIONS, TOP_POSTS, TRENDS,
-  type CompEvent, type CompetitorId, type Search, type Sentiment,
+  type CompEvent, type CompetitorId, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
-import type { EventState } from './slice'
-import { Btn, Empty, Filters, Mark, Modal, Net, PageHead, Pill, Switch, Tabs } from '../../ui'
+import { MENTION_NET, MENTION_TAGS, sentimentOf, type EventState, type MentionOp } from './slice'
+import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
+import { AlertsTable, downloadFile, toCSV } from '../insights/alerts'
+import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
-import type { Network } from '../../app/types'
 
-const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
 
 type Tab = 'competitors' | 'mentions' | 'trends' | 'searches'
 const compName = (id: CompetitorId) => COMPETITORS.find(c => c.id === id)!.name
@@ -306,16 +306,30 @@ function Profile() {
 }
 
 /* ---------- Mentions ---------- */
+const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
+
 function Mentions() {
   const { s, d } = useStore()
   const now = useNow()
   const [sent, setSent] = useState<'all' | Sentiment>('all')
   const [product, setProduct] = useState('all')
   const [risk, setRisk] = useState(false)
-  const all = MENTIONS.filter(m => s.listening.mentions[m.id] !== 'hidden')
-  const list = all.filter(m => (sent === 'all' || m.sentiment === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
-  const count = (x: Sentiment) => all.filter(m => m.sentiment === x).length
-  const products = ['Ridge 28L', 'Storm Jacket', 'Summit Bottle', 'Ember Fleece']
+  const [hidden, setHidden] = useState(false)
+  const [openId, setOpenId] = useState<string | null>(null)
+  const mood = (m: Mention) => sentimentOf(s, m)
+  const all = MENTIONS.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
+  const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
+  const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
+  const products = [...new Set(MENTIONS.map(m => m.product).filter(Boolean))] as string[]
+  const ids = useMemo(() => list.map(m => m.id), [list.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(ids, `${sent}-${product}-${risk}-${hidden}`)
+  const run = (op: MentionOp, extra: { tag?: string; sentiment?: Sentiment } = {}, which = [...sel.selected]) => { d({ type: 'listening/mentions', ids: which, op, ...extra }); sel.clear() }
+  const exportCSV = () => downloadFile(`fernway-mentions-${new Date(now).toISOString().slice(0, 10)}.csv`, toCSV([
+    ['Date', 'Author', 'Network', 'Sentiment', 'Reach', 'Product', 'At risk', 'Tags', 'Text'],
+    ...list.map(m => [new Date(m.at).toISOString(), m.author, m.network, mood(m), m.reach, m.product ?? '', m.risk ? 'yes' : '', (s.listening.tags[m.id] ?? []).join('; '), m.text]),
+  ]))
+  const open = MENTIONS.find(m => m.id === openId)
+
   return (
     <div className="stack">
       <section className="card pad">
@@ -331,30 +345,77 @@ function Mentions() {
         <Filters label="Product" value={product} onChange={setProduct} items={[{ value: 'all', label: 'All products' }, ...products.map(p => ({ value: p, label: p }))]} />
         <span className="spacer" />
         <Switch checked={risk} onChange={setRisk} label="At risk only" />
+        <Switch checked={hidden} onChange={setHidden} label="Hidden" />
+        <Btn size="sm" onClick={exportCSV} disabled={!list.length}><Download size={14} />Export CSV</Btn>
       </div>
-      {!list.length ? <Empty title="No mentions match" body="Try another sentiment or product." action={<Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn>} /> : (
-        <ul className="card mentions">
-          {list.map(m => {
-            const st = s.listening.mentions[m.id]
-            return (
-              <li key={m.id}>
-                <span className={`sent ${m.sentiment}`} aria-label={`${m.sentiment} sentiment`} />
-                <div className="mention-main">
-                  <div className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>{m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={11} />At risk</Pill>}</div>
-                  <p>{m.text}</p>
-                  <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
-                </div>
-                <div className="row nowrap">
-                  {st === 'replied' ? <Pill tone="ok"><Check size={11} />Nova replied</Pill> : (
-                    <Btn size="xs" onClick={() => d({ type: 'listening/mention', id: m.id, action: 'replied' })}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
-                  )}
-                  <Btn size="xs" variant="ghost" icon aria-label={`Hide ${m.author}’s mention`} onClick={() => d({ type: 'listening/mention', id: m.id, action: 'hidden' })}><EyeOff size={12} /></Btn>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+      {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can bring them back.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
+        <section className="card">
+          <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}</h2></span></div>
+          <ul className="ls-mentions">
+            {list.map(m => {
+              const st = s.listening.mentions[m.id]
+              const tags = s.listening.tags[m.id] ?? []
+              const md = mood(m)
+              return (
+                <li key={m.id} className={sel.has(m.id) ? 'ls-picked' : ''}>
+                  <SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />
+                  <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : setOpenId(m.id))}>
+                    <span className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>
+                      <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
+                      {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={11} />At risk</Pill>}
+                      {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}</span>
+                    <span className="ls-text">{m.text}</span>
+                    <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
+                  </button>
+                  <div className="row nowrap">
+                    {st === 'replied' ? <Pill tone="ok"><Check size={11} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
+                      <Btn size="xs" onClick={() => run('nova', {}, [m.id])}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
+                    )}
+                    <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Bring back ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
       )}
+      <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
+        { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
+        hidden ? { label: 'Bring back', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
+        { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
+      ]} />
+      {sel.count > 0 && (
+        <div className="row ls-bulk-more">
+          <Menu align="center" trigger={<Btn size="sm"><Tag size={14} />Tag<ChevronDown size={14} /></Btn>} items={MENTION_TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
+          <Menu align="center" trigger={<Btn size="sm">Correct sentiment<ChevronDown size={14} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: SENT_LABEL[x], onSelect: () => run('sentiment', { sentiment: x }) }))} />
+        </div>
+      )}
+
+      <Sheet open={!!open} onOpenChange={o => !o && setOpenId(null)} title={open ? `${open.author} on ${open.network}` : ''}
+        footer={open && <>
+          <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Bring back</> : <><EyeOff size={14} />Hide</>}</Btn>
+          <span className="spacer" />
+          <Btn onClick={() => run('atlas', {}, [open.id])}><Send size={14} />Hand to Atlas</Btn>
+          <Btn variant="primary" disabled={s.listening.mentions[open.id] === 'replied'} onClick={() => run('nova', {}, [open.id])}><MessageSquareReply size={14} />{s.listening.mentions[open.id] === 'replied' ? 'Reply on your Desk' : 'Ask Nova to reply'}</Btn>
+        </>}>
+        {open && (
+          <div className="stack">
+            <div className="row nowrap"><SocialAvatar name={open.author} network={MENTION_NET[open.network]} org={!open.author.startsWith('@')} size={40} /><div><b>{open.author}</b><div className="faint">{open.network} · {ago(open.at, now)}</div></div></div>
+            <blockquote className="ls-quote">{open.text}</blockquote>
+            <dl className="ls-facts">
+              <div><dt>Reach</dt><dd className="num">{open.reach.toLocaleString('en-GB')} people</dd></div>
+              <div><dt>Sentiment</dt><dd><span className={`ls-mood ${mood(open)}`}>{SENT_LABEL[mood(open)]}</span>{s.listening.sentiment[open.id] && <span className="faint"> · you corrected Echo</span>}</dd></div>
+              {open.product && <div><dt>Product</dt><dd>{open.product}</dd></div>}
+              <div><dt>Tags</dt><dd className="row tight">{(s.listening.tags[open.id] ?? []).map(t => <span key={t} className="chip ls-tag">{t}</span>)}
+                <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Tag size={12} />Add tag</Btn>} items={MENTION_TAGS.map(t => ({ label: t, onSelect: () => d({ type: 'listening/mentions', ids: [open.id], op: 'tag', tag: t }) }))} /></dd></div>
+            </dl>
+            <div className="row tight"><span className="faint">Correct the sentiment:</span>{(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => (
+              <button key={x} className="filter" aria-pressed={mood(open) === x} onClick={() => d({ type: 'listening/mentions', ids: [open.id], op: 'sentiment', sentiment: x })}>{SENT_LABEL[x]}</button>
+            ))}</div>
+            {open.risk && <p className="ls-risk"><TriangleAlert size={14} />Echo flags this one as a reputation risk. A reply within the hour keeps it from spreading.</p>}
+          </div>
+        )}
+      </Sheet>
     </div>
   )
 }
@@ -433,6 +494,10 @@ function Searches() {
         </div>
         {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
       </section>
+      <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo raises these on your Desk as soon as they happen, and copies Claire when you ask."
+        subjects={[{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]}
+        conditions={['gets more than', 'grows faster than']} units={[' negative mentions in 1 h', ' mentions in 1 h', ' mention from press', '% in a day']}
+        onSave={alert => d({ type: 'listening/alertSave', alert })} onToggle={id => d({ type: 'listening/alertToggle', id })} onDelete={id => d({ type: 'listening/alertDelete', id })} />
       {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
     </div>
   )
