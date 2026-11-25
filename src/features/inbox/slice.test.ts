@@ -377,3 +377,17 @@ describe('comments under their post', () => {
     expect(on.sort()).toEqual(['c-gr20-ben', 'c-gr20-julie', 'c-gr20-marco', 'c-lea'])
   })
 })
+
+describe('translation', () => {
+  it('every foreign-language message and reply in the seed and the German event has its English', async () => {
+    const { translate } = await import('./translate')
+    const s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-german' })
+    for (const id of ['c-jonas', 'c-fr-blue', 'c-es-ship', 'c-it-weight']) for (const m of conv(s, id).messages) expect(translate(m.text), m.text).toBeDefined()
+    // Product questions are on Act: Nova answered Lena alone, in German.
+    for (const m of s.inbox.convs.find(c => c.author === 'Lena W.')!.messages) expect(translate(m.text), m.text).toBeDefined()
+    const { SCRIPT } = await import('./script')
+    const p = SCRIPT.find(e => e.id === 'ev-german')!.handoff!.preview as { text: string; draft: (string | { text: string })[] }
+    expect(translate(p.text)?.lang).toBe('German')
+    expect(translate(p.draft.map(x => (typeof x === 'string' ? x : x.text)).join(''))).toBeDefined()
+  })
+})
