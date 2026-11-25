@@ -27,7 +27,8 @@ export function downloadFile(name: string, content: string, type = 'text/csv') {
 /** Rows → CSV, quoting every cell. */
 export const toCSV = (rows: (string | number)[][]) => rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
 
-const sentence = (a: Alert, subjects: { value: string; label: string }[]) =>
+/** The rule as a sentence: “Views per video drops by more than 30% over 3 posts”. */
+export const ruleSentence = (a: Alert, subjects: { value: string; label: string }[]) =>
   `${subjects.find(x => x.value === a.subject)?.label ?? a.subject} ${a.condition} ${a.threshold.toLocaleString('en-GB')}${a.unit}`
 
 /** Editable list of alert rules: on/off, edit, delete, add. */
@@ -54,10 +55,10 @@ export function AlertsTable({ agent, alerts, subjects, conditions, units, onSave
       <ul className="in-alerts">
         {alerts.map(a => (
           <li key={a.id} className={a.on ? '' : 'off'}>
-            <Switch checked={a.on} onChange={() => onToggle(a.id)} label={`${a.on ? 'Turn off' : 'Turn on'}: ${sentence(a, subjects)}`} hideLabel />
-            <span className="in-alert-text"><b>{sentence(a, subjects)}</b><span className="faint"> → {a.to === 'claire' ? 'Desk and Claire' : 'your Desk'}</span></span>
-            <Btn size="xs" variant="ghost" icon aria-label={`Edit alert: ${sentence(a, subjects)}`} onClick={() => setEdit(a)}><Pencil size={12} /></Btn>
-            <Btn size="xs" variant="ghost" icon aria-label={`Delete alert: ${sentence(a, subjects)}`} onClick={() => onDelete(a.id)}><Trash2 size={12} /></Btn>
+            <Switch checked={a.on} onChange={() => onToggle(a.id)} label={`${a.on ? 'Turn off' : 'Turn on'}: ${ruleSentence(a, subjects)}`} hideLabel />
+            <span className="in-alert-text"><b>{ruleSentence(a, subjects)}</b><span className="faint"> → {a.to === 'claire' ? 'Desk and Claire' : 'your Desk'}</span></span>
+            <Btn size="xs" variant="ghost" icon aria-label={`Edit alert: ${ruleSentence(a, subjects)}`} onClick={() => setEdit(a)}><Pencil size={12} /></Btn>
+            <Btn size="xs" variant="ghost" icon aria-label={`Delete alert: ${ruleSentence(a, subjects)}`} onClick={() => onDelete(a.id)}><Trash2 size={12} /></Btn>
           </li>
         ))}
         {!alerts.length && <li className="faint">No alerts. {agent} only reports in the weekly report.</li>}

@@ -8,7 +8,7 @@ import {
   BRAND_KIT, PHASES, PHASE_MS, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { clipPosts, findMoments, keywords, rescore, type Clip, type Evidence, type Sentence } from './model'
+import { LANG_LABEL, captionSlips, clipPosts, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -43,6 +43,8 @@ export type VideoAction =
   | { type: 'video/retry'; id: string }
   | { type: 'video/find'; source: string; query: string; len: number; count: number }
   | { type: 'video/kit'; patch: Partial<BrandKit> }
+  | { type: 'video/dub'; id: string; lang: Lang }
+  | { type: 'video/approveDub'; id: string; lang: Lang }
 
 /* ---------- Small setters ---------- */
 
@@ -102,7 +104,94 @@ export function unsendClips(s: State, ids: string[]): State {
 
 /** Undoing a Desk decision on a clips card also takes back what it sent. */
 export const undoDeskClips = (s: State, h: Handoff): State =>
-  h.topic === 'Clips' ? unsendClips(s, s.video.clips.filter(c => c.sentFrom === h.id).map(c => c.id)) : s
+  h.topic === 'Clips' ? unsendClips(s, s.video.clips.filter(c => c.sentFrom === h.id).map(c => c.id))
+    : h.topic === 'Captions' && h.fixes ? undoVideoWork(s, h.fixes) : s
+
+/* ---------- Captions, framing and dubs: each follows its own level ---------- */
+
+const levelOf = (s: State, action: string) => actionOf(s, 'juno', action)?.autonomy ?? 'suggest'
+const trOf = (s: State, c: Clip) => TRANSCRIPT[sourceOf(s, c.source)?.transcript ?? c.source]
+const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
+
+/** Apply caption fixes (clip id → word indexes) with the transcript's real words. */
+function setFixes(s: State, fixes: Record<string, number[]>, on: boolean): State {
+  return patchClips(s, Object.keys(fixes), c => {
+    const tr = trOf(s, c)
+    const next = { ...c.fixes }
+    for (const i of fixes[c.id]) { if (on) next[i] = tr.words[i].w; else delete next[i] }
+    return { ...c, fixes: next }
+  })
+}
+
+/**
+ * Juno checks the captions of these clips against the Playbook's product names. Act: she fixes them, with Undo.
+ * Draft: a Desk card, approving it fixes them. Suggest: the words stay flagged in Video and in the editor, you fix them.
+ */
+export function checkCaptions(s: State, ids: string[]): State {
+  const fixes: Record<string, number[]> = {}
+  const labels = new Set<string>()
+  for (const c of s.video.clips.filter(x => ids.includes(x.id) && (x.status === 'ready' || x.status === 'snoozed'))) {
+    const slips = captionSlips(c, trOf(s, c))
+    const idx = Object.keys(slips).map(Number)
+    if (!idx.length) continue
+    fixes[c.id] = idx
+    for (const i of idx) labels.add(slipLabel(c.heard![i], slips[i]))
+  }
+  const clips = Object.keys(fixes)
+  if (!clips.length) return s
+  const what = [...labels].join(', ')
+  const level = levelOf(s, 'juno-captions')
+  if (level === 'act') {
+    const next = setFixes(s, fixes, true)
+    return pushLog(next, { agent: 'juno', text: `Fixed ${plural(labels.size, 'product name')} in the captions of ${plural(clips.length, 'clip')}: ${what}`, status: 'done', reason: 'Caption fixes are set to Act', undoMinutes: 10, captionFixes: fixes, link: `/video/clips/${clips[0]}` })
+  }
+  if (level === 'suggest') return s
+  // Draft: one card for every open fix, refreshed rather than duplicated.
+  const open = s.handoffs.find(h => h.agent === 'juno' && h.topic === 'Captions')
+  const merged = { ...(open?.fixes ?? {}), ...fixes }
+  const n = Object.keys(merged).length
+  const card = {
+    agent: 'juno' as const, kind: 'approval' as const, urgency: 'week' as const, topic: 'Captions', action: 'juno-captions',
+    title: `Fix ${what} in ${plural(n, 'caption')}`, context: `Speech-to-text heard ${what}. The Playbook spells it the other way.`,
+    why: 'Caption fixes are set to Draft: Juno fixes them once you approve.', confidence: 93, link: `/video/clips/${Object.keys(merged)[0]}`,
+    sources: [{ label: 'Product names', from: 'Playbook facts' }], fixes: merged,
+  }
+  return open ? updateHandoff(s, open.id, card) : pushHandoff(s, card)
+}
+
+/** The scripted morning check: Juno re-reads the captions of every clip waiting for review. */
+export const captionsScript = { tag: 'video', run: (s: State) => checkCaptions(s, s.video.clips.filter(c => c.status === 'ready' || c.status === 'snoozed').map(c => c.id)) }
+
+const BARE_BRAND = (b: Clip['brand']): Clip['brand'] => ({ ...b, logo: false, progress: false, intro: false, outro: false, music: undefined })
+
+/** New clips, as each level leaves them: framed and branded (Act), framed and branded to check (Draft), raw with a suggestion (Suggest). Dubs alike. */
+function prepare(s: State, clips: Clip[]): Clip[] {
+  const frame = levelOf(s, 'juno-reframe')
+  const dub = levelOf(s, 'juno-dub')
+  const langs: Lang[] = s.video.kit.langs
+  return clips.map(c => ({
+    ...c,
+    ...(frame === 'suggest' ? { frame: 'fit' as const, brand: BARE_BRAND(c.brand), framing: 'suggested' as const } : frame === 'draft' ? { framing: 'check' as const } : {}),
+    audio: dub === 'suggest' ? c.audio : { ...c.audio, dubs: langs, review: dub === 'draft' ? langs : [] },
+  }))
+}
+
+/** On Act, the dubs Juno made alone go to the journal, with an Undo that takes them back. */
+function logDubs(s: State, clips: Clip[]): State {
+  if (levelOf(s, 'juno-dub') !== 'act' || !clips.length || !s.video.kit.langs.length) return s
+  const names = s.video.kit.langs.map(l => LANG_LABEL[l]).join(' and ')
+  return pushLog(s, { agent: 'juno', text: `Made ${names} versions of ${plural(clips.length, 'clip')}`, status: 'done', reason: 'Translate and dub is set to Act', undoMinutes: 10, dubs: Object.fromEntries(clips.map(c => [c.id, s.video.kit.langs])), link: `/video/clips/${clips[0].id}` })
+}
+
+/** Undo: the fixes and dubs Juno made alone come off. */
+export function undoVideoWork(s: State, captionFixes?: Record<string, number[]>, dubs?: Record<string, Lang[]>): State {
+  let next = captionFixes ? setFixes(s, captionFixes, false) : s
+  if (dubs) next = patchClips(next, Object.keys(dubs), c => {
+    const left = c.audio.dubs.filter(l => !dubs[c.id].includes(l))
+    return { ...c, audio: { ...c.audio, dubs: left, review: c.audio.review?.filter(l => left.includes(l)), lang: left.includes(c.audio.lang) ? c.audio.lang : 'en' } }
+  })
+  return next
+}
 
 /* ---------- Sources ---------- */
 
@@ -142,9 +231,10 @@ function startSource(s: State, id: string): State {
 function finishSource(s: State, src: Source): State {
   const t = now(s)
   const tr = TRANSCRIPT[src.transcript]
-  const fresh = SEEDS[src.media].map(seed => clipFromSeed({ ...seed, status: undefined, stats: undefined }, src, t, s.video.kit))
+  const fresh = prepare(s, SEEDS[src.media].map(seed => clipFromSeed({ ...seed, status: undefined, stats: undefined }, src, t, s.video.kit)))
     .sort((a, b) => rescore(b, tr).total - rescore(a, tr).total)
   let next = setVideo(patchSource(s, src.id, { status: 'ready', startedAt: undefined }), { clips: [...fresh, ...s.video.clips] })
+  next = logDubs(checkCaptions(next, fresh.map(c => c.id)), fresh)
   if (actionOf(next, 'juno', 'juno-handoff')?.autonomy === 'act') {
     const best = fresh.filter(c => rescore(c, tr).total >= SEND_ALONE).map(c => c.id)
     if (best.length) next = sendClips(next, best, 'juno')
@@ -179,10 +269,16 @@ export const videoDue = (s: State, t: number) =>
 /* ---------- Desk ---------- */
 
 export function onResolveVideo(s: State, h: Handoff, d: Decision): State {
-  if (h.agent !== 'juno' || !h.ref) return s
+  if (h.agent !== 'juno') return s
+  const yes = d.kind === 'approve' || d.kind === 'option' || d.kind === 'trial'
+  if (h.topic === 'Captions' && h.fixes) {
+    // Only what's still wrong: you may have fixed some in the editor meanwhile.
+    const open = Object.fromEntries(Object.entries(h.fixes).map(([id, idx]) => [id, idx.filter(i => s.video.clips.find(c => c.id === id)?.fixes[i] === undefined)]).filter(([, idx]) => idx.length))
+    return yes ? setFixes(s, open, true) : s
+  }
+  if (!h.ref) return s
   const src = sourceOf(s, h.ref)
   if (!src) return s
-  const yes = d.kind === 'approve' || d.kind === 'option' || d.kind === 'trial'
   let next = patchSource(s, src.id, { handoff: undefined })
   if (h.topic === 'Clips' && yes) next = sendClips(next, next.video.clips.filter(c => c.source === src.id && c.status === 'ready').map(c => c.id), 'desk', h.id)
   if (h.topic === 'New video' && yes) next = startSource(next, src.id)
@@ -285,7 +381,7 @@ export function reduceVideo(s: State, a: VideoAction): State {
       const tr = TRANSCRIPT[src.transcript]
       const moments = findMoments(tr, a.query, a.len, a.count)
       if (!moments.length) return notify(s, 'video', `Nothing in this video talks about “${a.query}”. Try other words.`)
-      const clips = moments.map(m => {
+      let clips = moments.map(m => {
         const said = tr.sentences[m.sentence]
         const short = said.text.length > 44 ? `${said.text.slice(0, 42).replace(/\s\S*$/, '')}…` : said.text
         const evidence = foundEvidence(s, src, said, a.query, PILLAR[src.media] ?? 'Repair & care')
@@ -297,10 +393,28 @@ export function reduceVideo(s: State, a: VideoAction): State {
         }
         return clipFromSeed(seed, src, t, s.video.kit)
       })
-      return notify(setVideo(s, { clips: [...clips, ...s.video.clips] }), 'video', `Juno found ${clips.length} moment${clips.length > 1 ? 's' : ''} about “${a.query}”`)
+      // Found on your request: framed and checked like any new clip, but no dubs nobody asked for.
+      clips = prepare(s, clips).map(c => ({ ...c, audio: { ...c.audio, dubs: [], review: [] } }))
+      const next = checkCaptions(setVideo(s, { clips: [...clips, ...s.video.clips] }), clips.map(c => c.id))
+      return notify(next, 'video', `Juno found ${clips.length} moment${clips.length > 1 ? 's' : ''} about “${a.query}”`)
     }
 
     case 'video/kit':
       return setVideo(s, { kit: { ...s.video.kit, ...a.patch } })
+
+    case 'video/dub': {
+      // You asked for it. On Draft it still arrives to review; otherwise it's ready.
+      const c = s.video.clips.find(x => x.id === a.id)
+      if (!c || a.lang === 'en') return s
+      const review = levelOf(s, 'juno-dub') === 'draft' ? [...new Set([...(c.audio.review ?? []), a.lang])] : c.audio.review
+      return reduceVideo(s, { type: 'video/edit', id: a.id, patch: { audio: { ...c.audio, lang: a.lang, dubs: [...new Set([...c.audio.dubs, a.lang])], review } } })
+    }
+
+    case 'video/approveDub': {
+      const c = s.video.clips.find(x => x.id === a.id)
+      if (!c?.audio.review?.includes(a.lang)) return s
+      const next = reduceVideo(s, { type: 'video/edit', id: a.id, patch: { audio: { ...c.audio, review: c.audio.review.filter(l => l !== a.lang) } } })
+      return track(next, 'video/dub-approved', { clip: a.id, lang: a.lang })
+    }
   }
 }

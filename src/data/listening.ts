@@ -168,7 +168,8 @@ export const LESSONS: Lesson[] = [
 ]
 
 export type Sentiment = 'positive' | 'neutral' | 'negative'
-export type Mention = { id: string; author: string; network: string; text: string; sentiment: Sentiment; reach: number; at: number; product?: string; risk?: boolean }
+/** `search`: the search that caught it (Searches tab), when Echo knows. */
+export type Mention = { id: string; author: string; network: string; text: string; sentiment: Sentiment; reach: number; at: number; product?: string; risk?: boolean; search?: string }
 
 const M: [string, string, string, Sentiment, number, string?, boolean?][] = [
   ['@camille.outdoors', 'Instagram', 'Third trip with this bag and it still looks new. @fernway you got me.', 'positive', 84000, 'Ridge 28L'],

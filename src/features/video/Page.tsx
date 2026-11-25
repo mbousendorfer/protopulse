@@ -3,11 +3,11 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ChevronDown, Clapperboard, Plus } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
-import { PHASES, PHASE_MS, type Source } from '../../data/video'
+import { PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/video'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
-import type { Clip } from './model'
+import { captionSlips, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipScore } from './parts'
 import Sources, { SourceDetail } from './Sources'
 import BrandKit from './BrandKit'
@@ -72,6 +72,14 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
   const nav = useNavigate()
   const sc = clipScore(c, src)
   const proof = c.evidence[0]
+  // What Juno left for you on this clip, by her level on each action.
+  const slips = Object.keys(captionSlips(c, TRANSCRIPT[src.transcript])).length
+  const review = c.audio.review?.length ?? 0
+  const todo = c.status !== 'ready' && c.status !== 'snoozed' ? [] : [
+    slips ? `${slips} caption${slips > 1 ? 's' : ''} to fix` : '',
+    c.framing === 'check' ? 'Framing to check' : c.framing === 'suggested' ? 'Framing suggested' : '',
+    review ? `${review} language version${review > 1 ? 's' : ''} to review` : '',
+  ].filter(Boolean)
   const posts = c.posts?.map(id => s.publishing.posts.find(p => p.id === id)).filter(Boolean) ?? []
   const stop = (f: () => void) => (e: MouseEvent) => { e.stopPropagation(); f() }
   return (
@@ -88,6 +96,7 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
           <span className="row tight nowrap">{c.post.networks.map(n => <Net key={n} n={n} size={16} />)}</span>
           <span>{src.title}</span>
           {c.edited && <span>Edited by you</span>}
+          {todo.map(t => <span key={t}>{t}</span>)}
         </p>
       </div>
       <div className="idea-acts">

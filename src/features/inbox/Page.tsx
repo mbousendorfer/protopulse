@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
   Paperclip, Plus, Search, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
@@ -16,11 +16,13 @@ import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
 import './inbox.css'
 
-type View = 'needs' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
+type View = 'needs' | 'review' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 const DAY_START = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
-const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; saved?: boolean }[] = [
-  // Needs you = what waits on Sam. Waiting on Claire lives in its own view; a conversation Sam took over stays here until he replies.
-  { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) },
+const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; count?: (c: Conversation) => boolean; saved?: boolean }[] = [
+  // Needs you = what waits on Sam, then what waits on Claire at the bottom (not counted: it doesn't need him). A conversation Sam took over stays here until he replies.
+  { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) || c.status === 'claire', count: c => NEEDS_YOU.includes(c.status) },
+  // Agorapulse's core status: not looked at by anyone yet. Nova reviews what she settles alone.
+  { id: 'review', label: 'To review', match: c => !c.reviewed },
   { id: 'drafts', label: 'Nova’s drafts', match: c => c.status === 'draft' },
   { id: 'handled', label: 'Handled by Nova', match: c => c.status === 'auto' },
   { id: 'hidden', label: 'Hidden', match: c => c.status === 'hidden' },
@@ -65,7 +67,11 @@ export default function InboxPage() {
   const nav = useNavigate()
   const now = useNow(5000)
   const id = params['*'] || undefined
-  const [view, setView] = useState<View>('needs')
+  const [params2] = useSearchParams()
+  const asked = VIEWS.find(x => x.id === params2.get('view'))?.id
+  const [view, setView] = useState<View>(asked ?? 'needs')
+  // A link can open a view (the Desk's spam lane opens Hidden).
+  useEffect(() => { if (asked) { setView(asked); setLabel(null) } }, [asked])
   const [label, setLabel] = useState<string | null>(null)
   const [network, setNetwork] = useState<Network | 'all'>('all')
   const [type, setType] = useState<ConvType | 'all'>('all')
@@ -129,7 +135,7 @@ export default function InboxPage() {
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
-          {VIEWS.filter(x => !x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
+          {VIEWS.filter(x => !x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => (x.count ?? (y => x.match(y, now)))(c)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Saved views</span>
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Labels</span>
@@ -173,6 +179,7 @@ export default function InboxPage() {
               <SelectAll sel={sel} label="Select every conversation in this view" />
               <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
               <span className="faint num">{list.length}</span>
+              {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
               <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
                 items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
             </div>
@@ -183,6 +190,7 @@ export default function InboxPage() {
 
           {!list.length ? (
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
+              : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="Nova reviews what she handles on her own. New conversations land here until someone looks at them." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
           ) : view === 'needs' && !label ? (
             <NeedsList list={list} sel={sel} currentId={id} onOpen={(cid, edit) => nav(`/inbox/${cid}`, { state: edit ? { edit: true } : undefined })} />
@@ -198,7 +206,7 @@ export default function InboxPage() {
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
                   <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title="Reviewed"><CheckCheck size={14} /></span>}</div>
+                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
                   <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
@@ -216,18 +224,19 @@ export default function InboxPage() {
 }
 
 /** What Nova needs from you, in three kinds: send what she is sure of, check the passage she doubts, decide what she never answers. */
-type Need = 'ready' | 'check' | 'call' | 'yours'
+type Need = 'ready' | 'check' | 'call' | 'yours' | 'claire'
 const flagsOf = (c: Conversation) => (c.draft ?? []).filter((x): x is Exclude<typeof x, string> => typeof x !== 'string')
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-const needOf = (c: Conversation): Need => c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
+const needOf = (c: Conversation): Need => c.status === 'claire' ? 'claire' : c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
 const NEEDS: { id: Need; title: string; hint: string }[] = [
   { id: 'ready', title: 'Ready to send', hint: 'Nova is sure of the facts and the tone.' },
   { id: 'check', title: 'One passage to check', hint: 'Nova marked what she is unsure about.' },
   { id: 'call', title: 'Your call', hint: 'Locked topics Nova never answers herself.' },
   { id: 'yours', title: 'You’re replying', hint: 'You took these over. Nova stays out.' },
+  { id: 'claire', title: 'Waiting on Claire', hint: 'You asked her. Nothing to do until she answers.' },
 ]
 
-const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand }
+const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand, claire: UserRound }
 const SHOWN = 3
 
 function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string, edit?: boolean) => void }) {
@@ -247,7 +256,7 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
             <header className="ib-need-head">
               <span className="ib-need-icon" aria-hidden><I size={14} /></span>
               <h3>{g.title}</h3>
-              <CountBadge n={rows.length} />
+              {g.id === 'claire' ? <span className="num faint">{rows.length}</span> : <CountBadge n={rows.length} />}
               <span className="faint">{g.hint}</span>
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
@@ -284,12 +293,14 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
         </>}
         {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? <>Holding reply: {draft}</> : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
         {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
+        {need === 'claire' && <ClaireLine c={c} />}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
         <span className="mono faint">{hhmm(c.at)}</span>
         {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn></>}
         {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn></>}
         {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
+        {need === 'claire' && <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>}
         {need === 'call' && <>
           <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
             { label: 'I’ll reply myself', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
@@ -301,6 +312,15 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
       </div>
     </li>
   )
+}
+
+/** Where the question to Claire stands: asked how long ago, or what she answered. */
+function ClaireLine({ c }: { c: Conversation }) {
+  const { s } = useStore()
+  const now = useNow(10000)
+  const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
+  const reply = card?.claire?.reply
+  return <p className="ib-need-line"><span className="ib-need-by">Claire</span>{reply ? `“${reply}”` : card?.claire ? `Asked ${ago(card.claire.askedAt, now)}. She usually answers within a minute.` : c.note ?? 'Asked. She usually answers within a minute.'}</p>
 }
 
 function ViewBtn({ on, label, n, onClick }: { on: boolean; label: ReactNode; n: number; onClick: () => void }) {

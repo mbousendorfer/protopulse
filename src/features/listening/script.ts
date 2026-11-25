@@ -1,16 +1,11 @@
 import type { ScriptEvent } from '../../data/script'
 import { ideaScript } from '../publishing/slice'
+import { raiseSpike } from './slice'
 
 /** Echo's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
-  {
-    id: 'ev-spike', order: 20, label: 'Echo · negative spike (seams leak)', always: true,
-    handoff: { agent: 'echo', kind: 'alert', urgency: 'urgent', topic: 'Negative spike', action: 'echo-spike',
-      title: '27 negative mentions in 40 minutes about Storm Jacket seams', context: 'A Reddit thread says the seams leak after 3 washes. Shared twice on X.',
-      why: '3× the usual negative volume in under an hour.', confidence: 73, link: '/listening/mentions',
-      options: [{ label: 'Pause Atlas and ask Claire for a statement', recommended: true }, { label: 'Nova sends the care-instructions reply to each mention' }, { label: 'Monitor for 2 hours' }],
-      preview: { type: 'metric', label: 'Negative mentions per hour', value: '41', delta: '3.4× usual', down: true, series: [3, 4, 2, 5, 3, 4, 6, 12, 27, 41] } },
-  },
+  // The mentions land in the feed, then Echo's spike guardrail decides what reaches you (see raiseSpike).
+  { id: 'ev-spike', order: 20, label: 'Echo · negative spike (seams leak)', agent: 'echo', always: true, tag: 'spike', run: (s, manual) => raiseSpike(s, manual) },
   {
     id: 'ev-trailkind', order: 90, label: 'Echo · Trailkind viral reel',
     handoff: { agent: 'echo', kind: 'decision', urgency: 'today', topic: 'Competitor', action: 'echo-counter',
