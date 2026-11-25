@@ -7,7 +7,7 @@ import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import type { Campaign, CampaignStatus, Phase } from '../../data/strategy'
-import { launchBlock } from './slice'
+import { lastWeekOf, launchBlock, mixOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -360,6 +360,9 @@ function DelegateBoard({ c }: { c: Campaign }) {
 /* ---------- Pillars and cadence ---------- */
 function Pillars() {
   const { s, d } = useStore()
+  const now = useNow()
+  const mix = mixOf(s, now)
+  const week = lastWeekOf(s, now)
   return (
     <div className="stack lg">
       <section className="card pad">
@@ -369,16 +372,17 @@ function Pillars() {
         </div>
         <div className="pillars">
           {s.strategy.pillars.map(p => {
-            const off = p.actual - p.target
+            const actual = mix[p.name] ?? 0
+            const off = actual - p.target
             return (
               <div key={p.id} className="pillar">
                 <div className="row between">
                   <b>{p.name}</b>
-                  <span className="num">{p.actual}% <span className="faint">of posts · target {p.target}%</span></span>
+                  <span className="num">{actual}% <span className="faint">of posts · target {p.target}%</span></span>
                 </div>
                 <p className="faint">{p.desc}</p>
-                <div className="pbar" role="img" aria-label={`${p.name}: ${p.actual}% of posts, target ${p.target}%`}>
-                  <i style={{ width: `${p.actual * 2}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
+                <div className="pbar" role="img" aria-label={`${p.name}: ${actual}% of posts, target ${p.target}%`}>
+                  <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
                   <span className="target" style={{ left: `${p.target * 2}%` }} />
                 </div>
                 {Math.abs(off) > 5 && <span className={`delta ${off < 0 ? 'down' : 'up'}`}>{off > 0 ? '+' : ''}{off} pt vs target</span>}
@@ -397,7 +401,7 @@ function Pillars() {
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
                   <td><Net n={c.network} size={20} /></td>
-                  <td className="r">{c.actual}{c.actual < c.target && <span className="delta down"> −{c.target - c.actual}</span>}</td>
+                  <td className="r">{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="delta down"> −{c.target - (week[c.network] ?? 0)}</span>}</td>
                   <td className="r">
                     <span className="stepper">
                       <Btn size="xs" variant="ghost" icon aria-label={`Lower ${NETWORK_LABEL[c.network]} target`} onClick={() => d({ type: 'strategy/cadence', network: c.network, target: c.target - 1 })}><Minus size={12} /></Btn>
