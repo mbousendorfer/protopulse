@@ -50,7 +50,9 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
   const [open, setOpen] = useState<string | null>(null)
   // Ready items start selected; the ones to decide wait for a look.
   const sel = useSelection(b.items.map(h => h.id), b.id)
-  useEffect(() => { sel.set(b.ready.map(h => h.id)) }, [b.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-seeded whenever none of the shown items is selected (a new batch, or the same batch rebuilt after a reset).
+  const itemsKey = b.items.map(h => h.id).join()
+  useEffect(() => { if (!b.items.some(h => sel.has(h.id))) sel.set(b.ready.map(h => h.id)) }, [b.id, itemsKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const chosen = b.items.filter(h => sel.has(h.id))
   const decide = b.items.filter(h => !b.ready.includes(h))
   const leads = b.items.filter(isLead)
@@ -125,7 +127,8 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
         <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>}
+        {/* The footer action stays in place with nothing selected, so the batch always says how it ends. */}
+        <Btn variant="primary" disabled={!chosen.length} title={chosen.length ? undefined : 'Select at least one item'} onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>
       </footer>
 
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>

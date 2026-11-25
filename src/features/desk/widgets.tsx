@@ -49,7 +49,7 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
   return (
     <section className="brief card" aria-labelledby="brief-title">
       <div className="brief-head">
-        <div className="row tight"><Mark agent="iris" /><span className="faint"><b style={{ color: 'var(--a-iris-ink)', fontWeight: 600 }}>Iris</b> wrote your brief · since {hhmm(since)} yesterday</span></div>
+        <div className="row tight"><Mark agent="iris" /><span className="faint"><b>Iris</b> wrote your brief · since {hhmm(since)} yesterday</span></div>
         <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/briefRead', read: true })}>Got it</Btn>
       </div>
 
@@ -132,7 +132,7 @@ export function ShiftBoard() {
       <div className="card-head">
         <h2>Shift board <span className="faint">· last 24 h</span></h2>
         <span className="legend m-0">
-          <span><i style={{ height: 10, width: 3, borderRadius: 2, background: 'var(--a-nova)' }} />Acted alone, in each agent’s colour</span>
+          <span><i className="legend-tick" />Acted alone, in each agent’s colour</span>
           <span><i className="legend-dot" />Raised to you</span>
         </span>
       </div>

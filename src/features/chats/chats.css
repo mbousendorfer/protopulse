@@ -31,6 +31,7 @@
 .bubble .who .mono { font-size: var(--t-xs); }
 
 .ccard { margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--s2); }
+.ccard-bars { width: 200px; }
 .ccard.dim { opacity: 0.55; }
 .ccard .big { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
 .ccard .ctext { font-size: var(--t-md); }

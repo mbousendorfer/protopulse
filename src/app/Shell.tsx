@@ -215,7 +215,7 @@ function Notifications() {
             <li key={l.id} className="row nowrap py-2 items-start">
               <Mark agent={l.agent} />
               <div className="grow">
-                <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
+                <div className={l.status === 'undone' ? 'struck' : undefined}>{l.text}</div>
                 <div className="faint mono">{ago(l.at, now)}</div>
               </div>
               {l.undoUntil && l.undoUntil > now && l.status !== 'undone' && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={12} />Undo</Btn>}
