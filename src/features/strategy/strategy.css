@@ -101,3 +101,11 @@
 .sage-ask { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--s2); margin: var(--s2) 0 var(--s1) 22px; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-ctl); color: var(--ink); }
 .assumptions { display: flex; flex-wrap: wrap; gap: 4px var(--s3); margin-top: 6px; font-size: var(--t-sm); color: var(--ink-2); }
 @media (max-width: 640px) { .brief-fields { grid-template-columns: minmax(0, 1fr); } }
+.pillar-edit { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s3); }
+.pillar-edit .table td { vertical-align: middle; }
+.pillar-edit .pct-input { justify-content: flex-end; }
+.pillar-edit .pct-input .input { width: 72px; text-align: right; }
+.pillar-edit tfoot td { font-weight: 600; border-top: 1px solid var(--line); }
+.pillar-edit .warn { color: var(--caution); }
+.sage-check { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); }
+.sage-check p { max-width: 72ch; }

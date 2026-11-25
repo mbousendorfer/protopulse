@@ -9,7 +9,7 @@ import {
   BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, NETWORK_FIT, buildVersions, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, NETWORK_FIT, buildVersions, type PostTags, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -120,6 +120,21 @@ export function vetClips(s: State, picked: Clip[]): { go: Clip[]; held: { clip: 
   return { go, held }
 }
 
+/* ---------- Labels and campaign ---------- */
+
+/**
+ * Sage's running campaign a clip belongs to: live now, and already carrying Atlas posts of the clip's pillar.
+ * Read through Sage's state (`s.strategy.campaigns`), never written.
+ */
+export function campaignFor(s: State, c: Clip) {
+  const t = now(s)
+  return s.strategy.campaigns.find(k => k.status === 'live' && k.start <= t && k.end >= t && s.publishing.posts.some(p => p.campaign === k.name && p.pillar === c.pillar))
+}
+export const tagsFor = (s: State, c: Clip): PostTags => {
+  const k = campaignFor(s, c)
+  return { labels: [c.pillar], ...(k ? { campaign: k.name, campaignId: k.id } : {}) }
+}
+
 /* ---------- Sending to Atlas ---------- */
 
 /** Ready clips become scheduled posts in Atlas's calendar. One journal line, one Undo. From the Desk, the Desk's own line undoes it. */
@@ -130,7 +145,7 @@ export function sendClips(s: State, ids: string[], by: 'you' | 'desk' | 'juno', 
   const t = now(s)
   let posts = s.publishing.posts
   const made: Record<string, string[]> = {}
-  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p'), clipLengthOf(c, trOf(s, c))); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
+  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p'), clipLengthOf(c, trOf(s, c)), tagsFor(s, c)); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
   let next: State = { ...s, publishing: { ...s.publishing, posts } }
   next = patchClips(next, picked.map(c => c.id), c => ({ ...c, status: 'sent', posts: made[c.id], back: undefined, sentAt: t, sentFrom: by === 'desk' ? fromCard : undefined }))
   for (const c of picked) next = decided(next, c, c.edited ? 'modified' : 'as-is', { by })

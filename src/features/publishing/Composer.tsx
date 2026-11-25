@@ -14,6 +14,7 @@ import { checkPost } from './checks'
 import { libraryOf } from './visuals'
 import { nextRoom, overCap } from './guards'
 import { variantsOf, type Variant } from './copilot'
+import { FIRST_COMMENT, FORMATS, FORMAT_LABEL, firstCommentFor, formatFor, type Format } from './formats'
 import { forLinkedIn, shorten } from './ideasModel'
 
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
@@ -48,6 +49,9 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const [time, setTime] = useState(hhmm(startAt))
   const [pillar, setPillar] = useState<Pillar>(post?.pillar ?? 'Trail stories')
   const [preview, setPreview] = useState<Network>(post?.network ?? initial?.network ?? 'instagram')
+  // Per network, what you chose; otherwise Atlas's pick. A first comment you clear stays cleared.
+  const [formats, setFormats] = useState<Partial<Record<Network, Format>>>(post?.format ? { [post.network]: post.format } : {})
+  const [comments, setComments] = useState<Partial<Record<Network, string>>>(post ? { [post.network]: post.firstComment ?? '' } : {})
   const [busy, setBusy] = useState<string | null>(null)
   const [ideas, setIdeas] = useState<Variant[] | null>(null)
   // After a failed submit the error follows the form live: it clears as soon as the problem is fixed.
@@ -55,6 +59,8 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
 
   const at = useMemo(() => { const [y, m, dd] = date.split('-').map(Number); const [h, mi] = time.split(':').map(Number); return new Date(y, m - 1, dd, h || 0, mi || 0).getTime() }, [date, time])
   const textFor = (n: Network) => variants[n] ?? text
+  const formatOf = (n: Network) => formats[n] ?? formatFor(n, textFor(n))
+  const commentOf = (n: Network) => (n in comments ? comments[n]! : firstCommentFor(n, textFor(n), pillar) ?? '')
   const previewNet = accounts.includes(preview) ? preview : accounts[0]
 
   // Guardrail: 3 posts per network per day. The post you are editing doesn't count against itself.
@@ -72,7 +78,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
     const group = accounts.length > 1 ? uid('g') : undefined
     return accounts.map((n, i) => ({
       id: editing && i === 0 ? post!.id : uid('p'), network: n, at, text: textFor(n).trim(), media, status, author: post?.author ?? 'you', pillar, group,
-      campaign: post?.campaign, note: undefined, handoff: post?.handoff,
+      campaign: post?.campaign, note: undefined, handoff: post?.handoff, format: formatOf(n), firstComment: commentOf(n).trim() || undefined,
     }))
   }
   const validate = (forSchedule: boolean) => {
@@ -140,6 +146,23 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             </div>
           )}
 
+          {accounts.length > 0 && (
+            <fieldset className="cmp-net">
+              <legend className="label">Per network <span className="faint">· Atlas pre-filled the format{accounts.some(n => FIRST_COMMENT.includes(n)) ? ' and the first comment' : ''}</span></legend>
+              {accounts.map(n => (
+                <div key={n} className="cmp-net-row">
+                  <span className="row tight"><Net n={n} />{NETWORK_LABEL[n]}</span>
+                  {(FORMATS[n]?.length ?? 0) > 1
+                    ? <Seg name={`fmt-${n}`} label={`${NETWORK_LABEL[n]} format`} size="sm" value={formatOf(n)} onChange={v => setFormats(f => ({ ...f, [n]: v }))} options={FORMATS[n]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
+                    : <span className="faint">{FORMAT_LABEL[formatOf(n)]}</span>}
+                  {FIRST_COMMENT.includes(n)
+                    ? <input className="input" aria-label={`${NETWORK_LABEL[n]} first comment`} placeholder="First comment (optional)" value={commentOf(n)} onChange={e => setComments(c => ({ ...c, [n]: e.target.value }))} />
+                    : <span className="faint t-xs">No first comment on {NETWORK_LABEL[n]}</span>}
+                </div>
+              ))}
+            </fieldset>
+          )}
+
           <div className="cmp-row">
             <div className="field">
               <span className="label">Visual</span>
@@ -194,7 +217,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           {accounts.length > 0 ? (
             <>
               {accounts.length > 1 && <Seg name="pv" label="Preview network" size="sm" value={previewNet} onChange={setPreview} options={accounts.map(n => ({ value: n, label: NETWORK_LABEL[n] }))} />}
-              <NetworkPreview network={previewNet} text={textFor(previewNet)} media={media} words={words} at={at} />
+              <NetworkPreview network={previewNet} text={textFor(previewNet)} media={media} words={words} at={at} format={formatOf(previewNet)} firstComment={commentOf(previewNet) || undefined} />
             </>
           ) : <p className="faint">Pick an account to see the preview.</p>}
 
