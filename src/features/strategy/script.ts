@@ -1,7 +1,7 @@
 import type { ScriptEvent } from '../../data/script'
 import type { Handoff } from '../../app/types'
 import { actionOf, pushHandoff } from '../../app/core'
-import { endCampaign, onResolveStrategy, trackCampaigns } from './slice'
+import { endCampaign, nextMoment, onResolveStrategy, raiseMoment, trackCampaigns } from './slice'
 import { now } from '../../app/core'
 
 /** Community under target: Sage proposes 2 more Instagram posts a week and 1 fewer on Facebook. At Act, it changes the cadence itself. */
@@ -39,6 +39,14 @@ export const SCRIPT: ScriptEvent[] = [
     run: (s, manual) => {
       const c = manual && s.strategy.campaigns.find(x => x.status === 'live')
       return c ? endCampaign(s, c.id) : s
+    },
+  },
+  {
+    // A calendar moment is 3 weeks away (from ⇧D: the next undecided one, whatever its date).
+    id: 'ev-moment', order: 225, label: 'Sage · A calendar moment is coming',
+    run: (s, manual) => {
+      const m = nextMoment(s) ?? (manual ? s.strategy.moments.find(x => !x.status && x.end > now(s)) : undefined)
+      return m ? raiseMoment(s, m) : s
     },
   },
   {

@@ -264,3 +264,26 @@ describe('Echo · creators', () => {
     expect(text).toMatch(/@theo\.wild \(120k, signed with Peakline\)/)
   })
 })
+
+describe('Echo · benchmark per network', () => {
+  it('ranks Fernway and the rivals on TikTok and reads it the same in ⌘K', async () => {
+    const { networkRows, benchNetworks } = await import('./model')
+    const s = s0()
+    expect(benchNetworks(s)).toContain('tiktok')
+    const rows = networkRows(s, 'tiktok')
+    expect(rows[0].name).toBe('Trailkind')
+    expect(rows.some(r => r.us)).toBe(true)
+    const def = intentDef('benchmark')!
+    const i = def.parse('how do we compare with trailkind on tiktok', { raw: '' })!
+    const text = def.bar(i as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toContain(`${rows[0].er}% engagement`)
+  })
+
+  it('“Atlas tests their format” drafts one locked post card', () => {
+    let s = reducer(s0(), { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    s = reducer(s, { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    const cards = s.handoffs.filter(h => h.ref === 'format:tiktok:trailkind')
+    expect(cards).toHaveLength(1)
+    expect(cards[0].agent).toBe('atlas')
+  })
+})

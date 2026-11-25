@@ -223,6 +223,39 @@ export const targetsFrom = (st: { pillars: Pillar[]; cadence: Cadence[] }): Targ
 
 /** A change to Sage's targets: pillar shares and posts a week set to a value, or posts a week added (`add`, may be negative). */
 export type TargetsChange = { pillars?: Partial<Record<PillarName, number>>; cadence?: Partial<Record<Network, number>>; add?: Partial<Record<Network, number>> }
+/* ---------- Calendar moments: dates worth planning for, which Sage raises 3 weeks before ---------- */
+
+export type MomentIdea = { title: string; network: Network; copy: string; pillar: PillarName; media?: string }
+export type Moment = { id: string; name: string; start: number; end: number; why: string; source: string; pillars: PillarName[]; ideas: MomentIdea[]; status?: 'added' | 'skipped' }
+/** Sage raises a moment this long before it starts. */
+export const MOMENT_LEAD = 21 * DAY
+export const MOMENTS: Moment[] = [
+  { id: 'm-blackfriday', name: 'Black Friday, without the discount', start: T(0, 0, 3), end: T(23, 59, 3), source: 'Strategy › Repair Friday',
+    why: 'Repair Friday drove 1,180 repair requests in October: Fernway answers Black Friday with repairs, not discounts.', pillars: ['Repair & care'],
+    ideas: [
+      { title: 'Black Friday? Bring us your old bag instead', network: 'instagram', pillar: 'Repair & care', media: 'workshop', copy: 'Black Friday? Bring us your old bag instead. We repair any Fernway bag for free, forever. Link in bio.' },
+      { title: 'We fixed 40 bags while everyone was shopping', network: 'tiktok', pillar: 'Repair & care', media: 'workshop', copy: 'While everyone was shopping, the Annecy workshop fixed 40 bags. Here are 3 of them in 30 seconds.' },
+    ] },
+  { id: 'm-snow', name: 'First snow', start: T(0, 0, 15), end: T(23, 59, 19), source: 'Insights › December 2024',
+    why: 'Last year, “first snow” posts got 2.3× your usual saves.', pillars: ['Gear that lasts', 'Trail stories'],
+    ideas: [
+      { title: 'First snow on the Semnoz: the Ember Fleece’s day', network: 'instagram', pillar: 'Gear that lasts', media: 'snow', copy: 'First snow on the Semnoz this morning. −4°C, one Ember Fleece, zero regrets.' },
+      { title: 'Packing for the first snow hike in 20 seconds', network: 'tiktok', pillar: 'Trail stories', media: 'pack', copy: 'Packing for the first snow hike: fleece, flask, spikes, and the Ridge 28L. 20 seconds.' },
+    ] },
+  { id: 'm-xmas', name: 'Last order date for Christmas', start: T(0, 0, 22), end: T(23, 59, 24), source: 'Orders › December 2024',
+    why: 'Carriers slow down after 17 December, and 31% of last December’s orders came in the final week.', pillars: ['Gear that lasts'],
+    ideas: [
+      { title: 'Order by 19 December, delivered before Christmas', network: 'instagram', pillar: 'Gear that lasts', media: 'fleece', copy: 'Order by 19 December and it’s under the tree in time. Wrapped without plastic, repairable for life.' },
+      { title: 'Gift cards for late shoppers, by email', network: 'facebook', pillar: 'Gear that lasts', copy: 'Missed the last order date? A Fernway gift card arrives by email in a minute, and never expires.' },
+    ] },
+  { id: 'm-newyear', name: 'First hike of the year', start: T(0, 0, 37), end: T(23, 59, 40), source: 'Listening › “first hike”',
+    why: '“First hike” mentions double in the first week of January.', pillars: ['Trail stories', 'Community'],
+    ideas: [
+      { title: 'Your first hike of the year: tag us', network: 'instagram', pillar: 'Community', media: 'trail', copy: 'Your first hike of the year, wherever it is: tag #FernwayFirstHike and we share our favourites on Sunday.' },
+      { title: '5 easy first hikes around Annecy', network: 'tiktok', pillar: 'Trail stories', media: 'lake', copy: '5 easy first hikes around Annecy, all under 2 hours, all with a view. Save it for January.' },
+    ] },
+]
+
 export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined'; change?: TargetsChange }
 export const PROPOSALS: Proposal[] = [
   { id: 'pr1', text: 'Raise Community from 20% to 25% of posts, Gear that lasts from 35% to 30%', why: 'Community posts have the best saves rate (4.1%) and cost nothing to produce.', status: 'proposed', change: { pillars: { Community: 25, 'Gear that lasts': 30 } } },

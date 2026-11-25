@@ -137,6 +137,8 @@ export const AGENTS: Agent[] = [
       { id: 'sage-pillars', perWeek: 1, example: 'Repair content beats every pillar this quarter', label: 'Change the editorial pillars', risk: 'destructive', autonomy: 'suggest', locked: true,
         lockReason: 'Pillars define the brand. Only people change them.',
         says: says('Sage suggests pillar changes with data. You decide.', '', '') },
+      { id: 'sage-moments', perWeek: 1, example: 'First snow is due in 3 weeks', label: 'Plan for calendar moments', risk: 'safe', autonomy: 'suggest', reviewed: 0, approvedUnchanged: 0,
+        says: says('Sage points out moments worth planning for. You add them.', 'Sage prepares the moment and its ideas, and asks you to add them.', 'Sage adds moments to the calendar and gives Atlas the ideas on its own.') },
     ],
     guardrails: [
       { id: 'g1', label: 'Every campaign has', value: 'One number goal' },
