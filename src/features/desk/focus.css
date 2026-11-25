@@ -21,7 +21,7 @@
 .focus-summary h1 { font-size: var(--t-3xl); font-weight: 600; }
 .focus-summary .glyph { width: 48px; height: 48px; border-radius: var(--r-ctl); background: var(--ok-wash); color: var(--ok); display: grid; place-items: center; }
 @media (max-width: 900px) {
-  .focus-body { grid-template-columns: 1fr; padding: var(--s4); }
+  .focus-body { grid-template-columns: minmax(0, 1fr); padding: var(--s4); }
   .focus-queue { display: none; }
   .focus-card { padding: var(--s4); }
   .focus-progress .bar { width: 80px; }

@@ -142,7 +142,7 @@ function ReportView() {
               <div className="a"><Mark agent="iris" /><p>{f.a}</p></div>
             </div>
           ))}
-          <form onSubmit={e => { e.preventDefault(); ask(q) }} className="stack" style={{ gap: 8 }}>
+          <form onSubmit={e => { e.preventDefault(); ask(q) }} className="stack gap-2">
             <label htmlFor="ask-iris" className="sr-only">Question for Iris</label>
             <input id="ask-iris" className="input" placeholder="Why did TikTok drop?" value={q} onChange={e => setQ(e.target.value)} />
             <div className="row tight">{ASK_SUGGEST.map(x => <button key={x} type="button" className="filter" onClick={() => ask(x)}>{x}</button>)}</div>
@@ -248,7 +248,7 @@ function Explore() {
 function PostTr({ p, now }: { p: PostRow; now: number }) {
   return (
     <tr>
-      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis" style={{ maxWidth: 320 }}>{p.title}</span></span></td>
+      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis mw-320">{p.title}</span></span></td>
       <td className="mono faint">{dayLabel(p.date, now)}</td>
       <td className="muted">{p.pillar}</td>
       <td className="muted">{p.author}</td>

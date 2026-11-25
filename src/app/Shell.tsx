@@ -121,11 +121,11 @@ export default function Shell() {
 
         <div className="rail-foot">
           <RailLink to="/settings" icon={<Settings size={16} />} label="Settings" />
-          <div className="rail-link" style={{ cursor: 'default' }}>
+          <div className="rail-link cursor-default">
             <SocialAvatar name="Sam Rivera" size={24} />
             <span className="hide-collapsed">Sam Rivera</span>
           </div>
-          <button className="rail-link" onClick={() => setCollapsed(c => !c)} style={{ background: 'none', border: 0 }} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
           </button>
         </div>
@@ -140,7 +140,7 @@ export default function Shell() {
             {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
-              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis" style={{ maxWidth: 200 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
+              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
           </div>
           <div className="spacer" />
@@ -185,7 +185,7 @@ function ClaireStatus() {
         <span className="hide-sm">{waiting ? `${waiting} with Claire` : 'Claire'}</span>
       </button>
     }>
-      <div className="stack" style={{ width: 280 }}>
+      <div className="stack w-280">
         <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted t-xs">Head of Brand · approves what you send her</div></div></div>
         <div className="muted">Usually replies in about a minute.</div>
         <div className="faint t-xs">{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
@@ -201,11 +201,11 @@ function Notifications() {
   const items = s.log.slice(0, 12)
   return (
     <Pop trigger={<Btn variant="ghost" icon size="sm" aria-label="Recent agent activity"><Bell size={16} /></Btn>}>
-      <div style={{ width: 360 }}>
+      <div className="w-360">
         <div className="section-title">Recent activity</div>
-        <ul className="rows" style={{ maxHeight: 360, overflowY: 'auto' }}>
+        <ul className="rows scroll-360">
           {items.map(l => (
-            <li key={l.id} className="row nowrap" style={{ padding: '8px 0', alignItems: 'flex-start' }}>
+            <li key={l.id} className="row nowrap py-2 items-start">
               <Mark agent={l.agent} />
               <div className="grow">
                 <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
@@ -235,7 +235,7 @@ function ShortcutHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
     <Modal open={open} onOpenChange={onOpenChange} title="Keyboard shortcuts">
       <ul className="rows">
         {SHORTCUTS.map(([k, v]) => (
-          <li key={k} className="row" style={{ justifyContent: 'space-between', padding: '8px 0' }}><span className="muted">{v}</span><Kbd>{k}</Kbd></li>
+          <li key={k} className="row between py-2"><span className="muted">{v}</span><Kbd>{k}</Kbd></li>
         ))}
       </ul>
     </Modal>

@@ -64,13 +64,13 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
         {mode === 'shift' ? (
           <div className="field">
             <label htmlFor="pub-shift">Days (negative = earlier)</label>
-            <input id="pub-shift" type="number" className="input" style={{ width: 120 }} value={days} min={-14} max={30} onChange={e => setDays(+e.target.value || 0)} />
+            <input id="pub-shift" type="number" className="input w-120" value={days} min={-14} max={30} onChange={e => setDays(+e.target.value || 0)} />
             <span className="hint">Each post keeps its time of day. Published posts don’t move.</span>
           </div>
         ) : (
           <div className="field">
             <label htmlFor="pub-dt">New date and time</label>
-            <input id="pub-dt" type="datetime-local" className="input" style={{ width: 240 }} value={dt} onChange={e => setDt(e.target.value)} />
+            <input id="pub-dt" type="datetime-local" className="input w-240" value={dt} onChange={e => setDt(e.target.value)} />
             {dt && new Date(dt).getTime() < now ? <span className="hint" role="alert">That slot is in the past. Pick today or later.</span>
               : n > 1 && <span className="hint">All {n} posts go to this exact slot.</span>}
           </div>

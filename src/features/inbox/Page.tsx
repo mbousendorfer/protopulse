@@ -128,11 +128,13 @@ export default function InboxPage() {
       <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you." />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
+          <div className="ib-views">
           {VIEWS.filter(x => !x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Saved views</span>
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Labels</span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
+          </div>
           <div className="ib-filters">
             <span className="ib-side-title">Filters</span>
             <Menu align="start" trigger={<button className="select-btn block">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
@@ -525,7 +527,7 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
       {!!others.length && (
         <div>
           <div className="section-title">Other conversations</div>
-          <ul className="rows">{others.map(o => <li key={o.id} style={{ padding: '6px 0' }}><Link to={`/inbox/${o.id}`} className="row nowrap tight"><Net n={o.network} /><span className="ellipsis">{o.messages[0]?.text}</span></Link></li>)}</ul>
+          <ul className="rows">{others.map(o => <li className="py-6" key={o.id}><Link to={`/inbox/${o.id}`} className="row nowrap tight"><Net n={o.network} /><span className="ellipsis">{o.messages[0]?.text}</span></Link></li>)}</ul>
         </div>
       )}
     </div>

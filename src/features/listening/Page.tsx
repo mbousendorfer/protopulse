@@ -149,7 +149,7 @@ function EventView() {
         </section>
         <section className="card pad echo-read">
           <Mark agent="echo" />
-          <div><div className="section-title" style={{ marginBottom: 4 }}>Echo’s read</div><p>{e.read}</p></div>
+          <div><div className="section-title mb-1">Echo’s read</div><p>{e.read}</p></div>
         </section>
       </div>
       <aside className="card pad stack moves">
@@ -275,7 +275,7 @@ function Profile() {
       <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} className="self-start"><ArrowLeft size={14} />Benchmark</Btn>
       <header>
         <h1 className="event-title">{c.name} <span className="faint mono t-md">{c.handle}</span></h1>
-        <p className="muted" style={{ maxWidth: '70ch' }}>{c.positioning}</p>
+        <p className="muted mw-70ch">{c.positioning}</p>
       </header>
       <dl className="grid-4 comp-stats">
         <div className="card pad stat"><dd><b className="num">{(c.followers / 1000).toFixed(0)}k</b></dd><dt className="label">Followers · you have {(FERNWAY_ROW.followers / 1000).toFixed(0)}k</dt></div>
@@ -494,7 +494,7 @@ function Searches() {
                   <td className="r">{x.volume ? x.volume.toLocaleString('en-GB') : 'Collecting'}</td>
                   <td>{x.paused ? <Pill>Paused</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
                   <td>
-                    <span className="row nowrap tight" style={{ justifyContent: 'flex-end' }}>
+                    <span className="row nowrap tight end">
                       <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
                       <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
                       <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => { setRemoved(x); d({ type: 'listening/searchDelete', id: x.id }) }}><Trash2 size={12} /></Btn>

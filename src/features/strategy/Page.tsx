@@ -115,7 +115,7 @@ function NewBrief() {
               <label htmlFor="brief">Brief</label>
               <textarea id="brief" className="textarea" rows={4} autoFocus value={brief} onChange={e => setBrief(e.target.value)} placeholder="Launch the new Storm Jacket on March 15, goal 300 pre-orders." />
             </div>
-            <div className="field" style={{ maxWidth: 220 }}>
+            <div className="field mw-220">
               <label htmlFor="budget">Boost budget (optional)</label>
               <input id="budget" className="input" inputMode="numeric" placeholder="€600" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
             </div>
@@ -250,7 +250,7 @@ function CampaignView() {
         <section className="card pad">
           <div className="section-title">Key messages</div>
           <ul className="bullets">{c.messages.map(m => <li key={m}>{m}</li>)}</ul>
-          <div className="section-title" style={{ marginTop: 16 }}>Audience</div>
+          <div className="section-title mt-4">Audience</div>
           <p className="muted">{c.audience}</p>
         </section>
       </div>

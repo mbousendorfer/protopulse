@@ -61,7 +61,7 @@
 .route-hint .mark { width: 16px; height: 16px; }
 
 @media (max-width: 900px) {
-  .chats-grid { grid-template-columns: 1fr; }
+  .chats-grid { grid-template-columns: minmax(0, 1fr); }
   .chats-list { position: static; max-height: 260px; }
   .chat-msgs, .chat-composer { padding-left: var(--s3); padding-right: var(--s3); }
 }

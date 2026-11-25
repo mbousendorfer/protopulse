@@ -209,7 +209,7 @@ function PostTable({ posts, sel, onOpen }: { posts: Post[]; sel: ReturnType<type
   return (
     <div className="card pub-table-wrap">
       <table className="table pub-table">
-        <thead><tr><th style={{ width: 40 }}><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
+        <thead><tr><th className="w-40"><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
         <tbody>
           {rows.map(p => (
             <tr key={p.id} className={sel.has(p.id) ? 'pub-picked' : ''} onClick={e => (e.shiftKey ? sel.toggle(p.id, true) : onOpen(p.id))}>

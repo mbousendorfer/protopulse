@@ -40,9 +40,9 @@
 .onb-recap dd { margin: 0; font-weight: 600; }
 .onb-foot { display: flex; align-items: center; gap: var(--s3); padding-top: var(--s4); border-top: 1px solid var(--line); }
 @media (max-width: 900px) {
-  .onb-body { grid-template-columns: 1fr; gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
+  .onb-body { grid-template-columns: minmax(0, 1fr); gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
   .onb-steps { position: static; }
   .onb-steps ol { display: none; }
-  .onb-team, .onb-levels, .onb-recap { grid-template-columns: 1fr; }
+  .onb-team, .onb-levels, .onb-recap { grid-template-columns: minmax(0, 1fr); }
   .onb-step h1 { font-size: var(--t-2xl); }
 }

@@ -70,7 +70,7 @@
   .today-grid { grid-template-columns: 340px minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
-  .today-grid { grid-template-columns: 1fr; }
+  .today-grid { grid-template-columns: minmax(0, 1fr); }
   .day-list { position: static; max-height: none; }
   .day-pane { padding: var(--s4); min-height: 0; }
   .detail-title { font-size: var(--t-xl); }
@@ -100,7 +100,7 @@
 .hl-comp { display: flex; gap: var(--s3); align-items: flex-start; }
 .hl-comp .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .hl-act { padding: 0 var(--s4) var(--s4); }
-@media (max-width: 1100px) { .highlights { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { .highlights { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 700px) {
   .agent-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
   .agent-line .spark-cell { display: none; }
@@ -118,7 +118,7 @@
 .batch-open { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: var(--s5); padding: var(--s3) var(--s2) var(--s5) 42px; align-items: start; }
 .batch-open:not(:has(.batch-pv)) { grid-template-columns: minmax(0, 1fr); }
 .batch-open .detail-title { font-size: var(--t-lg); }
-@media (max-width: 900px) { .batch-open { grid-template-columns: 1fr; padding-left: var(--s2); } }
+@media (max-width: 900px) { .batch-open { grid-template-columns: minmax(0, 1fr); padding-left: var(--s2); } }
 
 /* Your day rows with a selection box */
 .day-li { display: flex; align-items: center; gap: 2px; }
@@ -133,7 +133,7 @@
 .desk-bottom { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--s4); align-items: start; margin-top: var(--s4); }
 .desk-bottom .feed { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); column-gap: var(--s5); }
 .desk-bottom .feed li:nth-child(-n+3) { border-top: 0; }
-@media (max-width: 1000px) { .desk-bottom { grid-template-columns: 1fr; } }
+@media (max-width: 1000px) { .desk-bottom { grid-template-columns: minmax(0, 1fr); } }
 
 /* Master-detail at screen height: the list and the pane scroll on their own */
 .day-list { position: sticky; top: calc(var(--topbar) + var(--s3)); max-height: calc(100vh - var(--topbar) - var(--s6)); overflow-y: auto; }
@@ -153,3 +153,4 @@
 .next-link .ellipsis { max-width: 420px; }
 .next-link:hover .ellipsis { text-decoration: underline; text-underline-offset: 3px; }
 .day-row .txt > :first-child { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 520px) { .lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); } .lane-card { padding: var(--s3); } }

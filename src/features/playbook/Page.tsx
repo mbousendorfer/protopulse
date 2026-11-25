@@ -337,7 +337,7 @@ function Pillars() {
   const { s } = useStore()
   return (
     <section className="card pad">
-      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
+      <div className="row between mb-3">
         <div><h2 className="section-title flush">Editorial pillars</h2><p className="faint">Target share of posts. Sage proposes changes in Strategy and you accept them there.</p></div>
         <Link to="/strategy/pillars" className="btn sm">Open in Strategy</Link>
       </div>

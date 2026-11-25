@@ -75,7 +75,7 @@ export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (
             <>
               <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (answer.trim()) settle('Answered', () => act.answer(h, answer.trim())) }}>
                 <label className="sr-only" htmlFor={`f-${h.id}`}>{h.field.label}</label>
-                <input id={`f-${h.id}`} className="input" placeholder={h.field.placeholder} value={answer} onChange={e => setAnswer(e.target.value)} style={{ maxWidth: 260 }} />
+                <input id={`f-${h.id}`} className="input mw-260" placeholder={h.field.placeholder} value={answer} onChange={e => setAnswer(e.target.value)} />
                 <Btn variant="primary" type="submit" disabled={!answer.trim()}>Send to {h.agent[0].toUpperCase() + h.agent.slice(1)}</Btn>
               </form>
               <Secondary h={h} onDiscuss={onDiscuss} settle={settle} nav={nav} />
@@ -120,5 +120,5 @@ function Secondary({ h, onDiscuss, settle, nav, inline }: { h: Handoff; onDiscus
       <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Discuss{h.thread?.length ? <span className="faint num">{h.thread.length}</span> : null}</Btn>
     </>
   )
-  return inline ? content : <div className="row" style={{ marginTop: 8 }}>{content}</div>
+  return inline ? content : <div className="row mt-2">{content}</div>
 }

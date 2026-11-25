@@ -148,7 +148,7 @@ function Approver() {
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
         <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
       </div>
-      <p className="card-body muted" style={{ paddingBottom: 0 }}>Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
+      <p className="card-body muted pb-0">Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
       <ul className="rows">
         {s.playbook.escalate.map(e => (
           <li key={e.id} className="set-row">

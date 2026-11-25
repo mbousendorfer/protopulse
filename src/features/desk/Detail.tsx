@@ -106,7 +106,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
         ) : h.field ? (
           <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (answer.trim()) finish('decided', 'Answered', () => act.answer(h, answer.trim())) }}>
             <label className="sr-only" htmlFor={`ans-${h.id}`}>{h.field.label}</label>
-            <input id={`ans-${h.id}`} className="input" placeholder={h.field.placeholder} value={answer} onChange={e => setAnswer(e.target.value)} style={{ maxWidth: 260 }} />
+            <input id={`ans-${h.id}`} className="input mw-260" placeholder={h.field.placeholder} value={answer} onChange={e => setAnswer(e.target.value)} />
             <Btn variant="primary" type="submit" disabled={!answer.trim()} kbd="↵">Send to {agentName(h.agent)}</Btn>
           </form>
         ) : (

@@ -79,7 +79,7 @@ function AlertForm({ alert, subjects, conditions, units, onClose, onSave }: { al
         <div className="row nowrap">
           <div className="field grow"><label htmlFor="al-c">When it</label>
             <Choice id="al-c" value={v.condition} options={conditions.map(x => ({ value: x, label: x }))} onChange={x => setV({ ...v, condition: x })} /></div>
-          <div className="field"><label htmlFor="al-t">Threshold</label><input id="al-t" type="number" min={1} className="input" style={{ width: 100 }} value={v.threshold} onChange={e => setV({ ...v, threshold: +e.target.value })} /></div>
+          <div className="field"><label htmlFor="al-t">Threshold</label><input id="al-t" type="number" min={1} className="input w-100" value={v.threshold} onChange={e => setV({ ...v, threshold: +e.target.value })} /></div>
           <div className="field"><label htmlFor="al-u">Unit</label>
             <Choice id="al-u" value={v.unit} options={units.map(x => ({ value: x, label: x.trim() || 'count' }))} onChange={x => setV({ ...v, unit: x })} /></div>
         </div>

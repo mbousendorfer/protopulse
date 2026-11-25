@@ -111,7 +111,7 @@ export function AgentProfile() {
 
   return (
     <div className="page">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/agents')} style={{ marginBottom: 12 }}><ArrowLeft size={14} />Team</Btn>
+      <Btn className="mb-3" variant="ghost" size="sm" onClick={() => nav('/agents')}><ArrowLeft size={14} />Team</Btn>
       <div className="profile-top">
       <div className="profile-scene"><AgentScene agent={a.id} /></div>
       <div className="grow">
@@ -134,7 +134,7 @@ export function AgentProfile() {
             <div className="row between top">
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
-                <p className="muted" style={{ maxWidth: '62ch' }}>A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
+                <p className="muted mw-62ch">A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
               </div>
               <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: p, levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
@@ -244,7 +244,7 @@ function Guardrails({ agent }: { agent: Agent }) {
             <span className="muted">{g.label}</span>
             {editing === g.id ? (
               <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (!v.trim()) return; d({ type: 'core/guardrail', agent: agent.id, id: g.id, value: v.trim() }); setEditing(null) }}>
-                <input className="input" autoFocus value={v} onChange={e => setV(e.target.value)} aria-label={g.label} style={{ width: 260 }} />
+                <input className="input w-260" autoFocus value={v} onChange={e => setV(e.target.value)} aria-label={g.label} />
                 <Btn type="submit" size="sm" variant="primary" disabled={!v.trim()}>Save</Btn><Btn size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
               </form>
             ) : (
@@ -263,8 +263,8 @@ function Guardrails({ agent }: { agent: Agent }) {
         )}
         {adding ? (
           <form className="row" onSubmit={e => { e.preventDefault(); if (!label.trim() || !value.trim()) return; d({ type: 'core/guardrailAdd', agent: agent.id, label: label.trim(), value: value.trim() }); setAdding(false); setLabel(''); setValue('') }}>
-            <input className="input" autoFocus placeholder="What it limits (e.g. Replies per hour)" value={label} onChange={e => setLabel(e.target.value)} aria-label="Guardrail" style={{ width: 280 }} />
-            <input className="input" placeholder="The limit (e.g. 30 max)" value={value} onChange={e => setValue(e.target.value)} aria-label="Limit" style={{ width: 180 }} />
+            <input className="input w-280" autoFocus placeholder="What it limits (e.g. Replies per hour)" value={label} onChange={e => setLabel(e.target.value)} aria-label="Guardrail" />
+            <input className="input w-180" placeholder="The limit (e.g. 30 max)" value={value} onChange={e => setValue(e.target.value)} aria-label="Limit" />
             <Btn type="submit" size="sm" variant="primary" disabled={!label.trim() || !value.trim()}>Add</Btn>
             <Btn size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Btn>
           </form>
@@ -332,6 +332,7 @@ function Record({ agent }: { agent: Agent }) {
       </section>
       <section className="card">
         <div className="card-head"><h2>By action</h2></div>
+        <div className="table-wrap">
         <table className="table">
           <thead><tr><th>Action</th><th>Level</th><th className="r">Reviewed by you</th><th className="r">Approved unchanged</th></tr></thead>
           <tbody>
@@ -340,6 +341,7 @@ function Record({ agent }: { agent: Agent }) {
             ))}
           </tbody>
         </table>
+        </div>
       </section>
       <section className="card">
         <div className="card-head"><h2>Last undos</h2></div>

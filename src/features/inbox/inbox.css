@@ -10,6 +10,7 @@
 .ib-view.active { background: var(--panel); color: var(--ink); box-shadow: var(--card-shadow), 0 0 0 1px var(--card-border); }
 .ib-view.active:focus-visible { box-shadow: var(--focus); }
 .ib-view .num { font: 500 var(--t-sm) var(--mono); color: var(--ink-3); }
+.ib-views { display: contents; }
 .ib-filters { display: flex; flex-direction: column; gap: 6px; padding: 0 10px; align-items: flex-start; }
 .ib-filters .ib-side-title { padding-left: 0; }
 
@@ -83,7 +84,7 @@
 .ib-note { font-size: var(--t-sm); text-align: center; }
 .ib-claire { display: flex; gap: 10px; padding: 10px 12px; border-radius: var(--r-ctl); background: var(--caution-wash); }
 .ib-claire b { font-size: var(--t-sm); }
-.ib-draft { margin: 0 var(--s4) var(--s4); padding: var(--s4); border-radius: var(--r-ctl); background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: var(--s3); }
+.ib-draft { margin: 0 var(--s4) var(--s4); padding: var(--s4); border-radius: var(--r-ctl); background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); display: flex; flex-direction: column; gap: var(--s3); }
 .ib-draft-by { font-size: var(--t-sm); font-weight: 600; color: var(--a-nova-ink); }
 .ib-draft-text { font-size: var(--t-lg); line-height: 1.55; }
 .ib-attach { display: flex; flex-direction: column; gap: 6px; }
@@ -97,7 +98,7 @@
 .ib-contact h3 { font-size: var(--t-lg); font-weight: 600; }
 .ib-handles { display: flex; flex-direction: column; gap: 6px; font-size: var(--t-md); color: var(--ink-2); }
 .ib-handles li { display: flex; align-items: center; gap: 8px; }
-.ib-facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2) var(--s3); margin: 0; }
+.ib-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2) var(--s3); margin: 0; }
 .ib-facts div { display: flex; flex-direction: column-reverse; }
 .ib-facts dt { font-size: var(--t-xs); color: var(--ink-3); }
 .ib-facts dd { margin: 0; font-weight: 500; }
@@ -172,7 +173,7 @@
 /* Narrow list (phone, or a list squeezed by the reading pane): the decision drops under the text so the message stays readable. */
 @media (max-width: 640px) {
   .ib-need { grid-template-columns: 28px 32px minmax(0, 1fr); align-items: start; }
-  .ib-need-acts { grid-column: 3; justify-content: flex-start; }
+  .ib-need-acts { grid-column: 3; justify-content: flex-start; flex-wrap: wrap; min-width: 0; }
   .ib-need-them, .ib-need-line { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .ib-need-head .faint { display: none; }
   .ib-need-more { padding-left: var(--s4); }
@@ -180,3 +181,8 @@
 .ib-need-who { font-weight: 600; color: var(--ink); margin-right: 8px; text-decoration: none; }
 .ib-need-who:hover, .ib-need-who:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .ib-g-yours .ib-need-icon { background: var(--signal-wash); color: var(--action-ink); }
+/* Phones: views and labels in one row that scrolls sideways, like the tab bars, so the list starts on the first screen. */
+@media (max-width: 600px) {
+  .ib-views { display: flex; gap: 4px; width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .ib-views .ib-view { flex: none; }
+}

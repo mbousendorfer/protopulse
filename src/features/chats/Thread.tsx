@@ -113,7 +113,7 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
   switch (card.type) {
     case 'chart': return (
       <div className="ccard">
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div className="row between items-end">
           <div><div className="faint">{card.label}</div><div className="row tight"><b className="big num">{card.value}</b><span className={`delta ${card.down ? 'down' : 'up'}`}>{card.delta}</span></div></div>
           {card.labels ? <div style={{ width: 200 }}><Bars data={card.series} labels={card.labels} h={70} label={card.label} color={`var(--a-${agent})`} /></div>
             : <Spark data={card.series} w={180} h={44} color={card.down ? 'var(--alert)' : `var(--a-${agent})`} label={card.label} />}

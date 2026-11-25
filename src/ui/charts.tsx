@@ -41,7 +41,7 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
   const ticks = [0, top / 2, top]
   const stroke = (s: Series) => s.color ?? (s.tone === 'faint' ? 'var(--ink-3)' : 'var(--chart)')
   return (
-    <figure style={{ position: 'relative' }}>
+    <figure className="rel">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={label} onMouseLeave={() => setHover(null)}
         onMouseMove={e => {
           const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect()

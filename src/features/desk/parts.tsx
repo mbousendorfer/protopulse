@@ -61,7 +61,7 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
     <div className="well preview agent-tint" style={tint(h.agent)}>
       <div className="by row tight"><Net n={p.network} /><span className="agent-label">{agentName(h.agent)}’s post</span><span className="faint">· {NETWORK_LABEL[p.network]} · {p.slot}</span></div>
       <div className="post-prev">
-        {p.media && <span className="post-photo" style={{ width: 64, height: 80, flex: 'none', borderRadius: 6, overflow: 'hidden' }}><Photo name={p.media} /></span>}
+        {p.media && <span className="post-photo post-thumb"><Photo name={p.media} /></span>}
         {editing ? <textarea className="textarea" autoFocus value={draft} onChange={e => setDraft?.(e.target.value)} aria-label="Edit the post" rows={3} />
           : <p><FlagText parts={p.text} /></p>}
       </div>
