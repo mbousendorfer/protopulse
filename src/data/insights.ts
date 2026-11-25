@@ -201,6 +201,10 @@ export const TIKTOK_VIEWS = [3.1, 2.8, 3.4, 2.9, 2.97, 2.7, 3.2, 2.12, 1.88, 1.7
 
 export type Anomaly = {
   id: string
+  /** What was measured where: `subject:network`. Iris never raises the same key twice in a week. */
+  key: string
+  /** The alert rule that raised it, when one did. */
+  rule?: string
   title: string
   network: Network
   metric: string
@@ -218,22 +222,72 @@ export type Anomaly = {
 }
 
 export const ANOMALIES: Anomaly[] = [
-  { id: 'an-tiktok', title: 'TikTok views per video down 38%', network: 'tiktok', metric: 'Views per video', value: '1,840', delta: '−38%', down: true, series: TIKTOK_VIEWS, detectedAt: T(6, 58),
+  { id: 'an-tiktok', key: 'views:tiktok', title: 'TikTok views per video down 38%', network: 'tiktok', metric: 'Views per video', value: '1,840', delta: '−38%', down: true, series: TIKTOK_VIEWS, detectedAt: T(6, 58),
     cause: 'All 4 videos since Thursday open with a 5 to 7 second intro before the product appears. Average watch time fell from 9.1 s to 3.4 s. Trailkind’s best videos hook in 2 seconds.', confidence: 68,
     actions: ['Ask Atlas to test 3-second hooks this week', 'Snooze a week'], open: true, handoff: 'h-tiktok' },
-  { id: 'an-storm', title: 'Storm Jacket carousel at 3× the usual engagement', network: 'instagram', metric: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], detectedAt: T(7, 6),
+  { id: 'an-storm', key: 'er:instagram', title: 'Storm Jacket carousel at 3× the usual engagement', network: 'instagram', metric: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], detectedAt: T(7, 6),
     cause: 'Saves drive it: 214 saves, mostly from people who never bought from Fernway. The rain test format works for cold-weather intent.', confidence: 74,
     actions: ['Boost €150 for 5 days', 'Ask Atlas for a follow-up carousel', 'No action'], open: true, handoff: 'h-boost' },
-  { id: 'an-clicks', title: 'LinkedIn link clicks +210% this week', network: 'linkedin', metric: 'Link clicks', value: '1,140', delta: '+210%', series: [210, 240, 190, 260, 230, 250, 1140], detectedAt: T(9, 10, -3),
+  { id: 'an-clicks', key: 'clicks:linkedin', title: 'LinkedIn link clicks +210% this week', network: 'linkedin', metric: 'Link clicks', value: '1,140', delta: '+210%', series: [210, 240, 190, 260, 230, 250, 1140], detectedAt: T(9, 10, -3),
     cause: 'The repair programme post was shared by the Green Gear newsletter (38k readers). 71% of clicks went to the repair form.', confidence: 81,
     actions: ['Ask Atlas for a follow-up post', 'Tell Sage: repair content works on LinkedIn', 'No action'], open: true },
-  { id: 'an-fb', title: 'Facebook reach dropped 41% in a day', network: 'facebook', metric: 'Reach', value: '5.8k', delta: '−41%', down: true, series: [9.8, 10.1, 9.6, 9.9, 5.8, 6.2, 8.4, 9.7], detectedAt: T(10, 0, -15),
+  { id: 'an-fb', key: 'reach:facebook', title: 'Facebook reach dropped 41% in a day', network: 'facebook', metric: 'Reach', value: '5.8k', delta: '−41%', down: true, series: [9.8, 10.1, 9.6, 9.9, 5.8, 6.2, 8.4, 9.7], detectedAt: T(10, 0, -15),
     cause: 'A feed change on 10 November. Every brand in your category dropped the same day (Echo checked 40 accounts).', confidence: 86,
     actions: [], open: false, resolution: 'Atlas moved Facebook posts to 19:00. Reach recovered by Thursday 13 November.' },
-  { id: 'an-ig', title: 'Instagram followers +1,240 in a day', network: 'instagram', metric: 'New followers', value: '+1,240', delta: '6.8× usual', series: [170, 190, 160, 180, 1240, 320, 210], detectedAt: T(21, 0, -22),
+  { id: 'an-ig', key: 'followers:instagram', title: 'Instagram followers +1,240 in a day', network: 'instagram', metric: 'New followers', value: '+1,240', delta: '6.8× usual', series: [170, 190, 160, 180, 1240, 320, 210], detectedAt: T(21, 0, -22),
     cause: '@camille.outdoors (84k) shared the Ridge in an unpaid story.', confidence: 92,
     actions: [], open: false, resolution: 'Nova sent a thank-you DM. Echo added Camille to the creator watch list.' },
-  { id: 'an-yt', title: 'YouTube Shorts retention fell under 40%', network: 'youtube', metric: 'Average view duration', value: '38%', delta: '−17 pt', down: true, series: [58, 61, 55, 57, 44, 40, 38], detectedAt: T(9, 0, -30),
+  { id: 'an-yt', key: 'views:youtube', title: 'YouTube Shorts retention fell under 40%', network: 'youtube', metric: 'Average view duration', value: '38%', delta: '−17 pt', down: true, series: [58, 61, 55, 57, 44, 40, 38], detectedAt: T(9, 0, -30),
     cause: 'Shorts longer than 40 seconds lose half their viewers at 12 seconds.', confidence: 71,
     actions: [], open: false, resolution: 'Atlas now cuts Shorts to 30 seconds. Retention back to 55% the week after.' },
 ]
+
+/** What Iris's alert rules can watch, and how the rule reads. */
+export const ALERT_SUBJECTS = [
+  { value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' },
+  { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' },
+]
+export const ALERT_CONDITIONS = ['drops by more than', 'rises above', 'falls below']
+export const ALERT_UNITS = ['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']
+
+/**
+ * What Iris measures right now, per metric and network: today's value against its usual level. Her alert rules are
+ * evaluated against these on every heartbeat; one that fires becomes an anomaly built from the signal.
+ */
+export type Signal = Omit<Anomaly, 'id' | 'value' | 'delta' | 'down' | 'detectedAt' | 'open' | 'resolution' | 'handoff' | 'rule'> & {
+  subject: string
+  value: number
+  base: number
+  /** How the value reads: a count, thousands, a rate, minutes. */
+  unit: 'int' | 'k' | 'pct' | 'min'
+}
+
+export const SIGNALS: Signal[] = [
+  { key: 'views:tiktok', subject: 'views', network: 'tiktok', metric: 'Views per video', value: 1840, base: 2970, unit: 'int', series: TIKTOK_VIEWS, title: 'TikTok views per video down 38%',
+    cause: 'All 4 videos since Thursday open with a 5 to 7 second intro before the product appears. Average watch time fell from 9.1 s to 3.4 s. Trailkind’s best videos hook in 2 seconds.', confidence: 68,
+    actions: ['Ask Atlas to test 3-second hooks this week', 'Snooze a week'] },
+  { key: 'er:instagram', subject: 'er', network: 'instagram', metric: 'Engagement rate', value: 6.4, base: 2.1, unit: 'pct', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], title: 'Storm Jacket carousel at 3× the usual engagement',
+    cause: 'Saves drive it: 214 saves, mostly from people who never bought from Fernway.', confidence: 74, actions: ['Ask Atlas for a follow-up carousel', 'No action'] },
+  { key: 'reach:instagram', subject: 'reach', network: 'instagram', metric: 'Daily reach', value: 31200, base: 27900, unit: 'k', series: [27.1, 28.4, 26.9, 27.9, 28.8, 29.6, 31.2], title: 'Instagram daily reach up 12%',
+    cause: 'The Storm Jacket carousel is still being shared: 38% of today’s reach comes from shares.', confidence: 71, actions: ['Ask Atlas for a follow-up carousel', 'No action'] },
+  { key: 'reach:x', subject: 'reach', network: 'x', metric: 'Daily reach', value: 740, base: 1140, unit: 'int', series: [1180, 1090, 1210, 1140, 960, 820, 740], title: 'X daily reach down 35%',
+    cause: 'Atlas posted once on X in 5 days: Trail Week posts went to Instagram and TikTok. Reach on X follows posting.', confidence: 72,
+    actions: ['Ask Atlas for an X post this week', 'Tell Sage: X gets less in Trail Week', 'No action'] },
+  { key: 'reach:tiktok', subject: 'reach', network: 'tiktok', metric: 'Daily reach', value: 11800, base: 14100, unit: 'k', series: [14.6, 13.9, 14.1, 14.8, 12.9, 12.2, 11.8], title: 'TikTok daily reach down 16%',
+    cause: 'Fewer views per video since Thursday: the long hooks lose viewers before the product shows.', confidence: 66, actions: ['Ask Atlas to test 3-second hooks this week', 'No action'] },
+  { key: 'followers:linkedin', subject: 'followers', network: 'linkedin', metric: 'New followers per day', value: 82, base: 80, unit: 'int', series: [72, 80, 65, 90, 77, 84, 82], title: 'LinkedIn followers steady',
+    cause: 'Growth follows posting: nothing unusual this week.', confidence: 60, actions: [] },
+  { key: 'clicks:linkedin', subject: 'clicks', network: 'linkedin', metric: 'Link clicks', value: 1140, base: 230, unit: 'int', series: [210, 240, 190, 260, 230, 250, 1140], title: 'LinkedIn link clicks +210% this week',
+    cause: 'The repair programme post was shared by the Green Gear newsletter (38k readers). 71% of clicks went to the repair form.', confidence: 81,
+    actions: ['Ask Atlas for a follow-up post', 'Tell Sage: repair content works on LinkedIn', 'No action'] },
+  { key: 'reply:instagram', subject: 'reply', network: 'instagram', metric: 'Median reply time', value: 4, base: 26, unit: 'min', series: [31, 26, 18, 9, 6, 5, 4], title: 'Reply time on Instagram',
+    cause: 'Nova answers within minutes, day and night.', confidence: 60, actions: [] },
+  { key: 'sentiment:instagram', subject: 'sentiment', network: 'instagram', metric: 'Negative sentiment', value: 22, base: 24, unit: 'pct', series: [25, 24, 23, 24, 22, 23, 22], title: 'Negative sentiment at 22%',
+    cause: 'Mostly delivery delays on Facebook and Instagram comments; Nova answers each one.', confidence: 70, actions: ['No action'] },
+]
+
+/** Signals a scripted event switches on: what the metric looks like after it. */
+export const SPIKES: Record<string, Partial<Signal>> = {
+  'followers:linkedin': { value: 420, base: 80, series: [72, 80, 65, 90, 77, 84, 420], title: 'LinkedIn followers +420 in a day',
+    cause: 'The repair programme post was shared by the Green Gear newsletter (38k readers).', confidence: 84, actions: ['Ask Atlas for a follow-up post', 'No action'] },
+}

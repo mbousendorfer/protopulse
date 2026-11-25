@@ -4,6 +4,7 @@ import { addRule, now, pushLog, pushHandoff, uid } from '../../app/core'
 import { T } from '../../app/time'
 import { respond, routeText } from './respond'
 import { TIKTOK_VIEWS } from '../../data/insights'
+import { recordBoost } from '../insights/slice'
 
 /** Rich, serialisable cards an agent can put in a conversation. */
 export type Card =
@@ -112,7 +113,10 @@ export function reduceChats(s: State, a: ChatsAction, resolve: Resolve): State {
       if (card.type === 'brief' && a.action === 'startBrief') return setCard(s, a.id, a.msg, { status: 'started' })
       if (card.type === 'boost') {
         if (a.action === 'decline') return setCard(s, a.id, a.msg, { status: 'declined' })
-        const next = pushLog(s, { agent: 'iris', text: `Boost of €${card.amount} on “${card.post}” set up for when it goes live`, status: 'approved', reason: 'From a chat', undoMinutes: 30 })
+        // Every boost goes through Iris: her monthly cap applies, and undoing the journal line gives the money back.
+        const r = recordBoost(s, { post: card.post, budget: card.amount, days: 3 })
+        if (r.refused) return setCard(pushLog(s, { agent: 'iris', text: `Boost on “${card.post}” not set up`, status: 'rejected', reason: r.refused, link: '/agents/iris?tab=guardrails' }), a.id, a.msg, { status: 'declined' })
+        const next = pushLog(r.s, { agent: 'iris', text: `Boost of €${card.amount} on “${card.post}” set up for when it goes live`, status: 'approved', reason: 'From a chat', undoMinutes: 30, boost: r.id })
         return setCard(next, a.id, a.msg, { status: 'boosted' })
       }
       return s
