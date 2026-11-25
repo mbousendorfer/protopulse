@@ -276,10 +276,14 @@ type Props = {
   at?: number | string
   /** Number of images in a carousel. Defaults to what Atlas's label announces ("Carousel: 5 things…"). */
   slides?: number
+  /** Chosen format; without it, Atlas's planning label decides. */
+  format?: Post['format']
+  /** Shown under the post, as the brand's own first comment. */
+  firstComment?: string
 }
 
 /** The post as it will look in each network's own app, in the mode that network is mostly used in. */
-export function NetworkPreview({ network, text, media, words, stats, status, at, slides }: Props) {
+export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment }: Props) {
   const now = useNow(60_000)
   const [ref, zoom] = useFit(network !== 'trustpilot')
   if (network === 'trustpilot') return <Empty title="No preview for Trustpilot" body="Trustpilot only shows customer reviews and your replies. Brands can’t publish posts there." />
@@ -289,7 +293,7 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
   const raw = text || 'Your caption shows here.'
   // Atlas's planning label ("Carousel: …", "Reel: …", "Short: …") picks the format, never shows in the caption.
   const format = raw.match(/^(carousel|reel|short)\s*:\s*/i)
-  const kind = format?.[1].toLowerCase()
+  const kind = chosen ?? format?.[1].toLowerCase()
   const caption = format ? raw.slice(format[0].length).replace(/^./, c => c.toUpperCase()) : raw
   const carousel = kind === 'carousel' ? Math.min(10, Math.max(2, +(caption.match(/\b(\d{1,2})\b/)?.[1] ?? 5))) : 1
   const v: View = {
@@ -301,7 +305,10 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
   const Body = VIEWS[network]
   return (
     <div ref={ref} className="pv-fit">
-      <div className={`pv pv-${network}`} style={{ zoom }} role="figure" aria-label={`Preview on ${network}`}><Body {...v} /></div>
+      <div className={`pv pv-${network}`} style={{ zoom }} role="figure" aria-label={`Preview on ${network}`}>
+        <Body {...v} />
+        {firstComment && <p className="pv-first"><b>fernway</b> {firstComment}</p>}
+      </div>
     </div>
   )
 }
