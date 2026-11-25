@@ -34,7 +34,7 @@ export type State = {
   chats: ChatsState
 }
 
-export const STATE_VERSION = 1
+export const STATE_VERSION = 2
 
 export type Preset = 'calm' | 'busy' | 'competitor' | 'trust'
 

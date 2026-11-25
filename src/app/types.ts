@@ -12,6 +12,9 @@ export type AgentAction = {
   autonomy: Autonomy
   locked?: boolean
   lockReason?: string
+  /** Typical volume a week, and one concrete case: shows what a level produces. */
+  perWeek?: number
+  example?: string
   /** One sentence per level, shown under the control. */
   says: Record<Autonomy, string>
   /** 30-day track record for this action. */
@@ -25,6 +28,8 @@ export type AgentAction = {
 export type Agent = {
   id: AgentId
   name: string
+  /** What the weekly volume counts, e.g. 'messages'. */
+  unit: string
   dept: string
   route: string
   role: string

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { initialState } from './state'
 import { groupOf, reducer } from './reducer'
 import { MIN } from './time'
+import { AGENTS, levelFor, weeklyLoad } from '../data/agents'
 
 const s0 = () => initialState()
 
@@ -175,5 +176,25 @@ describe('depth pass', () => {
     const g = s.agents.find(a => a.id === 'nova')!.guardrails.find(x => x.label === 'Replies per hour')!
     s = reducer(s, { type: 'core/guardrailDelete', agent: 'nova', id: g.id })
     expect(s.agents.find(a => a.id === 'nova')!.guardrails.some(x => x.label === 'Replies per hour')).toBe(false)
+  })
+})
+
+describe('autonomy presets and weekly load', () => {
+  it('levelFor maps risk to a level per preset', () => {
+    expect([levelFor('safe', 'cautious'), levelFor('risky', 'cautious')]).toEqual(['draft', 'suggest'])
+    expect([levelFor('safe', 'balanced'), levelFor('risky', 'balanced')]).toEqual(['act', 'draft'])
+    expect(levelFor('risky', 'autonomous')).toBe('act')
+  })
+
+  it('weeklyLoad sums volume per level and keeps locked actions with the person', () => {
+    const nova = AGENTS.find(a => a.id === 'nova')!
+    const all = weeklyLoad(nova.actions, () => 'act')
+    expect(all.suggest).toBe(nova.actions.filter(x => x.locked).reduce((n, x) => n + (x.perWeek ?? 0), 0))
+    expect(all.act + all.draft + all.suggest).toBe(nova.actions.reduce((n, x) => n + (x.perWeek ?? 0), 0))
+    expect(all.draft).toBe(0)
+  })
+
+  it('every action says what it produces', () => {
+    for (const a of AGENTS) for (const x of a.actions) expect(x.perWeek && x.example, x.id).toBeTruthy()
   })
 })
