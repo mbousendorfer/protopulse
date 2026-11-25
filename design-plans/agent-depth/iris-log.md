@@ -16,3 +16,6 @@
 - 25/11 · Partage avec Claire · une carte dans la file de Claire (sujet « Weekly report ») ; son moteur répond, la réponse est gardée dans `shared[id].reply` et affichée dans le rapport · « vu » simulé par le temps · PROMPT.md §7.1.
 - 25/11 · Badge de l'onglet Reports · compte les rapports en Draft qui attendent Sam, sinon rien · le nombre total de rapports · chaque badge veut dire « needs you ».
 - 25/11 · Type de graphe `trail` · retiré ; `pillars` rendu (barres par pilier) et utilisé par le rapport hebdo généré.
+- 25/11 · Période personnalisée · deux `<input type="date">` natifs bornés aux 90 jours gardés ; les volumes suivent la portée quotidienne de la fenêtre, les taux restent ceux de la période de base · un sélecteur de dates maison · natif, accessible, sans dépendance.
+- 25/11 · Ligne de post cliquable · panneau `Sheet` d'Iris avec les chiffres du post contre la moyenne du réseau · ouvrir le panneau d'Atlas · les 18 posts d'Explore ne sont pas encore ceux d'Atlas (ids différents) ; le lien vers le panneau d'Atlas viendra avec « Données qui vivent ».
+- 25/11 · Demande de Juno (clipPerf) · contrat `postPerf`/`clipPerf` purs, même modèle que l'estimation de Juno · écrire `stats` sur les posts d'Atlas · on n'écrit pas dans l'état d'un autre agent ; sans pitch (exposition de contrat).

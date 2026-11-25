@@ -17,7 +17,7 @@
 | F5 | Rapport hebdo en Act | `onResolveInsights` marque w47 partagé (`slice.ts:124`), testé (`reducer.test.ts:223`) | Vérifier en navigateur ; garder le test | 2 | S | done (reports PR) |
 | F6 | Rapports réguliers | `REPORTS` constant (`data/insights.ts:21`) ; « Skip to tomorrow » écrit seulement une ligne de journal (`reducer.ts:425`) | Rapports en état ; au changement de jour, `tick` d'Iris écrit le brief du jour (et le rapport hebdo le lundi) depuis les sélecteurs | 3 | M | done (reports PR) |
 | F8 | — | Types `'pillars' \| 'trail'` déclarés jamais rendus (`data/insights.ts:7`) | Rendre `pillars` (utilisé par les rapports générés), retirer `trail` | 1 | S | done (reports PR) |
-| F9 | Période libre, tri, lignes cliquables (§6.4) | Périodes 7/30/90 seules, tri date/reach/ER/clics, lignes inertes (`Page.tsx:157-185`) | Période personnalisée (dates), tri réseau/pilier/auteur, ligne → panneau d'aperçu du post avec ses chiffres | 2 | M | todo |
+| F9 | Période libre, tri, lignes cliquables (§6.4) | Périodes 7/30/90 seules, tri date/reach/ER/clics, lignes inertes (`Page.tsx:157-185`) | Période personnalisée (dates), tri réseau/pilier/auteur, ligne → panneau d'aperçu du post avec ses chiffres | 2 | M | done (explore PR) |
 | F10 | Partage de rapport | « Seen » simulé par le temps (`Page.tsx:126`) | Le partage passe par le moteur de Claire (`CLAIRE['Weekly report']`, `core/heartbeat`) : sa réponse arrive dans le rapport | 2 | S | done (reports PR) |
 
 ## Features (pitch avant construction)
@@ -32,7 +32,7 @@
 | 6 | Social Media ROI | Absent | UTM des liens d'Atlas → clics, sessions, conversions, revenu mockés GA4 par réseau et campagne | 2 | M | todo |
 | 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | todo |
 | 8 | Competitors (benchmark) | Texte dans `answer()` (`slice.ts:59`) | Section benchmark lue chez Echo (`s.listening`) dans les rapports | 2 | S | todo |
-| 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | todo |
+| 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | done (contrat clipPerf, demande de Juno) |
 | 10 | Boost : résultat mesuré | — (le budget est F2) | Historique des boosts avec résultat (reach payé, coût par clic) dans Explore | 1 | S | todo |
 | 11 | CSV Builder | Export CSV de la table des posts (`Page.tsx:189`) | — | 1 | — | skipped — l'export CSV d'Explore couvre le besoin du test |
 | 12 | Ads reports | Absent | — | 1 | — | skipped — hors périmètre (_common : Paid = boost recommandé par Iris, pas de gestionnaire de campagnes) |
