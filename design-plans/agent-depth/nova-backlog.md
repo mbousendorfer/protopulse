@@ -32,7 +32,7 @@
 | Labels (gérer, renommer, supprimer) | création seule (`Page.tsx:317`) | Gestion dans la barre latérale ; Nova étiquette à l'arrivée ; labels lus par Iris | 2 | S | done (#93) |
 | Modération : supprimer, bannir, spam, liker, répondre en privé | Hide seulement | Nova le fait en Act sur spam et bots ; chaque action dit avant si elle est réversible | 2 | M | done (PR Moderation) |
 | Filtres (date, assigné, label, revue) et vues enregistrées par Sam | vues codées en dur (`Page.tsx:28-30`) | Filtres manquants + « Save view » | 2 | M | done (PR Filters) |
-| Fils sous le post (Filter items by post) | `post` = texte libre (`data/inbox.ts:24`) | Commentaires groupés sous leur post, aperçu du post | 2 | M | todo |
+| Fils sous le post (Filter items by post) | `post` = texte libre (`data/inbox.ts:24`) | Commentaires groupés sous leur post, aperçu du post | 2 | M | done (PR Post threads) |
 | Volume crédible | 45 conversations, TikTok/YouTube maigres | ~80 conversations, fils plus longs, arrivées par le moteur | 2 | M | todo |
 | Traduction | absent (Jonas en allemand sans traduction) | Message traduit à la volée ; Nova répond dans la langue du client et montre la version anglaise | 1 | S | todo |
 | Contrat → Iris (temps de réponse, volumes, taux traités seuls) | absent | Sélecteurs purs dans `inbox/slice.ts` + demande `requests/iris-from-nova-*.md` | 2 | S | done (PR SLA) |
