@@ -4,7 +4,7 @@ import { T } from '../app/time'
 /** A sentence part: plain text, or a number that points to its data source. */
 export type Cited = string | { n: string; source: string }
 
-export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' | 'trail' }
+export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' }
 
 export type Report = {
   id: string
@@ -14,6 +14,8 @@ export type Report = {
   writtenAt: number
   summary: string
   sections: ReportSection[]
+  /** Written on Draft: waits for Sam on the Desk. */
+  draft?: boolean
 }
 
 const c = (n: string, source: string) => ({ n, source })
