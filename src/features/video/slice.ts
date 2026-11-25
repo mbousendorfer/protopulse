@@ -3,12 +3,13 @@ import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
 import { DAY, T } from '../../app/time'
 import { actionOf, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
-import type { Pillar, Post } from '../../data/publishing'
+import { POSTS, type Pillar, type Post } from '../../data/publishing'
+import type { Network } from '../../app/types'
 import {
   BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, NETWORK_FIT, captionSlips, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, NETWORK_FIT, captionSlips, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -27,7 +28,8 @@ export const SEND_ALONE = 80
 const ARRIVED = T(17, 52, -1)
 export function initialVideo(): VideoState {
   const sources: Source[] = [{ ...SOURCE_DEFS.repair, status: 'ready' }, { ...SOURCE_DEFS.live, status: 'ready' }]
-  const clips = sources.flatMap(src => SEEDS[src.media].map(seed => clipFromSeed(seed, src, src.id === 'live' ? T(19, 10, -4) : ARRIVED)))
+  const seeded = sources.flatMap(src => SEEDS[src.media].map(seed => clipFromSeed(seed, src, src.id === 'live' ? T(19, 10, -4) : ARRIVED)))
+  const clips = withTrack(seeded, seeded, POSTS)
   return { sources, clips, kit: structuredClone(BRAND_KIT), editor: { past: [], future: [] }, opened: {}, releases: { ...RELEASES } }
 }
 
@@ -239,13 +241,19 @@ export function undoVideoWork(s: State, captionFixes?: Record<string, number[]>,
   return next
 }
 
+/* ---------- Track record ---------- */
+
+/** Clips waiting for review learn from what was published: their track record is refreshed. */
+const withTrack = (clips: Clip[], all: Clip[], posts: Post[]) => clips.map(c => (c.status === 'ready' || c.status === 'snoozed' ? { ...c, track: trackRecord(c, all, posts) } : c))
+const refreshTrack = (s: State): State => setVideo(s, { clips: withTrack(s.video.clips, s.video.clips, s.publishing.posts) })
+
 /* ---------- After it goes out: published, with numbers ---------- */
 
-/** Average reach and engagement of the published posts on a network, the yardstick Iris uses. */
+/** Usual reach and engagement of the published posts on a network (medians: one viral post doesn't set the bar). */
 export function networkAverage(s: State, n: string): { reach: number; er: number } | undefined {
   const ps = s.publishing.posts.filter(p => p.network === n && p.status === 'published' && p.stats)
   if (!ps.length) return undefined
-  return { reach: ps.reduce((a, p) => a + p.stats!.reach, 0) / ps.length, er: ps.reduce((a, p) => a + p.stats!.er, 0) / ps.length }
+  return { reach: typicalReach(ps, n as Network), er: median(ps.map(p => p.stats!.er)) }
 }
 
 const postsOf = (s: State, c: Clip) => (c.posts ?? []).map(id => s.publishing.posts.find(p => p.id === id)).filter(p => !!p && p.status !== 'failed' && p.status !== 'draft') as Post[]
@@ -330,7 +338,7 @@ function startSource(s: State, id: string): State {
 function finishSource(s: State, src: Source): State {
   const t = now(s)
   const tr = TRANSCRIPT[src.transcript]
-  const fresh = prepare(s, SEEDS[src.media].map(seed => clipFromSeed({ ...seed, status: undefined, stats: undefined }, src, t, s.video.kit)))
+  const fresh = withTrack(prepare(s, SEEDS[src.media].map(seed => clipFromSeed({ ...seed, status: undefined, stats: undefined }, src, t, s.video.kit))), s.video.clips, s.publishing.posts)
     .sort((a, b) => rescore(b, tr).total - rescore(a, tr).total)
   let next = setVideo(patchSource(s, src.id, { status: 'ready', startedAt: undefined }), { clips: [...fresh, ...s.video.clips] })
   next = logDubs(checkCaptions(next, fresh.map(c => c.id)), fresh)
@@ -358,7 +366,8 @@ export function tickVideo(s: State, t: number): State {
   }
   const back = next.video.clips.filter(c => c.status === 'snoozed' && (c.back ?? Infinity) <= t).map(c => c.id)
   if (back.length) next = patchClips(next, back, c => ({ ...c, status: 'ready', back: undefined }))
-  return publishDue(next, t)
+  const published = publishDue(next, t)
+  return published === next ? next : refreshTrack(published)
 }
 
 export const videoDue = (s: State, t: number) =>
@@ -493,7 +502,7 @@ export function reduceVideo(s: State, a: VideoAction): State {
         return clipFromSeed(seed, src, t, s.video.kit)
       })
       // Found on your request: framed and checked like any new clip, but no dubs nobody asked for.
-      clips = prepare(s, clips).map(c => ({ ...c, audio: { ...c.audio, dubs: [], review: [] } }))
+      clips = withTrack(prepare(s, clips).map(c => ({ ...c, audio: { ...c.audio, dubs: [], review: [] } })), s.video.clips, s.publishing.posts)
       const next = checkCaptions(setVideo(s, { clips: [...clips, ...s.video.clips] }), clips.map(c => c.id))
       return notify(next, 'video', `Juno found ${clips.length} moment${clips.length > 1 ? 's' : ''} about “${a.query}”`)
     }
