@@ -217,8 +217,11 @@ const FILLER: [string, Sentiment, string?][] = [
 const NETS = ['Instagram', 'TikTok', 'X', 'Facebook', 'Reddit']
 const NAMES = ['@lea.m', '@paul_outdoor', '@emma.trail', '@yanis.hike', '@chloe.rando', '@romain.alps', '@ana.lisboa', '@kevin_fr', '@sofia.runs', '@nico.peaks', '@ella.bv', '@jules.gr', '@marie.ct', '@victor.ski', '@lina.trek', '@hugo_m', '@zoe.vertical', '@arthur.camp', '@manon.k', '@louis.trail', '@eva.mont', '@gab_alps', '@ines.rando', '@sam.lyon', '@noah.peak']
 
+/** The search that caught a seeded mention, by its number. */
+const SEARCH_OF: Record<number, string> = { 1: 's2', 2: 's5', 4: 's9', 5: 's2', 7: 's3', 9: 's11', 10: 's2', 11: 's4', 12: 's4', 16: 's3', 18: 's12', 19: 's10', 20: 's9', 21: 's4', 25: 's3' }
+
 export const MENTIONS: Mention[] = [
-  ...M.map(([author, network, text, sentiment, reach, product, risk], i) => ({ id: `m${i + 1}`, author, network, text, sentiment, reach, product, risk, at: T(8, 0) - (i * 47 + 12) * MIN })),
+  ...M.map(([author, network, text, sentiment, reach, product, risk], i) => ({ id: `m${i + 1}`, author, network, text, sentiment, reach, product, risk, search: SEARCH_OF[i + 1], at: T(8, 0) - (i * 47 + 12) * MIN })),
   ...NAMES.map((author, i) => {
     const [text, sentiment, product] = FILLER[i % FILLER.length]
     return { id: `m${M.length + i + 1}`, author, network: NETS[i % NETS.length], text, sentiment, product, reach: 200 + ((i * 397) % 2400), at: T(8, 0) - (i * 83 + 30) * MIN }
@@ -238,7 +241,8 @@ export const TRENDS: Trend[] = [
   { id: 't8', name: 'AI-generated trail maps', networks: 'X, Instagram', growth: '+120% this week', fit: 'Low', fitWhy: 'Nothing to do with your products, and your audience distrusts AI content.', examples: ['#aitrails · 40k posts'] },
 ]
 
-export type Search = { id: string; name: string; keywords: string; exclude: string; volume: number; paused?: boolean }
+/** A search created during the session fills up from `startedAt` (see searchVolume). */
+export type Search = { id: string; name: string; keywords: string; exclude: string; volume: number; paused?: boolean; startedAt?: number }
 
 export const SEARCHES: Search[] = [
   { id: 's1', name: 'Brand', keywords: 'Fernway, @fernway, fernway.co', exclude: 'fernway road, fernway farm', volume: 1840 },

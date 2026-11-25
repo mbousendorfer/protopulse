@@ -10,7 +10,7 @@ import {
   type CompEvent, type CompetitorId, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { allMentions, sentimentOf, visibleMentions } from './model'
+import { activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -474,14 +474,15 @@ function Trends() {
 /* ---------- Searches ---------- */
 function Searches() {
   const { s, d } = useStore()
+  const now = useNow()
   const [edit, setEdit] = useState<Search | null>(null)
   const [removed, setRemoved] = useState<Search | null>(null)
   const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
   return (
     <div className="stack">
       <div className="row between">
-        <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</p>
-        <Btn variant="primary" onClick={() => setEdit(blank)}><Plus size={14} />New search</Btn>
+        <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums. <span className="num">{activeSearches(s)} of {searchCap(s)}</span> search slots in use.</p>
+        <Btn variant="primary" onClick={() => setEdit(blank)} disabled={activeSearches(s) >= searchCap(s)}><Plus size={14} />New search</Btn>
       </div>
       <section className="card">
         <div className="table-wrap">
@@ -493,8 +494,10 @@ function Searches() {
                   <td><b>{x.name}</b></td>
                   <td className="muted kw">{x.keywords}</td>
                   <td className="faint kw">{x.exclude || '–'}</td>
-                  <td className="r">{x.volume ? x.volume.toLocaleString('en-GB') : 'Collecting'}</td>
-                  <td>{x.paused ? <Pill>Paused</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
+                  {(() => { const v = searchVolume(x, now); return <>
+                    <td className="r num">{v.volume.toLocaleString('en-GB')}{v.collecting && <span className="faint"> so far</span>}</td>
+                    <td>{x.paused ? <Pill>Paused</Pill> : v.collecting ? <Pill tone="caution" dot>Collecting · {Math.round(v.progress * 100)}%</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
+                  </> })()}
                   <td>
                     <span className="row nowrap tight end">
                       <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>

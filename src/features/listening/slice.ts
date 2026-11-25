@@ -1,9 +1,9 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
-import { hhmm, MIN } from '../../app/time'
+import { DEMO_START, hhmm, MIN } from '../../app/time'
 import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
-import { mentionOf, negativeLastHour, sentimentOf, spikeMentions, SPIKE_FACTOR, USUAL_NEGATIVE_PER_HOUR } from './model'
+import { activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -36,6 +36,11 @@ export type ListeningState = {
   pausedAtlas?: string
   /** Echo keeps an eye on a spike until `until`, then reports. */
   watchSpike?: { until: number; from: number; card: string }
+  /** Alert rules: when each last fired, and the mentions behind it. */
+  fired: Record<string, number>
+  hits: Record<string, string[]>
+  /** Last time Echo checked her alert rules. */
+  checkedAt?: number
 }
 
 const ALERTS: Alert[] = [
@@ -44,7 +49,9 @@ const ALERTS: Alert[] = [
   { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
 ]
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [] })
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
+  // The press mention on “PFAS rainwear” came in overnight: Echo already raised it (Nova's PFAS card).
+  fired: { la3: DEMO_START }, hits: {} })
 
 export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
@@ -123,15 +130,22 @@ function handTrend(s: State, id: string): State {
 }
 
 export function reduceListening(s: State, a: ListeningAction): State {
+  const next = reduceListeningRaw(s, a)
+  return next === s ? s : syncGuardrails(next)
+}
+
+function reduceListeningRaw(s: State, a: ListeningAction): State {
   switch (a.type) {
     case 'listening/watchSave': {
       const exists = s.listening.watch.some(w => w.id === a.w.id)
+      if (!exists && a.w.tracking && watchedCount(s) >= competitorCap(s)) return capped(s, `Echo already watches ${competitorCap(s)} competitors, your cap. Pause one first, or raise the cap in Echo’s guardrails.`)
       const watch = exists ? s.listening.watch.map(w => (w.id === a.w.id ? a.w : w)) : [...s.listening.watch, a.w]
       const next = { ...s, listening: { ...s.listening, watch } }
       return exists ? next : notify(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), 'listening', `Echo is watching ${a.w.name}. First events within the hour, benchmark after 7 days.`)
     }
     case 'listening/watchToggle': {
       const w = s.listening.watch.find(x => x.id === a.id)!
+      if (!w.tracking && watchedCount(s) >= competitorCap(s)) return capped(s, `Echo already watches ${competitorCap(s)} competitors, your cap. Pause one first, or raise the cap in Echo’s guardrails.`)
       const next = { ...s, listening: { ...s.listening, watch: s.listening.watch.map(x => (x.id === a.id ? { ...x, tracking: !x.tracking } : x)) } }
       return pushLog(next, { agent: 'echo', text: w.tracking ? `Paused watching ${w.name}` : `Resumed watching ${w.name}`, status: 'done', reason: 'You changed the competitor list' })
     }
@@ -175,11 +189,18 @@ export function reduceListening(s: State, a: ListeningAction): State {
     }
     case 'listening/searchSave': {
       const exists = s.listening.searches.some(x => x.id === a.search.id)
-      const searches = exists ? s.listening.searches.map(x => (x.id === a.search.id ? a.search : x)) : [{ ...a.search, id: a.search.id || uid('s'), volume: 0 }, ...s.listening.searches]
-      return patch(s, { searches })
+      if (!exists && !a.search.paused && activeSearches(s) >= searchCap(s)) return capped(s, SEARCH_CAP(s))
+      // A brand-new search starts collecting now; one brought back by Undo keeps its data.
+      const fresh = !exists && !a.search.id
+      const searches = exists ? s.listening.searches.map(x => (x.id === a.search.id ? a.search : x)) : [fresh ? { ...a.search, id: uid('s'), volume: 0, startedAt: now(s) } : a.search, ...s.listening.searches]
+      const next = patch(s, { searches })
+      return fresh ? notify(pushLog(next, { agent: 'echo', text: `Started tracking “${a.search.name}”`, status: 'done', reason: 'You created a search', link: '/listening/searches' }), 'listening', `Echo is collecting the last 7 days for “${a.search.name}”. Results in about 10 minutes.`) : next
     }
-    case 'listening/searchToggle':
-      return patch(s, { searches: s.listening.searches.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
+    case 'listening/searchToggle': {
+      const x = s.listening.searches.find(y => y.id === a.id)
+      if (x?.paused && activeSearches(s) >= searchCap(s)) return capped(s, SEARCH_CAP(s))
+      return patch(s, { searches: s.listening.searches.map(y => (y.id === a.id ? { ...y, paused: !y.paused } : y)) })
+    }
     case 'listening/searchDelete':
       return patch(s, { searches: s.listening.searches.filter(x => x.id !== a.id) })
     case 'listening/mentions':
@@ -285,6 +306,7 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
   if (h.agent === 'echo' && h.ref === SPIKE_REF && d.kind === 'option') return spikeMove(s, h, d.index)
   if (h.ref?.startsWith('statement:') && d.kind === 'approve') return resumeAtlas(s, 'Claire’s statement is out')
   if (h.ref === SPIKE_REPLIES && d.kind === 'approve') return markSpikeReplied(s, true)
+  if (h.ref?.startsWith('alert:') && d.kind === 'option' && d.index === 0) return mentionsBulk(s, { type: 'listening/mentions', ids: s.listening.hits[h.ref.slice('alert:'.length)] ?? [], op: 'nova' })
   if (h.topic === 'Competitor') {
     const ev = EVENT_OF(h)
     if (!ev) return s
@@ -328,7 +350,7 @@ export function raiseSpike(s: State, manual: boolean): State {
   const live = [...spikeMentions(now(s)), ...s.listening.live.filter(m => !m.id.startsWith('spike-'))]
   let next = patch(s, { live })
   const { count, series, ratio } = negativeLastHour(next)
-  if (ratio < SPIKE_FACTOR) return next
+  if (ratio < spikeFactor(next)) return next
   const ms = spikeNow(next)
   const nets = (n: string) => ms.filter(m => m.network === n).length
   const top = [...ms].sort((x, y) => y.reach - x.reach)[0]
@@ -339,7 +361,7 @@ export function raiseSpike(s: State, manual: boolean): State {
     agent: 'echo', kind: 'alert', group: 'need', urgency: 'urgent', topic: 'Negative spike', action: 'echo-spike', ref: SPIKE_REF,
     title: `${ms.length} negative mentions in 40 minutes about Storm Jacket seams`,
     context: `${nets('Reddit')} on Reddit, ${nets('X')} on X, ${ms.length - nets('Reddit') - nets('X')} elsewhere. Loudest: ${top.author}, “${top.text}”`,
-    why: `${count} negative mentions in the last hour, ${times} my usual ${USUAL_NEGATIVE_PER_HOUR}. My spike threshold is ${SPIKE_FACTOR}×.`, confidence: 73,
+    why: `${count} negative mentions in the last hour, ${times} my usual ${USUAL_NEGATIVE_PER_HOUR}. My spike threshold is ${spikeFactor(next)}×.`, confidence: 73,
     link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket',
     options: [{ label: 'Pause Atlas and ask Claire for a statement', recommended: true }, { label: 'Nova sends the care-instructions reply to each mention' }, { label: 'Monitor for 2 hours' }],
     preview: { type: 'metric', label: 'Negative mentions per hour', value: String(count), delta: `${times} usual`, down: true, series },
@@ -347,7 +369,7 @@ export function raiseSpike(s: State, manual: boolean): State {
   }
   const id = uid('h')
   next = pushHandoff(next, { ...h, id })
-  if (level !== 'act') return next
+  if (level !== 'act') return checkAlerts(next)
   // On Act, Echo makes the recommended move herself, through the same effect as Sam's choice, with a real Undo.
   const card = next.handoffs.find(x => x.id === id)!
   next = removeHandoff(spikeMove(next, card, 0), id)
@@ -414,14 +436,18 @@ export function onUndoListening(s: State, entry: LogEntry): State {
   return next
 }
 
-/** Two hours after “Monitor”, Echo reports what the thread did. */
-export const listeningDue = (s: State, t: number) => !!s.listening.watchSpike && s.listening.watchSpike.until <= t
+/** Every minute Echo checks her alert rules; two hours after “Monitor”, she reports what the thread did. */
+export const listeningDue = (s: State, t: number) => t >= (s.listening.checkedAt ?? 0) + MIN || (!!s.listening.watchSpike && s.listening.watchSpike.until <= t)
 export function tickListening(s: State, t: number): State {
+  const checked = t >= (s.listening.checkedAt ?? 0) + MIN ? checkAlerts(patch(s, { checkedAt: t })) : s
+  return watchTick(checked, t)
+}
+function watchTick(s: State, t: number): State {
   const w = s.listening.watchSpike
   if (!w || w.until > t) return s
   const since = s.listening.live.filter(m => m.product === 'Storm Jacket' && sentimentOf(s, m) === 'negative' && m.at > w.from).length
   const next = patch(s, { watchSpike: undefined })
-  return pushHandoff(next, since >= USUAL_NEGATIVE_PER_HOUR * SPIKE_FACTOR
+  return pushHandoff(next, since >= USUAL_NEGATIVE_PER_HOUR * spikeFactor(s)
     ? { agent: 'echo', kind: 'alert', urgency: 'urgent', topic: 'Negative spike', title: `Storm Jacket seams: ${since} more negative mentions in 2 hours`, context: 'The thread is still growing.', why: 'You asked me to monitor for 2 hours.', confidence: 75, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' }
     : { agent: 'echo', kind: 'news', urgency: 'week', topic: 'Negative spike', title: `Storm Jacket seams calmed down: ${since} new negative mention${since === 1 ? '' : 's'} in 2 hours`, context: `Back under my usual ${USUAL_NEGATIVE_PER_HOUR} an hour. No move needed.`, why: 'You asked me to monitor for 2 hours.', confidence: 80, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket', cta: { label: 'See the mentions', to: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' } })
 }
@@ -451,4 +477,49 @@ function tellSales(s: State, ev: CompEvent, move: Move): State {
     preview: { type: 'text', label: `To ${SALES_TO}`, body: salesEmail(ev) },
   })
   return setEvent(next, ev.id, { status: 'handed', move: move.label, result: 'Echo drafted the email to sales. It’s on your Desk.' })
+}
+
+/* ---------- Alert rules ---------- */
+
+/** Evaluate every rule that's on and not quiet; a match raises a card (or joins the spike already on the Desk). */
+export function checkAlerts(s: State): State {
+  const t = now(s)
+  let next = s
+  for (const a of s.listening.alerts) {
+    if (!a.on || t - (next.listening.fired[a.id] ?? -Infinity) < alertWindow(a)) continue
+    const { value, ms } = alertValue(next, a)
+    if (value < a.threshold) continue
+    const sentence = alertSentence(next, a)
+    next = patch(next, { fired: { ...next.listening.fired, [a.id]: t }, hits: { ...next.listening.hits, [a.id]: ms.map(m => m.id) } })
+    const claire = a.to === 'claire' ? ' Claire is copied.' : ''
+    const spike = next.handoffs.find(h => h.ref === SPIKE_REF)
+    if (spike && /negative/.test(a.unit) && a.subject === 'brand') {
+      next = pushLog(next, { agent: 'echo', text: `Your alert “${sentence}” matched (${value}): it’s the spike already on your Desk.${claire}`, status: 'done', reason: 'Alert rule', link: spike.link })
+      continue
+    }
+    const top = [...ms].sort((x, y) => y.reach - x.reach).slice(0, 2)
+    next = pushHandoff(next, {
+      agent: 'echo', kind: 'alert', urgency: 'today', topic: 'Alert', action: 'echo-file', ref: `alert:${a.id}`,
+      title: `${sentence.replace(/^“|”/g, '')}: ${value}${/%/.test(a.unit) ? '%' : ''} now`,
+      context: top.length ? top.map(m => `${m.author}: “${m.text}”`).join(' · ') : 'Read from the searches’ hourly volume.',
+      why: `Your alert rule: “${sentence}”.${claire}`, confidence: 90, link: a.subject === 'brand' || a.subject === 'competitors' ? '/listening/mentions' : '/listening/searches',
+      options: ms.length ? [{ label: `Nova drafts replies to ${ms.length === 1 ? 'this mention' : `these ${ms.length} mentions`}`, recommended: true }, { label: 'Nothing to do' }] : undefined,
+    })
+    if (claire) next = pushLog(next, { agent: 'echo', text: `Copied Claire on your alert: ${sentence} (${value})`, status: 'done', reason: 'Alert rule' })
+  }
+  return next
+}
+
+/* ---------- Caps and guardrails ---------- */
+
+const SEARCH_CAP = (s: State) => `All ${searchCap(s)} search slots are in use. Pause a search first, or raise the cap in Echo’s guardrails.`
+const capped = (s: State, text: string) => notify(s, 'listening', text, { link: { to: '/agents/echo?tab=guardrails', label: 'Echo’s guardrails' } })
+
+/** The counts in Echo's guardrails follow the state; the cap after “of” stays Sam's. */
+function syncGuardrails(s: State): State {
+  const names = s.listening.watch.filter(w => w.tracking).map(w => w.name).join(', ')
+  const value = (id: string, text: (cap: string) => string) => <G extends { id: string; value: string }>(g: G): G => (g.id === id ? { ...g, value: text(g.value.match(/of (\d+)/)?.[1] ?? '') } : g)
+  return { ...s, agents: s.agents.map(ag => ag.id !== 'echo' ? ag : { ...ag, guardrails: ag.guardrails
+    .map(value('g2', cap => `${watchedCount(s)}${cap ? ` of ${cap}` : ''}: ${names || 'none'}`))
+    .map(value('g3', cap => `${activeSearches(s)}${cap ? ` of ${cap}` : ''}`)) }) }
 }

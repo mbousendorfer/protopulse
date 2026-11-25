@@ -112,8 +112,8 @@ export const AGENTS: Agent[] = [
     ],
     guardrails: [
       { id: 'g1', label: 'Spike threshold', value: '3× usual negative volume in 1 h' },
-      { id: 'g2', label: 'Competitors watched', value: 'Peakline, Norrø, Trailkind, Basecamp Co.' },
-      { id: 'g3', label: 'Active searches', value: '12' },
+      { id: 'g2', label: 'Competitors watched', value: '4 of 6: Peakline, Norrø, Trailkind, Basecamp Co.' },
+      { id: 'g3', label: 'Active searches', value: '11 of 15' },
     ],
   },
   {
