@@ -2,6 +2,7 @@ import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
 import { now, pushHandoff, pushLog, uid } from '../../app/core'
 import type { Alert } from './alerts'
+import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
 export type Share = { at: number }
@@ -49,15 +50,27 @@ function setAnomaly(s: State, id: string, resolution: string): State {
   return patch(s, { anomalies: { ...s.insights.anomalies, [id]: { open: false, resolution, at: now(s) } } })
 }
 
-/** Scripted answers to follow-up questions on a report. */
+/** Answers to follow-up questions on a report, read from the same numbers as Explore, Chat and ⌘K. */
 export function answer(q: string): string {
   const t = q.toLowerCase()
-  if (/tiktok/.test(t)) return 'TikTok views per video fell from a median of 9,000 to 1,840 since Thursday 20 Nov (4 videos). Watch time dropped from 9.1 s to 3.4 s: viewers leave before the product shows up. Atlas can test 3-second hooks on the next 3 videos.'
-  if (/best time|when .*post|slot/.test(t)) return 'Over the last 30 days, Friday 18:00 – 20:00 is your best window on Instagram (2.1× the median reach), and Atlas schedules at 18:30 inside it. Weekday 08:30 on LinkedIn, 18:30 on TikTok. See the heatmap in Explore.'
-  if (/reel|carousel|format/.test(t)) return 'Carousels get 2× the saves of reels (3.4% vs 1.7%), reels get 1.6× the reach. For cold-weather products, carousels convert better: the Storm Jacket carousel drove 920 link clicks.'
-  if (/linkedin/.test(t)) return 'LinkedIn engagement is 3.9% over 7 days, the highest of your networks. Repair content does 1.9× better than product posts there.'
+  if (/tiktok/.test(t)) {
+    const v = tiktokViews()
+    return `TikTok views per video fell from a median of ${fmt.int(v.before)} to ${fmt.int(v.now)} since Thursday 20 Nov (4 videos), ${fmt.signed(v.delta)}. Watch time dropped from 9.1 s to 3.4 s: viewers leave before the product shows up. Atlas can test 3-second hooks on the next 3 videos.`
+  }
+  if (/best time|when .*post|slot/.test(t)) {
+    const [ig, li, tt] = (['instagram', 'linkedin', 'tiktok'] as const).map(bestTime)
+    return `Over the last 30 days, ${ig.dayName} ${ig.window} is your best window on Instagram (${ig.lift}× the median reach), and Atlas posts at ${ig.time} inside it. ${li.dayName} ${li.time} on LinkedIn, ${tt.dayName} ${tt.time} on TikTok. See the heatmap in Explore.`
+  }
+  if (/reel|carousel|format/.test(t)) {
+    const f = formats()
+    return `Carousels get ${f.savesX}× the saves of reels (${fmt.pct(f.carousel.saves)} vs ${fmt.pct(f.reel.saves)}), reels get ${f.reachX}× the reach. For cold-weather products, carousels convert better: the Storm Jacket carousel drove 920 link clicks.`
+  }
+  if (/linkedin/.test(t)) return `LinkedIn engagement is ${fmt.pct(kpi('er', 7, 'linkedin').value)} over 7 days, the highest of your networks. Repair content does 1.9× better than product posts there.`
   if (/compet|peakline|trailkind|norr/.test(t)) return 'Your share of voice is 31% vs Peakline 27%. Peakline’s price cut drove 3× their usual comments, mostly about price, not quality. Details in Listening › Competitors.'
-  if (/reach|grow/.test(t)) return 'Reach was 412k over the last 7 days, +8% vs the week before (381k). Instagram brings 46% of it, TikTok 24%.'
+  if (/reach|grow/.test(t)) {
+    const r = kpi('reach'), ig = kpi('reach', 7, 'instagram'), tt = kpi('reach', 7, 'tiktok')
+    return `Reach was ${fmt.k(r.value)} over the last 7 days, ${fmt.signed(change(r))} vs the week before (${fmt.k(r.prev)}). Instagram brings ${Math.round((ig.value / r.value) * 100)}% of it, TikTok ${Math.round((tt.value / r.value) * 100)}%.`
+  }
   return 'I can answer questions about reach, engagement, networks, formats, best times and competitors, using the last 90 days of data. Try “Why did TikTok drop?” or “Reels or carousels?”.'
 }
 

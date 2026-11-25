@@ -27,7 +27,7 @@ export const REPORTS: Report[] = [
         'Nova handled ', c('142 conversations', 'Inbox · Mon 18:40 – Tue 07:00 · all networks'), ' on her own, including ', c('9 shipping questions', 'Inbox · tagged “shipping” · overnight'), ' and ', c('12 spam comments', 'Instagram · hidden by Nova · 07:46'), '. Four need you this morning.',
       ]] },
       { heading: 'What moved', paras: [[
-        'TikTok views per video are at ', c('1,840', 'TikTok · median of the last 4 videos · since Thu 20 Nov'), ', down ', c('38%', 'vs. median of the 10 videos before · 9,000'), '. The Storm Jacket carousel keeps climbing: ', c('6.4% engagement', 'Instagram · post of Mon 24 Nov · after 20 h'), ', three times the account average.',
+        'TikTok views per video are at ', c('1,840', 'TikTok · median of the last 4 videos · since Thu 20 Nov'), ', down ', c('38%', 'vs. median of the 7 videos before · 2,970'), '. The Storm Jacket carousel keeps climbing: ', c('6.4% engagement', 'Instagram · post of Mon 24 Nov · after 20 h'), ', three times the account average.',
       ]], chart: 'tiktok' },
       { heading: 'Competitors', paras: [[
         'Peakline cut the Aero 30 to ', c('€99', 'peakline.com · product page · checked 06:52'), ' (−29%). Three of your followers asked if you’ll match. Echo has a counter-move ready on your Desk.',
@@ -179,14 +179,25 @@ export const PILLAR_PERF = [
 
 export const HEAT_ROWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 export const HEAT_COLS = ['06', '08', '10', '12', '14', '16', '18', '20']
-export const HEAT: number[][] = HEAT_ROWS.map((_, r) => HEAT_COLS.map((_, c) => {
-  const evening = c === 6 ? 0.55 : c === 7 ? 0.35 : 0
-  const morning = c === 1 ? 0.3 : 0
-  const lunch = c === 3 ? 0.25 : 0
-  const weekend = r >= 5 ? (c === 2 ? 0.45 : 0.08) : 0
-  const fri = r === 4 && c === 6 ? 0.3 : 0
-  return Math.min(1, 0.12 + evening + morning + lunch + weekend + fri + (((r * 7 + c * 3) % 5) / 40))
-}))
+
+/** Each network's best cell (day, 2-hour column), the time Atlas posts inside it, and its reach against the median slot, last 30 days. */
+export const BEST_CELL: Record<Exclude<Network, 'google' | 'trustpilot'>, { day: number; col: number; time: string; lift: number }> = {
+  instagram: { day: 4, col: 6, time: '18:30', lift: 2.1 },
+  tiktok: { day: 3, col: 6, time: '18:30', lift: 1.8 },
+  linkedin: { day: 1, col: 1, time: '08:30', lift: 1.6 },
+  facebook: { day: 2, col: 6, time: '19:00', lift: 1.5 },
+  youtube: { day: 6, col: 5, time: '17:00', lift: 1.4 },
+  x: { day: 1, col: 3, time: '12:00', lift: 1.4 },
+}
+
+/** Instagram formats over the last 30 days. Ratios are derived from these, never typed. */
+export const FORMATS = {
+  carousel: { posts: 18, er: 4.2, reach: 21400, saves: 3.4, clicks: 1.8 },
+  reel: { posts: 22, er: 2.9, reach: 51400, saves: 1.9, clicks: 0.9 },
+}
+
+/** TikTok views per video (thousands), last 11 videos, oldest first. The last 4 are since Thu 20 Nov. */
+export const TIKTOK_VIEWS = [3.1, 2.8, 3.4, 2.9, 2.97, 2.7, 3.2, 2.12, 1.88, 1.71, 1.8]
 
 export type Anomaly = {
   id: string
@@ -207,7 +218,7 @@ export type Anomaly = {
 }
 
 export const ANOMALIES: Anomaly[] = [
-  { id: 'an-tiktok', title: 'TikTok views per video down 38%', network: 'tiktok', metric: 'Views per video', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], detectedAt: T(6, 58),
+  { id: 'an-tiktok', title: 'TikTok views per video down 38%', network: 'tiktok', metric: 'Views per video', value: '1,840', delta: '−38%', down: true, series: TIKTOK_VIEWS, detectedAt: T(6, 58),
     cause: 'All 4 videos since Thursday open with a 5 to 7 second intro before the product appears. Average watch time fell from 9.1 s to 3.4 s. Trailkind’s best videos hook in 2 seconds.', confidence: 68,
     actions: ['Ask Atlas to test 3-second hooks this week', 'Snooze a week'], open: true, handoff: 'h-tiktok' },
   { id: 'an-storm', title: 'Storm Jacket carousel at 3× the usual engagement', network: 'instagram', metric: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], detectedAt: T(7, 6),
