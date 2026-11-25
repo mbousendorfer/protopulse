@@ -7,7 +7,7 @@ import { RULES } from '../../data/playbook'
 import type { PlaybookRule } from '../../app/types'
 import {
   LEARNED_ORIGIN, LEARN_RULES, MAX_OPEN, applyAngle, applyInstruction, capIdeas, diffWords, draftIdea, expireIdeas, gapDays, heldByRules,
-  ideaPosts, isOpen, learn, makeIdea, mixVariants, namesCompetitor, pickSlot, spotIdeas, summarize, variantsOf, wakeIdeas,
+  gapSeed, ideaPosts, isOpen, learn, makeIdea, mixVariants, namesCompetitor, pickSlot, spotIdeas, summarize, variantsOf, wakeIdeas,
 } from './ideasModel'
 import { checkPost } from './checks'
 
@@ -171,4 +171,16 @@ test('scheduling: a post per draft, a brief without a photo waits for the visual
   const series = ideaPosts(makeIdea(IDEA_SEEDS['series-ridge'], 'continuous', NOW), id)
   expect(series).toHaveLength(4)
   expect(series[0].at).toBe(T(18, 30, 6))
+})
+
+test('gap ideas never propose the same post twice, and their why carries figures', () => {
+  const day1 = T(0, 0, 6), day2 = T(0, 0, 7)
+  const a = gapSeed({ day: day1, network: 'instagram' }, POSTS)!
+  const b = gapSeed({ day: day2, network: 'instagram' }, POSTS, [makeIdea(a, 'gap', NOW)])!
+  expect(b.copy.instagram).not.toBe(a.copy.instagram)
+  expect(a.title).not.toMatch(/:.*:/)
+  expect(a.sources.every(s => s.value && s.measure)).toBe(true)
+  const all = (['instagram'] as const).flatMap(() => [a, b]).map(x => makeIdea(x, 'gap', NOW))
+  const c = gapSeed({ day: T(0, 0, 8), network: 'instagram' }, POSTS, all)!
+  expect(gapSeed({ day: T(0, 0, 9), network: 'instagram' }, POSTS, [...all, makeIdea(c, 'gap', NOW)])).toBeNull()
 })

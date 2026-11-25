@@ -170,8 +170,10 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/askFill': {
       const day = T(0, 0, a.day)
-      const next = arriveIdeas(s, [gapSeed({ day, network: a.network }, s.publishing.posts)], 'gap', 'atlas')
-      const idea = next.publishing.ideas.find(i => i.key === `gap-${a.day}-${a.network}`)
+      const seed = gapSeed({ day, network: a.network }, s.publishing.posts, s.publishing.ideas)
+      if (!seed) return notify(s, 'publishing', `Atlas already proposed every ${a.network === 'x' ? 'X' : a.network} post it has for this week. Write one yourself, or check Ideas.`, { link: { to: '/publishing', label: 'Open Ideas' } })
+      const next = arriveIdeas(s, [seed], 'gap', 'atlas')
+      const idea = next.publishing.ideas.find(i => i.key === seed.key)
       return idea ? notify(next, 'publishing', `Atlas wrote an idea for ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}.`, { link: { to: `/publishing/ideas/${idea.id}`, label: 'Review the idea' } }) : next
     }
     case 'publishing/claire':
@@ -495,7 +497,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
 /** A scripted idea event: named seeds, or the next calendar gap. */
 export function ideaEvent(s: State, ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }): State {
   const seeds = ev.origin === 'gap'
-    ? gapDays(s.publishing.posts, now(s), 14).map(g => gapSeed(g, s.publishing.posts)).filter(seed => !s.publishing.ideas.some(i => i.key === seed.key)).slice(0, 1)
+    ? gapDays(s.publishing.posts, now(s), 14).flatMap(g => { const seed = gapSeed(g, s.publishing.posts, s.publishing.ideas); return seed && !s.publishing.ideas.some(i => i.key === seed.key) ? [seed] : [] }).slice(0, 1)
     : (ev.seeds ?? []).map(k => IDEA_SEEDS[k]).filter(Boolean)
   return arriveIdeas(s, seeds, ev.origin, ev.agent)
 }
