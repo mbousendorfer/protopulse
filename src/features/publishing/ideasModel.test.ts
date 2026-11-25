@@ -27,7 +27,7 @@ test('demo load: at least 6 ideas from the four sources, 2 ready, 1 series, 1 ex
   expect(ideas.filter(i => i.kind === 'series')).toHaveLength(1)
   expect(ideas.some(i => i.expires && i.expires.at - NOW < DAY)).toBe(true)
   for (const i of ideas) for (const s of i.sources) { expect(s.proof).toMatch(/\d/); expect(s.link).toMatch(/^\//) }
-  expect(summarize(ideas)).toBe('7 ideas this week, 2 ready to schedule. Community is behind target, so 3 of them are Community.')
+  expect(summarize(ideas)).toBe('3 of 7 ideas are for Community, the pillar furthest behind target.')
 })
 
 test('trend ideas stay suggestions on Suggest; recycle and fill get drafted on Draft', () => {

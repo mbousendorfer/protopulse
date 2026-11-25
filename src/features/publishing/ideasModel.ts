@@ -393,15 +393,15 @@ export function capIdeas(ideas: Idea[], incoming: Idea[]): { accepted: Idea[]; h
   return { accepted, held, retired }
 }
 
-/** Atlas's one-line summary at the top of Ideas. */
+/** Atlas's one line at the top of Ideas: only what the counts beside it don't already say. */
 export function summarize(ideas: Idea[]): string {
   const open = ideas.filter(isOpen)
-  if (!open.length) return 'No ideas waiting. Atlas will bring the next one as soon as a signal is worth it.'
-  const ready = open.filter(i => i.status === 'ready').length
+  if (!open.length) return 'No ideas waiting. Atlas brings the next one as soon as a signal is worth it.'
   const behind = behindPillar().pillar
   const inPillar = open.filter(i => i.pillar === behind).length
-  const lead = `${open.length} idea${open.length > 1 ? 's' : ''} this week, ${ready ? `${ready} ready to schedule` : 'none drafted yet'}.`
-  return inPillar ? `${lead} ${behind} is behind target, so ${inPillar} of them ${inPillar > 1 ? 'are' : 'is'} ${behind}.` : lead
+  const soon = open.filter(i => i.expires && i.expires.at - Math.max(...open.map(x => x.at)) < DAY).length
+  if (inPillar) return `${inPillar} of ${open.length} ideas are for ${behind}, the pillar furthest behind target.`
+  return soon ? `${soon} idea${soon > 1 ? 's' : ''} won’t keep past today.` : `${open.length} idea${open.length > 1 ? 's' : ''} waiting.`
 }
 
 /** "Good until Thu 27", "Good until 21:00", or no deadline. */
