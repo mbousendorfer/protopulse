@@ -61,33 +61,46 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
 }
 @media (prefers-reduced-motion: reduce) { .detail > * { animation: none; } }
 
-/* ---------- Brief: one line, the team, three highlights ---------- */
+/* ---------- Brief: the night in two lines, the team in six tiles, three highlights ----------
+   Sized so Your day starts on the first screen at 1440 × 900. */
 .brief .story { font-size: var(--t-lg); }
-.agent-band { margin-top: var(--s4); border-top: 1px solid var(--line); }
-.agent-line { display: grid; grid-template-columns: 28px minmax(0, 1fr) 84px auto; gap: var(--s3); align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
-.agent-line .who { display: flex; align-items: baseline; gap: var(--s2); min-width: 0; flex-wrap: wrap; }
-.agent-line .who b { font-weight: 600; }
-.agent-line .who .faint { font-size: var(--t-sm); }
-.agent-line .btn { justify-self: end; }
-.highlights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s5); }
-.hl-card { display: flex; flex-direction: column; border-radius: var(--r-ctl); background: var(--sunk); border: 1px solid var(--line); overflow: hidden; }
-.hl-body { flex: 1; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s4); border: 0; background: none; text-align: left; color: var(--ink); cursor: pointer; }
-.hl-body:hover .hl-title { text-decoration: underline; text-underline-offset: 3px; }
-.hl-body .faint { font-size: var(--t-sm); }
-.hl-title { font-weight: 600; line-height: 1.35; }
+.brief .brief-top { grid-template-columns: minmax(0, 1fr) 200px; gap: var(--s5); }
+.brief-head { margin-bottom: var(--s2); gap: var(--s3); }
+.brief-head > .row { flex-wrap: nowrap; align-items: flex-start; }
+
+/* The team: a grid of tiles, the whole tile is the target (row hover, not a card). */
+.agent-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px var(--s2); margin-top: var(--s4); padding-top: var(--s2); border-top: 1px solid var(--line); }
+.agent-tile { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 56px; padding: 8px 10px; border: 0; border-radius: var(--r-ctl); background: none; text-align: left; color: var(--ink); transition: background-color var(--fast) var(--ease); }
+.agent-tile:hover { background: var(--row-hover); }
+.agent-tile .who { display: flex; flex-direction: column; min-width: 0; line-height: 1.35; }
+.agent-tile .who b { font-weight: 600; }
+.agent-tile .who span { font-size: var(--t-sm); color: var(--ink-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.agent-tile .go { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); white-space: nowrap; }
+.agent-tile .go-quiet { color: var(--ink-2); transition: color var(--fast) var(--ease), transform var(--fast) var(--ease); }
+.agent-tile:hover .go-quiet { color: var(--action-ink); transform: translateX(2px); }
+
+/* Highlights: one button each, card hover = blue border. */
+.highlights { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s4); }
+.hl-card { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); border: 1px solid var(--line); text-align: left; color: var(--ink); cursor: pointer; transition: border-color var(--fast) var(--ease); }
+.hl-card:hover { border-color: var(--signal); }
+.hl-card .faint { font-size: var(--t-sm); }
+.hl-title { flex: 1; font-weight: 600; line-height: 1.35; }
+.hl-go { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); }
 .hl-metric { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
 .hl-metric b { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
-.hl-plan { display: flex; align-items: flex-end; gap: 6px; height: 48px; }
-.hl-plan span { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 1; }
-.hl-plan i { display: block; width: 100%; max-width: 16px; border-radius: 4px; background: var(--ink-off); }
-.hl-plan small { font-size: var(--t-xs); color: var(--ink-3); }
 .hl-comp { display: flex; gap: var(--s3); align-items: flex-start; }
 .hl-comp .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.hl-act { padding: 0 var(--s4) var(--s4); }
-@media (max-width: 1100px) { .highlights { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 1240px) { .agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1100px) {
+  /* Three highlights side by side would be 200 px wide: they scroll sideways instead of stacking 600 px. */
+  .highlights { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; margin-inline: calc(-1 * var(--s4)); padding-inline: var(--s4); scroll-padding-inline: var(--s4); }
+  .hl-card { flex: 0 0 min(300px, 82%); scroll-snap-align: start; }
+}
+.day1 .agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 700px) {
-  .agent-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
-  .agent-line .spark-cell { display: none; }
+  .brief .brief-top, .day1 .brief-top { grid-template-columns: minmax(0, 1fr); }
+  .agent-grid, .day1 .agent-grid { grid-template-columns: minmax(0, 1fr); }
+  .agent-tile { min-height: 48px; padding: 6px 4px; }
 }
 
 /* Batch rows: select, expand to the full preview */
@@ -151,11 +164,9 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
 /* ---------- Day 1: welcome and getting-started list ---------- */
 .day1-top { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s4); align-items: start; }
 .day1 .brief-top { grid-template-columns: minmax(0, 1fr) 180px; }
-.day1 .agent-line { grid-template-columns: 28px minmax(0, 1fr) auto; }
 .checklist.side .checklist-items { grid-template-columns: minmax(0, 1fr); padding-top: 0; }
 .checklist.side .checklist-bar { flex-basis: 64px; }
 .checklist.side .check-item:last-child { border-bottom: 0; }
-.day1 .spark-cell { display: none; }
 .day1-promise { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s3); font-weight: 500; }
 .day1-promise svg { color: var(--primary); flex: none; }
 .checklist { padding: 0; }
@@ -175,3 +186,6 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
 @media (max-width: 1100px) { .day1-top { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 900px) { .checklist-items { grid-template-columns: minmax(0, 1fr); } .checklist-bar { display: none; } }
 @media (max-width: 700px) { .day1 .brief-top { grid-template-columns: minmax(0, 1fr); } }
+
+/* On a phone the toggle keeps its name; the explanation would wrap under it. */
+@media (max-width: 700px) { .shift-wrap .lane-toggle .faint { display: none; } }
