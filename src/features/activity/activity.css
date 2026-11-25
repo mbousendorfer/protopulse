@@ -1,7 +1,7 @@
 .act-filters { display: flex; flex-direction: column; gap: var(--s3); margin-bottom: var(--s5); }
 .act-filters .filter .mark { width: 16px; height: 16px; }
 .act-day { margin-bottom: var(--s5); }
-.act-day h2 { font-size: var(--t-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
+.act-day h2 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
 .ledger > li { border-top: 1px solid var(--line); }
 .ledger > li:first-child { border-top: 0; }
 .lrow { display: grid; grid-template-columns: 44px 28px minmax(0, 1fr) auto auto; gap: var(--s3); align-items: center; padding: 8px var(--s4); min-height: 44px; }

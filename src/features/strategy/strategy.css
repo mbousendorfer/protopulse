@@ -18,7 +18,7 @@
 .sage-thinking li.done svg { color: var(--ok); }
 
 .campaign-head { display: flex; justify-content: space-between; gap: var(--s4); align-items: flex-end; flex-wrap: wrap; }
-.campaign-head h1 { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.02em; margin-top: 6px; }
+.campaign-head h1 { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; margin-top: 6px; }
 .brief-quote { margin-top: 4px; max-width: 72ch; }
 .side-label { font-weight: 600; }
 .diff ul { display: flex; flex-direction: column; gap: 6px; }

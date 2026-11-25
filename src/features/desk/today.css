@@ -10,7 +10,7 @@
 .day-group h3 { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); padding: 0 var(--s2) 6px; }
 .day-group .lane-toggle { padding: 0 var(--s2); font-size: var(--t-sm); margin-bottom: 6px; }
 .day-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-ctl); border: 0; background: none; text-align: left; color: var(--ink); transition: background-color var(--fast) var(--ease); }
-.day-row:hover { background: var(--lift); }
+.day-row:hover { background: var(--row-hover); }
 .day-row.active { background: var(--brand-soft); }
 .day-row.fresh { animation: arrive 420ms var(--ease); }
 .day-row .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
@@ -125,7 +125,7 @@
 .day-li { display: flex; align-items: center; gap: 2px; }
 .day-li > .day-row { flex: 1; min-width: 0; }
 .day-li > .select-box { margin-left: -4px; width: 28px; }
-.day-li.picked > .day-row { background: var(--brand-soft); }
+.day-li.picked > .day-row { background: var(--signal-wash); }
 .day-list .bulk-bar { position: sticky; bottom: var(--s2); margin: var(--s3) var(--s2) 0; width: auto; }
 .day-list .bulk-bar .sep { display: none; }
 .day-list .bulk-bar > b { flex-basis: 100%; }

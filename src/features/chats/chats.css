@@ -2,7 +2,7 @@
 .chats-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .chats-list { padding: var(--s2); display: flex; flex-direction: column; gap: 2px; position: sticky; top: calc(var(--topbar) + var(--s4)); max-height: calc(100vh - var(--topbar) - var(--s8)); overflow-y: auto; }
 .chat-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px; border-radius: var(--r-ctl); color: var(--ink); }
-.chat-item:hover { background: var(--lift); color: var(--ink); }
+.chat-item:hover { background: var(--row-hover); color: var(--ink); }
 .chat-item.active { background: var(--brand-soft); }
 .chat-item .txt { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
 .chat-item b { font-weight: 600; }

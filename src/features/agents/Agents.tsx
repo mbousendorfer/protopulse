@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
 import { ago, DAY } from '../../app/time'
 import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
 import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
+import { UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AlertsTable } from '../insights/alerts'
@@ -139,11 +140,7 @@ export function AgentProfile() {
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
             </div>
             {undoPreset && (
-              <div className="pb-undo" role="status" style={{ marginTop: 12 }}>
-                <span>{a.name} is now {undoPreset.label}. Every unlocked action moved.</span>
-                <Btn size="xs" onClick={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }}>Undo</Btn>
-                <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setUndoPreset(null)}><X size={12} /></Btn>
-              </div>
+              <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. Every unlocked action moved.</UndoBar>
             )}
             <AutonomyBoard agent={a} />
           </section>
@@ -261,11 +258,7 @@ function Guardrails({ agent }: { agent: Agent }) {
       </ul>
       <div className="card-body stack">
         {removed && (
-          <div className="pb-undo" role="status">
-            <span>Removed “{removed.label}: {removed.value}”</span>
-            <Btn size="xs" onClick={() => { d({ type: 'core/guardrailAdd', agent: agent.id, ...removed }); setRemoved(null) }}>Undo</Btn>
-            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
-          </div>
+          <UndoBar onUndo={() => { d({ type: 'core/guardrailAdd', agent: agent.id, ...removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Removed “{removed.label}: {removed.value}”</UndoBar>
         )}
         {adding ? (
           <form className="row" onSubmit={e => { e.preventDefault(); if (!label.trim() || !value.trim()) return; d({ type: 'core/guardrailAdd', agent: agent.id, label: label.trim(), value: value.trim() }); setAdding(false); setLabel(''); setValue('') }}>
@@ -274,7 +267,7 @@ function Guardrails({ agent }: { agent: Agent }) {
             <Btn type="submit" size="sm" variant="primary" disabled={!label.trim() || !value.trim()}>Add</Btn>
             <Btn size="sm" variant="ghost" onClick={() => setAdding(false)}>Cancel</Btn>
           </form>
-        ) : <Btn size="sm" onClick={() => setAdding(true)}><Plus size={14} />Add a guardrail</Btn>}
+        ) : <Btn size="sm" className="self-start" onClick={() => setAdding(true)}><Plus size={14} />Add a guardrail</Btn>}
       </div>
     </section>
   )
@@ -319,11 +312,7 @@ function Escalation({ agent }: { agent: Agent }) {
       </ul>
       <div className="card-body">
         {removedRule && (
-          <div className="pb-undo" role="status" style={{ marginBottom: 12 }}>
-            <span>Deleted “{removedRule.label}”</span>
-            <Btn size="xs" onClick={() => { d({ type: 'playbook/escalateAdd', rule: removedRule }); setRemovedRule(null) }}>Undo</Btn>
-            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemovedRule(null)}><X size={12} /></Btn>
-          </div>
+          <UndoBar className="mb-3" onUndo={() => { d({ type: 'playbook/escalateAdd', rule: removedRule }); setRemovedRule(null) }} onDismiss={() => setRemovedRule(null)}>Deleted “{removedRule.label}”</UndoBar>
         )}
         <div className="section-title">Add a rule</div>
         <div className="row">

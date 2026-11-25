@@ -8,6 +8,7 @@ import { now } from '../../app/core'
 import { AGENTS, agentName } from '../../data/agents'
 import { checkMessage, voiceSample } from '../../data/playbook'
 import { Btn, Empty, Mark, PageHead, Pill, Seg, Switch, Tabs } from '../../ui'
+import { UndoBar } from '../../ui/Feedback'
 import { HBars } from '../../ui/charts'
 import './playbook.css'
 
@@ -129,11 +130,7 @@ function RuleList({ items, kinds }: { items: PlaybookRule[]; kinds?: boolean }) 
         <Seg name={`pb-agent-${kinds ? 'r' : 'f'}`} label="Agent" size="sm" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: a.name }))]} />
       </div>
       {deleted && (
-        <div className="pb-undo" role="status">
-          <span>Deleted “{deleted.rule.text}”</span>
-          <Btn size="xs" onClick={() => { d({ type: 'playbook/restoreRule', rule: deleted.rule, index: deleted.index }); setDeleted(null) }}>Undo</Btn>
-          <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setDeleted(null)}><X size={12} /></Btn>
-        </div>
+        <UndoBar onUndo={() => { d({ type: 'playbook/restoreRule', rule: deleted.rule, index: deleted.index }); setDeleted(null) }} onDismiss={() => setDeleted(null)}>Deleted “{deleted.rule.text}”</UndoBar>
       )}
       <AddRule kinds={!!kinds} />
       <ul className="card rows pb-rules">

@@ -6,11 +6,11 @@ import {
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm } from '../../app/time'
+import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Switch, Tabs, type MenuItem } from '../../ui'
-import { CountBadge } from '../../ui/Feedback'
+import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
@@ -176,11 +176,7 @@ export default function InboxPage() {
             </div>
           )}
           {!sel.count && undo && (
-            <div className="ib-undo-strip" role="status">
-              <span>{undo.label}</span>
-              <Btn size="xs" onClick={() => d({ type: 'inbox/undo' })}><Undo2 size={13} />Undo</Btn>
-              <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'inbox/dismissUndo' })}><X size={13} /></Btn>
-            </div>
+            <UndoBar className="m-2" until={undo.at + 10_000} onUndo={() => d({ type: 'inbox/undo' })} onDismiss={() => d({ type: 'inbox/dismissUndo' })}>{undo.label}</UndoBar>
           )}
 
           {!list.length ? (
@@ -403,7 +399,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   <p>{x.m.text}</p>
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
                   {x.m.auto && x.m.undoUntil && x.m.undoUntil > now && !x.m.undone && (
-                    <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {Math.ceil((x.m.undoUntil - now) / 60000)} min left</Btn>
+                    <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {left(x.m.undoUntil, now)}</Btn>
                   )}
                 </div>
               </div>

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageSquarePlus, Trash2, X } from 'lucide-react'
+import { MessageSquarePlus, Trash2 } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { ago } from '../../app/time'
 import type { AgentId } from '../../app/types'
 import type { Chat } from './slice'
 import { Btn, Mark, PageHead } from '../../ui'
-import { CountBadge } from '../../ui/Feedback'
+import { CountBadge, UndoBar } from '../../ui/Feedback'
 import ChatThread from './Thread'
 import './chats.css'
 
@@ -31,11 +31,7 @@ export default function ChatsPage() {
       <div className="chats-grid">
         <nav className="card chats-list" aria-label="Conversations">
           {removed && (
-            <div className="pb-undo" role="status" style={{ margin: 8 }}>
-              <span className="ellipsis">Deleted “{removed.chat.title}”</span>
-              <Btn size="xs" onClick={() => { d({ type: 'chats/restore', ...removed }); nav(`/chats/${removed.chat.id}`); setRemoved(null) }}>Undo</Btn>
-              <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
-            </div>
+            <UndoBar className="m-2" onUndo={() => { d({ type: 'chats/restore', ...removed }); nav(`/chats/${removed.chat.id}`); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.chat.title}”</UndoBar>
           )}
           {sorted.map(c => {
             const who = [...new Set(c.messages.filter(m => m.from !== 'you').map(m => m.from as AgentId))]

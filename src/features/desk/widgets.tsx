@@ -6,7 +6,7 @@ import { groupOf } from '../../app/reducer'
 import { Spark } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm, MIN, DEMO_START } from '../../app/time'
+import { ago, hhmm, left, MIN, DEMO_START } from '../../app/time'
 import { agentName } from '../../data/agents'
 import { Btn, Kbd, Mark, TopicIcon } from '../../ui'
 import { BriefScene } from '../../ui/Illustrations'
@@ -182,7 +182,7 @@ export function LiveFeed() {
               <Mark agent={l.agent} />
               <div>
                 <p>{l.text}</p>
-                <span className="mono faint">{ago(l.at, now)}{l.status === 'undone' ? ' · undone' : canUndo ? ` · undo ${Math.ceil((l.undoUntil! - now) / MIN)} min left` : ''}</span>
+                <span className="mono faint">{ago(l.at, now)}{l.status === 'undone' ? ' · undone' : canUndo ? ` · undo · ${left(l.undoUntil!, now)}` : ''}</span>
               </div>
               {canUndo && <Btn size="xs" variant="ghost" icon aria-label={`Undo: ${l.text}`} onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={13} /></Btn>}
             </li>

@@ -8,11 +8,11 @@ import { Btn } from './index'
  * The one confirmation of your own action: a line at the top of the list it acted on, with Undo while it lasts.
  * No toast anywhere: the feedback sits where the action happened.
  */
-export function UndoBar({ children, onUndo, until, onDismiss }: { children: ReactNode; onUndo?: () => void; until?: number; onDismiss?: () => void }) {
+export function UndoBar({ children, onUndo, until, onDismiss, className = '' }: { children: ReactNode; onUndo?: () => void; until?: number; onDismiss?: () => void; className?: string }) {
   const now = useNow(1000)
   if (until && until <= now) return null
   return (
-    <div className="undo-bar" role="status">
+    <div className={`undo-bar ${className}`} role="status">
       <Check size={14} aria-hidden />
       <p>{children}</p>
       {onUndo && <Btn size="xs" onClick={onUndo}><Undo2 size={12} />Undo</Btn>}

@@ -173,7 +173,7 @@
 .cal-post { position: relative; }
 .pub-chip-check { position: absolute; top: 2px; right: 26px; z-index: 1; }
 .pub-chip-check .select-box { width: 26px; height: 26px; background: var(--panel); }
-.cal-post.pub-picked, .draft-row.pub-picked, .pub-table tr.pub-picked td { border-color: var(--signal-edge); background: var(--brand-soft); }
+.cal-post.pub-picked, .draft-row.pub-picked, .pub-table tr.pub-picked td { border-color: var(--signal-edge); background: var(--signal-wash); }
 .pub-selall { font-size: var(--t-sm); }
 .pub-selall .select-box { width: 26px; height: 26px; }
 .pub-cell-day { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
@@ -187,7 +187,6 @@
 .pub-draft-open { display: flex; align-items: center; gap: var(--s3); flex: 1; min-width: 0; background: none; border: 0; padding: 0; text-align: left; color: var(--ink); cursor: pointer; }
 .pub-draft-open > span { display: flex; flex-direction: column; gap: 2px; }
 .pub-draft-text { display: block; }
-.pub-undo { gap: var(--s3); }
 .pub-dlg-list { margin-top: var(--s3); display: flex; flex-direction: column; gap: 6px; }
 .pub-dlg-list li { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .pub-net-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--s3); }

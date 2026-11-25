@@ -18,7 +18,7 @@
 .onb-step { display: flex; flex-direction: column; gap: var(--s4); animation: fade-in var(--base) var(--ease); }
 .onb-step h1 { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.025em; }
 .onb-step .lede { color: var(--ink-2); font-size: var(--t-lg); max-width: 60ch; }
-.onb-group h2 { font-size: var(--t-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
+.onb-group h2 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
 .onb-int { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4); min-height: 52px; }
 .onb-int b { font-weight: 600; }
 .onb-reading { display: flex; align-items: center; gap: var(--s4); }

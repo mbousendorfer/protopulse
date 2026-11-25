@@ -31,7 +31,7 @@
 .queue-filters { display: flex; flex-direction: column; gap: var(--s2); margin-bottom: var(--s5); }
 .queue-filters .filter .mark { width: 16px; height: 16px; }
 .lane { margin-bottom: var(--s6); }
-.lane > h3 { font-size: var(--t-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s3); display: flex; gap: 6px; align-items: center; }
+.lane > h3 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s3); display: flex; gap: 6px; align-items: center; }
 .lane > h3.urgent { color: var(--alert); }
 .lane-toggle { display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; color: var(--ink-2); font-weight: 600; margin-bottom: var(--s3); }
 .snoozed li { padding: 8px 0; border-top: 1px solid var(--line); }
@@ -86,7 +86,7 @@
 .feed .mono { font-size: var(--t-xs); }
 .team { padding: 4px var(--s2) var(--s2); }
 .team button { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px; border-radius: var(--r-ctl); background: none; border: 0; text-align: left; line-height: 1.4; }
-.team button:hover { background: var(--lift); }
+.team button:hover { background: var(--row-hover); }
 .team b { font-weight: 600; }
 .team .now { font-size: var(--t-sm); }
 .team-foot { display: flex; align-items: center; gap: 8px; padding: var(--s2) var(--s4) var(--s3); border-top: 1px solid var(--line); font-size: var(--t-sm); }

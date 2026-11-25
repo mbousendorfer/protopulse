@@ -6,6 +6,7 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { AGENTS, agentName } from '../../data/agents'
 import { Btn, Mark, Net, Thinking, TopicIcon } from '../../ui'
+import { InlineConfirm } from '../../ui/Feedback'
 import { Spark, Bars } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import type { Card, Chat, ChatMsg, ChatsAction } from './slice'
@@ -185,7 +186,7 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
         {card.status === 'boosted' ? <span className="pill ok"><Check size={12} />Boost set up</span> : card.status === 'declined' ? <span className="pill">No boost</span> : (
           confirmBoost ? (
           // Paid spend never goes out on one click.
-          <div className="row"><span className="faint">€{card.amount} of ad spend over 3 days. Sure?</span><Btn size="sm" variant="primary" onClick={() => { act('boost'); setConfirmBoost(false) }}>Confirm boost</Btn><Btn size="sm" variant="ghost" onClick={() => setConfirmBoost(false)}>Cancel</Btn></div>
+          <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirmBoost(false)} onConfirm={() => { act('boost'); setConfirmBoost(false) }}>€{card.amount} of paid ad spend over 3 days, billed to Fernway’s ad account.</InlineConfirm>
         ) : <div className="row"><Btn size="sm" variant="primary" onClick={() => setConfirmBoost(true)}>Boost €{card.amount}</Btn><Btn size="sm" variant="ghost" onClick={() => act('decline')}>Not this one</Btn></div>
         )}
       </div>

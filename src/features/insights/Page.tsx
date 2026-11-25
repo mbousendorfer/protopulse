@@ -11,6 +11,7 @@ import {
   type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import './insights.css'
 
@@ -300,11 +301,9 @@ function Anomalies() {
             <div className="row">
               {confirm?.id === a.id ? (
                 // Paid spend never goes out on one click.
-                <div className="pb-undo" role="alertdialog" aria-label="Confirm the boost">
-                  <span>{confirm.action}? This is paid ad spend, billed to Fernway’s ad account.</span>
-                  <Btn size="xs" variant="ghost" onClick={() => setConfirm(null)}>Cancel</Btn>
-                  <Btn size="xs" variant="primary" onClick={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>Confirm boost</Btn>
-                </div>
+                <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
+                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account.
+                </InlineConfirm>
               ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
               {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Also on your Desk</Link>}
             </div>

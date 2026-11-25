@@ -68,7 +68,7 @@
 
 /* ---------- Mentions: selection, panel ---------- */
 .ls-mentions > li { grid-template-columns: 32px minmax(0, 1fr) auto; }
-.ls-mentions > li.ls-picked { background: var(--brand-soft); }
+.ls-mentions > li.ls-picked { background: var(--signal-wash); }
 .ls-open { background: none; border: 0; padding: 0; text-align: left; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
 .ls-open:hover .ls-text { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-loud); }
 .ls-text { display: block; }
