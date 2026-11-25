@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
-import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
+import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid } from '../../app/core'
 import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, PLAN_B, POSTS, type Media, type PlanItem, type Post } from '../../data/publishing'
 import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
@@ -11,6 +11,7 @@ import { briefSage, targetsOf } from '../strategy/slice'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
 import { PAUSE_TOPIC, fitCap, overCap, resumeAll } from './guards'
+import { approved, sendToClaire } from './approvals'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -195,7 +196,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       return idea ? notify(next, 'publishing', `Atlas wrote an idea for ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}.`, { link: { to: `/publishing/ideas/${idea.id}`, label: 'Review the idea' } }) : next
     }
     case 'publishing/claire':
-      return notify(toClaire(s, a.post).s, 'publishing', 'Asked Claire. The post stays on hold until she answers.')
+      return notify(toClaire(s, a.post).s, 'publishing', 'Sent to Claire. The post is To approve until she answers.')
     case 'publishing/addToPlan': {
       const d = new Date(a.post.at)
       const day = Math.max(0, Math.min(6, Math.floor((a.post.at - PLAN_MONDAY) / DAY)))
@@ -248,20 +249,8 @@ export function reducePublishing(s: State, a: PublishingAction): State {
 const day = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} ${hhmm(t)}`
 const note = (p: Post, at: number, text: string): Post => ({ ...p, history: [...(p.history ?? []), { at, text }] })
 
-/** Send one post to Claire: on hold, plus a card in Claire's lane. */
-function toClaire(s: State, post: Post): { s: State; hid: string } {
-  const t = now(s)
-  const held = note({ ...post, status: 'needs', note: 'Waiting on Claire.' }, t, 'Sent to Claire')
-  let next = setPosts(s, s.publishing.posts.some(p => p.id === post.id) ? s.publishing.posts.map(p => (p.id === post.id ? held : p)) : [...s.publishing.posts, held])
-  const hid = uid('h')
-  next = pushHandoff(next, {
-    id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Post', action: 'atlas-fill', ref: post.id, link: `/publishing/calendar?post=${post.id}`,
-    title: `Post for ${day(post.at)}`, context: post.text, why: 'You sent this post to Claire.', confidence: 85,
-    preview: { type: 'post', network: post.network, slot: `${new Date(post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(post.at)}`, text: [post.text], media: post.media },
-  })
-  next = updateHandoff(next, hid, { lane: 'claire', claire: { askedAt: t, dueAt: t + (30 + Math.round(Math.random() * 30)) * 1000 } })
-  return { s: next, hid }
-}
+/** Send one post to Claire (To approve). */
+const toClaire = (s: State, post: Post) => sendToClaire(s, post, 'You sent it to Claire.', 'you')
 
 /** One bulk change = one journal line + a 10 s undo snapshot. */
 function bulk(s: State, a: Extract<PublishingAction, { type: 'publishing/bulk' }>): State {
@@ -418,6 +407,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
       return patchPost(s, linked.id, { at: linked.at + 7 * DAY, status: 'scheduled', waiting: undefined, note: 'Moved to next week, visual to find.' })
     }
     if (h.id === 'h-code' && d.kind === 'answer') return patchPost(s, linked.id, { text: linked.text.replace('[code]', d.text.toUpperCase()), status: 'scheduled', note: `Code ${d.text.toUpperCase()} added.` })
+    if (ok && linked.approval) return patchPost(s, linked.id, approved(linked, h, now(s), preview ? plain(preview.text) : undefined))
     if (ok) return patchPost(s, linked.id, { status: 'scheduled', text: preview ? plain(preview.text) : linked.text, note: undefined })
     if (d.kind === 'reject') return linked.handoff === 'h-trend' ? setPosts(s, s.publishing.posts.filter(p => p.id !== linked.id)) : patchPost(s, linked.id, { status: 'draft', note: `Rejected${d.reason ? `: ${d.reason.toLowerCase()}` : ''}.` })
     return s
