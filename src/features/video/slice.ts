@@ -5,9 +5,10 @@ import { DAY, T } from '../../app/time'
 import { actionOf, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import type { Pillar } from '../../data/publishing'
 import {
-  BRAND_KIT, PHASES, PHASE_MS, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, type BrandKit, type ClipSeed, type Source,
+  BRAND_KIT, PHASES, PHASE_MS, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
-import { clipPosts, findMoments, rescore, type Clip } from './model'
+import { TRENDS } from '../../data/listening'
+import { clipPosts, findMoments, keywords, rescore, type Clip, type Evidence, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -188,6 +189,22 @@ export function onResolveVideo(s: State, h: Handoff, d: Decision): State {
   return next
 }
 
+/* ---------- Finding moments ---------- */
+
+const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`
+
+/** Why a moment found on request is worth it: where it's said, the trend it rides (Echo), how the pillar did before. */
+export function foundEvidence(s: State, src: Source, said: Sentence, query: string, pillar: Pillar): Evidence[] {
+  const short = said.text.length > 60 ? `${said.text.slice(0, 58).replace(/\s\S*$/, '')}…` : said.text
+  const out: Evidence[] = [{ value: mmss(said.s), label: `${speakerName(said.speaker)} says “${short}”`, from: 'This video', to: `/video/sources/${src.id}` }]
+  const keys = keywords(`${query} ${said.text}`)
+  const trend = TRENDS.find(x => s.listening.trends[x.id] !== 'dismissed' && keys.some(k => x.name.toLowerCase().includes(k)))
+  if (trend) out.push({ value: trend.growth, label: `“${trend.name}” on ${trend.networks}`, from: 'Listening', to: '/listening/trends' })
+  const past = s.video.clips.filter(c => c.status === 'published' && c.stats && c.pillar === pillar).sort((a, b) => b.stats!.views - a.stats!.views)[0]
+  if (past) out.push({ value: `${(past.stats!.views / 1000).toFixed(1)}k`, label: `views on “${past.title}”, same pillar`, from: 'Video', to: `/video/clips/${past.id}` })
+  return out
+}
+
 /* ---------- Reducer ---------- */
 
 export function reduceVideo(s: State, a: VideoAction): State {
@@ -245,9 +262,9 @@ export function reduceVideo(s: State, a: VideoAction): State {
       const sample = s.video.sources.some(x => x.media === 'gr20') ? 'repair' : 'gr20'
       const src: Source = {
         id: uid('src'), kind: 'link', title: sample === 'gr20' ? SOURCE_DEFS.gr20.title : `Video from ${host}`, channel: host, at: t,
-        media: sample, transcript: sample, url: a.url.trim(), status: 'processing', startedAt: t,
+        media: sample, transcript: sample, url: a.url.trim(), sampleTranscript: true, status: 'processing', startedAt: t,
       }
-      return notify(setVideo(s, { sources: [src, ...s.video.sources] }), 'video', `Juno is working on the video from ${host}`)
+      return notify(setVideo(s, { sources: [src, ...s.video.sources] }), 'video', `Juno is working on the video from ${host}. This prototype can’t open links, so she uses a sample video.`)
     }
 
     case 'video/addUpload': {
@@ -271,11 +288,12 @@ export function reduceVideo(s: State, a: VideoAction): State {
       const clips = moments.map(m => {
         const said = tr.sentences[m.sentence]
         const short = said.text.length > 44 ? `${said.text.slice(0, 42).replace(/\s\S*$/, '')}…` : said.text
+        const evidence = foundEvidence(s, src, said, a.query, PILLAR[src.media] ?? 'Repair & care')
         const seed: ClipSeed = {
           key: uid('find'), from: tr.sentences.find(x => x.s === m.start)!.text, to: tr.sentences.find(x => x.e === m.end)!.text,
-          title: short.replace(/[.?!]$/, ''), hooks: [said.text], base: { hook: Math.min(88, 70 + m.hits * 6), flow: 76, value: 74, trend: 60 },
-          why: `You asked for moments about “${a.query}”. ${said.speaker === 'guest' ? 'Léo' : said.speaker === 'host' ? 'Camille' : 'Léa'} says it here: “${said.text}”`,
-          evidence: [], networks: ['tiktok', 'instagram'], pillar: PILLAR[src.media] ?? 'Repair & care', text: said.text,
+          title: short.replace(/[.?!]$/, ''), hooks: [said.text], base: { hook: Math.min(88, 70 + m.hits * 6), flow: 76, value: 74, trend: evidence.some(e => e.from === 'Listening') ? 74 : 60 },
+          why: `You asked for moments about “${a.query}”. ${speakerName(said.speaker)} says it here: “${said.text}”`,
+          evidence, networks: ['tiktok', 'instagram'], pillar: PILLAR[src.media] ?? 'Repair & care', text: said.text,
         }
         return clipFromSeed(seed, src, t, s.video.kit)
       })
