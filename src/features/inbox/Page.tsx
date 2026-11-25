@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
+  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, ListFilter, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
   Ban, Heart, ListChecks, MessageSquareText, OctagonAlert, Trash2, Users, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
@@ -168,6 +168,33 @@ export default function InboxPage() {
     return [...by.values()].sort((a, b) => b.waiting - a.waiting || b.n - a.n || b.at - a.at)
   }, [all])
   const clear = () => apply({}, view)
+  // The filters behind the Filters button, each said as a chip that removes it.
+  const FILTER_MENUS = <>
+    <Menu align="start" trigger={<button className="select-btn">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
+      items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...(Object.keys(NETWORK_LABEL) as Network[]).map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
+      items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
+      items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{account ? accountLabel(accountById(account)) : 'All profiles'}<ChevronDown size={14} /></button>}
+      items={[{ label: 'All profiles', onSelect: () => setAccount(undefined) }, ...ACCOUNTS.filter(a => all.some(c => (c.account ?? c.network) === a.id)).map(a => ({ label: accountLabel(a), icon: <Net n={a.network} />, hint: a.handle, onSelect: () => setAccount(a.id) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{date ? DATES[date] : 'Any date'}<ChevronDown size={14} /></button>}
+      items={[{ label: 'Any date', onSelect: () => setDate(undefined) }, ...(Object.keys(DATES) as NonNullable<Filters['date']>[]).map(x => ({ label: DATES[x], onSelect: () => setDate(x) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{who ? (who === 'none' ? 'Not assigned' : `Assigned to ${ROSTER[who].short}`) : 'Anyone'}<ChevronDown size={14} /></button>}
+      items={[{ label: 'Anyone', onSelect: () => setWho(undefined) }, { label: 'Not assigned', onSelect: () => setWho('none') }, 'sep', ...(Object.keys(ROSTER) as Assignee[]).map(k => ({ label: ROSTER[k].name, onSelect: () => setWho(k) }))]} />
+    <Menu align="start" trigger={<button className="select-btn">{review === 'todo' ? 'To review' : review === 'done' ? 'Reviewed' : 'Any review status'}<ChevronDown size={14} /></button>}
+      items={[{ label: 'Any review status', onSelect: () => setReview(undefined) }, { label: 'To review', onSelect: () => setReview('todo') }, { label: 'Reviewed', onSelect: () => setReview('done') }]} />
+  </>
+  const chips = ([
+    network !== 'all' && [NETWORK_LABEL[network], () => setNetwork('all')],
+    type !== 'all' && [TYPE_LABEL[type], () => setType('all')],
+    sentiment !== 'all' && [SENT[sentiment], () => setSentiment('all')],
+    account && [accountLabel(accountById(account)), () => setAccount(undefined)],
+    date && [DATES[date], () => setDate(undefined)],
+    who && [who === 'none' ? 'Not assigned' : `Assigned to ${ROSTER[who].short}`, () => setWho(undefined)],
+    review && [review === 'todo' ? 'To review' : 'Reviewed', () => setReview(undefined)],
+    intent && ['Buying intent', () => setIntent(false)],
+  ] as const).filter((x): x is [string, () => void] => !!x)
   const [naming, setNaming] = useState<string | null>(null)
   const [dropped, setDropped] = useState<{ view: SavedView; index: number } | null>(null)
   const labels = [...new Set([...s.inbox.labels, ...all.flatMap(c => c.labels ?? [])])]
@@ -198,7 +225,6 @@ export default function InboxPage() {
       <LabelsSheet open={labelsOpen} onOpenChange={o => nav({ search: o ? '?labels=1' : '' })} />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
-          <div className="ib-views">
           {VIEWS.filter(x => !x.saved && !PEOPLE[x.id]).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => (x.count ?? (y => x.match(y, now)))(c)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Team</span>
           {VIEWS.filter(x => PEOPLE[x.id]).map(x => {
@@ -222,33 +248,6 @@ export default function InboxPage() {
             label={<><Net n={p.network} /><span className="ellipsis" title={p.key.replace(/^[^“]*“|”$/g, '')}>{p.key.replace(/^[^“]*“|”$/g, '')}</span>{p.waiting > 0 && <span className="ib-over">{p.waiting} waiting</span>}</>} />)}
           <span className="ib-side-title row between nowrap">Labels<button className="link-btn t-xs" onClick={() => nav({ search: '?labels=1' })}>Manage</button></span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={14} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
-          </div>
-          <div className="ib-filters">
-            <span className="ib-side-title">Filters</span>
-            <Menu align="start" trigger={<button className="select-btn block">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
-              items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...(Object.keys(NETWORK_LABEL) as Network[]).map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
-              items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
-              items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{account ? accountLabel(accountById(account)) : 'All profiles'}<ChevronDown size={14} /></button>}
-              items={[{ label: 'All profiles', onSelect: () => setAccount(undefined) }, ...ACCOUNTS.filter(a => all.some(c => (c.account ?? c.network) === a.id)).map(a => ({ label: accountLabel(a), icon: <Net n={a.network} />, hint: a.handle, onSelect: () => setAccount(a.id) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{date ? DATES[date] : 'Any date'}<ChevronDown size={14} /></button>}
-              items={[{ label: 'Any date', onSelect: () => setDate(undefined) }, ...(Object.keys(DATES) as NonNullable<Filters['date']>[]).map(x => ({ label: DATES[x], onSelect: () => setDate(x) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{who ? (who === 'none' ? 'Not assigned' : `Assigned to ${ROSTER[who].short}`) : 'Anyone'}<ChevronDown size={14} /></button>}
-              items={[{ label: 'Anyone', onSelect: () => setWho(undefined) }, { label: 'Not assigned', onSelect: () => setWho('none') }, 'sep', ...(Object.keys(ROSTER) as Assignee[]).map(k => ({ label: ROSTER[k].name, onSelect: () => setWho(k) }))]} />
-            <Menu align="start" trigger={<button className="select-btn block">{review === 'todo' ? 'To review' : review === 'done' ? 'Reviewed' : 'Any review status'}<ChevronDown size={14} /></button>}
-              items={[{ label: 'Any review status', onSelect: () => setReview(undefined) }, { label: 'To review', onSelect: () => setReview('todo') }, { label: 'Reviewed', onSelect: () => setReview('done') }]} />
-            <Switch checked={intent} onChange={setIntent} label="Buying intent" />
-            {filtersOn && (naming === null ? (
-              <div className="row tight"><button className="link-btn" onClick={clear}>Clear filters</button><span className="faint">·</span><button className="link-btn" onClick={() => setNaming(cap(describe(f)))}>Save as view</button></div>
-            ) : (
-              <form className="stack" onSubmit={e => { e.preventDefault(); d({ type: 'inbox/viewAdd', view: { name: naming, view, f } }); setNaming(null) }}>
-                <input className="input" autoFocus value={naming} onChange={e => setNaming(e.target.value)} aria-label="Name of the view" maxLength={40} />
-                <div className="row tight"><Btn size="sm" type="submit" disabled={!naming.trim()}>Save view</Btn><Btn size="sm" variant="ghost" onClick={() => setNaming(null)}>Cancel</Btn></div>
-              </form>
-            ))}
-          </div>
         </nav>
 
         <section className="ib-list card" aria-label="Conversations">
@@ -279,11 +278,50 @@ export default function InboxPage() {
           ) : (
             <div className="ib-list-head">
               <SelectAll sel={sel} label="Select every conversation in this view" />
+              {/* When the side nav is folded away (narrow screen, or a conversation open), the views live in one menu. */}
+              <Menu align="start" trigger={<button className="select-btn ib-view-pick" aria-label="Choose a view">
+                <span className="ellipsis">{label ?? (post ? post.replace(/^[^“]*“|”$/g, '') : v.label)}</span><ChevronDown size={14} />
+              </button>} items={[
+                ...VIEWS.filter(x => !x.saved && !PEOPLE[x.id]).map(x => ({ label: x.label, hint: <span className="num">{all.filter(c => (x.count ?? (y => x.match(y, now)))(c)).length}</span>, onSelect: () => { setView(x.id); setLabel(null) } })),
+                { heading: 'Team' },
+                ...VIEWS.filter(x => PEOPLE[x.id]).map(x => ({ label: x.label, icon: <AssigneeFace who={PEOPLE[x.id]} size={16} />, hint: <span className="num">{all.filter(c => c.assignee === PEOPLE[x.id] && waitingOn(c)).length}</span>, onSelect: () => { setView(x.id); setLabel(null) } })),
+                { heading: 'Saved views' },
+                ...s.inbox.views.map(x => ({ label: x.name, onSelect: () => apply(x.f, x.view as View) })),
+                ...VIEWS.filter(x => x.saved).map(x => ({ label: x.label, onSelect: () => { setView(x.id); setLabel(null) } })),
+                { heading: 'By post' },
+                ...posts.slice(0, 4).map(p => ({ label: <span className="ellipsis">{p.key.replace(/^[^“]*“|”$/g, '')}</span>, icon: <Net n={p.network} />, hint: <span className="num">{p.n}</span>, onSelect: () => apply({ post: p.key }) })),
+                { heading: 'Labels' },
+                ...labels.map(l => ({ label: l, icon: <Tag size={14} />, onSelect: () => { setLabel(l); setView('all') } })),
+                { label: 'Manage labels…', onSelect: () => nav({ search: '?labels=1' }) },
+              ]} />
               <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
-              <span className="faint num">{list.length}</span>
+              <span className="faint num ib-count">{list.length}</span>
               {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
-              <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
+              <Pop align="end" trigger={<Btn size="sm" variant="ghost" aria-label={chips.length ? `Filters, ${chips.length} on` : 'Filters'}><ListFilter size={14} />Filters{chips.length > 0 && <CountBadge n={chips.length} />}</Btn>}>
+                <div className="ib-filter-pop" role="group" aria-label="Filters">
+                  {FILTER_MENUS}
+                  <Switch checked={intent} onChange={setIntent} label="Buying intent" />
+                </div>
+              </Pop>
+              <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label={`Sort: ${SORTS.find(x => x.id === sort)!.label}`}><ArrowUpDown size={14} /><span className="ib-sort-label">{SORTS.find(x => x.id === sort)!.label}</span></Btn>}
                 items={SORTS.map(x => ({ label: x.label, hint: sort === x.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setSort(x.id) }))} />
+            </div>
+          )}
+          {/* What narrows the list, said once, each one removable; then keep it as a view. */}
+          {filtersOn && !sel.count && (
+            <div className="ib-active" role="group" aria-label="Filters on">
+              {label && <button type="button" className="filter" aria-pressed="true" aria-label={`Remove the label ${label}`} onClick={() => setLabel(null)}><Tag size={12} aria-hidden />{label}<X size={12} aria-hidden /></button>}
+              {chips.map(([t, off]) => <button key={t} type="button" className="filter" aria-pressed="true" aria-label={`Remove the filter ${t}`} onClick={off}>{t}<X size={12} aria-hidden /></button>)}
+              {naming === null ? <>
+                <button type="button" className="link-btn t-sm" onClick={clear}>Clear filters</button>
+                <button type="button" className="link-btn t-sm" onClick={() => setNaming(cap(describe(f)))}>Save as view</button>
+              </> : (
+                <form className="row tight nowrap" onSubmit={e => { e.preventDefault(); d({ type: 'inbox/viewAdd', view: { name: naming, view, f } }); setNaming(null) }}>
+                  <input className="input w-240" autoFocus value={naming} onChange={e => setNaming(e.target.value)} aria-label="Name of the view" maxLength={40} />
+                  <Btn size="sm" variant="ghost" onClick={() => setNaming(null)}>Cancel</Btn>
+                  <Btn size="sm" type="submit" disabled={!naming.trim()}>Save view</Btn>
+                </form>
+              )}
             </div>
           )}
           {post && !sel.count && <PostHead post={post} compact={!!current} convs={all.filter(c => postKey(c) === post)} onAll={() => setPost(undefined)} />}
@@ -522,7 +560,22 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
 
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
-  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const body = useRef<HTMLDivElement>(null)
+  // Open on the latest message, like any conversation: the draft and its Send sit right under it.
+  useEffect(() => {
+    setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); setNoting(false)
+    if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id })
+    requestAnimationFrame(() => {
+      if (!body.current) return
+      body.current.scrollTop = body.current.scrollHeight
+      // The docked panel is as tall as the window: bring its foot (Send, the note) into view on open.
+      const panel = body.current.closest('.ib-panel')
+      if (panel && panel.getBoundingClientRect().bottom > window.innerHeight) panel.scrollIntoView({ block: 'end' })
+    })
+  }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // While Nova's draft waits on a decision, the note field folds to one button so it never covers Send.
+  const pending = c.status === 'draft' || (c.status === 'escalated' && !!c.draft)
+  const [noting, setNoting] = useState(false)
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
@@ -583,7 +636,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
       ]} />
 
       {tab === 'contact' ? <ContactTab c={c} others={others} /> : (
-        <div className="ib-panel-body">
+        <div className="ib-panel-body" ref={body}>
           <div className="ib-thread">
             {c.post && <div className="ib-post"><span className="faint">On</span> <button className="link-btn" onClick={() => onPost(postKey(c)!)} title="See every comment on this post">{c.post}</button></div>}
             {c.stars && <div className="ib-stars" aria-label={`${c.stars} out of 5 stars`}>{'★'.repeat(c.stars)}<span>{'★'.repeat(5 - c.stars)}</span></div>}
@@ -665,13 +718,18 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
           )}
           {c.status === 'claire' && !card?.claire?.reply && <div className="ib-draft"><span className="muted">Waiting on Claire. She usually replies in about a minute.</span></div>}
 
+          {pending && !noting && !reply ? (
+            <div className="ib-reply ib-reply-folded">
+              <Btn size="sm" variant="ghost" onClick={() => { setMode('note'); setNoting(true) }}><StickyNote size={14} />Note for the team</Btn>
+            </div>
+          ) : (
           <form className={`ib-reply ${mode === 'note' ? 'ib-noting' : ''}`} onSubmit={e => { e.preventDefault(); submit() }}>
             <div className="row tight">
               {canReply && <button type="button" className={`ib-mode ${mode === 'reply' ? 'on' : ''}`} onClick={() => setMode('reply')} aria-pressed={mode === 'reply'}><Send size={14} />Reply</button>}
               <button type="button" className={`ib-mode ${mode === 'note' || !canReply ? 'on' : ''}`} onClick={() => setMode('note')} aria-pressed={mode === 'note' || !canReply}><StickyNote size={14} />Note for the team</button>
             </div>
             <label htmlFor="ib-reply" className="sr-only">{mode === 'note' || !canReply ? 'Internal note' : `Reply to ${c.author}`}</label>
-            <textarea id="ib-reply" className="textarea" rows={2}
+            <textarea id="ib-reply" className="textarea" rows={2} autoFocus={noting}
               placeholder={mode === 'note' || !canReply ? 'Note for the team — Claire sees it, the customer doesn’t' : `Reply to ${c.author} as Fernway…`}
               value={reply} onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!canReply) setMode('note'); submit() } }} />
@@ -682,11 +740,13 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
               )}
               <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
-              <Btn variant="primary" size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
+              {/* A note is never the panel's main action: only a reply to the customer is orange. */}
+              <Btn variant={mode === 'note' || !canReply ? undefined : 'primary'} size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
                 {mode === 'note' || !canReply ? <><StickyNote size={14} />Add note</> : <><Send size={14} />Send</>}
               </Btn>
             </div>
           </form>
+          )}
         </div>
       )}
     </aside>
