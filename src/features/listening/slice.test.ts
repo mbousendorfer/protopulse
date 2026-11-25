@@ -95,3 +95,32 @@ describe('Echo · counts come from the state', () => {
     expect(visibleMentions(s).length).toBe(n - 1)
   })
 })
+
+describe('Echo · competitor moves', () => {
+  const sales = (s: State) => reducer(s, { type: 'listening/move', event: 'e-norro-repair', index: 2 })
+  const salesLevel = (s: State, l: 'suggest' | 'draft' | 'act') => reducer(s, { type: 'core/autonomy', agent: 'echo', action: 'echo-sales', level: l })
+
+  it('Tell sales on Draft puts the email on the Desk; approving sends it', () => {
+    let s = sales(s0())
+    const h = s.handoffs.find(x => x.ref === 'sales:e-norro-repair')!
+    expect(h.preview?.type).toBe('text')
+    expect(s.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(false)
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(true)
+    expect(s.listening.events['e-norro-repair'].status).toBe('done')
+  })
+
+  it('Tell sales on Act sends at once, on Suggest sends nothing', () => {
+    expect(sales(salesLevel(s0(), 'act')).log[0].text).toMatch(/Emailed the sales team \(sales@/)
+    const sug = sales(salesLevel(s0(), 'suggest'))
+    expect(sug.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(false)
+    expect(sug.handoffs.some(x => x.ref === 'sales:e-norro-repair')).toBe(false)
+  })
+
+  it('acting on an event in Listening settles its Desk card, whatever the competitor', () => {
+    let s = reducer(s0(), { type: 'core/fire', eventId: 'ev-trailkind' })
+    expect(s.handoffs.some(h => /Trailkind/.test(h.title))).toBe(true)
+    s = reducer(s, { type: 'listening/move', event: 'e-trail-viral', index: 2 })
+    expect(s.handoffs.some(h => h.topic === 'Competitor' && /Trailkind/.test(h.title))).toBe(false)
+  })
+})

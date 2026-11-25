@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CalendarClock, Check, Copy, Pencil, Trash2, UserRound } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Check, Copy, Pencil, RotateCw, Trash2, UserRound } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, hhmm } from '../../app/time'
@@ -12,6 +12,7 @@ import { Notice, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
+import { RETRY_OPTIONS, failureCardOf, type Retry } from './failures'
 
 const when = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · ${hhmm(t)}`
 
@@ -109,7 +110,7 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
 
 /** Read-only preview of a post, with what happened to it and what you can do next. */
 export function PostPreview() {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const nav = useNavigate()
   const loc = useLocation()
   const id = new URLSearchParams(loc.search).get('post')
@@ -126,6 +127,26 @@ export function PostPreview() {
           <Btn onClick={() => setDialog({ kind: 'duplicate', ids: [p.id] })}><Copy size={14} />Duplicate</Btn>
           {p.status !== 'published' && <Btn variant="primary" onClick={() => nav(`/publishing/post/${p.id}`)}><Pencil size={14} />Edit</Btn>}
         </>}>
+        {p?.failure && p.status === 'failed' && (() => {
+          // The Desk card and this panel are one decision: settle the card when there is one.
+          const card = failureCardOf(s, p.id)
+          const retry = (mode: Retry) => {
+            const i = RETRY_OPTIONS.findIndex(o => o.mode === mode)
+            d(card ? { type: 'core/resolve', id: card.id, decision: { kind: 'option', index: i, option: RETRY_OPTIONS[i].label } } : { type: 'publishing/retry', id: p.id, mode })
+          }
+          return (
+            <section className="pub-fail card pad" aria-label="Publishing failed">
+              <AlertTriangle size={18} aria-hidden />
+              <div className="grow">
+                <b>Failed at {hhmm(p.failure.at)}</b>
+                <p className="muted">{p.failure.text} Atlas can retry with the plain link.</p>
+              </div>
+              <Btn variant="primary" onClick={() => retry('fix')}><RotateCw size={14} />Retry now</Btn>
+              <Btn onClick={() => retry('nolink')}>Publish without the link</Btn>
+              <Btn variant="ghost" onClick={() => retry('skip')}>Skip X today</Btn>
+            </section>
+          )
+        })()}
         {!p ? <p className="muted">This post no longer exists.</p> : (
           <div className="pub-prev">
             <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} /></div>
