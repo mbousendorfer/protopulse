@@ -6,7 +6,7 @@ import { now } from '../../app/core'
 import type { Network } from '../../app/types'
 import { ago } from '../../app/time'
 import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
-import { netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
+import { competitorName, eventsOf, netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -90,13 +90,20 @@ const benchmark = defineIntent({
 const competitor = defineIntent({
   kind: 'competitor', owner: 'echo', order: 100,
   parse: t => (/peakline|norr[øo]|trailkind|basecamp|competitor|rival/.test(t) ? { kind: 'competitor', name: t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] ?? 'competitors' } : undefined),
-  bar: (i, { go }) => ({
-    text: /peak/.test(i.name)
-      ? 'Peakline cut the Aero 30 to €99 overnight, −29%. It’s their direct rival to the Ridge. Comments under their post are mixed: 31% ask about durability. I suggest not matching the price and posting about how long the Ridge lasts instead.'
-      : `This week: Peakline cut the Aero 30 to €99, Trailkind’s “bag vs. rain” reel hit 1.2M views, Norrø announced lifetime repairs, and Basecamp Co. recalled 8,000 bottles. ${i.name === 'competitors' ? '' : `Most of the noise around ${i.name} is in the Events feed.`}`,
-    sources: ['Competitor accounts, Instagram and LinkedIn', 'Echo’s event feed, last 7 days'],
-    ctas: [{ label: 'Open competitor events', primary: true, run: () => go('/listening/competitors') }],
-  }),
+  bar: (i, { s, go }) => {
+    // Same events and states as Listening › Competitors.
+    const id = RIVAL_ID[i.name]
+    const open = eventsOf(s).filter(e => (!id || e.competitor === id) && !s.listening.events[e.id] && !e.done).sort((a, b) => b.at - a.at)
+    const top = open[0]
+    const name = id ? competitorName(s, id) : 'your competitors'
+    return {
+      text: !top ? `Nothing open from ${name}: every move has an answer.`
+        : id ? `${top.title}. ${top.impactWhy} ${top.read}`
+        : `${open.length} competitor move${open.length > 1 ? 's' : ''} without an answer: ${open.slice(0, 4).map(e => e.title).join('; ')}.`,
+      sources: ['Competitor accounts Echo watches', `Echo’s event feed · ${open.length} open`],
+      ctas: [{ label: top && id ? 'Open the event' : 'Open competitor events', primary: true, run: () => go(top && id ? `/listening/competitors/${top.id}` : '/listening/competitors') }],
+    }
+  },
   chat: (_i, { s }) => {
     const events = s.handoffs.filter(h => !h.lane && h.topic === 'Competitor')
     return {
