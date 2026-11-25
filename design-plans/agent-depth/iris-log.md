@@ -24,3 +24,7 @@
 - 25/11 · Report Studio · sections réécrites depuis l'état (`writeSection`) à chaque « shorter/longer/add », pas de texte libre généré ; une phrase est découpée en clauses (« and », virgules) lues une à une · un éditeur de texte · le prototype n'a pas de LLM ; la recette (période, réseaux, sections) suffit à réécrire.
 - 25/11 · Report Studio · le champ « Ask Iris » de l'onglet Reports accepte n'importe quelle phrase comme demande de rapport ; en ⌘K/Chat il faut le mot « report » · tout capter en ⌘K · éviter de voler les phrases des autres agents.
 - 25/11 · Report Studio · « Edit » en ⌘K/Chat agit sur le dernier rapport demandé · demander lequel · le scénario §1 enchaîne demande puis modification.
+- 25/11 · Pitch n°3 « Rapports programmés et partagés » · **Go** (tel que pitché) · Go plus simple · décision de l'humain.
+- 25/11 · Planification · suit le cran de « Write and share the weekly report with Claire » (Suggest écrit, Draft carte, Act envoie avec Undo) · un nouveau cran dédié · une seule action « partager avec Claire » ; un cran de plus brouillerait le profil.
+- 25/11 · Export PDF · impression du navigateur avec une feuille `@media print` qui ne garde que le rapport · générer un PDF · pas de dépendance ; le dialogue d'impression enregistre en PDF partout. Lien de lecture seule = la même route avec `?view=read` (sans outils ni panneau).
+- 25/11 · « Send the weekly report… » sans rapport demandé · planifie le rapport hebdo, qui remplace alors celui que la routine écrit le lundi · deux rapports hebdo le même lundi · éviter le doublon.

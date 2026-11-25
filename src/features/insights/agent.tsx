@@ -9,12 +9,12 @@ import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet 
 import { AlertsTable } from './alerts'
 import { onResolveInsights, onUndoInsights, reduceInsights, writeReport } from './slice'
 import { DEFAULT_SECTIONS, parseEdits, parseRecipe, writeStudio } from './studio'
-import { now, uid } from '../../app/core'
+import { actionOf, now, uid } from '../../app/core'
 import type { State } from '../../app/state'
 import type { Network } from '../../app/types'
 import type { Recipe } from '../../data/insights'
 import { anomaliesDue, tickAnomalies } from './engine'
-import { reportsDue, tickReports } from './reports'
+import { reportsDue, schedulesDue, tickReports, tickSchedules } from './reports'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -25,6 +25,7 @@ declare module '../../data/command' {
     performance: object
     report: { days: number; networks: Network[]; audience: 'claire' | 'sam'; raw: string }
     reportEdit: { raw: string }
+    schedule: { every: 'week' | 'month'; to: 'claire' | 'sam'; raw: string }
   }
 }
 
@@ -57,6 +58,44 @@ const report = defineIntent({
     return {
       replies: [{ from: 'iris', text: `Here it is${template ? `, from your template “${template}”` : ''}: ${r.sections.length} sections on ${r.period}. Tell me what to change, like “shorter” or “add the best times”.`, card: { type: 'list', items: [{ title: r.title, agent: 'iris', meta: r.period, link: `/insights/reports/${id}` }] } }],
       effects: [st => writeReport(st, recipe, id, 'You asked in a chat')],
+    }
+  },
+})
+
+const LEVEL_SAYS: Record<string, string> = {
+  act: 'Sharing is on Act, so I’ll send it to Claire myself and tell you in the journal.',
+  draft: 'Sharing is on Draft, so each one waits for you on the Desk first.',
+  suggest: 'Sharing is on Suggest, so I’ll write it and you send it.',
+}
+
+/** What to schedule: a template named in the sentence, else the last report Sam asked for, else the weekly report. */
+function scheduleTarget(s: State, raw: string): { name: string; recipe: Recipe } {
+  const t = s.insights.templates.find(x => raw.includes(x.name.toLowerCase()))
+  if (t) return t
+  const r = s.insights.reports.find(x => x.recipe)
+  return r ? { name: r.title, recipe: r.recipe! } : { name: 'Weekly report', recipe: { days: 7, networks: [], audience: 'claire', sections: DEFAULT_SECTIONS } }
+}
+
+/** “Send it to Claire every Monday”. */
+const schedule = defineIntent({
+  kind: 'schedule', owner: 'iris', order: 34,
+  parse: t => (/\b(send|share|email|schedule|deliver)\b/.test(t) && /every (monday|week|month)|\b(weekly|monthly)\b|each (monday|week|month)/.test(t) && !/\b(post|reply|clip)\b/.test(t)
+    ? { kind: 'schedule', every: /month/.test(t) ? 'month' : 'week', to: /\b(me|myself)\b/.test(t) && !/claire/.test(t) ? 'sam' : 'claire', raw: t } : undefined),
+  bar: (i, { s, d, go }) => {
+    const target = scheduleTarget(s, i.raw)
+    const lvl = actionOf(s, 'iris', 'iris-report')?.autonomy ?? 'draft'
+    return {
+      text: `Scheduled: “${target.name}” every ${i.every === 'week' ? 'Monday' : 'month, on the 1st,'} at 08:00, for ${i.to === 'claire' ? 'Claire' : 'you'}. ${i.to === 'claire' ? LEVEL_SAYS[lvl] : 'I’ll put it in Insights › Reports.'}`,
+      after: () => d({ type: 'insights/schedule', name: target.name, recipe: target.recipe, every: i.every, to: i.to, via: 'You asked in the command bar' }),
+      ctas: [{ label: 'See schedules', run: () => go('/insights') }],
+    }
+  },
+  chat: (i, { s }) => {
+    const target = scheduleTarget(s, i.raw)
+    const lvl = actionOf(s, 'iris', 'iris-report')?.autonomy ?? 'draft'
+    return {
+      replies: [{ from: 'iris', text: `Done: “${target.name}” every ${i.every === 'week' ? 'Monday' : 'month'} at 08:00 for ${i.to === 'claire' ? 'Claire' : 'you'}. ${i.to === 'claire' ? LEVEL_SAYS[lvl] : ''}`.trim(), card: { type: 'done', text: `Scheduled every ${i.every === 'week' ? 'Monday' : 'month'}` } }],
+      effects: [st => reduceInsights(st, { type: 'insights/schedule', name: target.name, recipe: target.recipe, every: i.every, to: i.to, via: 'You asked in a chat' })],
     }
   },
 })
@@ -193,9 +232,9 @@ const iris: AgentModule = {
   script: SCRIPT,
   onResolve: onResolveInsights,
   onUndo: onUndoInsights,
-  due: (s, t) => anomaliesDue(s) || reportsDue(s, t),
-  tick: (s, t) => tickAnomalies(reportsDue(s, t) ? tickReports(s, t) : s),
-  intents: [reportEdit, report, besttime, tiktok, compare, performance],
+  due: (s, t) => anomaliesDue(s) || reportsDue(s, t) || schedulesDue(s, t),
+  tick: (s, t) => { const r = reportsDue(s, t) ? tickReports(s, t) : s; return tickAnomalies(schedulesDue(r, t) ? tickSchedules(r, t) : r) },
+  intents: [schedule, reportEdit, report, besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
 }
