@@ -29,3 +29,7 @@
 - 25/11 · pitch CRM contacts · **Later** · — · reste au backlog.
 - 25/11 · Saved replies · une bibliothèque d'équipe (pas par profil social) · par profil comme Agorapulse · une seule marque ; le choix par profil n'apporte rien au test.
 - 25/11 · Saved replies · « Save as reply » ouvre le panneau prérempli (prénom → `{name}`) · formulaire dans la bulle · un seul endroit pour nommer et relire.
+- 25/11 · SLA · cibles par type modifiables dans le panneau Rules (menu de paliers 30 min → 24 h) · page Settings · un seul panneau de réglages Inbox.
+- 25/11 · SLA · la carte d'alerte est une carte `news` du groupe Needs you avec « Open them » (tri Waiting longest) et disparaît quand tout est répondu · une approbation · rien à approuver : c'est un rappel qui mène au travail.
+- 25/11 · SLA · « attend » = Needs you + Waiting on Claire, depuis le dernier message du client · depuis le premier message · c'est ce que le client ressent.
+- 25/11 · Contrat Iris · `responseStats` / `waitingList` exposés, demande `requests/iris-from-nova-response-times.md`.

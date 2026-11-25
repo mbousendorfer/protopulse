@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
-import { actionOf, agentOf, pushHandoff } from '../../app/core'
-import { escalate, escalationOf, handledAlone, land, proposeRule } from './slice'
+import { actionOf, agentOf, now, pushHandoff } from '../../app/core'
+import { escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -64,6 +64,11 @@ export const SCRIPT: ScriptEvent[] = ([
     // Sam labelled three product complaints by hand: Nova offers to do it herself from now on.
     id: 'ev-teach-rule', order: 175, history: true, agent: 'nova', tag: 'rule', label: 'Nova · proposes an Inbox rule (learned from your labels)',
     run: s => proposeRule(s, 'Product issue', ['c-lea', 'c-ana', 'c-pierre']),
+  },
+  {
+    // The conversations closest to (or past) their response target, raised now instead of 15 minutes before.
+    id: 'ev-sla', order: 195, agent: 'nova', tag: 'sla', label: 'Nova · response targets about to be missed',
+    run: s => warnLate(s, now(s), waitingList(s, now(s)).filter(x => !s.inbox.warned?.includes(x.c.id)).sort((a, b) => a.w.due - b.w.due).slice(0, 3)),
   },
   {
     id: 'ev-stove', order: 60, label: 'Nova · safety question (stove clip)', always: true,
