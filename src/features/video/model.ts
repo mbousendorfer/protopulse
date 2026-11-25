@@ -18,7 +18,7 @@ export type Transcript = { duration: number; sentences: Sentence[]; words: Word[
 
 /* ---------- Clip ---------- */
 
-export type Aspect = '9:16' | '1:1' | '16:9'
+export type Aspect = '9:16' | '1:1' | '16:9' | '4:5'
 export type Frame = 'track' | 'fill' | 'fit' | 'split'
 export type CapTemplate = 'highlight' | 'pop' | 'clean' | 'keyword' | 'boxed'
 export type CapFont = 'sans' | 'condensed' | 'serif'
@@ -72,7 +72,8 @@ export type Clip = {
   pillar: Pillar
   status: ClipStatus
   edited?: boolean
-  stats?: { views: number; er: number }
+  /** Iris's numbers once it's out (retention and shares when Iris has them). */
+  stats?: { views: number; er: number; retention?: number; shares?: number }
   posts?: string[]
   /** Snoozed until this app time. */
   back?: number
@@ -80,8 +81,14 @@ export type Clip = {
   sentFrom?: string
   /** When it went to Atlas: counts toward the weekly quota per video. */
   sentAt?: number
+  /** One version per network (ratio, caption height). Without one, the network gets the clip as framed above. */
+  versions?: Partial<Record<Network, Version>>
   /** What your published clips of the same pillar did: moves the total, and names the clip to compare with. */
   track?: Track
+  /** The cover: a frame of the source (seconds), the text on it, who picked it. Without one, the source's poster. */
+  cover?: { at: number; text: string; by: 'juno' | 'you' }
+  /** YouTube Shorts title, when YouTube is one of the networks. */
+  ytTitle?: string
   arrivedAt: number
 }
 
@@ -280,6 +287,51 @@ export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90
 export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
 export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
 
+/* ---------- Versions per network ---------- */
+
+export type Version = { aspect: Aspect; y: number }
+/** Each app's ratio, and the bands its buttons and text cover (percent of the frame, from the bottom and the right). */
+export const NET_SPEC: Partial<Record<Network, { aspect: Aspect; bottom: number; right: number }>> = {
+  tiktok: { aspect: '9:16', bottom: 24, right: 16 },
+  instagram: { aspect: '9:16', bottom: 22, right: 14 },
+  youtube: { aspect: '9:16', bottom: 20, right: 14 },
+  linkedin: { aspect: '1:1', bottom: 10, right: 0 },
+  facebook: { aspect: '4:5', bottom: 14, right: 12 },
+}
+const specOf = (n: Network) => NET_SPEC[n] ?? { aspect: '16:9' as Aspect, bottom: 10, right: 0 }
+/** Highest caption position (percent from the top) that stays clear of the app's buttons. */
+export const safeY = (n: Network) => 100 - specOf(n).bottom - 10
+export const versionOf = (c: Clip, n: Network): Version => c.versions?.[n] ?? { aspect: c.aspect, y: c.captions.y }
+/** Juno's version for a network: its ratio, captions moved above its buttons. */
+export const versionFor = (c: Clip, n: Network): Version => ({ aspect: specOf(n).aspect, y: Math.min(c.captions.y, safeY(n)) })
+export const buildVersions = (c: Clip): Partial<Record<Network, Version>> => Object.fromEntries(c.post.networks.map(n => [n, versionFor(c, n)]))
+/** What doesn't fit a network's spec: ratio, captions under its buttons. Length is checked apart (fitsLength). */
+export function versionIssues(c: Clip, n: Network): string[] {
+  const v = versionOf(c, n)
+  const out: string[] = []
+  if (v.aspect !== specOf(n).aspect) out.push(`${v.aspect} where the app shows ${specOf(n).aspect}`)
+  if (v.y > safeY(n)) out.push('captions sit under the app’s buttons')
+  return out
+}
+
+/* ---------- Cover ---------- */
+
+const COVER_WORDS = /strap|ridge|jacket|bottle|bag|zip|slider|hands|léa|camille|léo|machine|stitch|bar tack|patch|hood|shell/i
+export type CoverFrame = { at: number; why: string }
+
+/** Juno's 3 cover frames, best first: shots inside the clip that show the product or a person, never one in `avoid` (no release). */
+export function coverFrames(c: Clip, t: Transcript, avoid: { s: number; e: number }[] = []): CoverFrame[] {
+  const shots = t.shots.filter(x => x.e > c.start + 0.5 && x.s < c.end - 0.5 && !avoid.some(a => a.s < x.e && a.e > x.s))
+  return shots
+    .map((x, k) => ({ x, rank: (COVER_WORDS.test(x.label) ? 2 : 0) + (k === 0 ? 1 : 0) + Math.min(1, (Math.min(x.e, c.end) - Math.max(x.s, c.start)) / 6) }))
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, 3)
+    .map(({ x }) => ({ at: Math.round(((Math.max(x.s, c.start) + Math.min(x.e, c.end)) / 2) * 10) / 10, why: x.label }))
+}
+/** Text on the cover: the hook, short enough to read on a phone. */
+export const coverText = (hook: string) => (hook.length > 42 ? `${hook.slice(0, 40).replace(/\s\S*$/, '')}…` : hook)
+export const shortsTitle = (c: Pick<Clip, 'title' | 'hook'>) => `${c.title}: ${c.hook}`.slice(0, 95).replace(/\s\S*$/, s => (`${c.title}: ${c.hook}`.length > 95 ? '…' : s)) + ' #Shorts'
+
 /* ---------- Track record ---------- */
 
 export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number } }
@@ -337,9 +389,17 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
 const LANG_WORDS: [RegExp, Lang][] = [[/french|fran[cç]ais/, 'fr'], [/german|deutsch/, 'de'], [/spanish|espa[nñ]ol/, 'es'], [/italian|italiano/, 'it'], [/english|original/, 'en']]
 
 /** Juno's scripted understanding of a request on one clip. Never invents: an edit it can't make says so. */
-export function applyAsk(c: Clip, t: Transcript, raw: string): { clip: Clip; reply: string; changed: boolean } {
+export function applyAsk(c: Clip, t: Transcript, raw: string, avoid: { s: number; e: number }[] = []): { clip: Clip; reply: string; changed: boolean } {
   const q = raw.toLowerCase().trim()
   const same = (reply: string) => ({ clip: c, reply, changed: false })
+  if (/\bcover|thumbnail\b/.test(q)) {
+    const frames = coverFrames(c, t, avoid)
+    if (!frames.length) return same('No other frame in this clip works as a cover.')
+    const k = frames.findIndex(f => f.at === c.cover?.at)
+    const next = frames[(k + 1) % frames.length]
+    if (next.at === c.cover?.at) return same('That’s the only frame that works as a cover here.')
+    return { clip: { ...c, cover: { at: next.at, text: c.cover?.text ?? coverText(c.hook), by: 'you' } }, reply: `New cover at ${Math.floor((next.at - c.start) / 60)}:${String(Math.round((next.at - c.start) % 60)).padStart(2, '0')}: ${next.why.toLowerCase()}. The hook reads over it.`, changed: true }
+  }
   if (/\b(say|replace|change what|instead of)\b/.test(q) && !/caption/.test(q))
     return same('I won’t change what someone says on my own. Select the words in the transcript and use “Change the words”: you confirm, then I re-voice them.')
   const lang = LANG_WORDS.find(([re]) => re.test(q))?.[1]
@@ -382,7 +442,17 @@ export function applyAsk(c: Clip, t: Transcript, raw: string): { clip: Clip; rep
   if (/square|1:1/.test(q)) return { clip: { ...c, aspect: '1:1' }, reply: 'Square, for the Instagram and LinkedIn feeds.', changed: c.aspect !== '1:1' }
   if (/landscape|16:9|horizontal|wide/.test(q)) return { clip: { ...c, aspect: '16:9' }, reply: 'Landscape, for YouTube and LinkedIn.', changed: c.aspect !== '16:9' }
   if (/vertical|9:16|portrait/.test(q)) return { clip: { ...c, aspect: '9:16' }, reply: 'Vertical, for TikTok, Reels and Shorts.', changed: c.aspect !== '9:16' }
-  return same('I can make it shorter, open on a moment, remove the ums or the pauses, change the captions, the format or the language.')
+  return same('I can make it shorter, open on a moment, remove the ums or the pauses, change the captions, the format, the language or the cover.')
+}
+
+/* ---------- Language versions that go out ---------- */
+
+/** A post caption in another language: what's said in the clip, translated, cut at a sentence near 160 characters. */
+export function translatedCaption(c: Clip, t: Transcript, lang: Lang): string {
+  const sents = [...new Set(keptWords(c, t).map(w => w.sent))].map(i => t.sentences[i].tr[lang]).filter((x): x is string => !!x)
+  let out = ''
+  for (const x of sents) { if (out && (out + ' ' + x).length > 160) break; out = out ? `${out} ${x}` : x }
+  return out || c.hook
 }
 
 /* ---------- Hand-off to Atlas ---------- */
@@ -391,12 +461,16 @@ export const NETWORK_FIT: Partial<Record<Network, string>> = { tiktok: 'TikTok',
 const DAY0 = T(0, 0, 0)
 
 /** The posts a clip becomes: one per network, at Atlas's best free slot. */
-export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number): Post[] {
+/** The label and campaign a clip's posts carry (see `campaignFor` in the slice). */
+export type PostTags = { labels: string[]; campaign?: string; campaignId?: string }
+
+export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number, tags?: PostTags): Post[] {
   const day = Math.floor((now - DAY0) / DAY)
   const out: Post[] = []
   for (const n of c.post.networks.filter(x => dur === undefined || fitsLength(x, dur))) {
     const at = pickSlot(n, day, [...posts, ...out], now)
-    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title}` })
+    const format = n === 'instagram' || n === 'facebook' ? 'reel' : n === 'linkedin' ? 'video' : 'short'
+    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, format, status: 'scheduled', author: 'atlas', pillar: c.pillar, ...tags, note: `Clip by Juno: ${c.title} · ${versionOf(c, n).aspect}` })
   }
   return out
 }

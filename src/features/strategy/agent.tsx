@@ -118,5 +118,7 @@ const sage: AgentModule = {
   due: campaignsDue,
   tick: closeCampaigns,
   intents: [campaign, campaignStatusIntent, pillars, pillarChange],
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-trajectory', to: '/strategy/campaigns/trail-week' }],
 }
 export default sage

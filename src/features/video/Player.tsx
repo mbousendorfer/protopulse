@@ -117,7 +117,7 @@ export function usePlayback(clip: Clip, source: Source) {
 }
 
 /** The frame: video reframed, B-roll, brand layers and captions. Pure function of (clip, t). */
-export function Frame({ clip, source, pb, safe, outro }: { clip: Clip; source: Source; pb: Playback; safe?: boolean; outro: string }) {
+export function Frame({ clip, source, pb, safe, outro }: { clip: Clip; source: Source; pb: Playback; safe?: boolean | { bottom: number; right: number }; outro: string }) {
   const { tr, t, src, total } = pb
   const lines = useMemo(() => captionLines(clip, tr), [clip, tr])
   const cap = captionAt(lines, Math.max(t, lines[0]?.s ?? 0))
@@ -140,7 +140,11 @@ export function Frame({ clip, source, pb, safe, outro }: { clip: Clip; source: S
       {clip.brand.logo && <svg className="frame-logo" viewBox="0 0 90 20" aria-hidden><text x="0" y="15" fontSize="15" fontWeight="700" fill="#fff">fernway</text></svg>}
       {clip.brand.outro && total > 4 && t > total - 2 && <div className="frame-outro"><b>fernway</b><span>{outro}</span></div>}
       {clip.brand.progress && <div className="frame-progress" style={{ width: `${total ? (t / total) * 100 : 0}%` }} />}
-      {safe && <div className={`frame-safe ${clip.aspect === '9:16' ? 'vertical' : ''}`} aria-hidden><span className="safe-rail" /><span className="safe-bottom" /></div>}
+      {safe === true && <div className={`frame-safe ${clip.aspect === '9:16' ? 'vertical' : ''}`} aria-hidden><span className="safe-rail" /><span className="safe-bottom" /></div>}
+      {typeof safe === 'object' && <div className="frame-safe" aria-hidden>
+        {safe.right > 0 && <span style={{ right: 0, bottom: `${safe.bottom}%`, width: `${safe.right}%`, height: '40%' }} />}
+        {safe.bottom > 0 && <span style={{ left: 0, right: 0, bottom: 0, height: `${safe.bottom}%` }} />}
+      </div>}
     </div>
   )
 }

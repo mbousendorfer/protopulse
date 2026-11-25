@@ -10,7 +10,8 @@ export type CPost = { id: string; phase: Phase['name']; network: Network; day: n
 export type CTask = { id: string; label: string; agent: AgentId; status: 'todo' | 'doing' | 'done' }
 /** What an adjustment does to the campaign's posts (and their copies in Atlas's calendar). */
 export type PostMove = { post: string; network?: Network; title?: string }
-export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined'; moves?: PostMove[] }
+/** `goal`: the new goal the adjustment sets (the planned trajectory scales with it). */
+export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined'; moves?: PostMove[]; goal?: number }
 export type Change = { kind: 'added' | 'removed' | 'changed'; text: string }
 
 export type Campaign = {
@@ -33,6 +34,8 @@ export type Campaign = {
   actual: number[]
   adjustments: Adjustment[]
   recap?: string[]
+  /** Who wrote the recap: Iris (seeded reports) or Sage (when a campaign ends). */
+  recapBy?: 'iris' | 'sage'
   version: number
   diff?: Change[]
   createdAt: number
@@ -43,11 +46,13 @@ export type Campaign = {
   reportId?: string
   /** What Sage assumed because the brief didn't say. */
   assumptions?: string[]
+  /** Where the results are heading, as a share of the plan (simulated); seeded from the id when absent. */
+  pace?: number
 }
 
 export const CAMPAIGNS: Campaign[] = [
   {
-    id: 'trail-week', name: 'Trail Week', status: 'live', createdAt: T(10, 0, -21), base: DEMO_START,
+    id: 'trail-week', name: 'Trail Week', status: 'live', createdAt: T(10, 0, -21), base: DEMO_START, pace: 0.8,
     brief: 'Close the office for a week and get the community outside. Goal: 300 people join the Trail Week challenge.',
     goal: { label: 'challenge sign-ups', target: 300, current: 154 },
     start: T(0, 0, -1), end: T(23, 59, 12),
