@@ -26,7 +26,7 @@ Pas de POC. La barre : un social media manager doit croire, pendant 45 minutes, 
 
 6. **Juno prépare, Sam décide.** Sam accepte qu'un agent découpe ses vidéos en clips, comprend pourquoi un moment a été choisi, retouche le clip sans quitter l'éditeur et l'envoie à Atlas.
 
-**Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas ».
+**Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas » · « Make a LinkedIn version of this clip » · « Why is this clip not going out? » · « Which clip did best last week? » · « Pick a better cover ».
 
 Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage d'autonomie lisible par l'utilisateur métier, la validation d'un plan, un journal de ce que l'agent a fait avec annulation, un brief livré avant la journée, une mémoire de marque visible. Anti-patterns à éviter : autopilote sans revue sur le contenu public, promesse « autopilot » opaque, crédits IA opaques, fonctions annoncées non livrées.
 
