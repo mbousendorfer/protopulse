@@ -86,7 +86,7 @@ export const SCRIPT: ScriptEvent[] = ([
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Product question', action: 'nova-faq',
       title: 'Warranty question in German', context: 'YouTube comment under “Ridge 28L: 1,000 km later”. The Playbook has no German phrasing yet.',
       why: 'Low confidence on tone in German.', confidence: 58, link: '/inbox',
-      sources: [{ label: 'Lifetime warranty: bottles only', from: 'Playbook facts' }],
+      sources: [{ label: 'Lifetime warranty: bottles only', from: 'Playbook facts' }, { label: 'In English: “Does the lifetime warranty also cover the backpack? I live in Austria.”', from: 'Nova’s translation' }],
       conv: { type: 'comment', sentiment: 'neutral', post: 'YouTube · “Ridge 28L: 1,000 km later”', reply: 'Danke, Lena! Die lebenslange Garantie gilt für die Summit Bottle. Für den Ridge gibt es 5 Jahre Garantie und unser Reparaturprogramm, auch in Österreich.' },
       preview: { type: 'reply', network: 'youtube', author: 'Lena W.', text: 'Gilt die lebenslange Garantie auch für den Rucksack? Ich wohne in Österreich.', draft: ['Ja, Lena! Die ', { text: 'lebenslange Garantie', note: 'Lifetime warranty covers bottles only. The Ridge has 5 years.' }, ' gilt auch für den Ridge, überall in Europa.'] } },
     auto: { text: 'Answered Lena W. about the warranty, in German', reason: 'Product question, set to Act', link: '/inbox' },
