@@ -22,6 +22,7 @@ import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
+import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -240,6 +241,7 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
     { key: 'campaign', label: 'Campaign', options: campaigns.map(c => ({ value: c, label: c })) },
     { key: 'pillar', label: 'Pillar', options: s.strategy.pillars.map(p => ({ value: p.name, label: p.name })) },
     { key: 'author', label: 'Author', options: [{ value: 'atlas', label: 'Atlas' }, { value: 'you', label: 'You' }] },
+    { key: 'account', label: 'Profile', options: ACCOUNTS.map(a => ({ value: a.id, label: accountLabel(a) })) },
   ]
   const toggle = (k: Facet, v: string) => { const cur = value[k] ?? []; onChange({ ...value, [k]: cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v] }) }
   return (
@@ -267,7 +269,7 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
     <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
       <span className="pub-chip-check"><SelectBox checked={checked} visible={anySelected} onToggle={onToggle} label={`Select the ${NETWORK_LABEL[p.network]} post at ${hhmm(p.at)}`} /></span>
       <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
-        <div className="row nowrap tight"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
+        <div className="row nowrap tight"><Net n={p.network} />{p.account && <span className="faint t-xs">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}<span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
         {p.media && <span className="cal-photo"><Photo name={p.media} /></span>}
         <p>{p.text}</p>
         {p.stats && <span className="faint cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
