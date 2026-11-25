@@ -39,6 +39,7 @@ export type CoreAction =
   | { type: 'core/heartbeat' }
   | { type: 'core/engine'; live?: boolean; cadence?: number }
   | { type: 'core/skipDay' }
+  | { type: 'core/advance'; minutes: number }
   | { type: 'core/reset'; preset?: Preset; onboarding?: boolean }
   | { type: 'core/onboarded' }
   | { type: 'core/dropNotice' }
@@ -416,6 +417,11 @@ function reduceCore(s: State, a: CoreAction): State {
       const live = a.live ?? s.engine.live
       const cadence = a.cadence ?? s.engine.cadence
       return { ...s, engine: { ...s.engine, live, cadence, nextAt: now(s) + cadence * 1000 } }
+    }
+
+    case 'core/advance': {
+      // Moderator: move the clock forward, then let every agent's clock catch up at once.
+      return reduceCore({ ...s, clock: startClock(now(s) + a.minutes * MIN) }, { type: 'core/heartbeat' })
     }
 
     case 'core/skipDay': {

@@ -82,5 +82,7 @@ const juno: AgentModule = {
     ['Clips dismissed', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'dismissed').length],
     ['Dubs approved', ev.filter(e => e.kind === 'video/dub-approved').length],
   ],
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-video-captions', to: '/video' }],
 }
 export default juno

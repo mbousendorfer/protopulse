@@ -24,10 +24,10 @@
 
 | # | Capacité Agorapulse | État actuel | Version agentique | Valeur | Taille | Statut |
 |---|---|---|---|---|---|---|
-| 1 | Données qui vivent (profile reports) | KPI fixes × 3 périodes (`data/insights.ts:98`), `NET_SHARE` multiplicateur, 18 posts d'Iris ≠ posts publiés d'Atlas (`data/publishing.ts:53`) | Séries quotidiennes par réseau ; posts = posts publiés d'Atlas (et clips de Juno) avec leurs `stats` ; un post publié pendant la session entre dans les chiffres | 3 | L | todo |
-| 2 | Report Studio (agentique) | 6 rapports constants, aucune édition | « Iris, a monthly report for Claire on Instagram and TikTok » (⌘K, Chat) → rapport rédigé depuis l'état ; chaque section se retire, se déplace, se réécrit (« shorter », « add the top 3 posts ») ; modèles sauvegardables | 3 | L | todo |
-| 3 | Scheduled reports, export PDF | Download .md seulement | Planification hebdo/mensuelle, destinataires Sam/Claire ; en Act Iris envoie seule (journal + Undo) ; export PDF simulé (impression) et lien de lecture | 3 | M | todo |
-| 4 | Rapport par réseau / campagne / label | Un seul rapport de campagne constant | Iris rédige par réseau, par campagne (lu chez Sage `targetsOf`), par label (posts d'Atlas) | 2 | M | todo |
+| 1 | Données qui vivent (profile reports) | KPI fixes × 3 périodes (`data/insights.ts:98`), `NET_SHARE` multiplicateur, 18 posts d'Iris ≠ posts publiés d'Atlas (`data/publishing.ts:53`) | Séries quotidiennes par réseau ; posts = posts publiés d'Atlas (et clips de Juno) avec leurs `stats` ; un post publié pendant la session entre dans les chiffres | 3 | L | dropped — décision de l’humain au pitch (25/11), sans commentaire |
+| 2 | Report Studio (agentique) | 6 rapports constants, aucune édition | « Iris, a monthly report for Claire on Instagram and TikTok » (⌘K, Chat) → rapport rédigé depuis l'état ; chaque section se retire, se déplace, se réécrit (« shorter », « add the top 3 posts ») ; modèles sauvegardables | 3 | L | done (studio PR) |
+| 3 | Scheduled reports, export PDF | Download .md seulement | Planification hebdo/mensuelle, destinataires Sam/Claire ; en Act Iris envoie seule (journal + Undo) ; export PDF simulé (impression) et lien de lecture | 3 | M | done (schedules PR) |
+| 4 | Rapport par réseau / campagne / label | Un seul rapport de campagne constant | Iris rédige par réseau, par campagne (lu chez Sage `targetsOf`), par label (posts d'Atlas) | 2 | M | done (campaign & label PR ; le rapport par réseau est dans le Report Studio) |
 | 5 | Community management (rapport) | Chiffres Nova recopiés en texte (`data/insights.ts:53`) | Temps de réponse, volumes par type/réseau, part traitée par Nova seule, lus dans `s.inbox` | 2 | M | todo |
 | 6 | Social Media ROI | Absent | UTM des liens d'Atlas → clics, sessions, conversions, revenu mockés GA4 par réseau et campagne | 2 | M | todo |
 | 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | todo |

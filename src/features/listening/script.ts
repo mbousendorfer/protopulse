@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
 import { ideaScript } from '../publishing/slice'
-import { raiseSpike } from './slice'
+import { creatorEvent, raiseSpike } from './slice'
 
 /** Echo's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
@@ -15,6 +15,7 @@ export const SCRIPT: ScriptEvent[] = [
     auto: { text: 'Asked Atlas to test the split-screen format with the Ridge', reason: 'Counter-moves, set to Act', link: '/listening/competitors' },
   },
   { id: 'ev-idea-urgent', order: 100, label: 'Echo · first snow, post tonight (urgent idea)', agent: 'echo', ...ideaScript({ origin: 'urgent', agent: 'echo', seeds: ['first-snow'] }) },
+  { id: 'ev-creator-fit', order: 175, label: 'Echo · creator worth a collab (@jeanne.paris)', agent: 'echo', tag: 'creator', run: (s, manual) => creatorEvent(s, manual) },
   {
     id: 'ev-norro', order: 180, label: 'Echo · Norrø repair programme',
     handoff: { agent: 'echo', kind: 'decision', urgency: 'week', topic: 'Competitor', action: 'echo-counter',

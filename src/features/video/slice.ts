@@ -4,12 +4,12 @@ import type { Decision, Handoff } from '../../app/types'
 import { DAY, T } from '../../app/time'
 import { actionOf, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import { POSTS, type Pillar, type Post } from '../../data/publishing'
-import type { Network } from '../../app/types'
 import {
   BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, NETWORK_FIT, captionSlips, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { clipPerf, netAverage } from '../insights/metrics'
+import { LANG_LABEL, NETWORK_FIT, buildVersions, translatedCaption, type PostTags, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, trackRecord, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -29,7 +29,7 @@ const ARRIVED = T(17, 52, -1)
 export function initialVideo(): VideoState {
   const sources: Source[] = [{ ...SOURCE_DEFS.repair, status: 'ready' }, { ...SOURCE_DEFS.live, status: 'ready' }]
   const seeded = sources.flatMap(src => SEEDS[src.media].map(seed => clipFromSeed(seed, src, src.id === 'live' ? T(19, 10, -4) : ARRIVED)))
-  const clips = withTrack(seeded, seeded, POSTS)
+  const clips = withTrack(seeded, seeded, POSTS).map(c => ({ ...withCover(c, TRANSCRIPT[c.source], (ON_SCREEN[c.source] ?? []).filter(p => !RELEASES[p.who])), versions: buildVersions(c) }))
   return { sources, clips, kit: structuredClone(BRAND_KIT), editor: { past: [], future: [] }, opened: {}, releases: { ...RELEASES } }
 }
 
@@ -120,6 +120,27 @@ export function vetClips(s: State, picked: Clip[]): { go: Clip[]; held: { clip: 
   return { go, held }
 }
 
+/* ---------- Labels and campaign ---------- */
+
+/**
+ * Sage's running campaign a clip belongs to: live now, and already carrying Atlas posts of the clip's pillar.
+ * Read through Sage's state (`s.strategy.campaigns`), never written.
+ */
+export function campaignFor(s: State, c: Clip) {
+  const t = now(s)
+  return s.strategy.campaigns.find(k => k.status === 'live' && k.start <= t && k.end >= t && s.publishing.posts.some(p => p.campaign === k.name && p.pillar === c.pillar))
+}
+export const tagsFor = (s: State, c: Clip): PostTags => {
+  const k = campaignFor(s, c)
+  return { labels: [c.pillar], ...(k ? { campaign: k.name, campaignId: k.id } : {}) }
+}
+
+/** Which language versions go out with a clip: all on Act; otherwise the approved ones, the rest wait. */
+export function langsOut(s: State, c: Clip): { out: Lang[]; wait: Lang[] } {
+  const review = levelOf(s, 'juno-dub') === 'act' ? [] : c.audio.review ?? []
+  return { out: c.audio.dubs.filter(l => !review.includes(l)), wait: c.audio.dubs.filter(l => review.includes(l)) }
+}
+
 /* ---------- Sending to Atlas ---------- */
 
 /** Ready clips become scheduled posts in Atlas's calendar. One journal line, one Undo. From the Desk, the Desk's own line undoes it. */
@@ -130,14 +151,33 @@ export function sendClips(s: State, ids: string[], by: 'you' | 'desk' | 'juno', 
   const t = now(s)
   let posts = s.publishing.posts
   const made: Record<string, string[]> = {}
-  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p'), clipLengthOf(c, trOf(s, c))); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
+  const langsMade: Lang[] = []
+  const langsWait = new Set<Lang>()
+  for (const c of picked) {
+    const dur = clipLengthOf(c, trOf(s, c))
+    const tags = tagsFor(s, c)
+    let ps = clipPosts(c, posts, t, () => uid('p'), dur, tags)
+    // Language versions: on Act all of them; otherwise only the ones you approved (or made yourself).
+    const { out, wait } = langsOut(s, c)
+    for (const l of wait) langsWait.add(l)
+    for (const l of out) {
+      const text = translatedCaption(c, trOf(s, c), l)
+      const lp = clipPosts({ ...c, post: { ...c.post, text: Object.fromEntries(c.post.networks.map(n => [n, text])) } }, [...posts, ...ps], t, () => uid('p'), dur, { ...tags, labels: [...tags.labels, LANG_LABEL[l]] })
+      ps = [...ps, ...lp.map(p => ({ ...p, note: `${p.note} · ${LANG_LABEL[l]}` }))]
+      langsMade.push(l)
+    }
+    posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id)
+  }
   let next: State = { ...s, publishing: { ...s.publishing, posts } }
   next = patchClips(next, picked.map(c => c.id), c => ({ ...c, status: 'sent', posts: made[c.id], back: undefined, sentAt: t, sentFrom: by === 'desk' ? fromCard : undefined }))
   for (const c of picked) next = decided(next, c, c.edited ? 'modified' : 'as-is', { by })
   for (const id of new Set(picked.map(c => c.source))) next = syncCard(next, id)
   if (by === 'desk') return next
   const n = Object.values(made).flat().length
-  const text = (picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled.` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled.`) + heldText
+  const inLangs = [...new Set(langsMade)].map(l => LANG_LABEL[l])
+  const langText = inLangs.length ? ` ${inLangs.join(' and ')} version${inLangs.length > 1 ? 's' : ''} included.` : ''
+  const waitText = langsWait.size ? ` ${[...langsWait].map(l => LANG_LABEL[l]).join(' and ')} wait${langsWait.size > 1 ? '' : 's'} for your review.` : ''
+  const text = (picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled.` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled.`) + langText + waitText + heldText
   next = pushLog(next, { agent: 'juno', text, status: by === 'juno' ? 'done' : 'approved', reason: by === 'juno' ? 'Sending her best clips is set to Act' : 'You sent them from Video', undoMinutes: 10, clips: picked.map(c => c.id), link: '/publishing/calendar' })
   return by === 'you' ? notify(next, 'video', text, { undo: next.log[0].id, link: { to: '/publishing/calendar', label: 'Open the calendar' } }) : next
 }
@@ -218,7 +258,7 @@ function prepare(s: State, clips: Clip[]): Clip[] {
   const dub = levelOf(s, 'juno-dub')
   const langs: Lang[] = s.video.kit.langs
   return clips.map(c => ({
-    ...c,
+    ...(frame === 'suggest' ? c : { ...withCover(c, trOf(s, c), noRelease(s, sourceOf(s, c.source)?.transcript ?? '')), versions: buildVersions(c) }),
     ...(frame === 'suggest' ? { frame: 'fit' as const, brand: BARE_BRAND(c.brand), framing: 'suggested' as const } : frame === 'draft' ? { framing: 'check' as const } : {}),
     audio: dub === 'suggest' ? c.audio : { ...c.audio, dubs: langs, review: dub === 'draft' ? langs : [] },
   }))
@@ -241,6 +281,16 @@ export function undoVideoWork(s: State, captionFixes?: Record<string, number[]>,
   return next
 }
 
+/* ---------- Cover ---------- */
+
+/** Source ranges showing someone without a signed release: never a cover. */
+export const noRelease = (s: { video: { releases: Record<string, boolean> } }, transcript: string) => (ON_SCREEN[transcript] ?? []).filter(p => !s.video.releases[p.who])
+/** Juno's pick: the best frame, the hook on it, the Shorts title. */
+export function withCover(c: Clip, tr: Transcript, avoid: { s: number; e: number }[]): Clip {
+  const best = coverFrames(c, tr, avoid)[0]
+  return { ...c, cover: best ? { at: best.at, text: coverText(c.hook), by: 'juno' } : undefined, ytTitle: c.post.networks.includes('youtube') ? shortsTitle(c) : undefined }
+}
+
 /* ---------- Track record ---------- */
 
 /** Clips waiting for review learn from what was published: their track record is refreshed. */
@@ -249,30 +299,10 @@ const refreshTrack = (s: State): State => setVideo(s, { clips: withTrack(s.video
 
 /* ---------- After it goes out: published, with numbers ---------- */
 
-/** Usual reach and engagement of the published posts on a network (medians: one viral post doesn't set the bar). */
-export function networkAverage(s: State, n: string): { reach: number; er: number } | undefined {
-  const ps = s.publishing.posts.filter(p => p.network === n && p.status === 'published' && p.stats)
-  if (!ps.length) return undefined
-  return { reach: typicalReach(ps, n as Network), er: median(ps.map(p => p.stats!.er)) }
-}
-
 const postsOf = (s: State, c: Clip) => (c.posts ?? []).map(id => s.publishing.posts.find(p => p.id === id)).filter(p => !!p && p.status !== 'failed' && p.status !== 'draft') as Post[]
 
-/**
- * A published clip's numbers: its posts' own stats when Atlas and Iris have them, else Juno's read of the first day.
- * ponytail: the estimate (score × the network's average) stands in until Iris exposes `clipPerf`
- * (requests/iris-from-juno-clip-perf.md); then this reads hers.
- */
-export function clipPerf(s: State, c: Clip): { views: number; er: number } {
-  // Only the posts already out count.
-  const ps = postsOf(s, c).filter(p => p.at <= now(s))
-  const measured = ps.filter(p => p.stats)
-  if (measured.length) return { views: measured.reduce((a, p) => a + p.stats!.reach, 0), er: Math.round(measured.reduce((a, p) => a + p.stats!.er, 0) / measured.length * 10) / 10 }
-  const score = rescore(c, trOf(s, c)).total
-  const views = ps.reduce((a, p) => a + (networkAverage(s, p.network)?.reach ?? 8000) * (0.5 + (score - 50) / 30), 0)
-  const er = (networkAverage(s, ps[0]?.network ?? 'tiktok')?.er ?? 4) * (0.7 + (score - 50) / 60)
-  return { views: Math.round(views / 100) * 100, er: Math.round(er * 10) / 10 }
-}
+/** A published clip's numbers are Iris's (`clipPerf`), fed with Juno's score. */
+export const clipNumbers = (s: State, c: Clip) => clipPerf(s, c.id, rescore(c, trOf(s, c)).total)
 
 /** The first of a sent clip's posts: once it's past, the clip is out. */
 const outAt = (s: State, c: Clip) => { const ps = postsOf(s, c); return ps.length ? Math.min(...ps.map(p => p.at)) : Infinity }
@@ -281,13 +311,13 @@ const outAt = (s: State, c: Clip) => { const ps = postsOf(s, c); return ps.lengt
 function publishDue(s: State, t: number): State {
   let next = s
   for (const c of s.video.clips.filter(x => x.status === 'sent' && outAt(s, x) <= t)) {
-    const stats = clipPerf(next, c)
+    const stats = clipNumbers(next, c) ?? { views: 0, er: 0 }
     const net = postsOf(next, c).filter(p => p.at <= t).sort((a, b) => a.at - b.at)[0]?.network ?? c.post.networks[0]
     next = patchClips(next, [c.id], x => ({ ...x, status: 'published', stats }))
-    const avg = networkAverage(next, net)
+    const avg = netAverage(next, net)
     const lift = avg ? stats.views / avg.reach : 1
     const k = `${(stats.views / 1000).toFixed(1)}k`
-    next = pushLog(next, { agent: 'juno', text: `“${c.title}” is out: ${k} views, ${stats.er}% engagement on its first day`, status: 'done', reason: 'Atlas posted it at the planned time', link: `/video/clips/${c.id}` })
+    next = pushLog(next, { agent: 'juno', text: `“${c.title}” is out: ${k} views, ${stats.er}% engagement on its first day`, status: 'done', reason: 'Atlas posted it at the planned time; the numbers are Iris’s', link: `/video/clips/${c.id}` })
     if (lift >= 1.5 && !next.handoffs.some(h => h.ref === c.id)) {
       next = pushHandoff(next, {
         agent: 'juno', kind: 'news', urgency: 'week', topic: 'Clip', group: 'good', ref: c.id,

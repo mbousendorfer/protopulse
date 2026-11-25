@@ -113,6 +113,8 @@ export const AGENTS: Agent[] = [
         says: says('Echo notes spikes in the daily digest.', 'Echo raises the spike with three moves and waits for your pick.', 'Echo pauses Atlas and asks Claire for a statement on her own, then tells you.') },
       { id: 'echo-sales', perWeek: 1, example: 'Three retailers ask about the Storm Jacket restock', label: 'Tell the sales team (email digest)', risk: 'risky', autonomy: 'draft', reviewed: 6, approvedUnchanged: 83,
         says: says('Echo suggests what sales should know.', 'Echo drafts the email for your approval.', 'Echo emails the sales team on her own.') },
+      { id: 'echo-creators', perWeek: 1, example: 'A hiker with 84k followers posts the Ridge three times, unpaid', label: 'Shortlist creators for a collab', risk: 'safe', autonomy: 'draft', reviewed: 4, approvedUnchanged: 75,
+        says: says('Echo shows who talks about you.', 'Echo proposes creators to shortlist; you decide.', 'Echo shortlists good-fit creators on her own. Contacting them stays your call.') },
     ],
     guardrails: [
       { id: 'g1', label: 'Spike threshold', value: '3× usual negative volume in 1 h' },
@@ -135,6 +137,8 @@ export const AGENTS: Agent[] = [
       { id: 'sage-pillars', perWeek: 1, example: 'Repair content beats every pillar this quarter', label: 'Change the editorial pillars', risk: 'destructive', autonomy: 'suggest', locked: true,
         lockReason: 'Pillars define the brand. Only people change them.',
         says: says('Sage suggests pillar changes with data. You decide.', '', '') },
+      { id: 'sage-moments', perWeek: 1, example: 'First snow is due in 3 weeks', label: 'Plan for calendar moments', risk: 'safe', autonomy: 'suggest', reviewed: 0, approvedUnchanged: 0,
+        says: says('Sage points out moments worth planning for. You add them.', 'Sage prepares the moment and its ideas, and asks you to add them.', 'Sage adds moments to the calendar and gives Atlas the ideas on its own.') },
     ],
     guardrails: [
       { id: 'g1', label: 'Every campaign has', value: 'One number goal' },

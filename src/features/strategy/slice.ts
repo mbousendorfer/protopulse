@@ -1,15 +1,19 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment, MOMENTS, MOMENT_LEAD, type Moment } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
+import { arriveIdeas } from '../publishing/slice'
+import type { IdeaSeed } from '../../data/ideas'
+import { T } from '../../app/time'
 import { DAY, dayLabel } from '../../app/time'
 
-export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[] }
+/** `moments`: calendar moments Sage watches; added ones show in Atlas's calendar (`themesOf`). */
+export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[]; moments: Moment[] }
 
 export const initialStrategy = (): StrategyState => ({
-  campaigns: structuredClone(CAMPAIGNS), pillars: structuredClone(PILLARS), cadence: structuredClone(CADENCE), proposals: structuredClone(PROPOSALS),
+  campaigns: structuredClone(CAMPAIGNS), pillars: structuredClone(PILLARS), cadence: structuredClone(CADENCE), proposals: structuredClone(PROPOSALS), moments: structuredClone(MOMENTS),
 })
 
 export type StrategyAction =
@@ -23,6 +27,8 @@ export type StrategyAction =
   | { type: 'strategy/reopen'; id: string; adj?: string }
   | { type: 'strategy/cadence'; network: Network; target: number }
   | { type: 'strategy/propose'; proposal: Proposal }
+  | { type: 'strategy/pillars'; pillars: Pillar[] }
+  | { type: 'strategy/moment'; id: string; add: boolean }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
 const campaign = (s: State, id: string) => s.strategy.campaigns.find(c => c.id === id)
@@ -41,10 +47,10 @@ declare module '../../app/types' {
     sage?: SageUndo
   }
 }
-export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[] }
+export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[]; moments?: Moment[]; ideas?: string[] }
 
 /** What a Sage Desk card changes when it's approved (or its first option picked). */
-export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange }
+export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange; moment?: string }
 declare module '../../app/types' {
   interface Handoff { sage?: SageCard }
 }
@@ -161,6 +167,9 @@ function reverse(s: State, u: SageUndo): State {
   if (u.posts) next = toAtlas(fromAtlas(next, u.posts.added), u.posts.before)
   if (u.targets) next = patch(next, u.targets)
   if (u.proposals) next = patch(next, { proposals: u.proposals })
+  if (u.moments) next = patch(next, { moments: u.moments })
+  // ponytail: Atlas's ideas from a moment leave his list by key; swap for an Atlas withdraw when he exposes one.
+  if (u.ideas) next = { ...next, publishing: { ...next.publishing, ideas: next.publishing.ideas.filter(i => !u.ideas!.includes(i.key)) } }
   return next
 }
 
@@ -175,15 +184,141 @@ export function onUndoStrategy(s: State, entry: LogEntry): State {
   return next
 }
 
-/** Campaigns past their end date close themselves. */
-export const campaignsDue = (s: State, t: number) => s.strategy.campaigns.some(c => c.status === 'live' && c.end < t)
-export function closeCampaigns(s: State, t: number): State {
+/* ---------- Live goals: results come in, Sage watches the trajectory ---------- */
+
+/** The plan has 9 points from start to end; results arrive at the same pace. */
+const POINTS = 9
+const stepOf = (c: Campaign) => (c.end - c.start) / (POINTS - 1)
+const seed = (id: string) => [...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7)
+// ponytail: results are simulated, drifting toward a pace per campaign; Iris's real attribution replaces this when she exposes it.
+export const paceOf = (c: Campaign) => c.pace ?? 0.8 + (seed(c.id) % 45) / 100
+const resultsDue = (c: Campaign, t: number) => c.status === 'live' && c.actual.length < POINTS && c.start + c.actual.length * stepOf(c) <= t
+
+/** The next result: last ratio to plan, half-way toward the campaign's pace (or the ratio given). */
+function nextResult(c: Campaign, ratio?: number): Campaign {
+  const i = c.actual.length
+  const last = i > 0 && c.planned[i - 1] ? c.actual[i - 1] / c.planned[i - 1] : 1
+  const r = ratio ?? last + (paceOf(c) - last) * 0.5
+  const v = Math.max(c.actual[i - 1] ?? 0, Math.round(c.planned[i] * r))
+  return { ...c, actual: [...c.actual, v], goal: { ...c.goal, current: v } }
+}
+
+const OFF_LOW = 0.85, OFF_HIGH = 1.2
+const round10 = (n: number) => Math.max(10, Math.round(n / 10) * 10)
+
+/** Off trajectory: Sage proposes a fix with real moves (a Desk card on Draft, applied on Act). */
+function watchTrajectory(s: State, id: string, t: number): State {
+  const c = campaign(s, id)
+  const i = (c?.actual.length ?? 0) - 1
+  if (!c || i < 1 || !c.planned[i]) return s
+  const r = c.actual[i] / c.planned[i]
+  if (r >= OFF_LOW && r <= OFF_HIGH) return s
+  // One trajectory card at a time per campaign (the seeded goal card counts).
+  if (s.handoffs.some(h => cardOf(h)?.campaign === id && (!!cardOf(h)?.goal || /trajectory/.test(h.title)))) return s
+  const pct = Math.round(r * 100)
+  const u = unit(c)
+  let adj: Adjustment
+  if (r > OFF_HIGH) {
+    const goal = round10(c.goal.target * Math.min(r, 1.3))
+    adj = { id: uid('adj'), status: 'proposed', goal, text: `${c.name} is at ${pct}% of its trajectory. Raise the goal from ${fmtN(c, c.goal.target)} to ${fmtN(c, goal)} ${u}.` }
+  } else {
+    // Posts another open adjustment already moves stay out of this one.
+    const taken = new Set(c.adjustments.filter(a => a.status === 'proposed').flatMap(a => a.moves ?? []).map(m => m.post))
+    const upcoming = c.posts.filter(p => !p.published && slotOf(c, p) > t && !taken.has(p.id))
+    // Where the campaign already works: the network most of its published posts are on.
+    const done = c.posts.filter(p => p.published)
+    const best = [...new Set(done.map(p => p.network))].sort((a, b) => done.filter(p => p.network === b).length - done.filter(p => p.network === a).length)[0]
+    const count = (n: Network) => upcoming.filter(p => p.network === n).length
+    const nets = [...new Set(upcoming.map(p => p.network))].sort((a, b) => count(b) - count(a))
+    const from = nets.find(n => n !== best) ?? nets[0], to = best && best !== from ? best : nets.find(n => n !== from && n !== 'x') ?? (from === 'tiktok' ? 'instagram' : 'tiktok')
+    const moved = from ? upcoming.filter(p => p.network === from).slice(0, 2) : []
+    adj = moved.length
+      ? { id: uid('adj'), status: 'proposed', moves: moved.map(p => ({ post: p.id, network: to })), text: `${c.name} is at ${pct}% of its trajectory. Move ${list(moved.map(p => `“${p.title}”`))} from ${NETWORK_LABEL[from]} to ${NETWORK_LABEL[to]}.` }
+      : { id: uid('adj'), status: 'proposed', goal: round10(c.goal.target * r), text: `${c.name} is at ${pct}% of its trajectory with no post left to move. Lower the goal from ${fmtN(c, c.goal.target)} to ${fmtN(c, round10(c.goal.target * r))} ${u}.` }
+  }
+  let next = updateCampaign(s, id, x => ({ ...x, adjustments: [adj, ...x.adjustments] }))
+  const card: Omit<Handoff, 'id' | 'at'> = {
+    agent: 'sage', kind: 'approval', urgency: r < OFF_LOW ? 'today' : 'week', topic: 'Campaign', action: 'sage-cadence', chain: ['iris', 'sage'], ref: id,
+    title: `${c.name} ${r < OFF_LOW ? 'below' : 'ahead of'} its trajectory (${pct}%)`, context: `${fmtN(c, c.actual[i])} ${u} against ${fmtN(c, c.planned[i])} planned by now.`,
+    why: 'Campaign adjustments are set to Draft.', confidence: 74, link: `/strategy/campaigns/${id}`,
+    preview: { type: 'plan', title: 'Sage’s adjustment', lines: [adj.text.split('. ').slice(1).join('. ') || adj.text, `Goal ${fmtN(c, c.goal.target)} ${u}`] },
+    sage: { campaign: id, adjust: adj.id },
+  }
+  if (actionOf(next, 'sage', 'sage-cadence')?.autonomy !== 'act') return pushHandoff(next, card)
+  // On Act, Sage applies it: the same path as an approval, with its own Undo.
+  next = applyAdjust(next, id, adj.id, true)
+  return { ...next, log: next.log.map((l, n) => (n === 0 ? { ...l, status: 'done', reason: 'Campaign adjustments, set to Act', undoUntil: l.at + 30 * 60_000 } : l)) }
+}
+
+/** Results arrive for live campaigns; Sage checks each new one against the plan. `force` adds one now, at that ratio. */
+export function trackCampaigns(s: State, t: number, force?: { id: string; ratio: number }): State {
   let next = s
-  for (const c of s.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) {
-    next = updateCampaign(next, c.id, x => ({ ...x, status: 'done' }))
-    next = pushLog(next, { agent: 'sage', text: `${c.name} ended: ${c.goal.current.toLocaleString('en-GB')} of ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${c.id}` })
+  for (const c of s.strategy.campaigns) {
+    if (force ? c.id !== force.id || c.actual.length >= POINTS : !resultsDue(c, t)) continue
+    let x = c
+    // The moderator's push: results come in early at that ratio until they show it (results never go down).
+    if (force) do x = nextResult(x, force.ratio)
+    while (x.actual.length < POINTS && x.planned[x.actual.length - 1] && x.actual[x.actual.length - 1] / x.planned[x.actual.length - 1] >= OFF_LOW && force.ratio < OFF_LOW)
+    else while (resultsDue(x, t)) x = nextResult(x)
+    next = watchTrajectory(updateCampaign(next, c.id, () => x), c.id, t)
   }
   return next
+}
+
+/** Campaigns past their end date close themselves. */
+export const campaignsDue = (s: State, t: number) => s.strategy.campaigns.some(c => (c.status === 'live' && c.end < t) || resultsDue(c, t))
+export function closeCampaigns(s: State, t: number): State {
+  let next = trackCampaigns(s, t)
+  for (const c of next.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) next = endCampaign(next, c.id)
+  return next
+}
+
+/** What went out for a campaign: its posts marked published, and Atlas's published posts that carry its id. */
+function sentPosts(s: State, c: Campaign): { network: Network }[] {
+  const atlas = s.publishing.posts.filter(p => p.campaignId === c.id && p.status === 'published')
+  const ids = new Set(atlas.map(p => p.id))
+  return [...c.posts.filter(p => p.published && !ids.has(p.postId ?? p.id)), ...atlas]
+}
+
+/** Sage's recap, written from the state: the goal, where it worked, what you changed, what it cost; and the lesson as a proposal. */
+export function recapOf(s: State, c: Campaign): { recap: string[]; lesson?: Proposal } {
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  const sent = sentPosts(s, c)
+  const by = (n: Network) => sent.filter(p => p.network === n).length
+  const nets = [...new Set(sent.map(p => p.network))].sort((a, b) => by(b) - by(a))
+  const applied = c.adjustments.filter(a => a.status === 'accepted')
+  const movedTo = applied.flatMap(a => a.moves ?? []).map(m => m.network).filter((n): n is Network => !!n).at(-1)
+  const per = c.goal.current ? c.budget / c.goal.current : 0
+  const one = unit(c).replace(/s$/, '').replace(/^revenue from social$/, '€ of revenue')
+  const recap = [
+    `${fmtN(c, c.goal.current)} ${unit(c)}, ${pct}% of the ${fmtN(c, c.goal.target)} goal.`,
+    nets[0] ? `${sent.length} post${sent.length === 1 ? '' : 's'} went out; ${NETWORK_LABEL[nets[0]]} carried the most (${by(nets[0])}).` : 'No campaign post went out.',
+    applied.length ? `You applied ${applied.length} adjustment${applied.length > 1 ? 's' : ''}: ${applied.map(a => a.text.split('. ').slice(-1)[0].replace(/\.$/, '')).join('; ')}.` : 'No adjustment during the campaign.',
+    per ? `€${c.budget.toLocaleString('en-GB')} of boosts, €${per.toFixed(2)} per ${one}.` : `€${c.budget.toLocaleString('en-GB')} of boost budget.`,
+  ]
+  const net = movedTo ?? nets[0]
+  const weekly = net ? targetsOf(s).cadence[net] ?? 0 : 7
+  const lesson: Proposal | undefined = net && weekly < 7 && !s.strategy.proposals.some(p => p.status === 'proposed' && p.change?.add?.[net])
+    ? { id: uid('pr'), status: 'proposed', change: { add: { [net]: 1 } }, text: `Add 1 ${NETWORK_LABEL[net]} post a week`, why: `${NETWORK_LABEL[net]} ${movedTo ? 'is where you moved posts' : 'carried the most posts'} in ${c.name}, which reached ${pct}% of its goal.` }
+    : undefined
+  return { recap, lesson }
+}
+
+/** A campaign ends: the rest of its results come in, Sage writes the recap, raises it on the Desk and proposes the lesson. */
+export function endCampaign(s: State, id: string): State {
+  let c = campaign(s, id)
+  if (!c || c.status !== 'live') return s
+  while (c.actual.length < POINTS) c = nextResult(c)
+  const { recap, lesson } = recapOf(s, c)
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  let next = updateCampaign(s, id, () => ({ ...c!, status: 'done', recap: c!.recap ?? recap, recapBy: c!.recap ? c!.recapBy : 'sage' }))
+  if (lesson) next = patch(next, { proposals: [lesson, ...next.strategy.proposals] })
+  next = pushHandoff(next, {
+    agent: 'sage', kind: 'news', group: pct >= 100 ? 'good' : 'look', urgency: 'week', topic: 'Campaign recap', ref: id, chain: ['iris', 'sage'],
+    title: `${c.name} is over: ${pct}% of its goal`, context: recap.slice(0, 2).join(' '), why: 'Sage writes the recap when a campaign ends, with Iris’s numbers.', confidence: 90,
+    link: `/strategy/campaigns/${id}`, cta: { label: 'Read the recap', to: `/strategy/campaigns/${id}` },
+  })
+  return pushLog(next, { agent: 'sage', text: `${c.name} ended: ${fmtN(c, c.goal.current)} of ${fmtN(c, c.goal.target)} ${unit(c)}. Recap written${lesson ? `, proposed: ${lesson.text}` : ''}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${id}` })
 }
 
 export function reduceStrategy(s: State, a: StrategyAction): State {
@@ -217,13 +352,24 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       // A decline is taken back here; an applied change is undone from the journal.
       return a.adj
         ? updateCampaign(s, a.id, x => ({ ...x, adjustments: x.adjustments.map(y => (y.id === a.adj && y.status === 'declined' ? { ...y, status: 'proposed' } : y)) }))
-        : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
+        : s.strategy.moments.some(m => m.id === a.id)
+          ? patch(s, { moments: s.strategy.moments.map(m => (m.id === a.id && m.status === 'skipped' ? { ...m, status: undefined } : m)) })
+          : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
     case 'strategy/proposal': {
       const p = s.strategy.proposals.find(x => x.id === a.id)
       if (!p || p.status !== 'proposed') return s
       const next = patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id ? { ...x, status: a.accept ? 'accepted' : 'declined' } : x)) })
       if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
+    }
+    case 'strategy/moment':
+      return a.add ? addMoment(s, a.id, {}) : skipMoment(s, a.id)
+    case 'strategy/pillars': {
+      const check = pillarCheck(s, a.pillars)
+      if (!check.ok) return s
+      const before = s.strategy
+      const next = patch(s, { pillars: a.pillars })
+      return pushLog(next, { agent: 'sage', text: `You changed the pillars: ${check.changes.join(', ')}`, status: 'done', reason: 'Your edit, checked by Sage', link: '/strategy/pillars', undoMinutes: 10, sage: { targets: { pillars: before.pillars, cadence: before.cadence } } })
     }
     case 'strategy/propose': {
       if (s.strategy.proposals.some(p => p.text === a.proposal.text && p.status === 'proposed')) return s
@@ -268,7 +414,8 @@ function applyAdjust(s: State, id: string, adj: string, accept: boolean, card?: 
     const m = moves.find(x => x.post === p.id)
     return m ? { ...p, network: m.network ?? p.network, title: m.title ?? p.title } : p
   })
-  const after: Campaign = { ...c, posts, adjustments: c.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)) }
+  const k = accept && a.goal ? a.goal / c.goal.target : 1
+  const after: Campaign = { ...c, posts, ...(k !== 1 ? { goal: { ...c.goal, target: a.goal! }, planned: c.planned.map(v => Math.round(v * k)) } : {}), adjustments: c.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)) }
   const touched = new Set(moves.map(m => posts.find(p => p.id === m.post)).filter((p): p is CPost => !!p).map(p => p.postId ?? p.id))
   const inCalendar = s.publishing.posts.filter(p => touched.has(p.id) && p.status !== 'published')
   const moved = inCalendar.map(p => {
@@ -303,6 +450,7 @@ export function onResolveStrategy(s: State, h: Handoff, d: Decision): State {
   const yes = d.kind === 'approve' || d.kind === 'trial' || (d.kind === 'option' && d.index === 0)
   if (k?.adjust && k.campaign) return yes ? applyAdjust(s, k.campaign, k.adjust, true, h) : d.kind === 'reject' ? applyAdjust(s, k.campaign, k.adjust, false, h) : s
   if (k?.goal && k.campaign) return yes ? setGoal(s, k.campaign, k.goal, h) : s
+  if (k?.moment) return yes ? addMoment(s, k.moment, { card: h }) : d.kind === 'reject' || (d.kind === 'option' && d.index === 1) ? skipMoment(s, k.moment) : s
   if (k?.change) {
     if (!yes) return s
     const record: Proposal = { id: uid('pr'), text: h.title, why: h.context, status: 'accepted', change: k.change }
@@ -364,4 +512,81 @@ export function pillarProposal(s: State, pillar: string, more: boolean): Proposa
     text: `${more ? 'Raise' : 'Lower'} ${me.name} from ${me.target}% to ${me.target + d}% of posts, ${other.name} from ${other.target}% to ${other.target - d}%`,
     why: `${me.name} is at ${me.actual}% of posts against ${me.target}%; ${other.name} is at ${other.actual}% against ${other.target}%. Last 30 days.`,
   }
+}
+
+/**
+ * Sage checks Sam's pillar edit before it applies: shares add up to 100, no empty pillar,
+ * and what each change means in posts a week (from Sage's cadence).
+ */
+export function pillarCheck(s: State, draft: Pillar[]): { ok: boolean; total: number; issues: string[]; changes: string[]; impact: string[] } {
+  const total = draft.reduce((n, p) => n + p.target, 0)
+  const weekly = Object.values(targetsOf(s).cadence).reduce<number>((n, v) => n + (v ?? 0), 0)
+  const issues = [
+    ...(total !== 100 ? [`Shares add up to ${total}%: ${total < 100 ? `${100 - total} points to place` : `${total - 100} points too many`}.`] : []),
+    ...draft.filter(p => p.target < 0 || !Number.isFinite(p.target)).map(p => `${p.name} needs a share between 0 and 100%.`),
+    ...draft.filter(p => p.target === 0).map(p => `${p.name} at 0% means Atlas stops posting it.`),
+  ]
+  const was = new Map(s.strategy.pillars.map(p => [p.id, p]))
+  const moved = draft.filter(p => was.get(p.id) && was.get(p.id)!.target !== p.target)
+  const changes = [
+    ...moved.map(p => `${p.name} ${was.get(p.id)!.target}% → ${p.target}%`),
+    ...draft.filter(p => was.get(p.id) && was.get(p.id)!.desc !== p.desc).map(p => `${p.name}’s description`),
+  ]
+  const impact = moved.map(p => {
+    const d = ((p.target - was.get(p.id)!.target) / 100) * weekly
+    const n = Math.round(Math.abs(d) * 10) / 10
+    return `${p.name} ${p.target}% is about ${n} ${d > 0 ? 'more' : 'fewer'} post${n === 1 ? '' : 's'} a week`
+  })
+  return { ok: total === 100 && !draft.some(p => p.target < 0 || !Number.isFinite(p.target)) && changes.length > 0, total, issues, changes, impact }
+}
+
+/* ---------- Calendar moments ---------- */
+
+/** Moments added to the calendar, for Atlas's calendar band. */
+export const themesOf = (s: State) => s.strategy.moments.filter(m => m.status === 'added').map(({ id, name, start, end, why }) => ({ id, name, start, end, why }))
+/** The next moment Sage should raise: undecided, starting within 3 weeks. */
+export const nextMoment = (s: State, t = now(s)) => s.strategy.moments.find(m => !m.status && m.start - MOMENT_LEAD <= t && m.end > t && !s.handoffs.some(h => cardOf(h)?.moment === m.id))
+const dateRange = (m: Moment) => (dateLabel(m.start) === dateLabel(m.end) ? dateLabel(m.start) : `${dateLabel(m.start)}–${dateLabel(m.end)}`)
+
+/** Atlas's ideas for a moment, through his entry point for ideas. */
+const momentSeeds = (m: Moment): IdeaSeed[] => m.ideas.map((x, n) => ({
+  key: `${m.id}-${n + 1}`, kind: 'post', title: x.title, why: m.why, confidence: 78, pillar: x.pillar, networks: [x.network], action: 'atlas-plan',
+  copy: { [x.network]: x.copy }, media: x.media, day: Math.round((m.start - T(0, 0, 0)) / DAY), topic: m.id,
+  sources: [{ type: 'calendar', agent: 'sage', label: m.name, proof: m.why, link: '/strategy' }],
+}))
+
+/** Sage raises a moment: a Desk card on Suggest and Draft, added on its own on Act. */
+export function raiseMoment(s: State, m: Moment): State {
+  if (actionOf(s, 'sage', 'sage-moments')?.autonomy === 'act') return addMoment(s, m.id, { why: 'Calendar moments, set to Act' })
+  return pushHandoff(s, {
+    agent: 'sage', kind: 'decision', urgency: 'week', topic: 'Calendar moment', action: 'sage-moments', ref: m.id, group: 'look',
+    title: `${m.name}: ${dateRange(m)}`, context: m.why, why: 'Calendar moments are set to Suggest: you decide what goes in the calendar.', confidence: 80, link: '/strategy',
+    preview: { type: 'plan', title: `Ideas for Atlas · ${m.pillars.join(', ')}`, lines: m.ideas.map(x => `${NETWORK_LABEL[x.network]}: ${x.title}`) },
+    options: [{ label: 'Add to the calendar', recommended: true }, { label: 'Not this year' }],
+    sources: [{ label: m.why, from: m.source }],
+    sage: { moment: m.id },
+  })
+}
+
+/** A moment goes in the calendar and Atlas gets its ideas. Undo takes both back. */
+function addMoment(s: State, id: string, o: { card?: Handoff; why?: string }): State {
+  const m = s.strategy.moments.find(x => x.id === id)
+  if (!m || m.status === 'added') return s
+  const before = s.strategy.moments
+  const cards = s.handoffs.filter(h => h.id !== o.card?.id && cardOf(h)?.moment === id)
+  let next = patch({ ...s, handoffs: s.handoffs.filter(h => !cards.includes(h)) }, { moments: before.map(x => (x.id === id ? { ...x, status: 'added' } : x)) })
+  const seeds = momentSeeds(m)
+  next = arriveIdeas(next, seeds, 'continuous', 'sage')
+  return pushLog(next, {
+    agent: 'sage', text: `Added “${m.name}” (${dateRange(m)}) to the calendar, with ${seeds.length} ideas for Atlas`, status: o.why ? 'done' : 'approved', reason: o.why ?? 'You added it',
+    link: '/strategy', undoMinutes: o.card ? undefined : o.why ? 30 : 10, restore: o.card ? undefined : cards,
+    sage: { card: o.card?.id, moments: before, ideas: seeds.map(x => x.key) },
+  })
+}
+
+function skipMoment(s: State, id: string): State {
+  const m = s.strategy.moments.find(x => x.id === id)
+  if (!m || m.status) return s
+  const next = patch({ ...s, handoffs: s.handoffs.filter(h => cardOf(h)?.moment !== id) }, { moments: s.strategy.moments.map(x => (x.id === id ? { ...x, status: 'skipped' } : x)) })
+  return pushLog(next, { agent: 'sage', text: `Left “${m.name}” out of the calendar this year`, status: 'rejected', reason: 'Your call', link: '/strategy' })
 }
