@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BEST_CELL } from '../../data/insights'
-import { bestTime, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
+import { bestTime, formats, heat, kpi, kpis, rangeKpis, tiktokViews, type SocialNet } from './metrics'
 import { answer } from './slice'
 
 describe('Iris numbers', () => {
@@ -28,5 +28,14 @@ describe('Iris numbers', () => {
     expect(answer('Why did TikTok drop?')).toContain('2,970 to 1,840')
     expect(answer('Best time to post?')).toContain('Friday 18:00 – 20:00')
     expect(answer('How is reach growing?')).toContain(`${Math.round(kpi('reach').value / 1000)}k`)
+  })
+
+  it('a custom range follows daily reach in its window, rates stay those of the base period', () => {
+    expect(rangeKpis({ days: 7, offset: 0 }, 'all')).toEqual(kpis(7, 'all'))
+    const two = rangeKpis({ days: 14, offset: 0 }, 'all'), month = kpis(30, 'all')
+    const reach = two.find(k => k.key === 'reach')!.value
+    expect(reach).toBeGreaterThan(kpi('reach').value)
+    expect(reach).toBeLessThan(month.find(k => k.key === 'reach')!.value)
+    expect(two.find(k => k.key === 'er')!.value).toBe(month.find(k => k.key === 'er')!.value)
   })
 })

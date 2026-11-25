@@ -55,3 +55,13 @@
 .in-selall .select-box { width: 26px; height: 26px; }
 /* Sentence-long actions wrap inside their own button on phones instead of stretching to the card edge. */
 @media (max-width: 520px) { .anomaly-body .row .btn { white-space: normal; height: auto; min-height: 30px; padding-block: 5px; max-width: 260px; text-align: left; } }
+/* Explore: a custom range, and post rows that open the post's numbers. */
+.in-range .input { width: auto; }
+.in-posts tbody tr { cursor: pointer; }
+.in-post-open { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; text-align: left; display: block; }
+.in-post-open:hover { text-decoration: underline; text-underline-offset: 3px; }
+.in-post-open:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.in-post-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin: 0; }
+.in-post-stats div { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.in-post-stats dt { color: var(--ink-2); font-size: var(--t-sm); }
+.in-post-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--ink); }

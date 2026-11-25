@@ -8,12 +8,12 @@ import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
   DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, TIKTOK_VIEWS, dayLabels,
-  type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
+  type Cited, type Kpi, type NetFilter, type PostRow, type Report,
 } from '../../data/insights'
-import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
 import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
-import { bestTime, heat, kpis as kpisOf } from './metrics'
+import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
 import './insights.css'
@@ -167,34 +167,60 @@ function ReportView() {
 /* ---------- Explore ---------- */
 const fmtKpi = (k: Kpi, v: number) => k.fmt === 'k' ? (v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : `${Math.round(v / 1000)}k`) : k.fmt === 'pct' ? `${v.toFixed(1)}%` : k.fmt === 'min' ? `${v} min` : Math.round(v).toLocaleString('en-GB')
 
-type SortKey = 'date' | 'reach' | 'er' | 'clicks'
+type SortKey = 'date' | 'reach' | 'er' | 'clicks' | 'network' | 'pillar' | 'author'
+type PeriodChoice = '7' | '30' | '90' | 'custom'
+
+const iso = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const startOf = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
+const fromIso = (v: string) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime() }
 
 function Explore() {
   const now = useNow()
-  const [period, setPeriod] = useState<Period>(7)
+  const today = startOf(now)
+  const [choice, setChoice] = useState<PeriodChoice>('7')
+  const [custom, setCustom] = useState({ from: iso(today - 13 * DAY), to: iso(today) })
   const [net, setNet] = useState<NetFilter>('all')
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'reach', desc: true })
+  const [open, setOpen] = useState<PostRow | null>(null)
 
-  const kpis = kpisOf(period, net)
+  // A custom range is clamped to the 90 days Iris keeps, and never ends in the future.
+  const lo = today - 89 * DAY
+  const fromT = choice === 'custom' ? Math.min(Math.max(fromIso(custom.from) || lo, lo), today) : today - (+choice - 1) * DAY
+  const toT = choice === 'custom' ? Math.min(Math.max(fromIso(custom.to) || today, fromT), today) : today
+  const range: Range = { days: Math.round((toT - fromT) / DAY) + 1, offset: Math.round((today - toT) / DAY) }
+  const label = choice === 'custom' ? `${range.days} days` : `${choice} days`
+
+  const kpis = rangeKpis(range, net)
   const share = net === 'all' ? 1 : NET_SHARE[net].share
-  const cur = DAILY_REACH.slice(-period).map(v => +(v * share).toFixed(1))
-  const prev = period < 90 ? DAILY_REACH.slice(-period * 2, -period).map(v => +(v * share * 0.93).toFixed(1)) : []
-  const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= now - period * DAY)
-    .sort((a, b) => (sort.desc ? -1 : 1) * ((a[sort.key] as number) - (b[sort.key] as number))), [net, period, sort, now])
+  const cur = reachSeries(range).map(v => +(v * share).toFixed(1))
+  const before = { days: range.days, offset: range.offset + range.days }
+  const prev = before.offset + before.days <= 90 ? reachSeries(before).map(v => +(v * share * 0.93).toFixed(1)) : []
+  const labels = cur.map((_, i) => new Date(fromT + i * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))
+  const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= fromT && p.date < toT + DAY)
+    .sort((a, b) => (sort.desc ? -1 : 1) * (typeof a[sort.key] === 'string' ? String(a[sort.key]).localeCompare(String(b[sort.key])) : (a[sort.key] as number) - (b[sort.key] as number))), [net, fromT, toT, sort])
   const best = bestTime(net)
   const ig = bestTime('instagram')
 
   const th = (key: SortKey, label: string) => (
-    <th className={key === 'date' ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
-      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : true }))}>{label}<ArrowUpDown size={11} /></button>
+    <th className={['date', 'network', 'pillar', 'author'].includes(key) ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={11} /></button>
     </th>
   )
 
   return (
     <div className="stack lg">
       <div className="row explore-bar">
-        <Seg name="period" label="Period" value={String(period) as '7' | '30' | '90'} onChange={v => setPeriod(+v as Period)}
-          options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]} />
+        <Seg name="period" label="Period" value={choice} onChange={v => setChoice(v as PeriodChoice)}
+          options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }, { value: 'custom', label: 'Custom' }]} />
+        {choice === 'custom' && (
+          <div className="row tight in-range">
+            <label htmlFor="ex-from" className="sr-only">From</label>
+            <input id="ex-from" type="date" className="input" min={iso(lo)} max={iso(today)} value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} />
+            <span className="faint" aria-hidden>to</span>
+            <label htmlFor="ex-to" className="sr-only">To</label>
+            <input id="ex-to" type="date" className="input" min={custom.from} max={iso(today)} value={custom.to} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} />
+          </div>
+        )}
         <Filters label="Network" value={net} onChange={setNet} items={[{ value: 'all', label: 'All networks' }, ...NETWORKS_SOCIAL.map(n => ({ value: n as NetFilter, label: NETWORK_LABEL[n] }))]} />
       </div>
 
@@ -207,7 +233,7 @@ function Explore() {
             <div key={k.key} className="kpi">
               <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
               <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
-              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {period} days</span>
+              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {label}</span>
             </div>
           )
         })}
@@ -215,8 +241,8 @@ function Explore() {
 
       <section className="card pad">
         <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
-        <LineChart label="Daily reach" labels={dayLabels(period)} h={220} format={v => `${Math.round(v)}k`}
-          series={[{ name: `Last ${period} days`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${period} days`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
+        <LineChart label="Daily reach" labels={labels} h={220} format={v => `${Math.round(v)}k`}
+          series={[{ name: choice === 'custom' ? 'This range' : `Last ${label}`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${label}`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
       </section>
 
       <div className="grid-2">
@@ -237,24 +263,26 @@ function Explore() {
 
       <section className="card">
         <div className="card-head"><h2>Posts <span className="faint num">{rows.length}</span></h2>
-          <Btn size="sm" disabled={!rows.length} onClick={() => downloadFile(`fernway-posts-${period}d.csv`, toCSV([['Date', 'Network', 'Post', 'Pillar', 'Author', 'Reach', 'Engagement rate %', 'Clicks'], ...rows.map(p => [new Date(p.date).toISOString().slice(0, 10), NETWORK_LABEL[p.network], p.title, p.pillar, p.author, p.reach, p.er, p.clicks])]))}><Download size={14} />Export CSV</Btn></div>
+          <Btn size="sm" disabled={!rows.length} onClick={() => downloadFile(`fernway-posts-${iso(fromT)}-${iso(toT)}.csv`, toCSV([['Date', 'Network', 'Post', 'Pillar', 'Author', 'Reach', 'Engagement rate %', 'Clicks'], ...rows.map(p => [iso(p.date), NETWORK_LABEL[p.network], p.title, p.pillar, p.author, p.reach, p.er, p.clicks])]))}><Download size={14} />Export CSV</Btn></div>
         {rows.length ? (
           <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Post</th>{th('date', 'Date')}<th>Pillar</th><th>Author</th>{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
-              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} />)}</tbody>
+            <table className="table in-posts">
+              <thead><tr><th>Post</th>{th('network', 'Network')}{th('date', 'Date')}{th('pillar', 'Pillar')}{th('author', 'Author')}{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
+              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} onOpen={() => setOpen(p)} />)}</tbody>
             </table>
           </div>
         ) : <Empty title="No posts in this period" body="Try a longer period or another network." />}
       </section>
+      <PostSheet p={open} onClose={() => setOpen(null)} now={now} />
     </div>
   )
 }
 
-function PostTr({ p, now }: { p: PostRow; now: number }) {
+function PostTr({ p, now, onOpen }: { p: PostRow; now: number; onOpen: () => void }) {
   return (
-    <tr>
-      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis mw-320">{p.title}</span></span></td>
+    <tr onClick={onOpen}>
+      <td><button type="button" className="in-post-open ellipsis mw-320" onClick={e => { e.stopPropagation(); onOpen() }}>{p.title}</button></td>
+      <td><Net n={p.network} /></td>
       <td className="mono faint">{dayLabel(p.date, now)}</td>
       <td className="muted">{p.pillar}</td>
       <td className="muted">{p.author}</td>
@@ -262,6 +290,32 @@ function PostTr({ p, now }: { p: PostRow; now: number }) {
       <td className="r">{p.er.toFixed(1)}%</td>
       <td className="r">{p.clicks.toLocaleString('en-GB')}</td>
     </tr>
+  )
+}
+
+/** One post's numbers, against its network's average: what Iris would say about it. */
+function PostSheet({ p, onClose, now }: { p: PostRow | null; onClose: () => void; now: number }) {
+  const avg = p ? NET_SHARE[p.network].er : 0
+  const x = p ? p.er / avg : 1
+  return (
+    <Sheet open={!!p} onOpenChange={o => !o && onClose()} title={p ? p.title : ''}>
+      {p && (
+        <div className="stack">
+          <div className="row tight"><Net n={p.network} /><span className="faint">{dayLabel(p.date, now)} {hhmm(p.date)} · {p.pillar} · by {p.author}</span></div>
+          <dl className="in-post-stats">
+            <div><dt>Reach</dt><dd className="num">{p.reach.toLocaleString('en-GB')}</dd></div>
+            <div><dt>Engagement rate</dt><dd className="num">{p.er.toFixed(1)}%</dd></div>
+            <div><dt>Link clicks</dt><dd className="num">{p.clicks.toLocaleString('en-GB')}</dd></div>
+            <div><dt>{NETWORK_LABEL[p.network]} average engagement</dt><dd className="num">{avg.toFixed(1)}%</dd></div>
+          </dl>
+          <div className="anomaly-cause"><Mark agent="iris" /><p>
+            {x >= 1.5 ? `${x.toFixed(1)}× the ${NETWORK_LABEL[p.network]} average. Worth recycling: Atlas can bring it back in a few weeks.`
+              : x <= 0.7 ? `${Math.round((1 - x) * 100)}% under the ${NETWORK_LABEL[p.network]} average.${p.network === 'tiktok' ? ' Like the other TikToks since Thursday, the hook is long.' : ''}`
+              : `Close to the ${NETWORK_LABEL[p.network]} average.`}
+          </p></div>
+        </div>
+      )}
+    </Sheet>
   )
 }
 
