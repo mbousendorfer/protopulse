@@ -1,6 +1,6 @@
 // Helpers any feature reducer can use to touch shared state. Type-only imports keep this free of cycles.
 import type { State } from './state'
-import type { AgentId, Autonomy, Handoff, LogEntry, PlaybookRule, Toast } from './types'
+import type { AgentId, Autonomy, Handoff, LogEntry, NoticeScope, PlaybookRule } from './types'
 import { appNow, MIN } from './time'
 
 let seq = 0
@@ -13,10 +13,9 @@ export const agentOf = (s: State, id: AgentId) => s.agents.find(a => a.id === id
 export const actionOf = (s: State, agent: AgentId, action?: string) =>
   action ? agentOf(s, agent).actions.find(x => x.id === action) : undefined
 
-export function pushHandoff(s: State, h: Omit<Handoff, 'id' | 'at'> & { id?: string; at?: number }, toastText?: string): State {
+export function pushHandoff(s: State, h: Omit<Handoff, 'id' | 'at'> & { id?: string; at?: number }): State {
   const full: Handoff = { ...h, id: h.id ?? uid('h'), at: h.at ?? now(s), fresh: true }
-  const next = { ...s, handoffs: [full, ...s.handoffs] }
-  return toastText === undefined ? next : pushToast(next, { agent: full.agent, text: toastText || `New on your Desk: ${full.title}`, link: '/' })
+  return { ...s, handoffs: [full, ...s.handoffs] }
 }
 
 export function pushLog(s: State, e: Omit<LogEntry, 'id' | 'at'> & { at?: number; undoMinutes?: number }): State {
@@ -26,9 +25,13 @@ export function pushLog(s: State, e: Omit<LogEntry, 'id' | 'at'> & { at?: number
   return { ...s, log: [entry, ...s.log] }
 }
 
-export function pushToast(s: State, t: Omit<Toast, 'id'>): State {
-  return { ...s, toasts: [...s.toasts.slice(-3), { ...t, id: uid('t') }] }
+/** Confirms your own action at the top of the list it acted on. With `undo`, it lasts as long as that journal entry can be undone. */
+export function notify(s: State, scope: NoticeScope, text: string, opts: { undo?: string; link?: { to: string; label: string } } = {}): State {
+  const undoUntil = opts.undo ? s.log.find(l => l.id === opts.undo)?.undoUntil : undefined
+  return { ...s, notice: { scope, text, ...opts, until: undoUntil ?? now(s) + NOTICE_MS } }
 }
+/** A plain confirmation stays as long as the Inbox undo strip did. */
+export const NOTICE_MS = 10_000
 
 export function track(s: State, kind: string, detail?: Record<string, unknown>): State {
   return { ...s, tester: [...s.tester, { t: Date.now(), app: now(s), kind, detail }] }
@@ -47,8 +50,7 @@ export function removeHandoff(s: State, id: string): State {
  * they leave the Desk and show up in the journal as handled on its own.
  */
 export function setAutonomy(s: State, agent: AgentId, action: string, level: Autonomy, why = 'You switched this action to Act'): State {
-  const a = agentOf(s, agent)
-  const act = a.actions.find(x => x.id === action)
+  const act = agentOf(s, agent).actions.find(x => x.id === action)
   if (!act || (act.locked && level !== 'suggest')) return s
   let next: State = {
     ...s,
@@ -57,7 +59,6 @@ export function setAutonomy(s: State, agent: AgentId, action: string, level: Aut
   if (level !== 'act') return next
   const taken = s.handoffs.filter(h => h.action === action && h.kind !== 'promotion' && !h.lane)
   for (const h of taken) next = pushLog(removeHandoff(next, h.id), { agent: h.agent, text: `Handled on ${pronoun(agent)} own: ${h.title}`, reason: why, status: 'done', undoMinutes: 30, link: h.link })
-  if (taken.length) next = pushToast(next, { agent, text: `${taken.length} card${taken.length > 1 ? 's' : ''} left your Desk. ${a.name} handles ${taken.length > 1 ? 'them' : 'it'} now.` })
   return next
 }
 

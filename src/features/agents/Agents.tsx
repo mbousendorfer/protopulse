@@ -7,7 +7,7 @@ import { groupOf } from '../../app/reducer'
 import { ago, DAY } from '../../app/time'
 import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
 import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
-import { UndoBar } from '../../ui/Feedback'
+import { Notice, UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AlertsTable } from '../insights/alerts'
@@ -142,6 +142,7 @@ export function AgentProfile() {
             {undoPreset && (
               <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. Every unlocked action moved.</UndoBar>
             )}
+            <Notice scope="agents" className="mt-3" />
             <AutonomyBoard agent={a} />
           </section>
           <Promotions agent={a} />

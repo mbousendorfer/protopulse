@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
-import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
+import { now, pushHandoff, pushLog, uid } from '../../app/core'
 import type { Alert } from './alerts'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
@@ -65,7 +65,7 @@ export function reduceInsights(s: State, a: InsightsAction): State {
   switch (a.type) {
     case 'insights/share': {
       const next = patch(s, { shared: { ...s.insights.shared, [a.id]: { at: now(s) } } })
-      return pushToast(pushLog(next, { agent: 'iris', text: `Shared “${a.title}” with Claire`, status: 'approved', reason: 'You shared it from Insights' }), { agent: 'iris', text: `Shared with Claire: ${a.title}` })
+      return pushLog(next, { agent: 'iris', text: `Shared “${a.title}” with Claire`, status: 'approved', reason: 'You shared it from Insights' })
     }
     case 'insights/anomaly': {
       let next = setAnomaly(s, a.id, a.action)
@@ -93,7 +93,7 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     case 'insights/alertSave': {
       const exists = s.insights.alerts.some(x => x.id === a.alert.id)
       const alerts = exists ? s.insights.alerts.map(x => (x.id === a.alert.id ? a.alert : x)) : [...s.insights.alerts, { ...a.alert, id: uid('ia') }]
-      return pushToast(patch(s, { alerts }), { agent: 'iris', text: exists ? 'Alert updated' : 'Iris will raise this alert on your Desk' })
+      return patch(s, { alerts })
     }
     case 'insights/alertToggle':
       return patch(s, { alerts: s.insights.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
@@ -113,7 +113,7 @@ function followUpPost(s: State, about: string): State {
     preview: tiktok
       ? { type: 'post', network: 'tiktok', slot: 'Today, 18:30', media: 'pack', text: ['3 days. 28 litres. Watch it all go in. #packingmybag'] }
       : { type: 'post', network: 'linkedin', slot: 'Thu 27, 08:30', text: ['1,200 bags repaired this year. Here’s what our workshop learned about what breaks first, and how we design around it.'] },
-  }, '')
+  })
 }
 
 export function onResolveInsights(s: State, h: Handoff, d: Decision): State {

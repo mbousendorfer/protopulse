@@ -87,16 +87,17 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
     onBulk()
   }
 
-  const lanes: { id: Lane; label: string; count: number; note: string; action?: { label: string; run: () => void } }[] =
+  // One primary per batch: the footer acts on the selection (ready items start selected); lanes only open a review.
+  const lanes: { id: Lane; label: string; count: number; note: string }[] =
     b.id === 'nova' ? [
-      { id: 'leads', label: 'Leads', count: leads.length, note: leads.length ? 'People asking before they buy' : 'No buying questions right now', action: leads.filter(h => b.ready.includes(h)).length ? { label: `Send ${leads.filter(h => b.ready.includes(h)).length}`, run: () => bulk(leads.filter(h => b.ready.includes(h)), `Sent ${leads.filter(h => b.ready.includes(h)).length} lead replies`) } : undefined },
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Sure of the facts and the tone', action: b.ready.length ? { label: b.verb.many(b.ready.length), run: () => bulk(b.ready, b.verb.done(b.ready.length)) } : undefined },
+      { id: 'leads', label: 'Leads', count: leads.length, note: leads.length ? 'People asking before they buy' : 'No buying questions right now' },
+      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Sure of the facts and the tone' },
       { id: 'decide', label: 'To decide', count: decide.length, note: 'Nova marked a passage she’s unsure about' },
     ] : b.id === 'atlas' ? [
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Checked against the Playbook', action: b.ready.length ? { label: b.verb.many(b.ready.length), run: () => bulk(b.ready, b.verb.done(b.ready.length)) } : undefined },
+      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Checked against the Playbook' },
       { id: 'decide', label: 'To decide', count: decide.length, note: 'Atlas marked a passage to check' },
     ] : [
-      { id: 'all', label: 'Proposed', count: b.items.length, note: 'Each rule comes from edits you repeated', action: { label: b.verb.many(b.items.length), run: () => bulk(b.items, b.verb.done(b.items.length)) } },
+      { id: 'all', label: 'Proposed', count: b.items.length, note: 'Each rule comes from edits you repeated' },
     ]
 
   const shown = review === 'leads' ? leads : review === 'ready' ? b.ready : review === 'decide' ? decide : b.items
@@ -117,7 +118,6 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
             <b className="num">{l.count}</b>
             <p className="faint">{l.note}</p>
             <div className="row">
-              {l.action && <Btn size="sm" variant="primary" onClick={l.action.run}>{l.action.label}</Btn>}
               {l.count > 0 && <Btn size="sm" onClick={() => setReview(l.id)}>Review</Btn>}
             </div>
           </section>
@@ -165,7 +165,6 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
       <footer className="detail-foot">
         <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
-        <Btn size="sm" variant="ghost" onClick={() => setReview('all')}>Review one by one</Btn>
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
         {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.one} {chosen.length} selected</Btn>}
       </footer>

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity, BookOpen, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
-  Radar, Search, Send, Settings, Target, Undo2, X, Bell, MessageCircle, Sun, Moon,
+  Radar, Search, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
@@ -83,7 +83,6 @@ export default function Shell() {
   if (seg === 'focus' || seg === 'onboarding') return (
     <>
       <Boundary resetKey={loc.pathname}><Outlet /></Boundary>
-      <Toasts />
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
     </>
@@ -158,7 +157,6 @@ export default function Shell() {
         </main>
       </div>
 
-      <Toasts />
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
       <ShortcutHelp open={help} onOpenChange={setHelp} />
@@ -220,31 +218,6 @@ function Notifications() {
         <Btn size="sm" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn>
       </div>
     </Pop>
-  )
-}
-
-function Toasts() {
-  const { s, d } = useStore()
-  const nav = useNavigate()
-  useEffect(() => {
-    if (!s.toasts.length) return
-    const t = setTimeout(() => d({ type: 'core/dropToast', id: s.toasts[0].id }), s.toasts[0].undo ? 6000 : 4000)
-    return () => clearTimeout(t)
-  }, [s.toasts, d])
-  const announce = useMemo(() => s.toasts[s.toasts.length - 1]?.text ?? '', [s.toasts])
-  return (
-    <div className="toasts" aria-live="polite">
-      <span className="sr-only">{announce}</span>
-      {s.toasts.map(t => (
-        <div key={t.id} className="toast">
-          {t.agent && <Mark agent={t.agent} />}
-          <p>{t.text}</p>
-          {t.undo && <Btn size="xs" onClick={() => { d({ type: 'core/undo', id: t.undo! }); d({ type: 'core/dropToast', id: t.id }) }}>Undo</Btn>}
-          {t.link && <Btn size="xs" variant="ghost" onClick={() => { nav(t.link!); d({ type: 'core/dropToast', id: t.id }) }}>Open</Btn>}
-          <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'core/dropToast', id: t.id })}><X size={12} /></Btn>
-        </div>
-      ))}
-    </div>
   )
 }
 

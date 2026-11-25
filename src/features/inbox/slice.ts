@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff } from '../../app/types'
 import { MIN } from '../../app/time'
-import { now, pushHandoff, pushLog, pushToast, removeHandoff, uid, updateHandoff } from '../../app/core'
+import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
 import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type Conversation, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
@@ -155,12 +155,12 @@ export function reduceInbox(s0: State, a: InboxAction): State {
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
       next = settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved')
       if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
-      return pushToast(next, { agent: 'nova', text: `Sent to ${c.author}${attachmentNote(c) ? `, with ${attachmentNote(c).toLowerCase()}` : ''}.` })
+      return next
     }
     case 'inbox/send': {
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, messages: [...x.messages, { id: uid('m'), from: 'you', text: a.text, at: t }] }))
       next = settleCard(next, c, `You replied to ${c.author} yourself`, 'done')
-      return pushToast(next, { text: `Reply sent to ${c.author}.` })
+      return next
     }
     case 'inbox/takeover': {
       // Assigned to Sam too, so it's under "Assigned to me" once he closes the panel.
@@ -185,13 +185,13 @@ export function reduceInbox(s0: State, a: InboxAction): State {
         })
         next = updateHandoff(patch(next, c.id, { handoff: hid }), hid, { lane: 'claire', claire })
       }
-      return pushToast(next, { agent: 'claire', text: `Sent to Claire: reply to ${c.author}` })
+      return next
     }
     case 'inbox/undoAuto': {
       const msg = c.messages.find(m => m.id === a.msg)
       if (!msg) return s
       const next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], messages: x.messages.map(m => (m.id === a.msg ? { ...m, undone: true, undoUntil: undefined } : m)) }))
-      return pushToast(pushLog(next, { agent: 'nova', text: `Undone: Nova’s reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` }), { agent: 'nova', text: `Reply to ${c.author} deleted. It’s back as a draft.` })
+      return pushLog(next, { agent: 'nova', text: `Undone: Nova’s reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
     }
     case 'inbox/attach':
       return patch(s, c.id, x => ({ attachments: x.attachments?.map(at => (at.id === a.att ? { ...at, removed: !at.removed } : at)) }))

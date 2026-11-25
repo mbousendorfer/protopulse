@@ -12,7 +12,7 @@ import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
 import { KIND_LABEL, SNOOZE, byPriority, useHandoffActions } from './parts'
 import { BulkBar, SelectBox, useSelection } from '../../ui/Selection'
-import { CountBadge } from '../../ui/Feedback'
+import { CountBadge, Notice } from '../../ui/Feedback'
 import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
 import './desk.css'
 import './today.css'
@@ -160,6 +160,7 @@ export default function Desk() {
               )
             })}
           </div>
+          <Notice scope="desk" />
 
           <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
             { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,

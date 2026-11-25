@@ -268,11 +268,6 @@ a.card:hover, .card.hoverable:hover { border-color: var(--signal); }
 }
 @keyframes modal-in { from { opacity: 0; transform: translateX(-50%) scale(0.97); } to { opacity: 1; transform: translateX(-50%); } }
 
-/* ---------- Toasts ---------- */
-.toasts { position: fixed; right: 20px; bottom: 20px; z-index: 80; display: flex; flex-direction: column; gap: 8px; width: min(400px, calc(100vw - 32px)); }
-.toast { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 12px; background: var(--lift); border-radius: var(--r-ctl); box-shadow: var(--float); font-size: var(--t-md); animation: toast-in var(--slow) var(--ease); }
-.toast p { flex: 1; min-width: 0; }
-@keyframes toast-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
 
 /* ---------- Data bits ---------- */
 .conf { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: var(--t-sm); white-space: nowrap; }
@@ -328,7 +323,6 @@ a.card:hover, .card.hoverable:hover { border-color: var(--signal); }
   .top { gap: var(--s2); }
   .content { padding: var(--s4) var(--s4) 96px; }
   .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
-  .toasts { right: 16px; left: 16px; bottom: 16px; width: auto; }
 }
 @media (min-width: 821px) { .mobile-only { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {

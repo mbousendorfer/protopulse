@@ -8,7 +8,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { PUBLISH_NETWORKS, type Post } from '../../data/publishing'
 import { Btn, Mark, Modal, Net, Pill, Seg, Sheet } from '../../ui'
 import { BulkBar, type Selection } from '../../ui/Selection'
-import { UndoBar } from '../../ui/Feedback'
+import { Notice, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
@@ -101,6 +101,7 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
       {!sel.count && undo && (
         <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })}>{undo.label}</UndoBar>
       )}
+      {!sel.count && <Notice scope="publishing" className="mb-3" />}
       <Dialogs dialog={dialog} onClose={() => setDialog(null)} onDone={sel.clear} />
     </>
   )

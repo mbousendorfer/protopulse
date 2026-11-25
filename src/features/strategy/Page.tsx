@@ -8,6 +8,7 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import type { Campaign, CampaignStatus, Phase } from '../../data/strategy'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
+import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
 import './strategy.css'
 
@@ -224,7 +225,7 @@ function CampaignView() {
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
                   </div>
-                ) : <Pill tone={a.status === 'accepted' ? 'ok' : undefined}>{a.status === 'accepted' ? 'Applied' : 'Declined'}</Pill>}
+                ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
               </li>
             ))}
           </ul>
@@ -420,7 +421,7 @@ function Pillars() {
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
                   </div>
-                ) : <Pill tone={p.status === 'accepted' ? 'ok' : undefined}>{p.status === 'accepted' ? 'Applied' : 'Declined'}</Pill>}
+                ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
               </li>
             ))}
           </ul>

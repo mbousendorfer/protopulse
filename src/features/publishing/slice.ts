@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
-import { now, pushHandoff, pushLog, pushToast, removeHandoff, uid, updateHandoff } from '../../app/core'
+import { now, pushHandoff, notify, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
 import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, POSTS, type PlanItem, type Post } from '../../data/publishing'
 
 export type PlanState = {
@@ -73,7 +73,7 @@ function approvePlan(s: State): State {
   const included = s.publishing.plan.items.filter(i => i.included)
   const posts: Post[] = included.map(i => ({ id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined }))
   let next = setPlan(setPosts(s, [...s.publishing.posts, ...posts]), { status: 'approved' })
-  next = pushToast(next, { agent: 'atlas', text: `${posts.length} posts scheduled for the week of 1 December. Atlas takes it from here.`, link: '/publishing' })
+  next = notify(next, 'publishing', `${posts.length} posts scheduled for the week of 1 December. Atlas takes it from here.`)
   return next
 }
 
@@ -106,7 +106,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const exists = s.publishing.posts.some(p => p.id === a.post.id)
       const next = setPosts(s, exists ? s.publishing.posts.map(p => (p.id === a.post.id ? a.post : p)) : [...s.publishing.posts, a.post])
       const verb = a.verb ?? (a.post.status === 'draft' ? 'Saved as draft' : a.post.status === 'scheduled' ? `Scheduled for ${new Date(a.post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.post.at)}` : 'Saved')
-      return pushToast(next, { agent: a.post.author === 'atlas' ? 'atlas' : undefined, text: `${verb}: ${a.post.text.slice(0, 60)}${a.post.text.length > 60 ? '…' : ''}`, link: '/publishing' })
+      return notify(next, 'publishing', `${verb}: ${a.post.text.slice(0, 60)}${a.post.text.length > 60 ? '…' : ''}`)
     }
     case 'publishing/move': {
       const p = s.publishing.posts.find(x => x.id === a.id)
@@ -119,7 +119,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     case 'publishing/delete': {
       const p = s.publishing.posts.find(x => x.id === a.id)
       if (!p) return s
-      return pushToast(setPosts(s, s.publishing.posts.filter(x => x.id !== a.id)), { text: `Deleted: ${p.text.slice(0, 60)}` })
+      return notify(setPosts(s, s.publishing.posts.filter(x => x.id !== a.id)), 'publishing', `Deleted: ${p.text.slice(0, 60)}`)
     }
     case 'publishing/planToggle':
       return setPlan(s, { items: s.publishing.plan.items.map(i => (i.id === a.id ? { ...i, included: !i.included } : i)) })
@@ -139,7 +139,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     case 'publishing/planRequest': {
       const next = reworkPlan(s, a.text)
       const v = next.publishing.plan.version
-      return pushToast(pushLog(next, { agent: 'atlas', text: `Plan v${v} ready after your note: “${a.text}”`, status: 'done', link: '/publishing/plan' }), { agent: 'atlas', text: `Plan v${v} is ready. Changes are highlighted.`, link: '/publishing/plan' })
+      return pushLog(next, { agent: 'atlas', text: `Plan v${v} ready after your note: “${a.text}”`, status: 'done', link: '/publishing/plan' })
     }
     case 'publishing/askFill': {
       const at = T(...(BEST_SLOT[a.network].time.split(':').map(Number) as [number, number]), 0) + (a.day) * DAY
@@ -158,11 +158,11 @@ export function reducePublishing(s: State, a: PublishingAction): State {
         title: `Fill ${slot} on ${a.network === 'x' ? 'X' : a.network[0].toUpperCase() + a.network.slice(1)}`, context: 'You asked Atlas to fill a recommended empty slot from the calendar.',
         why: 'Filling empty slots is set to Draft.', confidence: 78,
         preview: { type: 'post', network: a.network, slot, text: [ideas[a.network]], media: a.network === 'linkedin' ? 'workshop' : a.network === 'facebook' ? 'pack' : 'fleece' },
-      }, 'Atlas drafted a post for that slot. It’s on your Desk.')
-      return next
+      })
+      return notify(next, 'publishing', 'Atlas drafted a post for that slot.', { link: { to: '/', label: 'Review on Desk' } })
     }
     case 'publishing/claire':
-      return pushToast(toClaire(s, a.post).s, { agent: 'claire', text: 'Sent to Claire. The post stays on hold until she answers.' })
+      return notify(toClaire(s, a.post).s, 'publishing', 'Asked Claire. The post stays on hold until she answers.')
     case 'publishing/addToPlan': {
       const d = new Date(a.post.at)
       const day = Math.max(0, Math.min(6, Math.floor((a.post.at - PLAN_MONDAY) / DAY)))
@@ -171,11 +171,11 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       // Plan already approved: schedule the post itself, don't reopen (and re-copy) the whole plan.
       if (s.publishing.plan.status === 'approved') {
         const at = new Date(PLAN_MONDAY + day * DAY).setHours(d.getHours(), d.getMinutes())
-        return pushToast(setPosts(s, [...s.publishing.posts, { ...a.post, at, status: 'scheduled' }]), { agent: 'atlas', text: `Scheduled for ${landed} ${hhmm(at)}, in the approved plan.${moved}`, link: '/publishing' })
+        return notify(setPosts(s, [...s.publishing.posts, { ...a.post, at, status: 'scheduled' }]), 'publishing', `Scheduled for ${landed} ${hhmm(at)}, in the approved plan.${moved}`)
       }
       const item: PlanItem = { id: uid('n'), day, time: hhmm(a.post.at), network: a.post.network, text: a.post.text, media: a.post.media, tag: 'New', reason: 'Added by you from the composer.', pillar: a.post.pillar, included: true }
       const next = setPlan(s, { items: [...s.publishing.plan.items, item], status: 'proposed' })
-      return pushToast(next, { agent: 'atlas', text: `Added to next week’s plan (${landed}).${moved}`, link: '/publishing/plan' })
+      return notify(next, 'publishing', `Added to next week’s plan (${landed}).${moved}`, { link: { to: '/publishing/plan', label: 'See the plan' } })
     }
     case 'publishing/bulk':
       return bulk(s, a)
@@ -283,7 +283,7 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
     const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: 'Trail stories', handoff: h.id }
-    return pushToast(setPosts(s, [...s.publishing.posts, post]), { agent: 'atlas', text: `Scheduled on ${preview.network === 'x' ? 'X' : preview.network[0].toUpperCase() + preview.network.slice(1)} for ${new Date(post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(post.at)}.`, link: '/publishing' })
+    return setPosts(s, [...s.publishing.posts, post])
   }
   return s
 }

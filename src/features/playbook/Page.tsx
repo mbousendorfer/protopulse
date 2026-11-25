@@ -166,14 +166,15 @@ function RuleList({ items, kinds }: { items: PlaybookRule[]; kinds?: boolean }) 
 }
 
 function AddRule({ kinds }: { kinds: boolean }) {
-  const { d } = useStore()
+  const { s, d } = useStore()
   const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'do' | 'dont'>('do')
   const [text, setText] = useState('')
   const [agents, setAgents] = useState<AgentId[]>(['nova', 'atlas'])
   if (!open) return <Btn className="self-start" onClick={() => setOpen(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>
+  const dup = s.playbook.rules.some(r => r.text.toLowerCase() === text.trim().toLowerCase())
   const submit = () => {
-    if (!text.trim() || !agents.length) return
+    if (!text.trim() || !agents.length || dup) return
     d({ type: 'playbook/addRule', kind: kinds ? kind : 'fact', text: text.trim(), agents, origin: 'Added by you' })
     setText(''); setOpen(false)
   }
@@ -181,9 +182,10 @@ function AddRule({ kinds }: { kinds: boolean }) {
     <form className="card pad pb-add" onSubmit={e => { e.preventDefault(); submit() }}>
       <div className="row">
         {kinds && <Seg name="new-kind" label="Kind" size="sm" value={kind} onChange={setKind} options={[{ value: 'do', label: 'Do' }, { value: 'dont', label: 'Don’t' }]} />}
-        <input className="input" autoFocus style={{ flex: 1, minWidth: 220 }} value={text} onChange={e => setText(e.target.value)}
+        <input className="input grow" autoFocus value={text} onChange={e => setText(e.target.value)} aria-describedby={dup ? 'pb-dup' : undefined}
           placeholder={kinds ? 'Never reply to a complaint with a joke' : 'Gift cards never expire'} aria-label={kinds ? 'Rule' : 'Fact'} />
       </div>
+      {dup && <p className="caption" id="pb-dup">Already in the Playbook.</p>}
       <div className="row">
         <span className="faint">Applies to</span>
         {AGENTS.map(a => (
@@ -191,7 +193,7 @@ function AddRule({ kinds }: { kinds: boolean }) {
         ))}
         <span className="spacer" />
         <Btn variant="ghost" onClick={() => setOpen(false)}>Cancel</Btn>
-        <Btn variant="primary" type="submit" disabled={!text.trim() || !agents.length}>Add</Btn>
+        <Btn variant="primary" type="submit" disabled={!text.trim() || !agents.length || dup}>Add</Btn>
       </div>
     </form>
   )

@@ -83,9 +83,24 @@ describe('core reducer', () => {
     expect(s.log[0].text).toBe('Sent 2 replies Nova drafted')
     expect(s.log.filter(l => l.text.startsWith('2-star') || l.text.startsWith('Ember')).length).toBe(0)
     expect(s.desk.done.map(x => x.id).sort()).toEqual([...ids].sort())
+    // No toast: the confirmation sits on the Desk and lasts as long as the journal's undo window.
+    expect(s.notice).toMatchObject({ scope: 'desk', text: 'Sent 2 replies Nova drafted', undo: s.log[0].id, until: s.log[0].undoUntil })
     s = reducer(s, { type: 'core/undo', id: s.log[0].id })
     expect(ids.every(id => s.handoffs.some(h => h.id === id))).toBe(true)
     expect(s.desk.done.length).toBe(0)
+    expect(s.notice).toBeUndefined()
+  })
+
+  it('a declined Sage adjustment and a dismissed trend can be reopened', () => {
+    let s = reducer(s0(), { type: 'listening/trend', id: 't1', hand: false })
+    expect(s.listening.trends.t1).toBe('dismissed')
+    s = reducer(s, { type: 'listening/reopen', kind: 'trends', id: 't1' })
+    expect(s.listening.trends.t1).toBeUndefined()
+    const c = s.strategy.campaigns.find(x => x.adjustments.length)!
+    const adj = c.adjustments[0].id
+    s = reducer(s, { type: 'strategy/adjust', id: c.id, adj, accept: false })
+    s = reducer(s, { type: 'strategy/reopen', id: c.id, adj })
+    expect(s.strategy.campaigns.find(x => x.id === c.id)!.adjustments[0].status).toBe('proposed')
   })
 
   it('cards fall into Needs you, Worth a look or Good news', () => {

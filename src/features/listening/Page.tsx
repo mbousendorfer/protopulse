@@ -13,7 +13,7 @@ import { MENTION_NET, MENTION_TAGS, sentimentOf, type EventState, type MentionOp
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
-import { UndoBar } from '../../ui/Feedback'
+import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -39,6 +39,7 @@ export default function ListeningPage() {
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
       ]} />
+      <Notice scope="listening" className="mb-3" />
       <Routes>
         <Route index element={<Competitors view="events" />} />
         <Route path="competitors" element={<Competitors view="events" />} />
@@ -158,6 +159,7 @@ function EventView() {
             <Check size={16} />
             <div><b>{st.move}</b><p>{st.result}</p>
               {st.status === 'handed' && <Link to="/" className="btn sm">Open your Desk</Link>}
+              {s.listening.events[e.id]?.status === 'dismissed' && <button type="button" className="link-btn t-sm" onClick={() => d({ type: 'listening/reopen', kind: 'events', id: e.id })}>Undo</button>}
             </div>
           </div>
         ) : (
@@ -228,7 +230,7 @@ function Benchmark() {
                   <p className="muted">{l.evidence}</p>
                   <p className="faint">Idea: {l.idea}</p>
                 </div>
-                {st ? <Pill tone={st === 'tested' ? 'signal' : undefined}>{st === 'tested' ? 'Test on your Desk' : 'Dismissed'}</Pill> : (
+                {st === 'tested' ? <Pill tone="signal">Test on your Desk</Pill> : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'lessons', id: l.id })} /> : (
                   <div className="row nowrap">
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/lesson', id: l.id, test: true })}>Test it</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/lesson', id: l.id, test: false })}>Dismiss</Btn>
@@ -452,7 +454,7 @@ function Trends() {
               <ul className="examples">{t.examples.map(x => <li key={x} className="faint">{x}</li>)}</ul>
               <div className="row">
                 {st === 'handed' ? <Pill tone="signal"><Check size={11} />With Atlas · draft on your Desk</Pill>
-                  : st === 'dismissed' ? <Pill>Not for us</Pill> : (
+                  : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
                     <>
                       <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
                       <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Not for us</Btn>
