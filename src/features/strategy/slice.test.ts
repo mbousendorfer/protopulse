@@ -258,3 +258,28 @@ test('the live feed never ends a campaign or brings results early: only the mode
   }
   expect(fed.strategy.campaigns.find(c => c.id === 'trail-week')!.status).toBe('live')
 })
+
+test('a calendar moment: Sage raises it, adding it gives Atlas its ideas, Undo takes both back', async () => {
+  const { themesOf } = await import('./slice')
+  let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-moment' })
+  const h = s.handoffs.find(x => x.topic === 'Calendar moment')!
+  expect(h.sage?.moment).toBe('m-blackfriday')
+  const ideas = s.publishing.ideas.length
+  s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'option', option: h.options![0].label, index: 0 } })
+  expect(themesOf(s).map(x => x.id)).toEqual(['m-blackfriday'])
+  expect(s.publishing.ideas.filter(i => i.key.startsWith('m-blackfriday-'))).toHaveLength(2)
+  s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(x => x.id === h.id))!.id })
+  expect(themesOf(s)).toEqual([])
+  expect(s.publishing.ideas.some(i => i.key.startsWith('m-blackfriday-'))).toBe(false)
+  expect(s.publishing.ideas.length).toBeLessThanOrEqual(ideas)
+})
+
+test('on Act, Sage adds the moment itself; “Not this year” can be reopened', () => {
+  let s = reducer(initialState(), { type: 'core/autonomy', agent: 'sage', action: 'sage-moments', level: 'act' })
+  s = reducer(s, { type: 'core/fire', eventId: 'ev-moment' })
+  expect(s.strategy.moments.find(m => m.id === 'm-blackfriday')!.status).toBe('added')
+  s = reducer(s, { type: 'strategy/moment', id: 'm-snow', add: false })
+  expect(s.strategy.moments.find(m => m.id === 'm-snow')!.status).toBe('skipped')
+  s = reducer(s, { type: 'strategy/reopen', id: 'm-snow' })
+  expect(s.strategy.moments.find(m => m.id === 'm-snow')!.status).toBeUndefined()
+})
