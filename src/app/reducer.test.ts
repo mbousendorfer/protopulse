@@ -223,7 +223,7 @@ describe('Act does the action', () => {
     s = reducer({ ...back, handoffs: back.handoffs.map(h => (h.id === 'h-report' ? { ...h, lane: undefined } : h)) }, { type: 'core/autonomy', agent: 'iris', action: 'iris-report', level: 'act' })
     expect(s.insights.shared.w47).toBeDefined()
     s = reducer(s0(), { type: 'core/autonomy', agent: 'nova', action: 'nova-complaint', level: 'act' })
-    expect(s.inbox.convs.find(c => c.id === 'c-lea')!.status).toBe('you')
+    expect(s.inbox.convs.find(c => c.id === 'c-lea')!.status).toBe('auto')
     // A recommended option is the agent's own call: Echo picks its counter-move.
     s = reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-counter', level: 'act' })
     expect(s.handoffs.some(h => h.id === 'h-peakline')).toBe(false)

@@ -14,7 +14,7 @@ test('every example maps to its intent and agent', () => {
   expect(parse(EXAMPLES[1]).intent).toMatchObject({ network: 'linkedin', topic: 'repair programme' })
   expect(parse(EXAMPLES[5]).intent).toMatchObject({ agent: 'atlas', until: 'monday' })
   expect(parse(EXAMPLES[6]).intent).toMatchObject({ rule: 'Never offer codes on complaints', agent: 'nova' })
-  expect(parse(EXAMPLES[10]).intent).toMatchObject({ convo: 'c-lea' })
+  expect(parse(EXAMPLES[10]).intent).toMatchObject({ kind: 'reply', name: 'léa' })
   expect(parse('blah blah').intent.kind).toBe('unknown')
 })
 
