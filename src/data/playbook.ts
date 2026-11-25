@@ -81,13 +81,6 @@ export const ESCALATIONS: Escalation[] = [
 export type Voice = { warmth: number; play: number; length: number }
 export const VOICE: Voice = { warmth: 75, play: 55, length: 30 }
 
-export const PILLARS = [
-  { name: 'Gear that lasts', share: 35 },
-  { name: 'Trail stories', share: 25 },
-  { name: 'Repair & care', share: 20 },
-  { name: 'Community', share: 20 },
-]
-
 /** A reply to the same message, written at a given voice. Used for the live example. */
 export function voiceSample(v: Voice) {
   const hi = v.warmth > 60 ? 'Léa, that should not happen' : v.warmth > 30 ? 'Hello Léa, this should not happen' : 'Hello, we have received your message'

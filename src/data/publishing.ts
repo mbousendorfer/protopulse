@@ -2,7 +2,6 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 
 export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
-export const PILLARS: Pillar[] = ['Gear that lasts', 'Trail stories', 'Repair & care', 'Community']
 export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed'
 
 export type Post = {
@@ -14,7 +13,13 @@ export type Post = {
   status: PostStatus
   author: 'atlas' | 'you'
   pillar: Pillar
+  /** Campaign name, as shown. `campaignId` points to Sage's campaign when there is one. */
   campaign?: string
+  campaignId?: string
+  /** Shared contract for every agent; no UI yet. */
+  labels?: string[]
+  link?: { url: string; utm?: Record<string, string> }
+  format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
   stats?: { reach: number; er: number }
   handoff?: string
   note?: string
@@ -26,8 +31,7 @@ export type Post = {
 export type PlanTag = 'New' | 'Recycled' | 'Trend' | 'Campaign'
 export type PlanItem = { id: string; day: number; time: string; network: Network; text: string; media?: string; tag: PlanTag; reason: string; pillar: Pillar; included: boolean }
 
-/** Sage's weekly cadence target per network. */
-export const CADENCE: Partial<Record<Network, number>> = { instagram: 5, tiktok: 4, linkedin: 2, facebook: 2, youtube: 1 }
+// Pillars and the weekly cadence are Sage's: `targetsOf(s)` in features/strategy/slice.ts.
 export const PUBLISH_NETWORKS: Network[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'youtube', 'x']
 
 /** Best slots per network, with Atlas's reason. */
@@ -37,7 +41,7 @@ export const BEST_SLOT: Record<string, { time: string; reason: string }> = {
   linkedin: { time: '08:30', reason: 'LinkedIn mornings perform 1.6× better for Fernway, especially Tuesday to Thursday.' },
   facebook: { time: '19:00', reason: 'Facebook engagement is highest after 19:00 on weekdays.' },
   youtube: { time: '17:00', reason: 'Shorts posted at 17:00 get the most views in the first 24 hours.' },
-  x: { time: '12:00', reason: 'X replies peak at lunchtime.' },
+  x: { time: '12:00', reason: 'X posts at 12:00 get 1.4× the replies of evening ones on your account.' },
 }
 
 const P = (id: string, network: Network, day: number, h: number, m: number, text: string, pillar: Pillar, media?: string, extra: Partial<Post> = {}): Post => {

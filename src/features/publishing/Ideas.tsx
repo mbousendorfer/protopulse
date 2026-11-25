@@ -15,6 +15,7 @@ import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
 import { checkPost } from './checks'
 import { ANGLES, diffWords, freshness, isOpen, mixVariants, summarize, variantText, variantsOf, type Angle, type Variant } from './ideasModel'
+import { targetsOf } from '../strategy/slice'
 import { slotComment } from './slice'
 
 /*
@@ -149,7 +150,7 @@ export default function Ideas({ id }: { id?: string }) {
   return (
     <div className={`ideas-layout ${current || id ? 'has-current' : ''}`}>
       <div className="ideas-main">
-        <p className="ideas-lede" aria-live="polite"><Mark agent="atlas" /><span>{summarize(ideas)}</span></p>
+        <p className="ideas-lede" aria-live="polite"><Mark agent="atlas" /><span>{summarize(ideas, targetsOf(s))}</span></p>
         {sel.count > 0 ? (
           <BulkBar count={sel.count} noun={sel.count > 1 ? 'ideas selected' : 'idea selected'} onClear={sel.clear} actions={[
             { label: `Schedule ${sel.count} ready`, primary: true, onRun: () => { d({ type: 'publishing/ideaSchedule', ids: [...sel.selected] }); sel.clear() } },

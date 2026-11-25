@@ -3,8 +3,7 @@ import { initialState, STATE_VERSION, type State } from './state'
 import { reducer, type Action } from './reducer'
 import { appNow, DEMO_START } from './time'
 import { hasDueFollowUps } from '../features/chats/slice'
-import { ideasDue } from '../features/publishing/slice'
-import { videoDue } from '../features/video/slice'
+import { registry } from './agents-registry'
 
 const KEY = 'protopulse:state'
 
@@ -56,8 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         st.handoffs.some(h => (h.lane === 'claire' && h.claire && !h.claire.reply && h.claire.dueAt <= t) || (h.lane === 'snoozed' && (h.snoozedUntil ?? Infinity) <= t)) ||
         st.agents.some(a => a.actions.some(x => x.trialUntil && x.trialUntil <= t)) ||
         hasDueFollowUps(st, t) ||
-        ideasDue(st, t) ||
-        videoDue(st, t)
+        registry().some(m => m.due?.(st, t))
       if (due) d({ type: 'core/heartbeat' })
     }, 1000)
     return () => clearInterval(id)

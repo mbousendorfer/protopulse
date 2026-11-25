@@ -7,6 +7,7 @@ import { HANDOFFS } from '../../data/desk'
 import { FACTS, RULES } from '../../data/playbook'
 import { PILLAR_PERF } from '../../data/insights'
 import { spotIdeas } from '../publishing/ideasModel'
+import { targetsOf } from '../strategy/slice'
 import type { Conversation, ConvStatus } from '../../data/inbox'
 import { ALL_ACCOUNTS, INTEGRATIONS, andList, PROPOSALS, levelFor, netOf, pickOf, presetOf, type Setup } from './model'
 
@@ -88,7 +89,7 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
   const atlasLevels = Object.fromEntries(agents.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
   // Only what went out on the networks is imported: drafts and scheduled posts were made in Protopulse.
   const posts = base.publishing.posts.filter(p => p.status === 'published')
-  let ideas = social ? spotIdeas(t, posts, atlasLevels, rules) : []
+  let ideas = social ? spotIdeas(t, posts, atlasLevels, rules, targetsOf(base)) : []
   const top = ideas.find(i => i.key === 'storm-snow') ?? ideas[0]
   if (top) {
     ideas = ideas.map(i => (i.id === top.id ? { ...i, handoff: DAY1_IDS.atlas } : i))

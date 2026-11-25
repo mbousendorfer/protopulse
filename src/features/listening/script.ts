@@ -1,0 +1,45 @@
+import type { ScriptEvent } from '../../data/script'
+import { ideaScript } from '../publishing/slice'
+
+/** Echo's scripted events. `order` places each one in the shared feed (see the registry). */
+export const SCRIPT: ScriptEvent[] = [
+  {
+    id: 'ev-spike', order: 20, label: 'Echo · negative spike (seams leak)', always: true,
+    handoff: { agent: 'echo', kind: 'alert', urgency: 'urgent', topic: 'Negative spike', action: 'echo-spike',
+      title: '27 negative mentions in 40 minutes about Storm Jacket seams', context: 'A Reddit thread says the seams leak after 3 washes. Shared twice on X.',
+      why: '3× the usual negative volume in under an hour.', confidence: 73, link: '/listening/mentions',
+      options: [{ label: 'Pause Atlas and ask Claire for a statement', recommended: true }, { label: 'Nova sends the care-instructions reply to each mention' }, { label: 'Monitor for 2 hours' }],
+      preview: { type: 'metric', label: 'Negative mentions per hour', value: '41', delta: '3.4× usual', down: true, series: [3, 4, 2, 5, 3, 4, 6, 12, 27, 41] } },
+  },
+  {
+    id: 'ev-trailkind', order: 90, label: 'Echo · Trailkind viral reel',
+    handoff: { agent: 'echo', kind: 'decision', urgency: 'today', topic: 'Competitor', action: 'echo-counter',
+      title: 'Trailkind’s “bag vs. rain” reel hit 1.2M views', context: 'Posted yesterday 19:00. Uses a 2-second hook and a split screen.',
+      why: 'Viral competitor post in your category. Counter-moves are set to Suggest.', confidence: 76, link: '/listening/competitors',
+      options: [{ label: 'Atlas tests the same format with the Ridge', recommended: true }, { label: 'Add to Echo’s lessons only' }, { label: 'Nothing to do' }] },
+    auto: { text: 'Asked Atlas to test the split-screen format with the Ridge', reason: 'Counter-moves, set to Act', link: '/listening/competitors' },
+  },
+  { id: 'ev-idea-urgent', order: 100, label: 'Echo · first snow, post tonight (urgent idea)', agent: 'echo', ...ideaScript({ origin: 'urgent', agent: 'echo', seeds: ['first-snow'] }) },
+  {
+    id: 'ev-norro', order: 180, label: 'Echo · Norrø repair programme',
+    handoff: { agent: 'echo', kind: 'decision', urgency: 'week', topic: 'Competitor', action: 'echo-counter',
+      title: 'Norrø launches a lifetime repair programme', context: 'Announced on LinkedIn and Instagram. Free repairs on all bags, forever.',
+      why: 'Competes with your repair programme. Counter-moves are set to Suggest.', confidence: 74, link: '/listening/competitors',
+      options: [{ label: 'Brief Sage: a “Repair Week” campaign in January', recommended: true }, { label: 'Atlas posts our repair numbers (1,200 bags fixed)' }, { label: 'Tell the sales team' }] },
+    auto: { text: 'Briefed Sage on a Repair Week response', reason: 'Counter-moves, set to Act', link: '/strategy' },
+  },
+  {
+    id: 'ev-trend-repair', order: 220, label: 'Echo · “repair over replace” trend',
+    handoff: { agent: 'echo', kind: 'approval', urgency: 'week', topic: 'Trend', action: 'echo-trend', chain: ['echo'],
+      title: 'Hand “repair over replace” to Atlas?', context: '+60% this month on LinkedIn and Instagram. Matches your repair pillar.',
+      why: 'Handing trends to Atlas is set to Draft.', confidence: 82, link: '/listening/trends' },
+    auto: { text: 'Handed “repair over replace” to Atlas', reason: 'Trends, set to Act', link: '/listening/trends' },
+  },
+  {
+    id: 'ev-basecamp', order: 230, label: 'Echo · Basecamp Co. recall',
+    handoff: { agent: 'echo', kind: 'decision', urgency: 'today', topic: 'Competitor', action: 'echo-counter',
+      title: 'Basecamp Co. recalls 8,000 water bottles', context: 'BPA found in the lid. National news since 07:30.',
+      why: 'Your Summit Bottle is the obvious alternative. Talking about a rival’s recall is sensitive.', confidence: 70, link: '/listening/competitors',
+      options: [{ label: 'Nova answers bottle safety questions with our lab results', recommended: true }, { label: 'Atlas posts our materials page, without naming them' }, { label: 'Nothing to do' }] },
+  },
+]

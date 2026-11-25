@@ -1,3 +1,5 @@
+// Saved state version. Bump it only when an existing shape changes (a field renamed, retyped or removed): that wipes
+// every tester's saved session. A new field doesn't need a bump: mergeSaved gives it its default, slice by slice.
 import type { Agent, DoneItem, Handoff, LogEntry, TesterEvent, Notice } from './types'
 import { startClock, type Clock, DEMO_START, MIN } from './time'
 import { AGENTS } from '../data/agents'

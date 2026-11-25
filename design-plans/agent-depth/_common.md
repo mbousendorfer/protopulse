@@ -34,8 +34,26 @@ test en manipulation libre, qu'il utilise un vrai produit. Pas de cul-de-sac, pa
    (BulkBar, SelectBox, useSelection), `src/ui/charts.tsx`, `src/ui/Illustrations.tsx`, helpers de
    `src/app/core.ts` (`pushHandoff`, `pushLog`, `notify`, `setAutonomy`, `addRule`, `updateHandoff`,
    `removeHandoff`, `uid`, `now`, `agentOf`, `actionOf`). **Le registre de ton agent** créé par la
-   Phase 0 (voir `phase-0.md`) : c'est là que tu branches événements, intents ⌘K, réponses de chat,
-   hooks de résolution, d'Undo et de battement de cœur.
+   Phase 0 : c'est là que tu branches tout, sans toucher au cœur.
+   - Ton module : `src/features/<ton dossier>/agent.tsx` (export par défaut, type `AgentModule` de
+     `src/app/agent-module.ts`). Champs, tous optionnels : `script` (tes événements, dans
+     `src/features/<ton dossier>/script.ts`), `onResolve(s, h, d)` (appelé pour **toute** carte réglée :
+     par Sam, Claire, un lot ou Act), `onUndo(s, entry)`, `due(s, t)` + `tick(s, t)` (battement de cœur),
+     `intents` (⌘K et Chat : `defineIntent({ kind, owner, order, parse, bar, chat })`), `previews` (rendu
+     Desk de tes types de preview), `batches` (lots du Desk), `profileTabs`, `testerStats`, `presets`.
+   - La liste : `src/app/agents-registry.ts` (`registry()`, `scriptEvents()`, `intentDef()`). Tu n'y
+     touches pas : ton module y est déjà. Lis-la toujours par ces fonctions, jamais au chargement.
+   - Événement : `order` le place dans le fil commun (multiples de 10 existants ; glisse le tien entre
+     deux). Un type d'événement à toi = un `run: (s, manual) => State` sur l'événement (voir
+     `ideaScript`, `videoScript`), et `tag` pour le panneau modérateur.
+   - Types ouverts, étendus depuis ton module par `declare module` (voir `video/agent.tsx`) : nouveau
+     type de preview (`interface PreviewTypes` dans `src/app/types.ts`), nouvel intent
+     (`interface IntentTypes` dans `src/data/command.ts`), champ propre sur `Handoff` ou `LogEntry`.
+     Ordre de `parse` du cœur : pause 10, resume 20, rule 30, needs 70, overnight 80 ; ceux des agents
+     sont dans leurs modules.
+   - Act : passer une action en Act fait régler ses cartes par `resolve()` (comme une approbation de
+     Sam, Undo compris). Ton `onResolve` fait donc l'action ; pour que l'Undo restaure vraiment l'état,
+     inverse ton effet dans `onUndo` (à partir de `entry.restore`).
 4. **Ce que fait Agorapulse** : charge le skill `agorapulse-product` pour savoir ce que le module
    équivalent offre vraiment (écrans, objets, statuts, rôles, libellés officiels). C'est ta
    référence de parité.
@@ -157,7 +175,7 @@ capacité, captures avant/après des trois écrans les plus changés, ce qui res
   `main`. Messages de commit en phrases simples préfixées (`Nova: …`).
 
 ## Propriété des fichiers
-- **À toi** : `src/features/<ton dossier>/`, `src/data/<ton module>.ts`, le registre de ton agent,
+- **À toi** : `src/features/<ton dossier>/` (dont `agent.tsx` et `script.ts`, ton registre), `src/data/<ton module>.ts`,
   ta sous-section de PROMPT.md, tes fichiers `design-plans/agent-depth/<agent>-*.md`,
   `docs/agent-depth/<agent>.html`, ton entrée dans `src/data/agents.ts` (actions, garde-fous).
 - **Partagé, touche minimale** : `src/app/*`, `src/ui/*`, `src/styles/tokens.css` / `base.css`,
@@ -178,7 +196,7 @@ avec le lien de sa PR.
 Contrats déjà attribués (source unique, les autres lisent) :
 | Donnée | Propriétaire | Lecteurs |
 |---|---|---|
-| Piliers, cadence cible, campagnes | Sage | Atlas, Iris |
+| Piliers, cadence cible, campagnes (`targetsOf(s)` dans `strategy/slice.ts`) | Sage | Atlas, Iris |
 | Posts, calendrier, créneaux | Atlas | Sage, Iris, Juno |
 | Conversations, contacts, temps de réponse | Nova | Iris, Echo |
 | Chiffres de performance (reach, engagement, perfs de posts et de clips) | Iris | tous (Chat et ⌘K compris) |

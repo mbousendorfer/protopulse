@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { initialState, type State } from '../../app/state'
 import { reducer } from '../../app/reducer'
 import { mergeSaved } from '../../app/store'
-import { SCRIPT } from '../../data/script'
+import { scriptEvents } from '../../app/agents-registry'
 import { AGENTS } from '../../data/agents'
 import { T } from '../../app/time'
 import { ALL_ACCOUNTS, FINDS, PHASES, READ_MS, deduce, defaultSetup, levelCounts, normalizeSite, readingAt, type Setup } from './model'
@@ -117,6 +117,7 @@ test('the checklist: connect what is missing, pages tick off once visited, the b
 
 test('Day 1 has no history: the feed skips promotions, step-backs, learned rules and campaign news', () => {
   const s = day1()
+  const SCRIPT = scriptEvents()
   for (const ev of SCRIPT.filter(e => e.history)) {
     const at = SCRIPT.indexOf(ev)
     const next = reducer({ ...s, engine: { ...s.engine, cursor: at } }, { type: 'core/fire' })

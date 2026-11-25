@@ -1,13 +1,13 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
-import { actionOf, addRule, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
+import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, POSTS, type PlanItem, type Post } from '../../data/publishing'
 import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
 import { DEMO_START } from '../../app/time'
 import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
-import { briefSage } from '../strategy/slice'
+import { briefSage, targetsOf } from '../strategy/slice'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -171,7 +171,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/askFill': {
       const day = T(0, 0, a.day)
-      const seed = gapSeed({ day, network: a.network }, s.publishing.posts, s.publishing.ideas)
+      const seed = gapSeed({ day, network: a.network }, s.publishing.posts, s.publishing.ideas, targetsOf(s))
       if (!seed) return notify(s, 'publishing', `Atlas already proposed every ${a.network === 'x' ? 'X' : a.network} post it has for this week. Write one yourself, or check Ideas.`, { link: { to: '/publishing', label: 'Open Ideas' } })
       const next = arriveIdeas(s, [seed], 'gap', 'atlas')
       const idea = next.publishing.ideas.find(i => i.key === seed.key)
@@ -309,7 +309,8 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
 
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
-    const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: 'Trail stories', handoff: h.id }
+    // The card's pillar and campaign follow the post. Trail stories stays the default for cards that don't say.
+    const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id }
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s
@@ -452,7 +453,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
   const t = now(next)
   const fresh = seeds.filter(seed => !next.publishing.ideas.some(i => i.key === seed.key))
   if (!fresh.length) return next
-  const { keep, held: byRule } = heldByRules(fresh, next.playbook.rules, next.publishing.posts, t)
+  const { keep, held: byRule } = heldByRules(fresh, next.playbook.rules, next.publishing.posts, t, targetsOf(next))
   const { accepted, held, retired } = capIdeas(next.publishing.ideas, keep.map(seed => makeIdea(seed, origin, t)))
   for (const r of retired) {
     const by = accepted[retired.indexOf(r) + accepted.length - retired.length]
@@ -498,10 +499,17 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
 /** A scripted idea event: named seeds, or the next calendar gap. */
 export function ideaEvent(s: State, ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }): State {
   const seeds = ev.origin === 'gap'
-    ? gapDays(s.publishing.posts, now(s), 14).flatMap(g => { const seed = gapSeed(g, s.publishing.posts, s.publishing.ideas); return seed && !s.publishing.ideas.some(i => i.key === seed.key) ? [seed] : [] }).slice(0, 1)
+    ? gapDays(s.publishing.posts, now(s), 14, targetsOf(s)).flatMap(g => { const seed = gapSeed(g, s.publishing.posts, s.publishing.ideas, targetsOf(s)); return seed && !s.publishing.ideas.some(i => i.key === seed.key) ? [seed] : [] }).slice(0, 1)
     : (ev.seeds ?? []).map(k => IDEA_SEEDS[k]).filter(Boolean)
   return arriveIdeas(s, seeds, ev.origin, ev.agent)
 }
+
+/** A script event that brings ideas to Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it. */
+export const ideaScript = (ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }) => ({
+  tag: ev.origin === 'urgent' ? 'idea + Desk' : 'idea',
+  run: (s: State, manual: boolean): State =>
+    !manual && (agentOf(s, ev.agent).status !== 'on' || agentOf(s, 'atlas').status !== 'on') ? s : ideaEvent(s, ev),
+})
 
 /** Undo of an idea Atlas scheduled on its own: the posts leave the calendar, the idea is back in Ideas. */
 export function unscheduleIdea(s: State, id: string): State {

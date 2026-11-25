@@ -5,16 +5,17 @@ import { DAY, MIN, startClock } from './time'
 import {
   actionOf, addRule, agentOf, now, pronoun, notify, pushHandoff, pushLog, removeHandoff, setAutonomy, track, uid, updateHandoff,
 } from './core'
-import { SCRIPT, CLAIRE } from '../data/script'
+import { CLAIRE } from '../data/script'
 import { levelFor } from '../data/agents'
-import { onResolveInbox, reduceInbox, type InboxAction } from '../features/inbox/slice'
-import { ideaEvent, onResolvePublishing, reducePublishing, tickIdeas, unscheduleIdea, type PublishingAction } from '../features/publishing/slice'
-import { onResolveInsights, reduceInsights, type InsightsAction } from '../features/insights/slice'
-import { onResolveListening, reduceListening, type ListeningAction } from '../features/listening/slice'
-import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../features/strategy/slice'
-import { onResolvePlaybook, reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
+import { registry, scriptEvents } from './agents-registry'
+import { reduceInbox, type InboxAction } from '../features/inbox/slice'
+import { reducePublishing, type PublishingAction } from '../features/publishing/slice'
+import { reduceInsights, type InsightsAction } from '../features/insights/slice'
+import { reduceListening, type ListeningAction } from '../features/listening/slice'
+import { reduceStrategy, type StrategyAction } from '../features/strategy/slice'
+import { reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
 import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
-import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, unsendClips, videoEvent, type VideoAction } from '../features/video/slice'
+import { reduceVideo, type VideoAction } from '../features/video/slice'
 import { reduceSetup, type SetupAction } from '../features/onboarding/slice'
 
 export type CoreAction =
@@ -85,11 +86,37 @@ function verb(d: Decision, h: Handoff): { text: string; status: 'approved' | 'ed
   }
 }
 
+/**
+ * What an agent decides alone once its action is on Act: approve, or pick the option it recommends.
+ * A choice it never recommended, missing information and promotions stay with Sam.
+ */
+export function actDecision(h: Handoff): Decision | undefined {
+  if (h.kind === 'promotion' || h.kind === 'info' || h.field) return
+  if (!h.options) return { kind: 'approve' }
+  const index = h.options.findIndex(o => o.recommended)
+  return index < 0 ? undefined : { kind: 'option', option: h.options[index].label, index }
+}
+
+/**
+ * Change one action's level. Moving to Act has the agent do its pending Desk cards for that action, through the same
+ * path as Sam's approval (every agent's onResolve, the journal, a real Undo). The others stay on the Desk.
+ */
+function setLevel(s: State, agent: AgentId, action: string, level: Autonomy, why = 'You switched this action to Act'): State {
+  let next = setAutonomy(s, agent, action, level)
+  if (next === s || level !== 'act') return next
+  for (const h of s.handoffs) {
+    if (h.action !== action || h.lane) continue
+    const d = actDecision(h)
+    if (d) next = resolve(next, h.id, d, { act: why })
+  }
+  return next
+}
+
 /** Undo what a Desk decision changed outside the card: autonomy moves and Playbook rules added from it. */
 function reverseDecision(s: State, h: Handoff): State {
   let next = s
   if (h.kind === 'promotion' && h.promote) {
-    next = setAutonomy(next, h.agent, h.promote.action, h.promote.from, 'You undid this decision')
+    next = setLevel(next, h.agent, h.promote.action, h.promote.from, 'You undid this decision')
     next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === h.promote!.action ? { ...x, trialUntil: undefined, trialFrom: undefined } : x) }) }
   }
   const drop = (r: { text: string; origin?: string }) =>
@@ -97,7 +124,8 @@ function reverseDecision(s: State, h: Handoff): State {
   return { ...next, playbook: { ...next.playbook, rules: next.playbook.rules.filter(r => !drop(r)) } }
 }
 
-export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boolean; ms?: number } = {}): State {
+/** Settle a Desk card. `act`: the agent did it alone (on Act), with this reason; it stays off Sam's done list. */
+export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boolean; ms?: number; act?: string } = {}): State {
   const h = s.handoffs.find(x => x.id === id)
   if (!h) return s
   let next = removeHandoff(s, id)
@@ -106,7 +134,7 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     const { action, to, from } = h.promote
     const label = actionOf(s, h.agent, action)?.label ?? action
     if (d.kind === 'approve' || d.kind === 'trial') {
-      next = setAutonomy(next, h.agent, action, to, `You moved “${label}” to ${to}`)
+      next = setLevel(next, h.agent, action, to, `You moved “${label}” to ${to}`)
       if (d.kind === 'trial') next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === action ? { ...x, trialUntil: now(s) + 7 * DAY, trialFrom: from } : x) }) }
     }
   }
@@ -115,19 +143,14 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     next = addRule(next, { kind: 'dont', text: h.proposal.text, agents: h.proposal.agents, origin: `Learned from your edits · ${agentOf(s, h.agent).name}` })
   }
 
-  next = onResolveInbox(next, h, d)
-  next = onResolvePublishing(next, h, d)
-  next = onResolveInsights(next, h, d)
-  next = onResolveListening(next, h, d)
-  next = onResolveStrategy(next, h, d)
-  next = onResolvePlaybook(next, h, d)
-  next = onResolveVideo(next, h, d)
+  for (const m of registry()) if (m.onResolve) next = m.onResolve(next, h, d)
 
   // An answer to "missing info" becomes a Playbook fact, so the agent never asks twice.
   if (h.kind === 'info' && d.kind === 'answer') {
     next = addRule(next, { kind: 'fact', text: `${h.field?.label ?? h.topic}: ${d.text}`, agents: [h.agent], origin: `Your answer to ${agentOf(s, h.agent).name}` })
   }
 
+  if (opts.act) return pushLog(next, { agent: h.agent, text: `Handled on ${pronoun(h.agent)} own: ${h.title}`, status: 'done', reason: opts.act, link: h.link, undoMinutes: 30, restore: [h] })
   const v = verb(d, h)
   next = { ...next, desk: { done: [{ id: h.id, title: h.title, text: doneText(d, h), at: now(s), ms: opts.ms, h }, ...next.desk.done.filter(x => x.id !== h.id)] } }
   if (opts.quiet) return next
@@ -157,18 +180,14 @@ export function groupOf(h: Handoff): 'need' | 'look' | 'good' {
 
 /** Fire one scripted event: a Desk card, or a journal entry if the agent is on Act for that action. */
 function fire(s: State, eventId?: string): State {
-  const idx = eventId ? SCRIPT.findIndex(e => e.id === eventId) : s.engine.cursor % SCRIPT.length
-  const ev = SCRIPT[idx]
+  const script = scriptEvents()
+  const ev = script[eventId ? script.findIndex(e => e.id === eventId) : s.engine.cursor % script.length]
   if (!ev) return s
   let next: State = eventId ? s : { ...s, engine: { ...s.engine, cursor: s.engine.cursor + 1 } }
   // A Day 1 workspace has no history: no promotion earned, no rule learned, no campaign running.
   if (ev.history && s.phase === 'day1' && !eventId) return next
-  if (ev.idea) {
-    // Ideas arrive in Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it.
-    if (!eventId && (agentOf(next, ev.idea.agent).status !== 'on' || agentOf(next, 'atlas').status !== 'on')) return next
-    return ideaEvent(next, ev.idea)
-  }
-  if (ev.video) return videoEvent(next, ev.video.source, !!eventId)
+  // Custom events (Atlas ideas, Juno videos…) do their own thing.
+  if (ev.run) return ev.run(next, !!eventId)
   if (!ev.handoff) return next
   // Never raise the same thing twice: skip it if it's already on the Desk or was settled since the brief.
   const handoff = ev.handoff
@@ -234,18 +253,12 @@ function threadReply(s: State, h: Handoff, input: string): { msg: ThreadMsg; pat
   return { msg: { ...base, text: `I’m not sure what you mean. I can explain why I raised this, make the draft shorter, warmer or more formal, use other words, or turn a “don’t…” into a Playbook rule for ${name} and the team.` } }
 }
 
-const TRAIL_SCRIPT_PRESETS: Record<Preset, string[]> = {
-  calm: ['h-strap', 'h-plan', 'h-tiktok', 'h-report'],
-  busy: [],
-  competitor: ['h-peakline', 'h-plan', 'h-report'],
-  trust: ['h-promo-nova', 'h-strap', 'h-review', 'h-report'],
-}
-
+/** A scenario keeps the Desk cards the agents list for it and fires their events. Busy keeps everything. */
 function applyPreset(s: State, p: Preset): State {
   if (p === 'busy') return s
-  let next: State = { ...s, handoffs: s.handoffs.filter(h => TRAIL_SCRIPT_PRESETS[p].includes(h.id)) }
-  const extra: Record<Preset, string[]> = { calm: [], busy: [], competitor: ['ev-trailkind', 'ev-norro', 'ev-basecamp'], trust: ['ev-promo-exchange', 'ev-demote', 'ev-rule-emoji'] }
-  for (const id of extra[p]) next = fire(next, id)
+  const keep = registry().flatMap(m => m.presets?.[p]?.keep ?? [])
+  let next: State = { ...s, handoffs: s.handoffs.filter(h => keep.includes(h.id)) }
+  for (const id of registry().flatMap(m => m.presets?.[p]?.fire ?? [])) next = fire(next, id)
   return { ...next, handoffs: next.handoffs.map(h => ({ ...h, fresh: false })), notice: undefined }
 }
 
@@ -316,10 +329,9 @@ function reduceCore(s: State, a: CoreAction): State {
       if (l.restore?.length) {
         const ids = new Set(l.restore.map(h => h.id))
         next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true, lane: undefined })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
-        for (const h of l.restore) next = undoDeskClips(reverseDecision(next, h), h)
+        for (const h of l.restore) next = reverseDecision(next, h)
       }
-      if (l.idea) next = unscheduleIdea(next, l.idea)
-      if (l.clips) next = unsendClips(next, l.clips)
+      for (const m of registry()) if (m.onUndo) next = m.onUndo(next, l)
       return next.notice?.undo === a.id ? { ...next, notice: undefined } : next
     }
 
@@ -330,8 +342,8 @@ function reduceCore(s: State, a: CoreAction): State {
     }
 
     case 'core/autonomy': {
-      const next = setAutonomy(s, a.agent, a.action, a.level)
-      const n = s.handoffs.length - next.handoffs.length
+      const next = setLevel(s, a.agent, a.action, a.level)
+      const n = s.handoffs.filter(h => !next.handoffs.some(x => x.id === h.id)).length
       return n ? notify(next, 'agents', `${n} card${n > 1 ? 's' : ''} left your Desk. ${agentOf(s, a.agent).name} handles ${n > 1 ? 'them' : 'it'} now.`, { link: { to: '/activity', label: 'See in Activity' } }) : next
     }
 
@@ -340,7 +352,7 @@ function reduceCore(s: State, a: CoreAction): State {
       let next = s
       for (const x of ag.actions) {
         if (x.locked) continue
-        next = setAutonomy(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
+        next = setLevel(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
       }
       return next
     }
@@ -384,16 +396,14 @@ function reduceCore(s: State, a: CoreAction): State {
       // Trials ending.
       for (const ag of next.agents) for (const x of ag.actions) {
         if (x.trialUntil && x.trialUntil <= t && x.trialFrom) {
-          next = setAutonomy(next, ag.id, x.id, x.trialFrom)
+          next = setLevel(next, ag.id, x.id, x.trialFrom)
           next = pushLog(next, { agent: ag.id, text: `Trial week on “${x.label}” is over. Back to ${x.trialFrom}.`, status: 'done', reason: 'The trial you started ended' })
         }
       }
       // Agents coming back in a conversation.
       next = deliverFollowUps(next, t)
-      // Ideas whose window closed leave; snoozed ones come back.
-      next = tickIdeas(next, t)
-      // Videos being processed move on; snoozed clips come back.
-      next = tickVideo(next, t)
+      // Each agent's own clock: ideas expiring, videos processing…
+      for (const m of registry()) if (m.tick) next = m.tick(next, t)
       // Proactive feed.
       if (next.engine.live && t >= next.engine.nextAt) {
         next = fire({ ...next, engine: { ...next.engine, nextAt: t + next.engine.cadence * 1000 } })

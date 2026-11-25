@@ -1,36 +1,53 @@
 import type { AgentId, Network } from '../app/types'
+import { intentDef, intentDefs } from '../app/agents-registry'
+import type { IntentDef } from '../app/agent-module'
 
-/** What the command bar understood. Mocked: keyword intents, no model behind it. */
-export type Intent =
-  | { kind: 'post'; network: Network; topic: string; slot: string }
-  | { kind: 'tiktok' }
-  | { kind: 'besttime'; network: 'instagram' | 'linkedin' | 'tiktok' }
-  | { kind: 'compare' }
-  | { kind: 'performance' }
-  | { kind: 'competitor'; name: string }
-  | { kind: 'pause'; agent: AgentId; until?: string }
-  | { kind: 'resume'; agent: AgentId }
-  | { kind: 'rule'; rule: string; agent: AgentId }
-  | { kind: 'campaign'; brief: string }
-  | { kind: 'needs' }
-  | { kind: 'overnight'; agent: AgentId }
-  | { kind: 'reply'; name: string; convo?: string }
-  | { kind: 'mentions' }
-  | { kind: 'clip'; url?: string }
-  | { kind: 'unknown' }
-
-export const OWNER: Record<Intent['kind'], AgentId> = {
-  post: 'atlas', tiktok: 'iris', besttime: 'iris', compare: 'iris', performance: 'iris', competitor: 'echo', pause: 'sage', resume: 'sage',
-  rule: 'nova', campaign: 'sage', needs: 'iris', overnight: 'iris', reply: 'nova', mentions: 'echo', clip: 'juno', unknown: 'iris',
+/**
+ * What the command bar understood. Mocked: keyword intents, no model behind it.
+ * The core owns these; each agent adds its own from its registry module:
+ * `declare module '../../data/command' { interface IntentTypes { post: { network: Network; topic: string; slot: string } } }`.
+ */
+export interface IntentTypes {
+  pause: { agent: AgentId; until?: string }
+  resume: { agent: AgentId }
+  rule: { rule: string; agent: AgentId }
+  needs: object
+  overnight: { agent: AgentId }
+  unknown: object
 }
+export type Intent = { [K in keyof IntentTypes]: { kind: K } & IntentTypes[K] }[keyof IntentTypes]
+
+const CORE_OWNER: Partial<Record<Intent['kind'], AgentId>> = { pause: 'sage', resume: 'sage', rule: 'nova', needs: 'iris', overnight: 'iris', unknown: 'iris' }
+
+/** The agent whose job an intent is. */
+export const ownerOf = (kind: Intent['kind']): AgentId => CORE_OWNER[kind] ?? intentDef(kind)?.owner ?? 'iris'
 
 const NAMES: AgentId[] = ['nova', 'atlas', 'iris', 'echo', 'sage', 'juno']
 const NETS: [RegExp, Network][] = [[/linkedin/, 'linkedin'], [/tiktok/, 'tiktok'], [/instagram|insta\b|\big\b|reel|carousel/, 'instagram'], [/facebook|\bfb\b/, 'facebook'], [/youtube|short\b/, 'youtube'], [/\bx\b|twitter|tweet/, 'x']]
-const BEST_SLOT: Record<Network, string> = { instagram: 'Fri 28, 18:30', linkedin: 'Tue 2, 08:30', tiktok: 'Thu 27, 18:00', facebook: 'Sat 29, 10:00', youtube: 'Sun 30, 11:00', x: 'Today, 12:00', google: '', trustpilot: '' }
-const DAYS: [RegExp, string][] = [[/monday/, 'Mon 1'], [/tuesday/, 'Tue 2'], [/wednesday/, 'Wed 26'], [/thursday/, 'Thu 27'], [/friday/, 'Fri 28'], [/saturday/, 'Sat 29'], [/sunday/, 'Sun 30'], [/tomorrow/, 'Wed 26'], [/today|tonight/, 'Today']]
-const CONVOS: Record<string, string> = { lea: 'c-lea', 'léa': 'c-lea', thomas: 'c-thomas', marc: 'c-marc', tom: 'c-tom', ines: 'c-ines', 'inès': 'c-ines' }
 
-const net = (t: string): Network | undefined => NETS.find(([re]) => re.test(t))?.[1]
+/** The network a query names, if any. */
+export const net = (t: string): Network | undefined => NETS.find(([re]) => re.test(t))?.[1]
+
+/** The core's own parsers, mixed with the agents' by order. */
+const CORE: Pick<IntentDef, 'order' | 'parse'>[] = [
+  { order: 10, parse: t => {
+    if (!/^(pause|stop)\s+(nova|atlas|iris|echo|sage|juno)/.test(t)) return
+    const m = t.match(/^(?:pause|stop)\s+(\w+)(?:\s+(?:until|till)\s+(.+))?/)!
+    return { kind: 'pause', agent: m[1] as AgentId, until: m[2] }
+  } },
+  { order: 20, parse: t => /^(resume|restart|unpause|wake)\s+(nova|atlas|iris|echo|sage|juno)/.test(t) ? { kind: 'resume', agent: t.split(/\s+/)[1] as AgentId } : undefined },
+  { order: 30, parse: (t, { forced, named }) => {
+    const never = t.match(/^(?:please\s+)?(never|don['’]?t|do not|stop|no more)\s+(.+)/)
+    if (!never) return
+    const body = never[2].replace(/\byou\b/g, 'we')
+    return { kind: 'rule', rule: `Never ${body.replace(/^(ever\s+)/, '')}`, agent: forced ?? named ?? (/post|caption|publish|hashtag/.test(body) ? 'atlas' : 'nova') }
+  } },
+  { order: 70, parse: t => /what needs me|needs me|on my desk|what('?s| is) waiting/.test(t) ? { kind: 'needs' } : undefined },
+  { order: 80, parse: t => {
+    if (!/(did|has)\s+(nova|atlas|iris|echo|sage|juno)\s+(do|done)|overnight|while i was/.test(t)) return
+    return { kind: 'overnight', agent: (t.match(/\b(nova|atlas|iris|echo|sage|juno)\b/)?.[1] ?? 'nova') as AgentId }
+  } },
+]
 
 export function parse(raw: string): { intent: Intent; forced?: AgentId } {
   let t = raw.toLowerCase().trim().replace(/[?!.]+$/, '')
@@ -38,63 +55,12 @@ export function parse(raw: string): { intent: Intent; forced?: AgentId } {
   const forced = lead ? (lead[1] as AgentId) : undefined
   if (lead) t = t.slice(lead[0].length)
   const named = NAMES.find(n => new RegExp(`\\b${n}\\b`).test(t))
-
-  if (/^(pause|stop)\s+(nova|atlas|iris|echo|sage|juno)/.test(t)) {
-    const m = t.match(/^(?:pause|stop)\s+(\w+)(?:\s+(?:until|till)\s+(.+))?/)!
-    return { intent: { kind: 'pause', agent: m[1] as AgentId, until: m[2] }, forced }
+  const ctx = { raw, forced, named }
+  for (const def of [...CORE, ...intentDefs()].sort((a, b) => a.order - b.order)) {
+    const intent = def.parse(t, ctx)
+    if (intent) return { intent, forced }
   }
-  if (/^(resume|restart|unpause|wake)\s+(nova|atlas|iris|echo|sage|juno)/.test(t)) return { intent: { kind: 'resume', agent: t.split(/\s+/)[1] as AgentId }, forced }
-  const never = t.match(/^(?:please\s+)?(never|don['’]?t|do not|stop|no more)\s+(.+)/)
-  if (never) {
-    const body = never[2].replace(/\byou\b/g, 'we')
-    return { intent: { kind: 'rule', rule: `Never ${body.replace(/^(ever\s+)/, '')}`, agent: forced ?? named ?? (/post|caption|publish|hashtag/.test(body) ? 'atlas' : 'nova') }, forced }
-  }
-  const url = raw.match(/https?:\/\/\S+/)?.[0]
-  if (url || /\bclips?\b|latest video|\bshorts? from\b/.test(t)) return { intent: { kind: 'clip', url }, forced }
-  if (/^brief\b|campaign|launch/.test(t)) return { intent: { kind: 'campaign', brief: raw.replace(/^\s*(sage[,:]?\s*)?(brief:?\s*)?/i, '').trim() }, forced }
-  if (/reply to\s+(\S+)/.test(t)) {
-    const name = t.match(/reply to\s+(\S+)/)![1].replace(/^@/, '')
-    return { intent: { kind: 'reply', name, convo: CONVOS[name] }, forced }
-  }
-  if (/what needs me|needs me|on my desk|what('?s| is) waiting/.test(t)) return { intent: { kind: 'needs' }, forced }
-  if (/(did|has)\s+(nova|atlas|iris|echo|sage|juno)\s+(do|done)|overnight|while i was/.test(t)) {
-    const who = (t.match(/\b(nova|atlas|iris|echo|sage|juno)\b/)?.[1] ?? 'nova') as AgentId
-    return { intent: { kind: 'overnight', agent: who }, forced }
-  }
-  if (/negative|complain(t|ts)? about us|mentions/.test(t) && !/post/.test(t)) return { intent: { kind: 'mentions' }, forced }
-  if (/peakline|norr[øo]|trailkind|basecamp|competitor|rival/.test(t)) {
-    const name = t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] ?? 'competitors'
-    return { intent: { kind: 'competitor', name }, forced }
-  }
-  if (/best (time|slot|hour|day)|when should (i|we) post/.test(t)) {
-    const n = net(t)
-    return { intent: { kind: 'besttime', network: n === 'linkedin' || n === 'tiktok' ? n : 'instagram' }, forced }
-  }
-  if (/tiktok/.test(t) && /how|did|perform|doing|last week|views|reach/.test(t)) return { intent: { kind: 'tiktok' }, forced }
-  if (/reels? (vs|versus|or|against) carousels?|carousels? (vs|versus|or|against) reels?|compare/.test(t)) return { intent: { kind: 'compare' }, forced }
-  if (/(post|reel|carousel|tweet|caption|story)\b/.test(t) && /(write|draft|create|make|post about|a post|an? (reel|carousel|tweet))/.test(t) || (forced === 'atlas' && /about|sale|post/.test(t))) {
-    const n = net(t) ?? 'instagram'
-    const day = DAYS.find(([re]) => re.test(t))
-    const topic = (t.match(/(?:about|on|for)\s+(?:the\s+|our\s+)?(.+?)(?:\s+(?:on|for|this|next)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|linkedin|instagram|tiktok|facebook|youtube|x)\b.*)?$/)?.[1]
-      ?? t.replace(/^(?:write|draft|create|make)\s+(?:me\s+)?(?:an?\s+)?(?:\w+\s+)?(?:post|reel|carousel|tweet)\s*/, '')).trim() || 'our latest news'
-    return { intent: { kind: 'post', network: n, topic, slot: day ? `${day[1]}, ${BEST_SLOT[n].split(', ')[1] ?? '18:00'}` : BEST_SLOT[n] }, forced }
-  }
-  if (/reach|engagement|how are we doing|how('?s| is) it going|performance|numbers|followers/.test(t)) return { intent: { kind: 'performance' }, forced }
   return { intent: { kind: 'unknown' }, forced }
-}
-
-/** Post copy Atlas drafts from a topic, per network. */
-export function draftPost(topic: string, network: Network) {
-  const T = topic.charAt(0).toUpperCase() + topic.slice(1)
-  if (/sale|discount|% off|promo/.test(topic)) return 'Weekend sale: 15% off every Summit Bottle until Sunday 20:00. Cold water for the next trail, warm coffee for the summit.'
-  switch (network) {
-    case 'linkedin': return `${T}. Here’s what our team learned this year, and why it matters to anyone who spends their weekends outside.`
-    case 'tiktok': return `${T} in 20 seconds. Wait for the last shot.`
-    case 'facebook': return `${T}. Tell us in the comments where you’d take it first.`
-    case 'x': return `${T}. More on fernway.co`
-    case 'youtube': return `${T}: the short version, filmed above Annecy.`
-    default: return `${T}. Shot on the trail above Annecy, no filter needed.`
-  }
 }
 
 /** Examples shown when the command bar opens. */

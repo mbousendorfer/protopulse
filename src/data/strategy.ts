@@ -1,5 +1,6 @@
 import type { AgentId, Network } from '../app/types'
 import { T, DAY, DEMO_START } from '../app/time'
+import type { Pillar as PillarName } from './publishing'
 
 export type CampaignStatus = 'brief' | 'review' | 'live' | 'done'
 export type Phase = { name: 'Teasing' | 'Launch' | 'Follow-up'; start: number; end: number; summary: string }
@@ -156,7 +157,7 @@ export const CAMPAIGNS: Campaign[] = [
   },
 ]
 
-export type Pillar = { id: string; name: string; desc: string; target: number; actual: number }
+export type Pillar = { id: string; name: PillarName; desc: string; target: number; actual: number }
 export const PILLARS: Pillar[] = [
   { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35, actual: 41 },
   { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30, actual: 32 },
@@ -169,6 +170,13 @@ export const CADENCE: Cadence[] = [
   { network: 'instagram', target: 5, actual: 5 }, { network: 'tiktok', target: 4, actual: 4 }, { network: 'linkedin', target: 2, actual: 2 },
   { network: 'facebook', target: 2, actual: 3 }, { network: 'youtube', target: 1, actual: 1 }, { network: 'x', target: 3, actual: 2 },
 ]
+
+/** Sage's targets as Atlas reads them: share of posts per pillar, posts a week per network. */
+export type Targets = { pillars: { name: PillarName; target: number }[]; cadence: Partial<Record<Network, number>> }
+export const targetsFrom = (st: { pillars: Pillar[]; cadence: Cadence[] }): Targets => ({
+  pillars: st.pillars.map(({ name, target }) => ({ name, target })),
+  cadence: Object.fromEntries(st.cadence.map(c => [c.network, c.target])),
+})
 
 export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined' }
 export const PROPOSALS: Proposal[] = [

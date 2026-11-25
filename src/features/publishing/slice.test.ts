@@ -1,8 +1,11 @@
 import { expect, test } from 'vitest'
+import { reducer } from '../../app/reducer'
 import { initialState } from '../../app/state'
 import { T } from '../../app/time'
 import { onResolvePublishing, parseSlot, reducePublishing } from './slice'
 import { onResolveInbox, reduceInbox } from '../inbox/slice'
+import { targetsOf } from '../strategy/slice'
+import { behindPillar, gapDays } from './ideasModel'
 
 test('parseSlot reads the slot strings agents write', () => {
   const now = T(8, 12)
@@ -127,4 +130,27 @@ test('ideas: the same angle twice proposes a rule; accepting it adds it to the P
   expect(s.publishing.ideas.find(i => i.id === b.id)!.proposal?.key).toBe('angle:linkedin')
   s = reducePublishing(s, { type: 'publishing/ideaRule', id: b.id, accept: true })
   expect(s.playbook.rules[0].text).toBe('Add a LinkedIn version to every idea')
+})
+
+test('an approved post card keeps its pillar and campaign in the calendar', () => {
+  let s = initialState()
+  s = { ...s, handoffs: [{ id: 'h-test', agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Post', title: 'Test post', context: '', why: '', confidence: 90, at: s.clock.base,
+    pillar: 'Repair & care', campaign: 'Trail Week', campaignId: 'trail-week', preview: { type: 'post', network: 'instagram', slot: 'Fri 28, 18:30', text: ['Repair kit, packed.'] } }, ...s.handoffs] }
+  s = reducer(s, { type: 'core/resolve', id: 'h-test', decision: { kind: 'approve' } })
+  const post = s.publishing.posts.find(p => p.handoff === 'h-test')!
+  expect(post).toMatchObject({ pillar: 'Repair & care', campaign: 'Trail Week', campaignId: 'trail-week', status: 'scheduled' })
+})
+
+test('Atlas reads pillars and cadence from Sage: one source, and it follows Sage’s changes', () => {
+  let s = initialState()
+  const t = targetsOf(s)
+  expect(t.pillars).toEqual(s.strategy.pillars.map(p => ({ name: p.name, target: p.target })))
+  expect(t.cadence).toMatchObject({ instagram: 5, tiktok: 4, linkedin: 2, facebook: 2, youtube: 1, x: 3 })
+  expect(gapDays(s.publishing.posts, T(8, 12), 7, t)[0].network).toBe('x')
+  // Sage drops X: Atlas stops looking for X slots.
+  s = reducer(s, { type: 'strategy/cadence', network: 'x', target: 0 })
+  expect(gapDays(s.publishing.posts, T(8, 12), 7, targetsOf(s)).some(g => g.network === 'x')).toBe(false)
+  // Sage makes Repair & care the pillar furthest behind: Atlas's Ideas say so.
+  s = { ...s, strategy: { ...s.strategy, pillars: s.strategy.pillars.map(p => (p.name === 'Repair & care' ? { ...p, target: 60 } : p)) } }
+  expect(behindPillar(targetsOf(s)).pillar).toBe('Repair & care')
 })

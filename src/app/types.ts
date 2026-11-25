@@ -1,4 +1,5 @@
 // Shared domain types. Feature-specific types live next to their feature.
+import type { Pillar } from '../data/publishing'
 
 export type AgentId = 'nova' | 'atlas' | 'iris' | 'echo' | 'sage' | 'juno'
 export type Autonomy = 'suggest' | 'draft' | 'act'
@@ -50,18 +51,25 @@ export type Lane = Urgency | 'claire' | 'snoozed'
 /** A span of text, optionally flagged as uncertain by the agent. */
 export type Flagged = string | { text: string; note: string }
 
-export type Preview =
-  | { type: 'reply'; network: Network; author: string; text: string; draft: Flagged[]; attachments?: string[] }
-  | { type: 'post'; network: Network; slot: string; text: Flagged[]; media?: string }
-  | { type: 'metric'; label: string; value: string; delta: string; down?: boolean; series: number[] }
-  | { type: 'plan'; title: string; lines: string[] }
-  | { type: 'evidence'; lines: string[] }
-  | { type: 'text'; label: string; body: string }
-  | { type: 'clip'; clip: string }
+/**
+ * Desk preview shapes, by type. An agent adds its own from its registry module, without touching this file:
+ * `declare module '../../app/types' { interface PreviewTypes { clip: { clip: string } } }`, plus a renderer in `previews`.
+ */
+export interface PreviewTypes {
+  reply: { network: Network; author: string; text: string; draft: Flagged[]; attachments?: string[] }
+  post: { network: Network; slot: string; text: Flagged[]; media?: string }
+  metric: { label: string; value: string; delta: string; down?: boolean; series: number[] }
+  plan: { title: string; lines: string[] }
+  evidence: { lines: string[] }
+  text: { label: string; body: string }
+}
+export type Preview = { [K in keyof PreviewTypes]: { type: K } & PreviewTypes[K] }[keyof PreviewTypes]
+export type PreviewOf<K extends Preview['type']> = Extract<Preview, { type: K }>
 
 export type ThreadMsg = { id: string; from: 'agent' | 'you' | 'claire'; text: string; at: number; rule?: string; ruleAdded?: boolean }
 
-export type Handoff = {
+/** An interface so an agent can add its own optional fields from its module (declaration merging), like `LogEntry`. */
+export interface Handoff {
   id: string
   agent: AgentId
   kind: Kind
@@ -99,6 +107,10 @@ export type Handoff = {
   sources?: { label: string; from: string }[]
   /** Good news: the one useful thing to do with it. */
   cta?: { label: string; to?: string }
+  /** A post card's pillar and campaign, kept when the approved post lands in the calendar. */
+  pillar?: Pillar
+  campaign?: string
+  campaignId?: string
 }
 
 export type RuleKind = 'do' | 'dont' | 'word' | 'fact' | 'escalate'
@@ -115,7 +127,7 @@ export type PlaybookRule = {
 
 export type LogStatus = 'done' | 'approved' | 'edited' | 'rejected' | 'undone' | 'redone' | 'dismissed'
 
-export type LogEntry = {
+export interface LogEntry {
   id: string
   agent: AgentId
   at: number
@@ -129,10 +141,6 @@ export type LogEntry = {
   detail?: { before?: string; after?: string }
   /** Cards to bring back when this entry is undone (bulk decisions). */
   restore?: Handoff[]
-  /** Idea Atlas scheduled on its own: Undo takes the posts back out and returns it to Ideas. */
-  idea?: string
-  /** Clips sent to Atlas: Undo takes their posts back out and returns them to Video. */
-  clips?: string[]
 }
 
 /** A Desk card the user settled this session. */

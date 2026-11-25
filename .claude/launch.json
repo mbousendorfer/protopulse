@@ -1,6 +1,13 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "protopulse", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5179"], "port": 5179 }
+    { "name": "protopulse", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5179"], "port": 5179 },
+    { "name": "protopulse-phase0", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5180"], "port": 5180 },
+    { "name": "protopulse-nova", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5181"], "port": 5181 },
+    { "name": "protopulse-atlas", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5182"], "port": 5182 },
+    { "name": "protopulse-iris", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5183"], "port": 5183 },
+    { "name": "protopulse-echo", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5184"], "port": 5184 },
+    { "name": "protopulse-sage", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5185"], "port": 5185 },
+    { "name": "protopulse-juno", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5186"], "port": 5186 }
   ]
 }

@@ -1,9 +1,9 @@
 import { expect, test } from 'vitest'
-import { EXAMPLES, OWNER, parse } from '../../data/command'
+import { EXAMPLES, ownerOf, parse } from '../../data/command'
 import { checkMessage } from '../../data/playbook'
 
 test('every example maps to its intent and agent', () => {
-  const got = EXAMPLES.map(x => { const p = parse(x); return [p.intent.kind, p.forced ?? OWNER[p.intent.kind]] })
+  const got = EXAMPLES.map(x => { const p = parse(x); return [p.intent.kind, p.forced ?? ownerOf(p.intent.kind)] })
   expect(got).toEqual([
     ['post', 'atlas'], ['post', 'atlas'], ['tiktok', 'iris'], ['besttime', 'iris'], ['competitor', 'echo'], ['pause', 'sage'],
     ['rule', 'nova'], ['campaign', 'sage'], ['needs', 'iris'], ['overnight', 'iris'], ['reply', 'nova'], ['mentions', 'echo'], ['clip', 'juno'],
