@@ -450,13 +450,16 @@ export const NETWORK_FIT: Partial<Record<Network, string>> = { tiktok: 'TikTok',
 const DAY0 = T(0, 0, 0)
 
 /** The posts a clip becomes: one per network, at Atlas's best free slot. */
-export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number): Post[] {
+/** The label and campaign a clip's posts carry (see `campaignFor` in the slice). */
+export type PostTags = { labels: string[]; campaign?: string; campaignId?: string }
+
+export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number, tags?: PostTags): Post[] {
   const day = Math.floor((now - DAY0) / DAY)
   const out: Post[] = []
   for (const n of c.post.networks.filter(x => dur === undefined || fitsLength(x, dur))) {
     const at = pickSlot(n, day, [...posts, ...out], now)
     const format = n === 'instagram' || n === 'facebook' ? 'reel' : n === 'linkedin' ? 'video' : 'short'
-    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, format, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title} · ${versionOf(c, n).aspect}` })
+    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, format, status: 'scheduled', author: 'atlas', pillar: c.pillar, ...tags, note: `Clip by Juno: ${c.title} · ${versionOf(c, n).aspect}` })
   }
   return out
 }
