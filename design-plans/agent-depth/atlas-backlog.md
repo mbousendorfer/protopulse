@@ -28,4 +28,4 @@ avec « Retry now » ; pas de statut « Approved »). Trié par valeur, les corr
 | B12 | Import CSV | absent | Import d'un CSV ; Atlas vérifie chaque ligne et propose un lot validable | 1 | M | à pitcher |
 | B13 | Multi-profils | un compte par réseau | Plusieurs comptes par réseau, groupes de profils | 1 | L | à pitcher |
 
-Demandes entrantes (`requests/atlas-from-*.md`) au 25/11 : aucune.
+Demandes entrantes (`requests/atlas-from-*.md`) : 5 traitées (Echo ×2, Iris, Juno, Sage), voir `…-done.md`.

@@ -1,10 +1,12 @@
 // Atlas · Publishing: everything Atlas plugs into the core (see src/app/agents-registry.ts).
 import type { Network } from '../../app/types'
+import { BEST_SLOT } from '../../data/publishing'
+import { DEMO_START } from '../../app/time'
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { flagged } from '../desk/parts'
-import { actVisuals, ideasDue, onResolvePublishing, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
+import { actVisuals, ideasDue, onResolvePublishing, publishDue, publishingDue, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
 import { SCRIPT } from './script'
 import { guardsDue, tickGuards } from './guards'
 import { approvalsDue, sendToClaire, tickApprovals } from './approvals'
@@ -31,7 +33,15 @@ declare module '../../data/command' {
   }
 }
 
-const BEST_SLOT: Record<Network, string> = { instagram: 'Fri 28, 18:30', linkedin: 'Tue 2, 08:30', tiktok: 'Thu 27, 18:00', facebook: 'Sat 29, 10:00', youtube: 'Sun 30, 11:00', x: 'Today, 12:00', google: '', trustpilot: '' }
+/** The next best-day slot from the demo's first morning: Iris's best weekday and time for the network. */
+const bestDay = (n: Network) => {
+  const b = BEST_SLOT[n]
+  if (!b) return ''
+  const start = new Date(DEMO_START)
+  const ahead = ((b.day - (start.getDay() + 6) % 7) + 7) % 7 || 7
+  const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + ahead)
+  return `${d.toLocaleDateString('en-GB', { weekday: 'short' })} ${d.getDate()}, ${b.time}`
+}
 const DAYS: [RegExp, string][] = [[/monday/, 'Mon 1'], [/tuesday/, 'Tue 2'], [/wednesday/, 'Wed 26'], [/thursday/, 'Thu 27'], [/friday/, 'Fri 28'], [/saturday/, 'Sat 29'], [/sunday/, 'Sun 30'], [/tomorrow/, 'Wed 26'], [/today|tonight/, 'Today']]
 
 /** Post copy Atlas drafts from a topic, per network. */
@@ -56,7 +66,7 @@ const post = defineIntent({
     const day = DAYS.find(([re]) => re.test(t))
     const topic = (t.match(/(?:about|on|for)\s+(?:the\s+|our\s+)?(.+?)(?:\s+(?:on|for|this|next)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today|linkedin|instagram|tiktok|facebook|youtube|x)\b.*)?$/)?.[1]
       ?? t.replace(/^(?:write|draft|create|make)\s+(?:me\s+)?(?:an?\s+)?(?:\w+\s+)?(?:post|reel|carousel|tweet)\s*/, '')).trim() || 'our latest news'
-    return { kind: 'post', network: n, topic, slot: day ? `${day[1]}, ${BEST_SLOT[n].split(', ')[1] ?? '18:00'}` : BEST_SLOT[n] }
+    return { kind: 'post', network: n, topic, slot: day ? `${day[1]}, ${BEST_SLOT[n]?.time ?? '18:00'}` : bestDay(n) }
   },
   bar: (i, { d, go, query }) => {
     const text = draftPost(i.topic, i.network)
@@ -164,9 +174,9 @@ const atlas: AgentModule = {
   onUndo: (s, l) => undoCards(unfill(l.idea ? unscheduleIdea(s, l.idea) : s, l.queuePosts ?? []), l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
   // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s),
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t),
   tick: (s, t) => {
-    let next = tickIdeas(s, t)
+    let next = publishDue(tickIdeas(s, t), t)
     if (visualsDue(next)) next = actVisuals(next)
     if (approvalsDue(next)) next = tickApprovals(next)
     return guardsDue(next) ? tickGuards(next) : next
