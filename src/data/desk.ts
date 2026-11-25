@@ -1,6 +1,7 @@
 import type { Handoff } from '../app/types'
 import { T, MIN } from '../app/time'
 import { SEEDS, SOURCE_DEFS, clipFromSeed, clipsCard } from './video'
+import { TIKTOK_VIEWS } from './insights'
 
 const LIVE = { ...SOURCE_DEFS.live, status: 'ready' as const }
 const LIVE_CARD = clipsCard(LIVE, SEEDS.live.map(seed => clipFromSeed(seed, LIVE, 0)))
@@ -59,11 +60,11 @@ export const HANDOFFS: Handoff[] = [
   {
     id: 'h-tiktok', agent: 'iris', kind: 'alert', urgency: 'today', topic: 'Anomaly', action: 'iris-anomaly',
     title: 'TikTok views per video down 38% since Thursday',
-    context: 'All 4 videos posted since Thursday are under 2,000 views. Usual: 9,000.',
+    context: 'All 4 videos posted since Thursday are under 2,200 views. Usual: about 3,000.',
     why: 'Four posts in a row below the normal range. Likely cause: hooks longer than 3 seconds.',
     confidence: 68, at: T(7, 0), link: '/insights/anomalies',
     options: [{ label: 'Ask Atlas to test 3-second hooks this week', recommended: true }, { label: 'Snooze a week' }],
-    preview: { type: 'metric', label: 'TikTok views per video', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8] },
+    preview: { type: 'metric', label: 'TikTok views per video', value: '1,840', delta: '−38%', down: true, series: TIKTOK_VIEWS },
   },
   {
     id: 'h-promo-nova', agent: 'nova', kind: 'promotion', urgency: 'today', topic: 'Autonomy',

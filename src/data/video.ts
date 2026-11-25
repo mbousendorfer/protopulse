@@ -45,7 +45,10 @@ export const SOURCE_DEFS: Record<string, Omit<Source, 'status'>> = {
   gr20: { id: 'gr20', kind: 'youtube', title: 'Storm Jacket: 3 days of GR20 rain', channel: 'Fernway on YouTube', at: T(8, 0), media: 'gr20', transcript: 'gr20' },
 }
 
-export const WATCHING = { channel: 'Fernway', handle: '@fernway', subscribers: '6k', checkedEvery: '15 minutes' }
+/** Who speaks, by the transcript's speaker key. Sentences without one are the narrator, Léa. One table for every screen. */
+export const speakerName = (speaker?: string) => (speaker === 'host' ? 'Camille' : speaker === 'guest' ? 'Léo' : 'Léa')
+
+export const WATCHING ={ channel: 'Fernway', handle: '@fernway', subscribers: '6k', checkedEvery: '15 minutes' }
 
 /* ---------- Brand kit ---------- */
 

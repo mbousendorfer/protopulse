@@ -143,7 +143,8 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     next = addRule(next, { kind: 'dont', text: h.proposal.text, agents: h.proposal.agents, origin: `Learned from your edits · ${agentOf(s, h.agent).name}` })
   }
 
-  for (const m of registry()) if (m.onResolve) next = m.onResolve(next, h, d)
+  const dm: Decision = opts.act ? { ...d, act: true } : d
+  for (const m of registry()) if (m.onResolve) next = m.onResolve(next, h, dm)
 
   // An answer to "missing info" becomes a Playbook fact, so the agent never asks twice.
   if (h.kind === 'info' && d.kind === 'answer') {

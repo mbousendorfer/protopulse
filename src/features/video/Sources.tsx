@@ -8,7 +8,7 @@ import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
 import { validUrl } from './slice'
 import { SESSION_BLOBS, ScoreBadge, SourceThumb, clipScore, fmt, playable, videoUrl } from './parts'
-import { mediaUrl } from '../../data/video'
+import { mediaUrl, speakerName } from '../../data/video'
 
 const KIND = { youtube: { icon: Youtube, label: 'YouTube upload' }, live: { icon: Radio, label: 'Recorded live' }, link: { icon: Link2, label: 'Pasted link' }, upload: { icon: Upload, label: 'Uploaded file' } }
 export const lengthOf = (src: Source) => src.shownDuration ?? fmt(TRANSCRIPT[src.transcript].duration)
@@ -151,7 +151,7 @@ export function SourceDetail({ id }: { id: string }) {
             {playable(src)
               ? <video ref={video} className="src-video" src={videoUrl(src)} poster={src.kind === 'upload' ? undefined : mediaUrl(`${src.media}/poster.jpg`)} controls preload="metadata" />
               : <div className="src-video gone"><p>Upload the file again to play it: uploads stay in the browser for one session.</p></div>}
-            {src.sampleTranscript && <p className="muted t-sm">This prototype can’t transcribe your file: the transcript and clips below come from a sample video.</p>}
+            {src.sampleTranscript && <p className="muted t-sm">{src.kind === 'link' ? 'This prototype can’t open links: the video, transcript and clips below come from a sample video.' : 'This prototype can’t transcribe your file: the transcript and clips below come from a sample video.'}</p>}
             <form className="card pad stack" onSubmit={find} aria-labelledby="find-h">
               <div className="row nowrap"><Mark agent="juno" /><h3 id="find-h" className="section-title flush">Find clips about…</h3></div>
               <div className="add-link">
@@ -180,7 +180,7 @@ export function SourceDetail({ id }: { id: string }) {
                     {first && c && <div className="tr-clip"><Link to={`/video/clips/${c.id}`} className="link-btn">{c.title}</Link><ScoreBadge value={clipScore(c, src).total} /></div>}
                     <button className="tr-line" onClick={() => seek(se.s)}>
                       <span className="mono">{fmt(se.s)}</span>
-                      {se.speaker && <b>{se.speaker === 'host' ? 'Camille' : 'Léo'}</b>}
+                      {se.speaker && <b>{speakerName(se.speaker)}</b>}
                       <span>{se.text}</span>
                     </button>
                   </li>
