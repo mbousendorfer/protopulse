@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
 import { DAY, dayLabel } from '../../app/time'
@@ -13,7 +13,7 @@ export const initialStrategy = (): StrategyState => ({
 })
 
 export type StrategyAction =
-  | { type: 'strategy/create'; id: string; brief: string; budget?: number }
+  | { type: 'strategy/create'; id: string; brief: string; budget?: number; input?: Omit<BriefInput, 'text'> }
   | { type: 'strategy/approve'; id: string }
   | { type: 'strategy/changes'; id: string; feedback: string }
   | { type: 'strategy/discard'; id: string }
@@ -189,7 +189,7 @@ export function closeCampaigns(s: State, t: number): State {
 export function reduceStrategy(s: State, a: StrategyAction): State {
   switch (a.type) {
     case 'strategy/create':
-      return addPlan(s, generatePlan(a.id, a.brief, now(s), { budget: a.budget }), { brief: a.brief })
+      return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { budget: a.budget }), { brief: a.brief })
     case 'strategy/approve':
       return approveCampaign(s, a.id)
     case 'strategy/changes': {
