@@ -4,7 +4,8 @@ import type { Handoff } from '../../app/types'
 import { MEDIA, type Media, type Pillar, type Post } from '../../data/publishing'
 
 /** The library: what you uploaded first, then the seeded photos. */
-export const libraryOf = (s: State): Media[] => [...(s.publishing.uploads ?? []), ...MEDIA]
+export const libraryOf = (s: State): Media[] =>
+  [...(s.publishing.uploads ?? []), ...MEDIA].map(m => (s.publishing.mediaTags?.[m.id] ? { ...m, tags: s.publishing.mediaTags[m.id] } : m))
 
 /** The Desk card asking for this post's visual, if one is open. */
 export const visualCardOf = (s: State, p: Post): Handoff | undefined =>

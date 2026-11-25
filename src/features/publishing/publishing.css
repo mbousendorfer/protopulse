@@ -80,6 +80,8 @@
 .pub-fail > .grow { flex: 1 1 320px; min-width: 0; }
 .media-bar { display: flex; align-items: flex-start; gap: var(--s3); }
 .media-bar > .grow { min-width: 0; }
+.media-search { width: 220px; flex: none; }
+@media (max-width: 640px) { .media-bar { flex-wrap: wrap; } .media-search { width: 100%; } }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s3); }
 .media-tile { display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 0; background: none; border: 0; text-align: left; color: var(--ink); border-radius: var(--r-card); }
 .media-photo { display: block; aspect-ratio: 4 / 5; border-radius: var(--r-card); overflow: hidden; border: 1px solid transparent; transition: border-color var(--fast) var(--ease); }
