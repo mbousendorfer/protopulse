@@ -22,7 +22,7 @@ avec « Retry now » ; pas de statut « Approved »). Trié par valeur, les corr
 | B6 | Liens et UTM | `link` posé sur `Post` sans UI | Champ lien, UTM générés selon une convention du Playbook, lien court simulé ; clics lus chez Iris | 2 | M | go |
 | B7 | Notes et commentaires | absent | Notes de calendrier par jour, commentaires sur un post avec @Claire ; Atlas lit les notes | 2 | M | go, plus simple (notes + quiet day) |
 | B8 | Glisser-déposer horaire | `Page.tsx:104-115` : le dépôt garde l'heure ; mois : pas de dépôt | Déposer sur une heure en semaine, déplacer en vue mois ; Atlas commente | 1 | S | à pitcher |
-| B9 | Perf d'un post | aperçu (`Bulk.tsx`) : `stats` seulement | Chiffres d'Iris et lien vers Insights depuis le panneau d'aperçu | 2 | S | go |
+| B9 | Perf d'un post | aperçu (`Bulk.tsx`) : `stats` seulement | Chiffres d'Iris et lien vers Insights depuis le panneau d'aperçu | 2 | S | done |
 | B10 | Médiathèque complète (dossiers, tags, droits) | Media : filtres par tag, lecture seule | Tags éditables, recherche, alerte droits expirés ; Atlas trie et tagge à l'arrivée | 2 | M | à pitcher |
 | B11 | Fuseaux horaires | absent | Fuseau par profil, aperçu « 18:30 Paris · 17:30 London » | 1 | M | à pitcher |
 | B12 | Import CSV | absent | Import d'un CSV ; Atlas vérifie chaque ligne et propose un lot validable | 1 | M | à pitcher |

@@ -6,11 +6,30 @@ import { DAY } from '../../app/time'
 import { now } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
 import { NETWORKS_SOCIAL, POSTS, type Cited, type Recipe, type Report, type ReportSection, type SectionKind } from '../../data/insights'
-import { bestTime, fmt, rangeKpis } from './metrics'
+import { bestTime, fmt, postPerf, rangeKpis } from './metrics'
 import { anomalyList } from './slice'
 
 export const SECTION_LABEL: Record<SectionKind, string> = {
   summary: 'Results', top: 'Top 3 posts', dips: 'What didn’t work', besttime: 'Best times to post', pillars: 'By pillar', community: 'Community',
+  campaign: 'Campaign vs goal', label: 'Labelled posts',
+}
+
+/**
+ * The parts of a request only the state can resolve: a campaign of Sage's named in it (its window and networks
+ * become the report's), or a label on Atlas's posts (“labelled Sale”).
+ */
+export function enrich(s: State, raw: string, r: Recipe): Recipe {
+  const t = raw.toLowerCase()
+  const c = s.strategy.campaigns.find(x => t.includes(x.name.toLowerCase()))
+  const l = t.match(/(?:labell?ed|label|tagged)\s+[“"']?([a-z0-9][a-z0-9 &-]*?)[”"']?(?=\s+(?:for|on|over|in|this|last)\b|[.,!?]|$)/)
+  let next = r
+  if (c) {
+    const days = Math.min(90, Math.max(1, Math.round((Math.min(c.end, now(s)) - c.start) / DAY) + 1))
+    const nets = [...new Set(c.posts.map(p => p.network))]
+    next = { ...next, campaign: c.id, days, networks: r.networks.length ? r.networks : nets, sections: ['campaign', ...r.sections.filter(k => k !== 'campaign')] }
+  }
+  if (l) next = { ...next, label: l[1].trim(), sections: ['label', ...next.sections.filter(k => k !== 'label')] }
+  return next
 }
 export const DEFAULT_SECTIONS: SectionKind[] = ['summary', 'top', 'dips', 'besttime', 'community']
 
@@ -79,6 +98,32 @@ export function writeSection(s: State, r: Recipe, kind: SectionKind, short = fal
     const replies = k.find(x => x.key === 'replies')!, reply = k.find(x => x.key === 'reply')!, sentiment = k.find(x => x.key === 'sentiment')!
     paras = [[c(`${fmt.int(replies.value)} replies`, `Inbox · all networks · ${window}`), ' handled, with a median reply time of ', c(`${reply.value} minutes`, `Inbox · median first reply · ${window}`), '. Positive sentiment held at ', c(`${sentiment.value}%`, `Listening · brand mentions · ${window}`), '.']]
   }
+  if (kind === 'campaign') {
+    const cp = s.strategy.campaigns.find(x => x.id === r.campaign)
+    if (!cp) paras = [['This report isn’t about a campaign. Ask for one by name, like “a report on Trail Week”.']]
+    else {
+      const day = Math.max(1, Math.min(Math.round((cp.end - cp.start) / DAY) + 1, Math.round((now(s) - cp.start) / DAY) + 1)), total = Math.round((cp.end - cp.start) / DAY) + 1
+      const pct = Math.round(cp.goal.current / cp.goal.target * 100)
+      const out = cp.posts.filter(p => p.published).length
+      const moved = cp.adjustments.filter(a => a.status === 'accepted')
+      paras = [
+        [`${cp.name}: `, c(`${fmt.int(cp.goal.current)} of ${fmt.int(cp.goal.target)} ${cp.goal.label}`, `Sage · ${cp.name} · goal`), ` (${pct}%), day ${day} of ${total}. `, c(`${out} of ${cp.posts.length} posts`, `Sage · ${cp.name} · plan`), ' are out.'],
+        moved.length ? [`Sage adjusted the plan: ${moved.map(a => a.text.replace(/\.$/, '')).join('; ')}.`] : ['No change to the plan so far.'],
+      ]
+      chart = cp.planned.length ? 'campaign' : undefined
+    }
+  }
+  if (kind === 'label') {
+    const lab = (r.label ?? '').toLowerCase()
+    const ps = s.publishing.posts.filter(p => p.status === 'published' && (p.labels?.some(x => x.toLowerCase() === lab) || p.campaign?.toLowerCase() === lab))
+    const perf = ps.map(p => ({ p, x: postPerf(s, p.id) })).filter(y => y.x)
+    if (!perf.length) paras = [[`No published post carries the label “${r.label}” yet. Atlas labels posts when he schedules them; this section fills in as they go out.`]]
+    else {
+      const reach = perf.reduce((t, y) => t + y.x!.reach, 0), er = perf.reduce((t, y) => t + y.x!.er, 0) / perf.length
+      const best = [...perf].sort((a, b) => b.x!.reach - a.x!.reach)[0]
+      paras = [[c(`${perf.length} posts`, `Atlas · label “${r.label}”`), ' reached ', c(fmt.k(reach), `Label “${r.label}” · reach`), ' at ', c(fmt.pct(er), `Label “${r.label}” · average engagement`), `. Best: “${best.p.text.slice(0, 60)}” on ${NETWORK_LABEL[best.p.network]}.`]]
+    }
+  }
   if (short) { paras = kind === 'top' || kind === 'dips' ? paras.slice(0, 1) : firstSentence(paras); if (kind === 'pillars') chart = undefined }
   return { heading: SECTION_LABEL[kind], paras, chart, kind, short }
 }
@@ -90,8 +135,9 @@ export function writeStudio(s: State, recipe: Recipe, id: string, at: number): R
   const sections = recipe.sections.map(k => writeSection(s, recipe, k))
   const end = new Date(at), start = new Date(at - (recipe.days - 1) * DAY)
   const d = (x: Date) => x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const about = recipe.campaign ? s.strategy.campaigns.find(x => x.id === recipe.campaign)?.name : recipe.label ? `Label “${recipe.label}”` : undefined
   return {
-    id, kind: 'custom', recipe, writtenAt: at, title: `${TITLE[recipe.days] ?? `${recipe.days}-day`} report · ${netNames(recipe)}`,
+    id, kind: 'custom', recipe, writtenAt: at, title: about ? `${about} report` : `${TITLE[recipe.days] ?? `${recipe.days}-day`} report · ${netNames(recipe)}`,
     period: `${d(start)} – ${d(end)}`,
     summary: `${recipe.audience === 'claire' ? 'For Claire. ' : ''}${sections.length} sections on ${netNames(recipe)}, last ${recipe.days} days. Every number points to its source.`,
     sections,
@@ -117,7 +163,7 @@ export function applyOp(s: State, r: Report, o: StudioOp): Report {
 
 const KIND_WORDS: [RegExp, SectionKind][] = [
   [/best time|timing|when to post|slot/, 'besttime'], [/result|summary|reach|overview/, 'summary'], [/top \d|top three|top posts|best posts|\bposts\b/, 'top'],
-  [/didn|dip|anomal|problem|\bbad\b/, 'dips'], [/pillar|theme/, 'pillars'], [/community|inbox|repl/, 'community'],
+  [/didn|dip|anomal|problem|\bbad\b/, 'dips'], [/pillar|theme/, 'pillars'], [/community|inbox|repl/, 'community'], [/campaign|goal/, 'campaign'], [/label/, 'label'],
 ]
 const kindIn = (t: string) => KIND_WORDS.find(([re]) => re.test(t))?.[1]
 
