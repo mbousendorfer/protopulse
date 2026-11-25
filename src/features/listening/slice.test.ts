@@ -229,3 +229,38 @@ it('a share reads as counts under 10, a percentage from 10', async () => {
   expect(share(2, 3)).toBe('2 of 3')
   expect(share(5, 10)).toBe('50%')
 })
+
+describe('Echo · creators', () => {
+  it('lists creators from the feed and flags the fits', async () => {
+    const { creatorsOf } = await import('./model')
+    const list = creatorsOf(s0())
+    expect(list.find(c => c.handle === '@camille.outdoors')?.fit).toBe(true)
+    expect(list.find(c => c.handle === '@theo.wild')?.fit).toBe(false)
+  })
+
+  it('a collab DM is a Nova card; approving marks the creator contacted', () => {
+    let s = reducer(s0(), { type: 'listening/creator', handle: '@camille.outdoors', op: 'propose' })
+    const h = s.handoffs.find(x => x.ref === 'collab:@camille.outdoors')!
+    expect(h.agent).toBe('nova')
+    expect(s.listening.creators['@camille.outdoors']).toBe('proposed')
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.listening.creators['@camille.outdoors']).toBe('contacted')
+  })
+
+  it('the creator event follows the level, and Act can be undone', () => {
+    const lv = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-creators', level: l })
+    const ev = (s: State) => reducer(s, { type: 'core/fire', eventId: 'ev-creator-fit' })
+    expect(ev(lv('draft')).handoffs.some(h => h.ref === 'ev-creator-fit')).toBe(true)
+    expect(ev(lv('suggest')).listening.creators['@jeanne.paris']).toBeUndefined()
+    let s = ev(lv('act'))
+    expect(s.listening.creators['@jeanne.paris']).toBe('listed')
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.listening.creators['@jeanne.paris']).toBeUndefined()
+  })
+
+  it('⌘K answers who talks about Peakline from the same list', () => {
+    const s = s0()
+    const text = intentDef('creators')!.bar({ kind: 'creators', rival: 'peakline' } as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toMatch(/@theo\.wild \(120k, signed with Peakline\)/)
+  })
+})

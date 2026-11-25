@@ -7,6 +7,11 @@ import { flagged } from '../desk/parts'
 import { actVisuals, ideasDue, onResolvePublishing, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
 import { SCRIPT } from './script'
 import { guardsDue, tickGuards } from './guards'
+import { approvalsDue, sendToClaire, tickApprovals } from './approvals'
+import type { State } from '../../app/state'
+import { FIRST_COMMENT, SIZE_GUIDE } from './formats'
+import { now } from '../../app/core'
+import { hhmm } from '../../app/time'
 
 declare module '../../app/types' {
   interface LogEntry {
@@ -15,7 +20,11 @@ declare module '../../app/types' {
   }
 }
 declare module '../../data/command' {
-  interface IntentTypes { post: { network: Network; topic: string; slot: string } }
+  interface IntentTypes {
+    post: { network: Network; topic: string; slot: string }
+    postClaire: { day?: string; network?: Network }
+    firstComment: { day?: string; network?: Network; text: string }
+  }
 }
 
 const BEST_SLOT: Record<Network, string> = { instagram: 'Fri 28, 18:30', linkedin: 'Tue 2, 08:30', tiktok: 'Thu 27, 18:00', facebook: 'Sat 29, 10:00', youtube: 'Sun 30, 11:00', x: 'Today, 12:00', google: '', trustpilot: '' }
@@ -57,6 +66,69 @@ const post = defineIntent({
   chat: i => ({ replies: [{ from: 'atlas', text: `Here’s a ${NETWORK_LABEL[i.network]} draft for ${i.slot}${i.slot.includes('18') ? ', your best evening slot there' : ''}. Nothing goes out until you schedule it.`, card: { type: 'post', network: i.network, slot: i.slot, text: draftPost(i.topic, i.network), status: 'draft' } }], effects: [] }),
 })
 
+/** The post a sentence points at: the day named ("Friday's post"), the network if named, the soonest one still to go out. */
+function postNamed(s: State, i: { day?: string; network?: Network }) {
+  const today = new Date(now(s)).getDate()
+  const date = i.day === 'Today' ? today : i.day ? +i.day.split(' ')[1] : undefined
+  return s.publishing.posts
+    .filter(p => ['scheduled', 'draft', 'needs'].includes(p.status) && p.at > now(s) && (!date || new Date(p.at).getDate() === date) && (!i.network || p.network === i.network))
+    .sort((a, b) => a.at - b.at)[0]
+}
+const sentText = (p: { network: Network; at: number; text: string }) =>
+  `Sent the ${NETWORK_LABEL[p.network]} post for ${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'long' })} ${hhmm(p.at)} to Claire: “${p.text}”. It’s To approve until she answers, usually within a minute.`
+
+const postClaire = defineIntent({
+  kind: 'postClaire', owner: 'atlas', order: 135,
+  parse: t => {
+    if (!/claire/.test(t) || !/\b(send|ask|share|get)\b/.test(t) || !/\b(post|reel|tweet|story|carousel)\b/.test(t)) return
+    return { kind: 'postClaire', day: DAYS.find(([re]) => re.test(t))?.[1], network: net(t) }
+  },
+  bar: (i, { s, d, go }) => {
+    const p = postNamed(s, i)
+    if (!p) return { text: `I don’t see a post to send${i.day ? ` on ${i.day}` : ''}${i.network ? ` on ${NETWORK_LABEL[i.network]}` : ''}. Open the calendar to pick one.`, ctas: [{ label: 'Open the calendar', primary: true, run: () => go('/publishing/calendar') }] }
+    return {
+      text: sentText(p),
+      after: () => d({ type: 'publishing/claire', post: p }),
+      ctas: [{ label: 'Open the post', primary: true, run: () => go(`/publishing/calendar?post=${p.id}`) }],
+    }
+  },
+  chat: (i, { s }) => {
+    const p = postNamed(s, i)
+    if (!p) return { replies: [{ from: 'atlas', text: `I don’t see a post to send${i.day ? ` on ${i.day}` : ''}. Tell me the day or open the calendar.` }], effects: [] }
+    return { replies: [{ from: 'atlas', text: sentText(p) }], effects: [x => { const q = x.publishing.posts.find(y => y.id === p.id); return q ? sendToClaire(x, q, 'You asked from Chat.', 'you').s : x }] }
+  },
+})
+
+/** The post a first comment goes on: the one named, else the next product post on a network that has first comments. */
+const commentTarget = (s: State, i: { day?: string; network?: Network }) => {
+  const named = i.day || i.network ? postNamed(s, i) : undefined
+  if (named && FIRST_COMMENT.includes(named.network)) return named
+  return s.publishing.posts.filter(p => p.status === 'scheduled' && p.at > now(s) && FIRST_COMMENT.includes(i.network ?? p.network) && p.network === (i.network ?? p.network) && (i.day ? false : /ridge|bottle|jacket|fleece/i.test(p.text)))
+    .sort((a, b) => a.at - b.at)[0]
+}
+const commentText = (i: { day?: string; network?: Network; text: string }, p: { network: Network; at: number }) =>
+  `Added the first comment “${i.text}” to the ${NETWORK_LABEL[p.network]} post for ${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'long' })} ${hhmm(p.at)}. It goes out with the post.`
+
+const firstComment = defineIntent({
+  kind: 'firstComment', owner: 'atlas', order: 136,
+  parse: (t, { raw }) => {
+    if (!/first comment/.test(t)) return
+    const quoted = raw.match(/[“"]([^”"]+)[”"]/)?.[1]
+    const text = quoted ?? (/size guide|sizes?\b/.test(t) ? `Sizes, weights and specs: ${SIZE_GUIDE}` : `More on ${'fernway.co'}`)
+    return { kind: 'firstComment', day: DAYS.find(([re]) => re.test(t))?.[1], network: net(t), text }
+  },
+  bar: (i, { s, d, go }) => {
+    const p = commentTarget(s, i)
+    if (!p) return { text: 'I don’t see a post on Instagram, Facebook or LinkedIn to add it to. First comments only exist there.', ctas: [{ label: 'Open the calendar', primary: true, run: () => go('/publishing/calendar') }] }
+    return { text: commentText(i, p), after: () => d({ type: 'publishing/firstComment', id: p.id, text: i.text }), ctas: [{ label: 'Open the post', primary: true, run: () => go(`/publishing/calendar?post=${p.id}`) }] }
+  },
+  chat: (i, { s }) => {
+    const p = commentTarget(s, i)
+    if (!p) return { replies: [{ from: 'atlas', text: 'I don’t see a post on Instagram, Facebook or LinkedIn to add it to. First comments only exist there.' }], effects: [] }
+    return { replies: [{ from: 'atlas', text: commentText(i, p) }], effects: [x => ({ ...x, publishing: { ...x.publishing, posts: x.publishing.posts.map(q => (q.id === p.id ? { ...q, firstComment: i.text } : q)) } })] }
+  },
+})
+
 const atlas: AgentModule = {
   id: 'atlas',
   script: SCRIPT,
@@ -64,13 +136,14 @@ const atlas: AgentModule = {
   onUndo: (s, l) => undoCards(l.idea ? unscheduleIdea(s, l.idea) : s, l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
   // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s),
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s),
   tick: (s, t) => {
     let next = tickIdeas(s, t)
     if (visualsDue(next)) next = actVisuals(next)
+    if (approvalsDue(next)) next = tickApprovals(next)
     return guardsDue(next) ? tickGuards(next) : next
   },
-  intents: [post],
+  intents: [post, postClaire, firstComment],
   batches: [{
     // An idea with a short window stands on its own: it opens the idea, and its other networks live there.
     id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal && h.topic !== 'Idea',

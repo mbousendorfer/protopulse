@@ -18,7 +18,7 @@ export type Transcript = { duration: number; sentences: Sentence[]; words: Word[
 
 /* ---------- Clip ---------- */
 
-export type Aspect = '9:16' | '1:1' | '16:9'
+export type Aspect = '9:16' | '1:1' | '16:9' | '4:5'
 export type Frame = 'track' | 'fill' | 'fit' | 'split'
 export type CapTemplate = 'highlight' | 'pop' | 'clean' | 'keyword' | 'boxed'
 export type CapFont = 'sans' | 'condensed' | 'serif'
@@ -80,6 +80,8 @@ export type Clip = {
   sentFrom?: string
   /** When it went to Atlas: counts toward the weekly quota per video. */
   sentAt?: number
+  /** One version per network (ratio, caption height). Without one, the network gets the clip as framed above. */
+  versions?: Partial<Record<Network, Version>>
   /** What your published clips of the same pillar did: moves the total, and names the clip to compare with. */
   track?: Track
   /** The cover: a frame of the source (seconds), the text on it, who picked it. Without one, the source's poster. */
@@ -284,6 +286,33 @@ export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90
 export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
 export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
 
+/* ---------- Versions per network ---------- */
+
+export type Version = { aspect: Aspect; y: number }
+/** Each app's ratio, and the bands its buttons and text cover (percent of the frame, from the bottom and the right). */
+export const NET_SPEC: Partial<Record<Network, { aspect: Aspect; bottom: number; right: number }>> = {
+  tiktok: { aspect: '9:16', bottom: 24, right: 16 },
+  instagram: { aspect: '9:16', bottom: 22, right: 14 },
+  youtube: { aspect: '9:16', bottom: 20, right: 14 },
+  linkedin: { aspect: '1:1', bottom: 10, right: 0 },
+  facebook: { aspect: '4:5', bottom: 14, right: 12 },
+}
+const specOf = (n: Network) => NET_SPEC[n] ?? { aspect: '16:9' as Aspect, bottom: 10, right: 0 }
+/** Highest caption position (percent from the top) that stays clear of the app's buttons. */
+export const safeY = (n: Network) => 100 - specOf(n).bottom - 10
+export const versionOf = (c: Clip, n: Network): Version => c.versions?.[n] ?? { aspect: c.aspect, y: c.captions.y }
+/** Juno's version for a network: its ratio, captions moved above its buttons. */
+export const versionFor = (c: Clip, n: Network): Version => ({ aspect: specOf(n).aspect, y: Math.min(c.captions.y, safeY(n)) })
+export const buildVersions = (c: Clip): Partial<Record<Network, Version>> => Object.fromEntries(c.post.networks.map(n => [n, versionFor(c, n)]))
+/** What doesn't fit a network's spec: ratio, captions under its buttons. Length is checked apart (fitsLength). */
+export function versionIssues(c: Clip, n: Network): string[] {
+  const v = versionOf(c, n)
+  const out: string[] = []
+  if (v.aspect !== specOf(n).aspect) out.push(`${v.aspect} where the app shows ${specOf(n).aspect}`)
+  if (v.y > safeY(n)) out.push('captions sit under the app’s buttons')
+  return out
+}
+
 /* ---------- Cover ---------- */
 
 const COVER_WORDS = /strap|ridge|jacket|bottle|bag|zip|slider|hands|léa|camille|léo|machine|stitch|bar tack|patch|hood|shell/i
@@ -426,7 +455,8 @@ export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => str
   const out: Post[] = []
   for (const n of c.post.networks.filter(x => dur === undefined || fitsLength(x, dur))) {
     const at = pickSlot(n, day, [...posts, ...out], now)
-    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title}` })
+    const format = n === 'instagram' || n === 'facebook' ? 'reel' : n === 'linkedin' ? 'video' : 'short'
+    out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, format, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title} · ${versionOf(c, n).aspect}` })
   }
   return out
 }

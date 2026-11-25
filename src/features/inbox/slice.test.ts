@@ -223,3 +223,36 @@ describe('saved replies', () => {
     expect(s.inbox.saved.slice(-1)[0]).toMatchObject({ name: 'Enjoy', by: 'you', uses: 0 })
   })
 })
+
+describe('response time', () => {
+  it('waiting time per conversation, longest first, and ⌘K says the same numbers', async () => {
+    const { waitingList, dur, responseStats } = await import('./slice')
+    const { now } = await import('../../app/core')
+    const s = initialState()
+    const list = waitingList(s, now(s))
+    expect(list.length).toBeGreaterThan(3)
+    expect(list.every((x, i) => i === 0 || list[i - 1].w.since <= x.w.since)).toBe(true)
+    const sophie = list.find(x => x.c.id === 'c-sophie')!
+    expect(sophie.w.target).toBe(60 * 60_000)
+    expect(sophie.w.over).toBe(true)
+    expect(responseStats(s, now(s)).waiting).toBe(list.length)
+    const { parse } = await import('../../data/command')
+    expect(parse('who is waiting longest?').intent.kind).toBe('waiting')
+    expect(dur(185 * 60_000)).toBe('3 h 05')
+  })
+
+  it('15 minutes before a target, Nova raises one Desk card; it goes once they are answered', async () => {
+    const { tickInbox, waitingList } = await import('./slice')
+    const { now } = await import('../../app/core')
+    let s = initialState()
+    const next = waitingList(s, now(s)).filter(x => !x.w.over).sort((a, b) => a.w.due - b.w.due)[0]
+    const t = next.w.due - 10 * 60_000
+    s = tickInbox(s, t)
+    const card = s.handoffs.find(h => h.sla?.includes(next.c.id))!
+    expect(card.title).toMatch(/response target at/)
+    expect(tickInbox(s, t).handoffs.filter(h => h.sla).length).toBe(1)
+    s = reducer(s, { type: 'inbox/send', id: next.c.id, text: 'On it' })
+    s = tickInbox(s, t)
+    expect(s.handoffs.some(h => h.id === card.id)).toBe(card.sla!.length > 1)
+  })
+})

@@ -2,7 +2,7 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { COMPETITORS, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { COMPETITORS, CREATOR_INFO, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
 import type { Network } from '../../app/types'
 import type { Watched } from './slice'
 import type { Alert } from '../insights/alerts'
@@ -221,3 +221,27 @@ function topWord(ms: Mention[], own: string) {
   const best = [...by].sort((a, b) => b[1] - a[1])[0]
   return best && best[1] >= 3 ? best : undefined
 }
+
+/* ---------- Creators ---------- */
+
+/** Creators: authors with an @handle reaching 5,000 people or more. */
+export const CREATOR_MIN_REACH = 5000
+/** Echo proposes a collab to a creator who is mostly positive, reaches 10k or more and isn't signed with a rival. */
+export const COLLAB_MIN_REACH = 10_000
+export type Creator = { handle: string; name: string; network: string; followers: number; mentions: Mention[]; mood: Sentiment; fit: boolean; fitWhy: string; also: { competitor: string; n: number }[]; history: string[]; signed?: string }
+
+export function creatorsOf(s: State): Creator[] {
+  const by = new Map<string, Mention[]>()
+  for (const m of allMentions(s)) if (m.author.startsWith('@') && (m.reach >= CREATOR_MIN_REACH || CREATOR_INFO[m.author])) by.set(m.author, [...(by.get(m.author) ?? []), m])
+  return [...by].map(([handle, ms]) => {
+    const info = CREATOR_INFO[handle]
+    const c = moodCount(s, ms)
+    const mood: Sentiment = c.negative > c.positive ? 'negative' : c.positive >= c.neutral ? 'positive' : 'neutral'
+    const followers = Math.max(...ms.map(m => m.reach))
+    const signed = info?.signed ? competitorName(s, info.signed) : undefined
+    const fit = mood === 'positive' && followers >= COLLAB_MIN_REACH && !signed
+    const fitWhy = signed ? `Signed with ${signed}: not now.` : mood !== 'positive' ? 'Not positive about Fernway yet.' : followers < COLLAB_MIN_REACH ? `Under ${COLLAB_MIN_REACH / 1000}k people: thank them, no collab yet.` : `Positive, unpaid, ${Math.round(followers / 1000)}k people: worth a collab.`
+    return { handle, name: info?.name ?? handle.slice(1), network: ms[0].network, followers, mentions: ms, mood, fit, fitWhy, also: (info?.also ?? []).map(a => ({ competitor: competitorName(s, a.competitor), n: a.n })), history: info?.history ?? [], signed }
+  }).sort((a, b) => Number(b.fit) - Number(a.fit) || b.followers - a.followers)
+}
+export const creatorOf = (s: State, handle: string) => creatorsOf(s).find(c => c.handle === handle)

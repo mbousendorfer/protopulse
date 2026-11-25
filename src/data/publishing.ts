@@ -2,7 +2,7 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 
 export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
-export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused'
+export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused' | 'unapproved'
 
 export type Post = {
   id: string
@@ -20,10 +20,16 @@ export type Post = {
   labels?: string[]
   link?: { url: string; utm?: Record<string, string> }
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
+  /** Published as the first comment, on networks that allow it. */
+  firstComment?: string
   stats?: { reach: number; er: number }
   handoff?: string
   note?: string
   group?: string
+  /** Claire's approval: pending while the post is To approve, then her verdict. `card` is the Desk card in her lane. */
+  approval?: { state: 'pending' | 'approved' | 'changes' | 'declined'; at: number; card?: string }
+  /** Comments on the post, newest last: Atlas, Claire, you. */
+  comments?: { from: 'atlas' | 'claire' | 'you'; text: string; at: number }[]
   /** Why the network refused it, while it is Failed. */
   failure?: { at: number; text: string }
   /** Held for something Sam said they'd provide. */
