@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
 import { DAY, dayLabel } from '../../app/time'
@@ -175,11 +175,92 @@ export function onUndoStrategy(s: State, entry: LogEntry): State {
   return next
 }
 
-/** Campaigns past their end date close themselves. */
-export const campaignsDue = (s: State, t: number) => s.strategy.campaigns.some(c => c.status === 'live' && c.end < t)
-export function closeCampaigns(s: State, t: number): State {
+/* ---------- Live goals: results come in, Sage watches the trajectory ---------- */
+
+/** The plan has 9 points from start to end; results arrive at the same pace. */
+const POINTS = 9
+const stepOf = (c: Campaign) => (c.end - c.start) / (POINTS - 1)
+const seed = (id: string) => [...id].reduce((n, ch) => (n * 31 + ch.charCodeAt(0)) % 997, 7)
+// ponytail: results are simulated, drifting toward a pace per campaign; Iris's real attribution replaces this when she exposes it.
+export const paceOf = (c: Campaign) => c.pace ?? 0.8 + (seed(c.id) % 45) / 100
+const resultsDue = (c: Campaign, t: number) => c.status === 'live' && c.actual.length < POINTS && c.start + c.actual.length * stepOf(c) <= t
+
+/** The next result: last ratio to plan, half-way toward the campaign's pace (or the ratio given). */
+function nextResult(c: Campaign, ratio?: number): Campaign {
+  const i = c.actual.length
+  const last = i > 0 && c.planned[i - 1] ? c.actual[i - 1] / c.planned[i - 1] : 1
+  const r = ratio ?? last + (paceOf(c) - last) * 0.5
+  const v = Math.max(c.actual[i - 1] ?? 0, Math.round(c.planned[i] * r))
+  return { ...c, actual: [...c.actual, v], goal: { ...c.goal, current: v } }
+}
+
+const OFF_LOW = 0.85, OFF_HIGH = 1.2
+const round10 = (n: number) => Math.max(10, Math.round(n / 10) * 10)
+
+/** Off trajectory: Sage proposes a fix with real moves (a Desk card on Draft, applied on Act). */
+function watchTrajectory(s: State, id: string, t: number): State {
+  const c = campaign(s, id)
+  const i = (c?.actual.length ?? 0) - 1
+  if (!c || i < 1 || !c.planned[i]) return s
+  const r = c.actual[i] / c.planned[i]
+  if (r >= OFF_LOW && r <= OFF_HIGH) return s
+  // One trajectory card at a time per campaign (the seeded goal card counts).
+  if (s.handoffs.some(h => cardOf(h)?.campaign === id && (!!cardOf(h)?.goal || /trajectory/.test(h.title)))) return s
+  const pct = Math.round(r * 100)
+  const u = unit(c)
+  let adj: Adjustment
+  if (r > OFF_HIGH) {
+    const goal = round10(c.goal.target * Math.min(r, 1.3))
+    adj = { id: uid('adj'), status: 'proposed', goal, text: `${c.name} is at ${pct}% of its trajectory. Raise the goal from ${fmtN(c, c.goal.target)} to ${fmtN(c, goal)} ${u}.` }
+  } else {
+    // Posts another open adjustment already moves stay out of this one.
+    const taken = new Set(c.adjustments.filter(a => a.status === 'proposed').flatMap(a => a.moves ?? []).map(m => m.post))
+    const upcoming = c.posts.filter(p => !p.published && slotOf(c, p) > t && !taken.has(p.id))
+    // Where the campaign already works: the network most of its published posts are on.
+    const done = c.posts.filter(p => p.published)
+    const best = [...new Set(done.map(p => p.network))].sort((a, b) => done.filter(p => p.network === b).length - done.filter(p => p.network === a).length)[0]
+    const count = (n: Network) => upcoming.filter(p => p.network === n).length
+    const nets = [...new Set(upcoming.map(p => p.network))].sort((a, b) => count(b) - count(a))
+    const from = nets.find(n => n !== best) ?? nets[0], to = best && best !== from ? best : nets.find(n => n !== from && n !== 'x') ?? (from === 'tiktok' ? 'instagram' : 'tiktok')
+    const moved = from ? upcoming.filter(p => p.network === from).slice(0, 2) : []
+    adj = moved.length
+      ? { id: uid('adj'), status: 'proposed', moves: moved.map(p => ({ post: p.id, network: to })), text: `${c.name} is at ${pct}% of its trajectory. Move ${list(moved.map(p => `“${p.title}”`))} from ${NETWORK_LABEL[from]} to ${NETWORK_LABEL[to]}.` }
+      : { id: uid('adj'), status: 'proposed', goal: round10(c.goal.target * r), text: `${c.name} is at ${pct}% of its trajectory with no post left to move. Lower the goal from ${fmtN(c, c.goal.target)} to ${fmtN(c, round10(c.goal.target * r))} ${u}.` }
+  }
+  let next = updateCampaign(s, id, x => ({ ...x, adjustments: [adj, ...x.adjustments] }))
+  const card: Omit<Handoff, 'id' | 'at'> = {
+    agent: 'sage', kind: 'approval', urgency: r < OFF_LOW ? 'today' : 'week', topic: 'Campaign', action: 'sage-cadence', chain: ['iris', 'sage'], ref: id,
+    title: `${c.name} ${r < OFF_LOW ? 'below' : 'ahead of'} its trajectory (${pct}%)`, context: `${fmtN(c, c.actual[i])} ${u} against ${fmtN(c, c.planned[i])} planned by now.`,
+    why: 'Campaign adjustments are set to Draft.', confidence: 74, link: `/strategy/campaigns/${id}`,
+    preview: { type: 'plan', title: 'Sage’s adjustment', lines: [adj.text.split('. ').slice(1).join('. ') || adj.text, `Goal ${fmtN(c, c.goal.target)} ${u}`] },
+    sage: { campaign: id, adjust: adj.id },
+  }
+  if (actionOf(next, 'sage', 'sage-cadence')?.autonomy !== 'act') return pushHandoff(next, card)
+  // On Act, Sage applies it: the same path as an approval, with its own Undo.
+  next = applyAdjust(next, id, adj.id, true)
+  return { ...next, log: next.log.map((l, n) => (n === 0 ? { ...l, status: 'done', reason: 'Campaign adjustments, set to Act', undoUntil: l.at + 30 * 60_000 } : l)) }
+}
+
+/** Results arrive for live campaigns; Sage checks each new one against the plan. `force` adds one now, at that ratio. */
+export function trackCampaigns(s: State, t: number, force?: { id: string; ratio: number }): State {
   let next = s
-  for (const c of s.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) {
+  for (const c of s.strategy.campaigns) {
+    if (force ? c.id !== force.id || c.actual.length >= POINTS : !resultsDue(c, t)) continue
+    let x = c
+    // The moderator's push: results come in early at that ratio until they show it (results never go down).
+    if (force) do x = nextResult(x, force.ratio)
+    while (x.actual.length < POINTS && x.planned[x.actual.length - 1] && x.actual[x.actual.length - 1] / x.planned[x.actual.length - 1] >= OFF_LOW && force.ratio < OFF_LOW)
+    else while (resultsDue(x, t)) x = nextResult(x)
+    next = watchTrajectory(updateCampaign(next, c.id, () => x), c.id, t)
+  }
+  return next
+}
+
+/** Campaigns past their end date close themselves. */
+export const campaignsDue = (s: State, t: number) => s.strategy.campaigns.some(c => (c.status === 'live' && c.end < t) || resultsDue(c, t))
+export function closeCampaigns(s: State, t: number): State {
+  let next = trackCampaigns(s, t)
+  for (const c of next.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) {
     next = updateCampaign(next, c.id, x => ({ ...x, status: 'done' }))
     next = pushLog(next, { agent: 'sage', text: `${c.name} ended: ${c.goal.current.toLocaleString('en-GB')} of ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${c.id}` })
   }
@@ -268,7 +349,8 @@ function applyAdjust(s: State, id: string, adj: string, accept: boolean, card?: 
     const m = moves.find(x => x.post === p.id)
     return m ? { ...p, network: m.network ?? p.network, title: m.title ?? p.title } : p
   })
-  const after: Campaign = { ...c, posts, adjustments: c.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)) }
+  const k = accept && a.goal ? a.goal / c.goal.target : 1
+  const after: Campaign = { ...c, posts, ...(k !== 1 ? { goal: { ...c.goal, target: a.goal! }, planned: c.planned.map(v => Math.round(v * k)) } : {}), adjustments: c.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)) }
   const touched = new Set(moves.map(m => posts.find(p => p.id === m.post)).filter((p): p is CPost => !!p).map(p => p.postId ?? p.id))
   const inCalendar = s.publishing.posts.filter(p => touched.has(p.id) && p.status !== 'published')
   const moved = inCalendar.map(p => {
