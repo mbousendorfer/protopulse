@@ -124,7 +124,7 @@ export function AgentProfile() {
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
                 <p className="preset-says">{PRESET_SAYS[preset]}</p>
-                <p className="muted mw-62ch">Pick a preset, or set each action below.</p>
+                <AutonomySummary agent={a} />
               </div>
               <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: PRESET_LABEL[p], delta: presetDelta(a, p), levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
@@ -133,7 +133,6 @@ export function AgentProfile() {
               <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. {undoPreset.delta}</UndoBar>
             )}
             <Notice scope="agents" className="mt-3" />
-            <AutonomySummary agent={a} />
             <AutonomyList key={a.id} agent={a} onChange={(x, level) => d({ type: 'core/autonomy', agent: a.id, action: x.id, level })} />
           </section>
           <Promotions agent={a} />

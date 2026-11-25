@@ -33,7 +33,6 @@
 .onb-auto { display: flex; flex-direction: column; gap: var(--s3); }
 .onb-auto b { font-weight: 600; }
 .onb-auto .preset-says { margin-top: 0; }
-.onb-auto .aset-sum { margin-top: 0; }
 .onb-actions summary { cursor: pointer; font-size: var(--t-md); font-weight: 500; color: var(--action-ink); width: max-content; }
 .onb-recap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3) var(--s6); margin: 0; }
 .onb-recap div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
