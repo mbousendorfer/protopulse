@@ -11,8 +11,8 @@
 .clip-thumb.lg { width: 90px; height: 160px; }
 .clip-thumb.a-1x1.sm { height: 40px; } .clip-thumb.a-1x1.lg { height: 90px; }
 .clip-thumb.a-16x9.sm { width: 71px; height: 40px; } .clip-thumb.a-16x9.lg { width: 160px; height: 90px; }
-.clip-thumb-len { position: absolute; right: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: 10px; line-height: 16px; }
-.clip-thumb.sm .clip-thumb-len { font-size: 9px; right: 2px; bottom: 2px; }
+.clip-thumb-len { position: absolute; right: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: var(--t-xs); line-height: 16px; }
+.clip-thumb.sm .clip-thumb-len { right: 2px; bottom: 2px; }
 .src-thumb { display: block; width: 80px; height: 45px; border-radius: var(--r-sm); overflow: hidden; background: var(--lift-2); flex: none; }
 .src-thumb img, .src-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
 

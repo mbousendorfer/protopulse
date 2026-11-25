@@ -167,7 +167,9 @@ everywhere except media preview (`publishing/Page.tsx:319`, "Close" secondary + 
 ## 10. Type, spacing, radius, icons, agent colours
 
 - Type scale 12 · 13 · 14 · 16 · 19 · 24 · 32 (`--t-*`). Off-scale: 9/10/11 (see measures). Chart axis labels at 10
-  are kept (SVG, inside charts) — exception, written. All others → `--t-xs`.
+  are kept (SVG, inside charts) — exception, written. The Video timeline is the same case: its ruler and the labels
+  inside its track blocks (`.tl-ruler`, `.tl-cap`, `.tl-broll`, `.tl-music`) stay at 10, like an axis — exception,
+  written (2026-11-25). All others → `--t-xs`.
 - Spacing tokens `--s1…--s10`; literal 6 / 10 / 14 px gaps are common in components and allowed (between tokens) when
   inside a component; layout gaps use tokens.
 - Radius: 6 chips, 10 controls and inner boxes, 16 cards, 20 sheets, 999 pills. `.seg` (8) and `.seg span` (6) → 10 / 6.

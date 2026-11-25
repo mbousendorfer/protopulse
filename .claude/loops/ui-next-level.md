@@ -31,6 +31,14 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
   primitive partagée, pas écran par écran).
 - Delight : au plus une amélioration de « moment » par passe (micro-interaction, copy plus humaine, état vide plus
   utile), uniquement si elle sert la compréhension.
+- **Redesign, pas seulement des retouches** (demande de Matt, 25/11) : regarde chaque surface touchée en vrai
+  (screenshots 1440 et 375) et demande-toi si un utilisateur la trouverait bonne au premier regard. Si un bloc est
+  faible (hiérarchie confuse, densité qui noie l'info, contrôle illisible ou mal choisi, parcours qui fait réfléchir),
+  redessine-le franchement : nouvelle mise en page, autre primitive, copy réécrite. Au moins une amélioration
+  visible par passe quand la surface le mérite ; les détails invisibles (1 px, un token équivalent) ne suffisent pas
+  seuls. Garde-fous inchangés : tokens et primitives du DS, PROMPT §10, matrice ; la preuve est la capture avant/après
+  et la règle ou l'heuristique qu'elle sert. Une refonte qui change un parcours ou un écran entier → PR en draft et
+  notification, pas de merge automatique.
 - Aucune finding qui survit → avance STATE, supprime la branche, wakeup, fin.
 
 ## 4. Implémenter
