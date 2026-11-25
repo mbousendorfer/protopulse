@@ -1,6 +1,3 @@
-.comp-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-.comp-chip { color: var(--ink-2); }
-.comp-chip:hover { color: var(--ink); box-shadow: inset 0 0 0 1px var(--line-loud); }
 
 .events { display: flex; flex-direction: column; gap: var(--s3); }
 .event-row { display: flex; flex-direction: column; gap: 6px; padding: var(--s4); color: var(--ink); transition: border-color var(--fast) var(--ease); }
@@ -21,7 +18,6 @@
 .echo-read p { color: var(--ink); font-size: var(--t-lg); line-height: 1.55; }
 .moves { position: sticky; top: calc(var(--topbar) + var(--s6)); }
 .move-list { display: flex; flex-direction: column; gap: 6px; }
-.move-list .option { height: auto; min-height: 40px; padding: 8px 10px; }
 .move-label { flex: 1; min-width: 0; }
 .move-done { display: flex; gap: 10px; padding: var(--s3); border-radius: var(--r-ctl); background: var(--sunk); border: 1px solid var(--line); }
 .move-done > svg { color: var(--ok); flex: none; margin-top: 2px; }
@@ -46,9 +42,6 @@
 
 .ls-mentions > li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: var(--s3); padding: 12px var(--s4); border-top: 1px solid var(--line); align-items: start; }
 .ls-mentions > li:first-child { border-top: 0; }
-.ls-sent { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--ink-3); }
-.ls-sent.positive { background: var(--ok); }
-.ls-sent.negative { background: var(--alert); }
 .mention-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .mention-main b { font-weight: 600; }
 
@@ -64,7 +57,7 @@
 .kw { max-width: 280px; }
 
 @media (max-width: 1100px) { .event-layout { grid-template-columns: minmax(0, 1fr); } .moves { position: static; } }
-@media (max-width: 820px) { .lesson { flex-direction: column; align-items: flex-start; } .mentions > li { grid-template-columns: 8px minmax(0, 1fr); } .mentions > li > .row { grid-column: 2; } }
+@media (max-width: 820px) { .lesson { flex-direction: column; align-items: flex-start; } }
 
 /* ---------- Mentions: selection, panel ---------- */
 .ls-mentions > li { grid-template-columns: 32px minmax(0, 1fr) auto; }
@@ -90,7 +83,6 @@
 .ls-watch-main b { font-weight: 600; font-size: var(--t-lg); }
 .ls-watch-main .chip { gap: 6px; }
 .ls-watch-meta { font-size: var(--t-sm); }
-.ls-watch.ls-paused .ls-watch-main { opacity: 0.6; }
 @media (max-width: 820px) { .ls-watch { grid-template-columns: 40px minmax(0, 1fr) auto; } .ls-watch > :nth-child(n+4) { display: none; } }
 
 .ls-creator { display: flex; gap: var(--s3); align-items: center; padding: 12px var(--s4); }

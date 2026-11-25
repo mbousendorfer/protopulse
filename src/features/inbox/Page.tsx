@@ -221,7 +221,7 @@ export default function InboxPage() {
           {posts.slice(0, 4).map(p => <ViewBtn key={p.key} on={post === p.key} n={p.n} onClick={() => apply(post === p.key ? {} : { post: p.key })}
             label={<><Net n={p.network} /><span className="ellipsis" title={p.key.replace(/^[^“]*“|”$/g, '')}>{p.key.replace(/^[^“]*“|”$/g, '')}</span>{p.waiting > 0 && <span className="ib-over">{p.waiting} waiting</span>}</>} />)}
           <span className="ib-side-title row between nowrap">Labels<button className="link-btn t-xs" onClick={() => nav({ search: '?labels=1' })}>Manage</button></span>
-          {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
+          {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={14} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
           </div>
           <div className="ib-filters">
             <span className="ib-side-title">Filters</span>
@@ -283,7 +283,7 @@ export default function InboxPage() {
               <span className="faint num">{list.length}</span>
               {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
               <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
-                items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
+                items={SORTS.map(x => ({ label: x.label, hint: sort === x.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setSort(x.id) }))} />
             </div>
           )}
           {post && !sel.count && <PostHead post={post} compact={!!current} convs={all.filter(c => postKey(c) === post)} onAll={() => setPost(undefined)} />}
@@ -563,9 +563,9 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
         ]} />
         <span className="ib-sep" aria-hidden />
         {(c.labels ?? []).map(l => (
-          <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={11} /></button></span>
+          <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={12} /></button></span>
         ))}
-        <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
+        <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={12} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
       </div>
 
       {(c.suggested ?? []).map(id => s.inbox.rules.find(r => r.id === id && r.on)).filter(r => !!r).map(r => (
@@ -633,9 +633,9 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 <ul className="ib-attach">
                   {c.attachments.map(a => (
                     <li key={a.id} className={a.removed ? 'removed' : ''}>
-                      {a.kind === 'exchange' ? <ShoppingBag size={13} /> : <Paperclip size={13} />}
+                      {a.kind === 'exchange' ? <ShoppingBag size={14} /> : <Paperclip size={14} />}
                       <span>{a.label}</span><span className="faint">· {a.limit}</span>
-                      <button className="link-btn" onClick={() => d({ type: 'inbox/attach', id: c.id, att: a.id })} aria-label={a.removed ? `Add back ${a.label}` : `Remove ${a.label}`}>{a.removed ? 'Add back' : <X size={13} />}</button>
+                      <button className="link-btn" onClick={() => d({ type: 'inbox/attach', id: c.id, att: a.id })} aria-label={a.removed ? `Add back ${a.label}` : `Remove ${a.label}`}>{a.removed ? 'Add back' : <X size={14} />}</button>
                     </li>
                   ))}
                 </ul>
@@ -668,8 +668,8 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
 
           <form className={`ib-reply ${mode === 'note' ? 'ib-noting' : ''}`} onSubmit={e => { e.preventDefault(); submit() }}>
             <div className="row tight">
-              {canReply && <button type="button" className={`ib-mode ${mode === 'reply' ? 'on' : ''}`} onClick={() => setMode('reply')} aria-pressed={mode === 'reply'}><Send size={13} />Reply</button>}
-              <button type="button" className={`ib-mode ${mode === 'note' || !canReply ? 'on' : ''}`} onClick={() => setMode('note')} aria-pressed={mode === 'note' || !canReply}><StickyNote size={13} />Note for the team</button>
+              {canReply && <button type="button" className={`ib-mode ${mode === 'reply' ? 'on' : ''}`} onClick={() => setMode('reply')} aria-pressed={mode === 'reply'}><Send size={14} />Reply</button>}
+              <button type="button" className={`ib-mode ${mode === 'note' || !canReply ? 'on' : ''}`} onClick={() => setMode('note')} aria-pressed={mode === 'note' || !canReply}><StickyNote size={14} />Note for the team</button>
             </div>
             <label htmlFor="ib-reply" className="sr-only">{mode === 'note' || !canReply ? 'Internal note' : `Reply to ${c.author}`}</label>
             <textarea id="ib-reply" className="textarea" rows={2}

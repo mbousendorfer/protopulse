@@ -117,7 +117,7 @@ function Events() {
                 <p className="muted ellipsis">{e.read}</p>
                 <div className="row">
                   <Pill tone={IMPACT_TONE[e.impact]}>{e.impact} impact</Pill>
-                  {st ? <span className={`ev-status ${st.status}`}><Check size={13} />{st.result}</span> : <span className="ev-status open">{e.moves.length} counter-moves ready</span>}
+                  {st ? <span className={`ev-status ${st.status}`}><Check size={14} />{st.result}</span> : <span className="ev-status open">{e.moves.length} counter-moves ready</span>}
                 </div>
               </Link>
             </li>
@@ -403,14 +403,14 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
                   <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : (setOpenId(m.id), d({ type: 'listening/seen', ids: [m.id] })))}>
                     <span className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>
                       <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
-                      {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={11} />At risk</Pill>}
+                      {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
                       {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}</span>
                     <span className="ls-text">{m.text}</span>
                     <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
                   </button>
                   <div className="row nowrap">
                     {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
-                    {st === 'replied' ? <Pill tone="ok"><Check size={11} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
+                    {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
                       <Btn size="xs" onClick={() => run('nova', {}, [m.id])}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
                     )}
                     <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Bring back ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
@@ -481,7 +481,7 @@ function Trends() {
               <p className="muted">{t.fitWhy}</p>
               <ul className="examples">{t.examples.map(x => <li key={x} className="faint">{x}</li>)}</ul>
               <div className="row">
-                {st === 'handed' ? <Pill tone="signal"><Check size={11} />With Atlas · draft on your Desk</Pill>
+                {st === 'handed' ? <Pill tone="signal"><Check size={12} />With Atlas · draft on your Desk</Pill>
                   : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
                     <>
                       <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
