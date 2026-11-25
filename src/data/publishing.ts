@@ -111,6 +111,23 @@ export const PLAN: PlanItem[] = [
   I('n-14', 6, '19:00', 'tiktok', 'Trail Week recap in 20 seconds.', 'Campaign', 'Campaign close, recap format.', 'Trail stories', 'mountain'),
 ]
 
+/** The plan Atlas proposes after you reject the first one: same slots and Trail Week posts, every post it picked itself swapped. */
+export const PLAN_B: PlanItem[] = [
+  PLAN[0], PLAN[1],
+  I('n-b03', 1, '18:30', 'tiktok', '3-second hook test: the Ridge in the rain.', 'New', 'Tests Iris’s hook hypothesis after the TikTok dip.', 'Gear that lasts', 'rain'),
+  PLAN[3],
+  I('n-b05', 2, '08:30', 'linkedin', 'What 1,200 repairs taught our designers about zips.', 'New', 'Repair & care is LinkedIn’s best pillar (4.1% engagement).', 'Repair & care', 'workshop'),
+  I('n-b06', 2, '18:30', 'instagram', 'Trail Week, day 3: the crew’s favourite viewpoint.', 'New', 'Trail stories reels average 22k reach on Instagram.', 'Trail stories', 'mountain'),
+  I('n-b07', 3, '17:00', 'youtube', 'Short: the Storm Jacket seam tape, up close.', 'New', 'Answers this week’s questions about seams in the Inbox.', 'Gear that lasts', 'jacket'),
+  I('n-b08', 3, '18:30', 'tiktok', 'Morning stove ritual at 2,000 m, Trail Week edition.', 'Recycled', 'Recycled: “Morning routine” got 41k views in October.', 'Trail stories', 'stove'),
+  I('n-b09', 4, '08:00', 'instagram', 'Story quiz: which knot holds a tarp in the wind?', 'New', 'Quizzes get 2.4× the taps of plain stories on your account.', 'Community', 'map'),
+  I('n-b10', 4, '18:30', 'tiktok', 'Storm Jacket vs. a garden hose, 15-second cut.', 'Recycled', 'Recycled: 26k reach on Instagram, TikTok never saw it.', 'Gear that lasts', 'jacket'),
+  I('n-b11', 5, '10:00', 'instagram', 'Camille’s bivouac above Chamonix, in her words.', 'New', 'Creator photo licensed until March (Media).', 'Community', 'tent'),
+  I('n-b12', 5, '16:00', 'facebook', 'Winter hiking questions? Drop them below, our guides answer on Monday.', 'New', 'Community pillar: question posts get 3× the comments on Facebook.', 'Community', 'snow'),
+  I('n-b13', 6, '11:00', 'instagram', 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'New', 'Repair & care pillar, Sunday slot performs well.', 'Repair & care', 'jacket'),
+  PLAN[13],
+]
+
 /** Alternatives Atlas uses for a v2 when you ask for changes. */
 export const PLAN_ALTERNATIVES: Partial<Record<Network, { text: string; reason: string; pillar: Pillar; media: string }>> = {
   instagram: { text: 'Trail Week, day 3: the crew’s favourite viewpoint.', reason: 'New, replaces a removed post on Instagram.', pillar: 'Trail stories', media: 'mountain' },
