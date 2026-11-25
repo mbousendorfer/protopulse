@@ -23,7 +23,7 @@ import './publishing.css'
 
 type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'media'
 const STATUS: Record<PostStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
-  scheduled: { label: 'Scheduled' }, published: { label: 'Published', tone: 'ok' }, draft: { label: 'Draft' }, needs: { label: 'Needs you', tone: 'caution' }, failed: { label: 'Failed', tone: 'alert' }, paused: { label: 'Paused', tone: 'caution' },
+  scheduled: { label: 'Scheduled' }, published: { label: 'Published', tone: 'ok' }, draft: { label: 'Draft' }, needs: { label: 'Needs you', tone: 'caution' }, failed: { label: 'Failed', tone: 'alert' }, paused: { label: 'Paused', tone: 'caution' }, unapproved: { label: 'To approve' },
 }
 const MONDAY_THIS_WEEK = T(0, 0, -1)
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`)
@@ -203,7 +203,7 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
         {p.media && <span className="cal-photo"><Photo name={p.media} /></span>}
         <p>{p.text}</p>
         {p.stats && <span className="faint cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
-        {(p.status === 'needs' || p.status === 'draft' || p.status === 'failed' || p.status === 'paused') && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}
+        {(p.status === 'needs' || p.status === 'draft' || p.status === 'failed' || p.status === 'paused' || p.status === 'unapproved') && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}
         {p.campaign && <span className="chip">{p.campaign}</span>}
         {p.note && <span className="faint cal-note">{p.note}</span>}
       </button>

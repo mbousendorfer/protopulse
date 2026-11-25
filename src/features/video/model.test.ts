@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 import { T } from '../../app/time'
 import {
-  applyAsk, captionAt, captionLines, clipPosts, coverFrames, duration, extend, fillers, findMoments, keptSegments, playableAt, removeFillers, rescore,
+  applyAsk, buildVersions, captionAt, captionLines, clipPosts, coverFrames, duration, safeY, versionIssues, versionOf, extend, fillers, findMoments, keptSegments, playableAt, removeFillers, rescore,
   silences, toClipTime, toSourceTime, toSRT, type Clip, type Transcript, type Word,
 } from './model'
 import { SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed } from '../../data/video'
@@ -129,4 +129,17 @@ test('cover: 3 frames inside the clip, best first, never on someone without a re
   const first = applyAsk({ ...c, cover: { at: frames[0].at, text: 'x', by: 'juno' } }, t, 'Pick a better cover', [{ s: 0, e: 6 }])
   expect(first.changed).toBe(true)
   expect(first.clip.cover?.at).toBe(frames[1]?.at ?? frames[0].at)
+})
+
+test('versions: Juno builds one per network with its ratio and captions above its buttons; drift is flagged', () => {
+  const c = clipFromSeed(SEEDS.repair[1], { ...SOURCE_DEFS.repair, status: 'ready' }, 0) // TikTok, Instagram, LinkedIn
+  const built = { ...c, captions: { ...c.captions, y: 84 } }
+  const v = buildVersions(built)
+  expect(v.linkedin?.aspect).toBe('1:1')
+  expect(v.tiktok).toEqual({ aspect: '9:16', y: safeY('tiktok') })
+  const withV = { ...built, versions: v }
+  expect(versionIssues(withV, 'tiktok')).toEqual([])
+  expect(versionIssues({ ...withV, versions: { ...v, linkedin: { aspect: '9:16', y: 84 } } }, 'linkedin')).toEqual(['9:16 where the app shows 1:1', 'captions sit under the app’s buttons'])
+  // Without versions, every network gets the clip as framed.
+  expect(versionOf(c, 'linkedin').aspect).toBe(c.aspect)
 })

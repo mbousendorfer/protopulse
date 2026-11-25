@@ -158,7 +158,7 @@ export function PostPreview() {
           <div className="pub-prev">
             <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} /></div>
             <dl className="pub-prev-meta">
-              <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
+              <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status === 'unapproved' ? 'To approve' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>
               <div><dt>Pillar</dt><dd>{p.pillar}</dd></div>
               {p.campaign && <div><dt>Campaign</dt><dd>{p.campaign}</dd></div>}
@@ -173,6 +173,19 @@ export function PostPreview() {
                 {p.status === 'published' && <li><span>Published</span><span className="mono faint">{when(p.at)}</span></li>}
               </ol>
             </section>
+            {!!p.comments?.length && (
+              <section>
+                <h3 className="pub-prev-h">Comments</h3>
+                <ol className="pub-hist pub-comments">
+                  {p.comments.map((c, i) => (
+                    <li key={i}>
+                      <span className="row tight">{c.from === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name={c.from === 'claire' ? 'Claire Dubois' : 'Sam Rivera'} size={16} />}<span><b>{c.from === 'atlas' ? 'Atlas' : c.from === 'claire' ? 'Claire' : 'You'}</b> {c.text}</span></span>
+                      <span className="mono faint">{hhmm(c.at)}</span>
+                    </li>
+                  ))}
+                </ol>
+              </section>
+            )}
           </div>
         )}
       </Sheet>
