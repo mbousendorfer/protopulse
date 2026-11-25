@@ -16,3 +16,9 @@
 - 25/11/2026 · C9 garde-fous · le compte suit l'état, le plafond après « of » reste celui de Sam et s'applique (création, reprise, ajout de concurrent) ; seuil de pic lu dans g1 · garde-fous figés · « un garde-fou affiché est un garde-fou appliqué » ; plafonds 15 recherches (slots Agorapulse) et 6 concurrents (plan Advanced)
 - 25/11/2026 · C5 concurrent ajouté · chiffres générés depuis le nom (déterministes), visibles après 10 min de « lecture des 30 derniers jours », premier événement à 25 min, carte selon le cran `echo-events` · attendre 7 jours comme l'annonçait le texte · le testeur doit voir le résultat pendant sa session ; texte d'annonce aligné
 - 25/11/2026 · C5 share of voice · recalculé parmi les marques suivies (somme 100) · valeurs seed figées · ajouter ou mettre en pause un concurrent doit bouger la part de Fernway ; `shareOfVoice(s)` est le contrat pour Iris
+- 25/11/2026 · Pitch F1 Search view · **Go** (tel que pitché) · – · réponse de l'humain
+- 25/11/2026 · Pitch F2 Séries temporelles · **Drop** (sans commentaire) · – · réponse de l'humain
+- 25/11/2026 · Pitch F4 Par produit · **Drop** (sans commentaire) · – · réponse de l'humain
+- 25/11/2026 · Pitch F5 Créateurs · **Go** (tel que pitché) · – · réponse de l'humain
+- 25/11/2026 · F1 search view · mots-clés : toutes les mentions d'un mot-clé, n'importe quel mot-clé (≈ groupes de mots-clés d'Agorapulse) · sous-chaîne littérale · « storm jacket seams » doit attraper « Seams on my Storm… » ; volume de la table = volume seed + mentions arrivées pendant la session, même chiffre sur la page
+- 25/11/2026 · F1 search view · ratios (négatif, auteurs, reach) nommés « latest N filed » · les présenter comme des totaux 7 j · le flux est un échantillon, le libellé le dit
