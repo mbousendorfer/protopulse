@@ -211,3 +211,9 @@
 .ib-saved-view { display: flex; align-items: center; gap: 2px; }
 .ib-saved-view .ib-view { flex: 1; min-width: 0; }
 .ib-saved-view .ib-view > .row { min-width: 0; overflow: hidden; }
+
+/* One post's comments */
+.ib-post-head { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); }
+.ib-post-head p { margin: 0; }
+.ib-post .link-btn { font-weight: 500; text-align: left; }
+.ib-post-head .grow { min-width: 0; }
