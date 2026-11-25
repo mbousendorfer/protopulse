@@ -3,15 +3,18 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { useStore } from '../../app/store'
 import { AlertsTable } from '../insights/alerts'
 import { now } from '../../app/core'
+import type { Network } from '../../app/types'
 import { ago } from '../../app/time'
 import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
-import { alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
+import { netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
   interface IntentTypes {
     competitor: { name: string }
     mentions: object
+    creators: { rival?: string }
+    benchmark: { network: Network; rival?: string }
   }
 }
 
@@ -38,6 +41,49 @@ const mentions = defineIntent({
     return { replies: [{ from: 'echo',
       text: neg.length ? `${neg.length} negative mention${neg.length === 1 ? '' : 's'} today${top ? `, ${top[1]} about the ${top[0]}` : ''}. The ones reaching the most people:` : 'No negative mention today.',
       card: neg.length ? { type: 'list', items: neg.slice(0, 3).map(m => ({ title: `${m.author}: “${m.text}”`, agent: 'echo' as const, meta: `${m.network} · reach ${m.reach.toLocaleString('en-GB')} · ${ago(m.at, now(s))}`, link: NEG_LINK })) } : undefined }], effects: [] }
+  },
+})
+
+/** Creators, all of them or the ones who also talk about a rival. Same list as Listening › Creators. */
+function creatorAnswer(s: Parameters<typeof creatorsOf>[0], rival?: string) {
+  const all = creatorsOf(s)
+  const list = rival ? all.filter(c => c.also.some(a => a.competitor.toLowerCase().replace('ø', 'o').startsWith(rival.replace('ø', 'o')))) : all
+  const fits = list.filter(c => c.fit && !s.listening.creators[c.handle])
+  const who = rival ? `about ${list[0]?.also.find(a => a.competitor.toLowerCase().replace('ø', 'o').startsWith(rival.replace('ø', 'o')))?.competitor ?? rival}` : 'about Fernway'
+  const text = !list.length ? `No creator I follow talks ${who}.`
+    : `${list.length} creator${list.length > 1 ? 's' : ''} talk${list.length === 1 ? 's' : ''} ${who}: ${list.slice(0, 3).map(c => `${c.handle} (${Math.round(c.followers / 1000)}k${c.signed ? `, signed with ${c.signed}` : ''})`).join(', ')}.${fits.length ? ` Worth a collab: ${fits.map(c => c.handle).join(' and ')}.` : ''}`
+  return { list, text }
+}
+
+const creators = defineIntent({
+  kind: 'creators', owner: 'echo', order: 95,
+  parse: t => (/creator|influencer/.test(t) ? { kind: 'creators', rival: t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] } : undefined),
+  bar: (i, { s, go }) => ({ text: creatorAnswer(s, i.rival).text, sources: ['Echo’s mention feed · authors reaching 5,000 people or more'], ctas: [{ label: 'Open Creators', primary: true, run: () => go('/listening/creators') }] }),
+  chat: (i, { s }) => {
+    const { list, text } = creatorAnswer(s, i.rival)
+    return { replies: [{ from: 'echo', text, card: list.length ? { type: 'list', items: list.slice(0, 5).map(c => ({ title: `${c.handle} · ${c.name}`, agent: 'echo' as const, meta: `${c.followers.toLocaleString('en-GB')} people · ${c.fitWhy}`, link: `/listening/creators?c=${encodeURIComponent(c.handle)}` })) } : undefined }], effects: [] }
+  },
+})
+
+const NETS: [RegExp, Network][] = [[/instagram|\big\b/, 'instagram'], [/tiktok/, 'tiktok'], [/linkedin/, 'linkedin'], [/facebook/, 'facebook'], [/youtube/, 'youtube']]
+const RIVAL_ID: Record<string, string> = { peakline: 'peakline', norro: 'norro', 'norrø': 'norro', trailkind: 'trailkind', basecamp: 'basecamp' }
+
+/** « How do we compare with Trailkind on TikTok? »: the same rows and reading as Benchmark › TikTok. */
+const benchmark = defineIntent({
+  kind: 'benchmark', owner: 'echo', order: 98,
+  parse: t => {
+    const n = NETS.find(([re]) => re.test(t))?.[1]
+    if (!n || !/compar|\bvs\.?\b|versus|benchmark|against|beat/.test(t)) return undefined
+    return { kind: 'benchmark', network: n, rival: RIVAL_ID[t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] ?? ''] }
+  },
+  bar: (i, { s, go }) => {
+    const r = networkRead(s, i.network, i.rival)
+    return { text: r.text, sources: [`Benchmark · ${netLabel(i.network)} · last 30 days`, 'Fernway’s numbers: Iris’s analytics'], ctas: [{ label: `Open the ${netLabel(i.network)} benchmark`, primary: true, run: () => go(`/listening/competitors/benchmark?net=${i.network}`) }] }
+  },
+  chat: (i, { s }) => {
+    const r = networkRead(s, i.network, i.rival)
+    const rows = networkRows(s, i.network)
+    return { replies: [{ from: 'echo', text: r.text, card: { type: 'list', items: rows.map(x => ({ title: `${x.rank}. ${x.name}`, agent: 'echo' as const, meta: `${x.er}% engagement · ${x.perWeek} posts a week · ${(x.followers / 1000).toFixed(0)}k followers`, link: `/listening/competitors/benchmark?net=${i.network}` })) } }], effects: [] }
   },
 })
 
@@ -80,8 +126,10 @@ const echo: AgentModule = {
   onUndo: onUndoListening,
   due: listeningDue,
   tick: tickListening,
-  intents: [mentions, competitor],
+  intents: [mentions, creators, benchmark, competitor],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.listening.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { competitor: { keep: ['h-peakline'], fire: ['ev-trailkind', 'ev-norro', 'ev-basecamp'] } },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-spike', to: '/listening/mentions?sentiment=negative' }, { event: 'ev-creator-fit', to: '/listening/creators' }, { event: 'ev-idea-urgent', to: '/publishing/ideas' }],
 }
 export default echo

@@ -259,3 +259,22 @@ export const SEARCHES: Search[] = [
   { id: 's11', name: 'Trail Week', keywords: '#FernwayTrailWeek, Trail Week Fernway', exclude: '', volume: 640 },
   { id: 's12', name: 'Gear repair', keywords: 'bag repair, repair outdoor gear, réparation sac', exclude: 'phone repair', volume: 970, paused: true },
 ]
+
+/** What Echo knows about the creators in the feed beyond their mentions. Followers come from the mention's reach. */
+export type CreatorInfo = { name: string; network: Network; also: { competitor: CompetitorId; n: number }[]; history: string[]; signed?: CompetitorId }
+export const CREATOR_INFO: Record<string, CreatorInfo> = {
+  '@camille.outdoors': { name: 'Camille Roux', network: 'instagram', also: [], history: ['3 unpaid stories with the Ridge this week, 2.4k replies', 'Has tagged Fernway 11 times since June'] },
+  '@theo.wild': { name: 'Théo Wild', network: 'instagram', also: [{ competitor: 'peakline', n: 6 }], history: ['Signed a 6-month series with Peakline in September', 'Asked Fernway for a collab last month, no answer'], signed: 'peakline' },
+  '@jeanne.paris': { name: 'Jeanne Martin', network: 'tiktok', also: [{ competitor: 'trailkind', n: 1 }], history: ['Weekly gorpcore fit checks, about 15k views each', 'Wore the Storm Jacket in 2 of her last 5 videos'] },
+  '@julien_trail': { name: 'Julien Favre', network: 'tiktok', also: [{ competitor: 'trailkind', n: 2 }], history: ['Sunrise hikes around Chamonix every weekend'] },
+  '@nadia.runs': { name: 'Nadia Benali', network: 'tiktok', also: [], history: ['Daily gym-bag routine, the Summit Bottle in every one'] },
+}
+
+/** Competitors per network, last 30 days: followers, posts a week, engagement rate. Totals match COMPETITORS. */
+export type NetStat = { followers: number; perWeek: number; er: number }
+export const COMP_NETWORKS: Record<CompetitorId, Partial<Record<Network, NetStat>>> = {
+  peakline: { instagram: { followers: 230000, perWeek: 8, er: 1.6 }, tiktok: { followers: 95000, perWeek: 9, er: 3.2 }, facebook: { followers: 70000, perWeek: 5, er: 0.7 }, youtube: { followers: 15000, perWeek: 2, er: 2.9 } },
+  norro: { instagram: { followers: 110000, perWeek: 4, er: 3.1 }, linkedin: { followers: 48000, perWeek: 3, er: 4.6 }, youtube: { followers: 27000, perWeek: 2, er: 2.4 } },
+  trailkind: { tiktok: { followers: 180000, perWeek: 21, er: 6.8 }, instagram: { followers: 70000, perWeek: 8, er: 4.1 }, x: { followers: 10000, perWeek: 2, er: 0.8 } },
+  basecamp: { facebook: { followers: 60000, perWeek: 7, er: 0.6 }, instagram: { followers: 30000, perWeek: 4, er: 1.2 }, x: { followers: 5000, perWeek: 1, er: 0.3 } },
+}

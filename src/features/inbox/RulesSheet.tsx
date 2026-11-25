@@ -5,13 +5,15 @@ import type { Network } from '../../app/types'
 import { useStore } from '../../app/store'
 import { actionOf } from '../../app/core'
 import { AUTONOMY_LABEL, NETWORK_LABEL } from '../../data/agents'
-import { withTeam, type ConvType, type Sentiment } from '../../data/inbox'
+import { ROSTER, withTeam, type Assignee, type ConvType, type Sentiment } from '../../data/inbox'
 import { Btn, Menu, Net, Seg, Sheet, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
-import { suggestedCount } from './slice'
+import { dur, suggestedCount } from './slice'
+import { MIN } from '../../app/time'
 import { matches, thenText, whenText, type InboxRule, type RuleOp } from './rules'
 
 const TYPES: Record<ConvType, string> = { comment: 'Comments', dm: 'Messages', mention: 'Mentions', review: 'Reviews', ad: 'Ad comments' }
+const TARGET_STEPS = [30, 60, 120, 240, 480, 1440]
 const OPS: { op: RuleOp['op']; label: string }[] = [{ op: 'label', label: 'Label' }, { op: 'assign', label: 'Assign' }, { op: 'hide', label: 'Hide' }, { op: 'review', label: 'Mark reviewed' }, { op: 'sentiment', label: 'Set sentiment' }]
 
 /** Nova's Inbox rules: what she does on her own as messages arrive, how often, and the switch to stop it. */
@@ -57,6 +59,19 @@ export function RulesSheet({ open, onOpenChange, labels }: { open: boolean; onOp
         </ul>
         {editing === 'new' ? <RuleForm labels={labels} onDone={() => setEditing(null)} />
           : <Btn size="sm" className="self-start" onClick={() => setEditing('new')}><Plus size={14} />Add a rule</Btn>}
+        <section className="stack" aria-label="Response targets">
+          <h3>Response targets</h3>
+          <p className="muted">How long a customer may wait on you or Claire. Nova warns you 15 minutes before a target is missed.</p>
+          <div className="ib-targets">
+            {(Object.keys(TYPES) as ConvType[]).map(t => (
+              <div key={t} className="ib-target-row">
+                <span>{TYPES[t]}</span>
+                <Menu align="start" trigger={<Btn size="sm" variant="ghost" className="self-start">{dur(s.inbox.targets[t] * MIN)}<ChevronDown size={12} /></Btn>}
+                  items={TARGET_STEPS.map(m => ({ label: dur(m * MIN), onSelect: () => d({ type: 'inbox/target', kind: t, minutes: m }) }))} />
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </Sheet>
   )
@@ -69,7 +84,7 @@ function RuleForm({ rule, labels, onDone }: { rule?: InboxRule; labels: string[]
   const [type, setType] = useState<ConvType | undefined>(rule?.type)
   const [op, setOp] = useState<RuleOp['op']>(rule?.then.op ?? 'label')
   const [label, setLabel] = useState(rule?.then.op === 'label' ? rule.then.value : labels[0] ?? '')
-  const [who, setWho] = useState<'sam' | 'claire'>(rule?.then.op === 'assign' ? rule.then.value : 'claire')
+  const [who, setWho] = useState<Assignee>(rule?.then.op === 'assign' ? rule.then.value : 'claire')
   const [mood, setMood] = useState<Sentiment>(rule?.then.op === 'sentiment' ? rule.then.value : 'negative')
   const [now, setNow] = useState(true)
   const [fresh, setFresh] = useState(false)
@@ -103,7 +118,8 @@ function RuleForm({ rule, labels, onDone }: { rule?: InboxRule; labels: string[]
           ? <input className="input w-180" autoFocus value={label} onChange={e => setLabel(e.target.value)} placeholder="New label" aria-label="New label" />
           : <Menu align="start" trigger={<Btn size="sm" variant="ghost">{label || 'Pick a label'}<ChevronDown size={12} /></Btn>}
               items={[...labels.map(l => ({ label: l, onSelect: () => setLabel(l) })), 'sep', { label: 'New label…', icon: <Plus size={14} />, onSelect: () => { setFresh(true); setLabel('') } }]} />)}
-        {op === 'assign' && <Seg name="ib-rule-who" size="sm" label="Assign to" value={who} onChange={setWho} options={[{ value: 'claire', label: 'Claire' }, { value: 'sam', label: 'Me' }]} />}
+        {op === 'assign' && <Menu align="start" trigger={<Btn size="sm" variant="ghost">{ROSTER[who].name}<ChevronDown size={12} /></Btn>}
+          items={(Object.keys(ROSTER) as Assignee[]).map(k => ({ label: ROSTER[k].name, hint: ROSTER[k].role, onSelect: () => setWho(k) }))} />}
         {op === 'sentiment' && <Seg name="ib-rule-mood" size="sm" label="Sentiment" value={mood} onChange={setMood} options={[{ value: 'positive', label: 'Positive' }, { value: 'neutral', label: 'Neutral' }, { value: 'negative', label: 'Negative' }]} />}
       </div>
       {!rule && fits > 0 && <Switch checked={now} onChange={setNow} label={`Also apply it to the ${fits} conversation${fits > 1 ? 's' : ''} that match now`} />}

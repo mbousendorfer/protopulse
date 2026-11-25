@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
-import { actionOf, agentOf, pushHandoff } from '../../app/core'
-import { escalate, escalationOf, handledAlone, land, proposeRule } from './slice'
+import { actionOf, agentOf, now, pushHandoff } from '../../app/core'
+import { botWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -31,7 +31,7 @@ export const SCRIPT: ScriptEvent[] = ([
     id: 'ev-colour', order: 10, label: 'Nova · wrong colour delivered',
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Complaint', action: 'nova-complaint',
       title: 'Wrong colour delivered: Moss instead of Ember', context: 'Instagram DM from @anais.trek, order #48390.',
-      conv: { type: 'dm', sentiment: 'negative', reply: 'Anaïs, sorry for the mix-up. Ember ships today by express, usually 2 days to Lyon. Keep the Moss one or send it back with the label we just emailed.' },
+      conv: { type: 'dm', sentiment: 'negative', saved: 'sr-exchange', reply: 'Anaïs, sorry for the mix-up. Ember ships today by express, usually 2 days to Lyon. Keep the Moss one or send it back with the label we just emailed.' },
       why: 'Complaint. Complaints are set to Draft.', confidence: 88, rules: ['Apologise once, then fix'], link: '/inbox',
       sources: [{ label: 'Order #48390 · Ridge 28L Ember', from: 'Shopify' }, { label: 'Express to Lyon: 2 days', from: 'Playbook facts' }],
       preview: { type: 'reply', network: 'instagram', author: '@anais.trek', text: 'I ordered Ember and got Moss 😕 I wanted it for Saturday.',
@@ -55,7 +55,7 @@ export const SCRIPT: ScriptEvent[] = ([
       title: 'Can I get my money back on a jacket that’s too big?', context: 'Facebook DM from Hélène Dubois.',
       why: 'Return questions with an order number are checked first.', confidence: 86, link: '/inbox',
       sources: [{ label: '30-day returns, free label', from: 'Playbook facts' }],
-      conv: { type: 'dm', sentiment: 'neutral', reply: 'Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.' },
+      conv: { type: 'dm', sentiment: 'neutral', saved: 'sr-returns', reply: 'Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.' },
       preview: { type: 'reply', network: 'facebook', author: 'Hélène Dubois', text: 'The Storm Jacket is too big for me. Can I get my money back? Order #48402.',
         draft: ['Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.'] } },
     auto: { text: 'Answered Hélène Dubois about returning her Storm Jacket', reason: 'Product question, set to Act', link: '/inbox' },
@@ -64,6 +64,15 @@ export const SCRIPT: ScriptEvent[] = ([
     // Sam labelled three product complaints by hand: Nova offers to do it herself from now on.
     id: 'ev-teach-rule', order: 175, history: true, agent: 'nova', tag: 'rule', label: 'Nova · proposes an Inbox rule (learned from your labels)',
     run: s => proposeRule(s, 'Product issue', ['c-lea', 'c-ana', 'c-pierre']),
+  },
+  {
+    // The conversations closest to (or past) their response target, raised now instead of 15 minutes before.
+    id: 'ev-sla', order: 195, agent: 'nova', tag: 'sla', label: 'Nova · response targets about to be missed',
+    run: s => warnLate(s, now(s), waitingList(s, now(s)).filter(x => !s.inbox.warned?.includes(x.c.id)).sort((a, b) => a.w.due - b.w.due).slice(0, 3)),
+  },
+  {
+    id: 'ev-bots', order: 205, agent: 'nova', tag: 'spam', label: 'Nova · bot comments under a reel (spam)',
+    run: s => botWave(s),
   },
   {
     id: 'ev-stove', order: 60, label: 'Nova · safety question (stove clip)', always: true,

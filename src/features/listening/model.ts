@@ -2,8 +2,10 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { COMPETITORS, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
 import type { Network } from '../../app/types'
+import { NET_SHARE, POSTS } from '../../data/insights'
+import { lastWeekOf } from '../strategy/slice'
 import type { Watched } from './slice'
 import type { Alert } from '../insights/alerts'
 
@@ -35,6 +37,8 @@ export function topComplaints(s: State, ms: Mention[]) {
 }
 
 export const pct = (n: number, of: number) => (of ? `${((n / of) * 100).toFixed(1).replace(/\.0$/, '')}%` : '0%')
+/** A share as people read it: counts for a handful (“2 of 3”), a percentage from 10 up. */
+export const share = (n: number, of: number) => (of < 10 ? `${n} of ${of}` : pct(n, of))
 export const WEEK = 7 * DAY
 
 /* ---------- The Storm Jacket seams spike ---------- */
@@ -204,7 +208,9 @@ export function searchRead(s: State, x: Search) {
   const word = topWord(day, `${x.name} ${x.keywords} ${top?.[0] ?? ''}`)
   const head = day.length >= 3
     ? `${day.length} negative mentions in the last 24 hours${top && !x.name.toLowerCase().includes(top[0].toLowerCase()) ? `, ${top[1]} about the ${top[0]}` : ''}${word ? `; ${word[1]} say “${word[0]}”` : ''}.`
-    : `Mostly ${c.positive >= c.negative ? 'positive' : 'negative'}: ${pct(c.positive, c.total)} positive, ${pct(c.negative, c.total)} negative.`
+    : c.total < 10
+      ? `${c.positive >= c.negative ? `${c.positive} of the last ${c.total} are positive` : `${c.negative} of the last ${c.total} are negative`}.`
+      : `Mostly ${c.positive >= c.negative ? 'positive' : 'negative'}: ${pct(c.positive, c.total)} positive, ${pct(c.negative, c.total)} negative.`
   return `${head} Loudest: ${loud.author} on ${loud.network} (${loud.reach.toLocaleString('en-GB')} reach).${waiting ? ` Nova has ${waiting} repl${waiting === 1 ? 'y' : 'ies'} waiting on your Desk.` : ''}`
 }
 
@@ -217,3 +223,74 @@ function topWord(ms: Mention[], own: string) {
   const best = [...by].sort((a, b) => b[1] - a[1])[0]
   return best && best[1] >= 3 ? best : undefined
 }
+
+/* ---------- Creators ---------- */
+
+/** Creators: authors with an @handle reaching 5,000 people or more. */
+export const CREATOR_MIN_REACH = 5000
+/** Echo proposes a collab to a creator who is mostly positive, reaches 10k or more and isn't signed with a rival. */
+export const COLLAB_MIN_REACH = 10_000
+export type Creator = { handle: string; name: string; network: string; followers: number; mentions: Mention[]; mood: Sentiment; fit: boolean; fitWhy: string; also: { competitor: string; n: number }[]; history: string[]; signed?: string }
+
+export function creatorsOf(s: State): Creator[] {
+  const by = new Map<string, Mention[]>()
+  for (const m of allMentions(s)) if (m.author.startsWith('@') && (m.reach >= CREATOR_MIN_REACH || CREATOR_INFO[m.author])) by.set(m.author, [...(by.get(m.author) ?? []), m])
+  return [...by].map(([handle, ms]) => {
+    const info = CREATOR_INFO[handle]
+    const c = moodCount(s, ms)
+    const mood: Sentiment = c.negative > c.positive ? 'negative' : c.positive >= c.neutral ? 'positive' : 'neutral'
+    const followers = Math.max(...ms.map(m => m.reach))
+    const signed = info?.signed ? competitorName(s, info.signed) : undefined
+    const fit = mood === 'positive' && followers >= COLLAB_MIN_REACH && !signed
+    const fitWhy = signed ? `Signed with ${signed}: not now.` : mood !== 'positive' ? 'Not positive about Fernway yet.' : followers < COLLAB_MIN_REACH ? `Under ${COLLAB_MIN_REACH / 1000}k people: thank them, no collab yet.` : `Positive, unpaid, ${Math.round(followers / 1000)}k people: worth a collab.`
+    return { handle, name: info?.name ?? handle.slice(1), network: ms[0].network, followers, mentions: ms, mood, fit, fitWhy, also: (info?.also ?? []).map(a => ({ competitor: competitorName(s, a.competitor), n: a.n })), history: info?.history ?? [], signed }
+  }).sort((a, b) => Number(b.fit) - Number(a.fit) || b.followers - a.followers)
+}
+export const creatorOf = (s: State, handle: string) => creatorsOf(s).find(c => c.handle === handle)
+
+/* ---------- Benchmark per network ---------- */
+
+export type NetRow = NetStat & { id: string; name: string; us: boolean; rank: number }
+
+/** One competitor's numbers on a network: seeded for the four, split across their accounts for one you added. */
+function netStat(s: State, w: Watched, n: Network): NetStat | undefined {
+  const seededNet = COMP_NETWORKS[w.id as keyof typeof COMP_NETWORKS]
+  if (seededNet) return seededNet[n]
+  if (!w.accounts.some(a => a.network === n) || !competitorReady(s, w)) return
+  const c = generatedCompetitor(w)
+  return { followers: Math.round(c.followers / w.accounts.length), perWeek: Math.max(1, Math.round(c.cadence / w.accounts.length)), er: c.er }
+}
+
+/** Fernway's own numbers come from Iris (followers share, engagement) and Atlas's posts (posts last 7 days). */
+const ours = (s: State, n: Network): NetStat => ({ followers: Math.round(FERNWAY_ROW.followers * NET_SHARE[n].share), perWeek: lastWeekOf(s)[n] ?? 0, er: NET_SHARE[n].er })
+
+/** Networks where at least one watched competitor posts. */
+export const benchNetworks = (s: State): Network[] =>
+  (['instagram', 'tiktok', 'linkedin', 'facebook', 'youtube', 'x'] as Network[]).filter(n => s.listening.watch.some(w => w.tracking && netStat(s, w, n)))
+
+/** Fernway and the watched competitors on one network, ranked by engagement rate. */
+export function networkRows(s: State, n: Network): NetRow[] {
+  const rows = [{ id: 'fernway', name: 'Fernway', us: true, ...ours(s, n) }, ...s.listening.watch.filter(w => w.tracking).flatMap(w => { const x = netStat(s, w, n); return x ? [{ id: w.id, name: w.name, us: false, ...x }] : [] })]
+  return rows.sort((a, b) => b.er - a.er).map((r, i) => ({ ...r, rank: i + 1 }))
+}
+
+/** Our best post and theirs on a network. */
+export const ourTop = (n: Network) => POSTS.filter(p => p.network === n).sort((a, b) => b.er - a.er)[0]
+export const theirTop = (n: Network, id: string) => TOP_POSTS.filter(p => p.network === n && p.competitor === id).sort((a, b) => b.er - a.er)[0]
+
+/** Echo's reading of a network: who leads, why, what to do. Only numbers from networkRows. */
+export function networkRead(s: State, n: Network, rival?: string) {
+  const rows = networkRows(s, n)
+  const us = rows.find(r => r.us)!
+  const lead = rows[0]
+  const them = rows.find(r => r.id === rival) ?? (lead.us ? rows[1] : lead)
+  if (!them) return { text: `No competitor I watch posts on ${netLabel(n)}.`, them: undefined }
+  const top = theirTop(n, them.id)
+  const often = them.perWeek >= us.perWeek * 2 && us.perWeek > 0 ? ` They post ${Math.round(them.perWeek / us.perWeek)}× more often (${them.perWeek} a week, you ${us.perWeek}).` : ` They post ${them.perWeek} a week, you ${us.perWeek}.`
+  const head = them.er > us.er
+    ? `${them.name} beats you on ${netLabel(n)}: ${them.er}% engagement against your ${us.er}%, rank ${them.rank} to your ${us.rank}.`
+    : `You beat ${them.name} on ${netLabel(n)}: ${us.er}% engagement against ${them.er}%, rank ${us.rank} to their ${them.rank}.`
+  return { text: `${head}${often}${top ? ` Their best: “${top.title}” (${top.views} views, ${top.format.toLowerCase()}). ${top.takeaway}` : ''}`, them }
+}
+const NET_LABEL: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
+export const netLabel = (n: Network) => NET_LABEL[n] ?? n

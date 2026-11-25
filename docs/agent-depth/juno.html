@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Juno Agent Depth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ui-quality.html. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.list li { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.list li:first-child { border-top: 0; }
+.list li p { color: var(--ink-2); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Juno, video: agent depth</h1>
+  <p class="lede">Session of 25 November 2026. Juno already had the deepest editor; the work made her settings and guardrails govern what she does, closed the loop from clip to numbers, and added what Opus Clip and Agorapulse’s composer offer around a clip. Backlog: <code>design-plans/agent-depth/juno-backlog.md</code>, decisions: <code>juno-log.md</code>.</p>
+</header>
+
+<section>
+  <div class="tiles">
+    <div class="tile"><b>13</b><span>PRs merged by this session, incl. 1 fix of main and 1 shared UI change</span></div>
+    <div class="tile"><b>10 / 10</b><span>fixes listed in the prompt, done</span></div>
+    <div class="tile"><b>6 Go · 4 Drop</b><span>feature pitches, all six Go built</span></div>
+    <div class="tile"><b>41</b><span>Video tests (model, slice, intents), from 19</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Parity, before and after</h2>
+  <p class="sub">Each capability answers the seven agentic-first questions in code; the PR body holds the grid.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Capability</th><th>Before</th><th>After</th><th>PR</th></tr></thead>
+    <tbody>
+<tr><td>Per-action levels (captions, reframe, dub)</td><td>Only 2 of 6 actions read; “Make it” dubbed after 1.5 s at any level</td><td>Each of the three follows Suggest · Draft · Act: fixes with Undo, a Desk card, flags in the editor; “Framing to check”; dubs to review</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/35">#35</a></td></tr>
+<tr><td>Guardrails</td><td>Shown on the profile, never applied</td><td>5 clips per video per week, signed release (Hugo held), 15–60 s and 90 s on LinkedIn: applied to every send, with the reason</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/44">#44</a></td></tr>
+<tr><td>Evidence on clips found on request</td><td><code>evidence: []</code></td><td>The moment, the Listening trend, the pillar’s best published clip</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/25">#25</a></td></tr>
+<tr><td>Speakers, pasted links</td><td>Sources named every non-host “Léo”; links silently used a sample</td><td>One speaker table; links say they play a sample</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/25">#25</a></td></tr>
+<tr><td>Publish loop</td><td>Sent clips never became Published; one static Good news card</td><td>Published at the first post’s time, with Iris’s numbers (<code>clipPerf</code>); real Good news at 1.5× the network</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/49">#49</a> <a href="https://github.com/mbousendorfer/protopulse/pull/83">#83</a></td></tr>
+<tr><td>Juno in Chat and ⌘K</td><td>“Clip the latest video” and a pasted link</td><td>Find moments, why a clip is held, best clips last week, a LinkedIn version</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/54">#54</a></td></tr>
+<tr><td>Score that learns</td><td>The score read only the clip</td><td>“Track record” from published clips of the same pillar, closest clip cited</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/60">#60</a></td></tr>
+<tr><td>Cover and thumbnail</td><td>The source poster everywhere</td><td>3 frames from the clip’s shots (never Hugo), cover text, Shorts title, “Pick a better cover”; shown in Atlas too</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/66">#66</a> <a href="https://github.com/mbousendorfer/protopulse/pull/64">#64</a></td></tr>
+<tr><td>One version per network</td><td>One ratio for every network</td><td>9:16, 4:5, 1:1 per app, captions above its buttons, a switcher and per-app safe zones</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/72">#72</a></td></tr>
+<tr><td>Labels and campaign</td><td>Posts without label or campaign</td><td>Pillar label, Sage’s running campaign when it fits</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/80">#80</a></td></tr>
+<tr><td>Language versions that go out</td><td>Dubs stayed in the editor</td><td>Approved languages become their own posts; Act sends all; Undo takes them back</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/88">#88</a></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Video › Clips</h2>
+  <p class="sub">After the GR20 upload: each row says what Juno left for Sam.</p>
+  <div class="pair">
+    <figure><img src="juno/clips-before.jpg" alt="Clips list before: rows with poster, hook, score and networks"><figcaption><b>Before</b> · rows say nothing about captions, framing, languages or guardrails.</figcaption></figure>
+    <figure><img src="juno/clips-after.jpg" alt="Clips list after: rows with covers, languages and held reasons"><figcaption><b>After</b> · covers, “1 caption to fix”, “FR DE”, “Held: Hugo is on screen without a signed release”, “2 language versions to review”.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Editor › Post</h2>
+  <div class="pair">
+    <figure><img src="juno/editor-before.jpg" alt="Editor before: score with four parts"><figcaption><b>Before</b> · four score parts, the clip’s own judgement only.</figcaption></figure>
+    <figure><img src="juno/editor-after.jpg" alt="Editor after: version switcher, caption flag, Track record"><figcaption><b>After</b> · a version switcher over the frame, the misheard “bridge” flagged with Fix it, and “Track record +1” from the published Repair &amp; care clip.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Editor › one network’s version</h2>
+  <div class="pair">
+    <figure><img src="juno/version-before.jpg" alt="Editor before: 1:1 applies to every network"><figcaption><b>Before</b> · choosing 1:1 changed the clip for TikTok and Reels too.</figcaption></figure>
+    <figure><img src="juno/version-after.jpg" alt="Editor after: LinkedIn feed version in 1:1 with its caption height, and three cover frames"><figcaption><b>After</b> · LinkedIn feed alone is 1:1 with its own caption height and safe zone; the Post tab offers three cover frames.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Checks</h2>
+  <ul class="check">
+    <li><span class="tag ok">Done</span><p><code>npm test</code> and <code>npm run build</code> green on every PR and on <code>main</code> after each merge; CI of each PR green before merging.</p></li>
+    <li><span class="tag ok">Done</span><p>Each action in its three levels: tests per level (captions, reframe, covers, versions, dubs, send).</p></li>
+    <li><span class="tag ok">Done</span><p>1440 and 375, light and dark: editor Post tab and clip list, no horizontal scroll at 375; cover frames keep a visible focus ring.</p></li>
+    <li><span class="tag ok">Done</span><p>Fixed <code>main</code> once while working (<a href="https://github.com/mbousendorfer/protopulse/pull/52">#52</a>, a lost import between two other sessions’ PRs).</p></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Still open</h2>
+  <ul class="list">
+    <li><h3>Calendar posts stay “scheduled” after their time</h3><p>Atlas owns publishing; request <code>atlas-from-juno-publish-due.md</code>. Juno marks the clip Published on the post time without touching Atlas’s posts.</p></li>
+    <li><h3>Atlas’s preview box ignores the clip’s version</h3><p>A LinkedIn clip is 1:1 in the editor but cropped to 1.91:1 in Atlas’s preview. Request <code>atlas-from-juno-clip-version.md</code> (read <code>versionOf</code>).</p></li>
+    <li><h3>The seed card “3× your TikTok average”</h3><p>The static Good news card in <code>data/desk.ts</code> predates Iris’s averages; new Good news cards use Iris’s <code>netAverage</code>.</p></li>
+    <li><h3>Dropped at pitch</h3><p>Blur or cut a person without a release (N6), clips during a live (N8), named speakers and speaker tracking (N9), bigger B-roll and music libraries (N10).</p></li>
+  </ul>
+</section>
+</main>
+</body>
+</html>

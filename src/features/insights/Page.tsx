@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import type { Network } from '../../app/types'
+import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from './alerts'
@@ -17,16 +18,18 @@ import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
+import Roi from './RoiTab'
+import { ReportOut, SaveTemplate, Schedules, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
 import './insights.css'
 
-type Tab = 'reports' | 'explore' | 'anomalies'
+type Tab = 'reports' | 'explore' | 'roi' | 'anomalies'
 
 export default function InsightsPage() {
   const loc = useLocation()
   const nav = useNavigate()
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
-  const tab: Tab = seg === 'explore' ? 'explore' : seg === 'anomalies' ? 'anomalies' : 'reports'
+  const tab: Tab = seg === 'explore' ? 'explore' : seg === 'roi' ? 'roi' : seg === 'anomalies' ? 'anomalies' : 'reports'
   const openAnomalies = anomalyList(s).filter(a => a.open).length
 
   return (
@@ -35,6 +38,7 @@ export default function InsightsPage() {
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
         { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },
+        { value: 'roi', label: 'ROI' },
         { value: 'anomalies', label: 'Anomalies', count: openAnomalies },
       ]} />
       <Routes>
@@ -42,6 +46,7 @@ export default function InsightsPage() {
         <Route path="reports" element={<Reports />} />
         <Route path="reports/:id" element={<ReportView />} />
         <Route path="explore" element={<Explore />} />
+        <Route path="roi" element={<Roi />} />
         <Route path="anomalies" element={<Anomalies />} />
         <Route path="*" element={<Reports />} />
       </Routes>
@@ -57,7 +62,7 @@ export function CitedText({ parts }: { parts: Cited[] }) {
 }
 
 /* ---------- Reports ---------- */
-const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap' }
+const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap', custom: 'Asked by you' }
 /** The title says what's in it; the type sits in the meta. Out of context (journal, file name) it gets its type back. */
 const reportMeta = (r: Report) => (r.kind === 'weekly' ? KIND_LABEL.weekly : `${KIND_LABEL[r.kind]} · ${r.period}`)
 const fullTitle = (r: Report) => (r.kind === 'brief' ? r.title : `${KIND_LABEL[r.kind]} · ${r.title}`)
@@ -67,6 +72,8 @@ function Reports() {
   const now = useNow()
   return (
     <div className="reports">
+      <StudioAsk />
+      <Schedules />
       {reportList(s).map(r => {
         const shared = s.insights.shared[r.id]
         return (
@@ -96,6 +103,9 @@ function ReportView() {
   const now = useNow(5000)
   const nav = useNavigate()
   const [q, setQ] = useState('')
+  const [params] = useSearchParams()
+  // The read-only link: the report alone, without tools or side panels.
+  const readOnly = params.get('view') === 'read'
   const r = reportList(s).find(x => x.id === id)
   if (!r) return <Empty title="This report doesn’t exist" action={<Btn onClick={() => nav('/insights')}>All reports</Btn>} />
   const shared = s.insights.shared[r.id]
@@ -108,23 +118,27 @@ function ReportView() {
   return (
     <div className="report-layout">
       <article className="card report">
-        <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>
+        {readOnly ? <p className="faint">Read-only view of a report by Iris for Fernway.</p> : <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>}
         <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">{reportMeta(r)} · written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)}</span></div>
         <h1>{r.title}</h1>
         <p className="lede">{r.summary}</p>
-        {r.sections.map(sec => (
+        {r.sections.map((sec, i) => (
           <section key={sec.heading}>
-            <h2>{sec.heading}</h2>
+            {r.recipe && !readOnly ? <div className="row nowrap in-sec-head"><h2>{sec.heading}</h2><span className="spacer" /><SectionTools r={r} i={i} sec={sec} /></div> : <h2>{sec.heading}</h2>}
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
-            {sec.chart === 'reach' && <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>}
+            {sec.chart === 'reach' && (r.recipe ? <ReachChart days={r.recipe.days} networks={r.recipe.networks} />
+              : <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>)}
+            {sec.chart === 'campaign' && <CampaignChart id={r.recipe?.campaign} />}
             {sec.chart === 'pillars' && <div className="report-chart"><HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} color="var(--a-iris)" /></div>}
             {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
           </section>
         ))}
+        {r.recipe && !r.sections.length && <p className="muted">Every section is gone. Add one back, or undo.</p>}
         <p className="faint hint-cite">Point at an underlined number to see where it comes from.</p>
+        {r.recipe && !readOnly && <StudioEdit r={r} />}
       </article>
 
-      <aside className="report-side">
+      {!readOnly && <aside className="report-side">
         <section className="card pad stack">
           <h2 className="side-title">Share</h2>
           {r.draft && deskCard ? (
@@ -145,7 +159,9 @@ function ReportView() {
             </>
           )}
           <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${fullTitle(r).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: fullTitle(r) }) }}><Download size={14} />Download (.md)</Btn>
+          <ReportOut r={r} />
         </section>
+        {r.recipe && <section className="card pad stack"><h2 className="side-title">Template</h2><SaveTemplate r={r} /></section>}
         <section className="card pad stack">
           <h2 className="side-title">Ask Iris a follow-up</h2>
           {follow.map(f => (
@@ -160,9 +176,26 @@ function ReportView() {
             <div className="row tight">{ASK_SUGGEST.map(x => <button key={x} type="button" className="filter" onClick={() => ask(x)}>{x}</button>)}</div>
           </form>
         </section>
-      </aside>
+      </aside>}
     </div>
   )
+}
+
+/** A campaign's planned against actual progress, as Sage tracks it. */
+function CampaignChart({ id }: { id?: string }) {
+  const { s } = useStore()
+  const c = s.strategy.campaigns.find(x => x.id === id)
+  if (!c?.planned.length) return null
+  const labels = c.planned.map((_, i) => `Day ${i + 1}`)
+  return <div className="report-chart"><LineChart label={`${c.name}: ${c.goal.label}, planned and actual`} labels={labels} h={160}
+    series={[{ name: 'Actual', data: c.actual, color: 'var(--a-iris)' }, { name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }]} /></div>
+}
+
+/** A requested report's reach: its own window and networks. */
+function ReachChart({ days, networks }: { days: number; networks: Network[] }) {
+  const share = networks.length ? networks.reduce((t, n) => t + NET_SHARE[n].share, 0) : 1
+  const data = reachSeries({ days, offset: 0 }).map(v => +(v * share).toFixed(1))
+  return <div className="report-chart"><LineChart label={`Daily reach, last ${days} days`} labels={dayLabels(days)} series={[{ name: 'Reach (k)', data, color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>
 }
 
 /* ---------- Explore ---------- */
