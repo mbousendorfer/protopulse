@@ -49,6 +49,8 @@ export type Clip = {
   trimGaps: boolean
   /** Caption-only spelling fixes, by word index. */
   fixes: Record<number, string>
+  /** What speech-to-text heard where it got a product or Playbook word wrong, by word index. Captions show it until fixed. */
+  heard?: Record<number, string>
   /** Words re-voiced in the speaker's voice, by word index. */
   overdub: Record<number, string>
   /** Juno's read of the moment before any edit; `rescore` adjusts it. */
@@ -62,7 +64,10 @@ export type Clip = {
   captions: Captions
   broll: Broll[]
   brand: Brand
-  audio: { studio: boolean; lang: Lang; dubs: Lang[] }
+  /** `review`: dubs Juno made on Draft that you haven't approved yet. */
+  audio: { studio: boolean; lang: Lang; dubs: Lang[]; review?: Lang[] }
+  /** Reframe and brand kit on Draft: applied, to check. On Suggest: not applied, Juno suggests it. */
+  framing?: 'check' | 'suggested'
   post: { networks: Network[]; text: Partial<Record<Network, string>> }
   pillar: Pillar
   status: ClipStatus
@@ -73,6 +78,10 @@ export type Clip = {
   back?: number
   /** Desk card it was sent from, so undoing that decision takes it back. */
   sentFrom?: string
+  /** When it went to Atlas: counts toward the weekly quota per video. */
+  sentAt?: number
+  /** What your published clips of the same pillar did: moves the total, and names the clip to compare with. */
+  track?: Track
   arrivedAt: number
 }
 
@@ -174,7 +183,13 @@ export type CapLine = { s: number; e: number; words: CapWord[] }
 const KEY = /\d|ridge|storm|summit|ember|repair|free|lifetime|gr20|strap|rain|warranty/i
 const EMOJI_FOR: [RegExp, string][] = [[/repair|stitch|sew/i, '🧵'], [/rain|storm|wet/i, '🌧️'], [/mountain|gr20|summit|peak/i, '⛰️'], [/strap|bag|backpack|ridge/i, '🎒'], [/free/i, '🎁'], [/lifetime|forever/i, '♾️'], [/water|bottle|lake/i, '💧'], [/jacket/i, '🧥']]
 export const emojiFor = (w: string) => EMOJI_FOR.find(([re]) => re.test(w))?.[1]
-export const wordText = (c: Clip, w: Word) => c.overdub[w.i] ?? c.fixes[w.i] ?? w.w
+export const wordText = (c: Clip, w: Word) => c.overdub[w.i] ?? c.fixes[w.i] ?? c.heard?.[w.i] ?? w.w
+
+/** Words speech-to-text got wrong that still play and aren't fixed: word index → the right word. */
+export const captionSlips = (c: Clip, t: Transcript): Record<number, string> =>
+  Object.fromEntries(keptWords(c, t).filter(w => c.heard?.[w.i] !== undefined && c.fixes[w.i] === undefined && c.overdub[w.i] === undefined).map(w => [w.i, w.w]))
+/** “28” → “28L”, without the punctuation around the words. */
+export const slipLabel = (heard: string, right: string) => `“${heard.replace(/[.,!?]$/, '')}” → “${right.replace(/[.,!?]$/, '')}”`
 
 /** Caption lines in clip time. English follows the words; a dub shows each sentence's translation, timed across the sentence. */
 export function captionLines(c: Clip, t: Transcript, lang: Lang = c.audio.lang): CapLine[] {
@@ -258,6 +273,32 @@ export function findMoments(t: Transcript, query: string, len: number, count: nu
   return out
 }
 
+/* ---------- Length per network ---------- */
+
+/** How long a clip may run on each network, in seconds (the guardrail “15–60 s · 90 s on LinkedIn”). */
+export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90 : 60 })
+export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
+export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
+
+/* ---------- Track record ---------- */
+
+export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number } }
+export const median = (xs: number[]) => { if (!xs.length) return 0; const o = [...xs].sort((a, b) => a - b); const m = o.length >> 1; return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2 }
+/** The usual reach of a published post on this network: the median, so one viral post doesn't set the bar. */
+export const typicalReach = (posts: Post[], n: Network) => median(posts.filter(p => p.network === n && p.status === 'published' && p.stats).map(p => p.stats!.reach))
+
+/** How the published clips of this clip's pillar did against the usual reach of its first network. Up to ±6 on the total. */
+export function trackRecord(c: Clip, clips: Clip[], posts: Post[]): Track | undefined {
+  const net = c.post.networks[0]
+  const base = typicalReach(posts, net)
+  const past = clips.filter(x => x.id !== c.id && x.status === 'published' && x.stats && x.pillar === c.pillar).sort((a, b) => b.stats!.views - a.stats!.views)
+  if (!base || !past.length) return undefined
+  const lift = past.reduce((a, x) => a + x.stats!.views / base, 0) / past.length
+  const delta = Math.max(-6, Math.min(6, Math.round((lift - 1) * 4)))
+  const word = past.length === 1 ? `Your ${c.pillar} clip did` : `Your ${past.length} ${c.pillar} clips did`
+  return { delta, lift, why: `${word} ${lift.toFixed(1)}× your usual ${NETWORK_FIT[net] ?? net} reach`, like: { id: past[0].id, title: past[0].title, views: past[0].stats!.views } }
+}
+
 /* ---------- Score ---------- */
 
 export const SCORE_LABEL: Record<ScoreKey, string> = { hook: 'Hook', flow: 'Flow', value: 'Value', trend: 'Trend' }
@@ -265,7 +306,7 @@ const clamp = (n: number) => Math.max(0, Math.min(99, Math.round(n)))
 export const total = (s: Score) => clamp(s.hook * 0.35 + s.flow * 0.25 + s.value * 0.25 + s.trend * 0.15)
 
 /** Juno's score after your edits, with one reason per part. Deterministic: same clip, same score. */
-export function rescore(c: Clip, t: Transcript): { score: Score; total: number; reasons: Record<ScoreKey, string> } {
+export function rescore(c: Clip, t: Transcript): { score: Score; total: number; reasons: Record<ScoreKey, string>; track?: Track } {
   const kept = keptWords(c, t)
   const dur = duration(keptSegments(c, t))
   const first = kept[0]
@@ -279,7 +320,8 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
   else if (firstSentence && /\?|\d/.test(firstSentence.text)) { hook += 6; hookWhy = 'Opens on a question or a number in the first 3 seconds' }
   flow -= Math.min(12, fill * 2) + Math.min(12, sil * 3)
   let flowWhy = fill || sil ? `${fill} filler${fill === 1 ? '' : 's'} and ${sil} long pause${sil === 1 ? '' : 's'} left` : 'No fillers or long pauses'
-  if (dur > 60) { flow -= 10; flowWhy = `${Math.round(dur)} s: longer than 60 s, Shorts and Reels cut it off` }
+  const tooLong = c.post.networks.filter(n => dur > lengthSpec(n).max + 0.5)
+  if (tooLong.length) { flow -= 10; flowWhy = `${Math.round(dur)} s: longer than ${lengthSpec(tooLong[0]).max} s, ${[...new Set(tooLong.map(n => NETWORK_FIT[n] ?? n))].join(' and ')} cut it off` }
   else if (dur < 12) { flow -= 6; flowWhy = `${Math.round(dur)} s: too short to land the point` }
   const score = { hook: clamp(hook), flow: clamp(flow), value: clamp(value), trend: clamp(trend) }
   const reasons = {
@@ -287,7 +329,7 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
     value: c.evidence[0] ? `${c.evidence[0].value} ${c.evidence[0].label}` : 'Shows the product doing its job',
     trend: c.base.trend >= 70 ? 'The topic is rising on TikTok this week' : 'Steady topic, not trending',
   }
-  return { score, total: total(score), reasons }
+  return { score, total: clamp(total(score) + (c.track?.delta ?? 0)), reasons, track: c.track }
 }
 
 /* ---------- Ask Juno ---------- */
@@ -349,10 +391,10 @@ export const NETWORK_FIT: Partial<Record<Network, string>> = { tiktok: 'TikTok',
 const DAY0 = T(0, 0, 0)
 
 /** The posts a clip becomes: one per network, at Atlas's best free slot. */
-export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string): Post[] {
+export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number): Post[] {
   const day = Math.floor((now - DAY0) / DAY)
   const out: Post[] = []
-  for (const n of c.post.networks) {
+  for (const n of c.post.networks.filter(x => dur === undefined || fitsLength(x, dur))) {
     const at = pickSlot(n, day, [...posts, ...out], now)
     out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title}` })
   }
