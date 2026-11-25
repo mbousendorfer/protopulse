@@ -14,3 +14,5 @@ challenge? », « Does a 2 km walk count? », photos #FernwayTrailWeek) : la tâ
 
 **En attendant.** Le lien de la carte va sur l'Inbox non filtrée ; Trail Week montre ses posts et
 « 0 conversations » tant qu'aucune ne cite la campagne.
+
+**Fait par Nova** (PR claude/nova-campaign-label) : `/inbox?label=<nom>` ouvre l’Inbox filtrée sur ce label (vue All) ; seed : 4 conversations Trail Week étiquetées (`c-tw-join`, `c-tw-walk`, `c-tw-photo` traitées par Nova, `c-tw-prize` brouillon avec un passage à vérifier) et la règle de Nova `ir-trailweek` (origine « Sage · Trail Week campaign », mots `trail week`, `#fernwaytrailweek`) que `novaRuleFor` retrouve.

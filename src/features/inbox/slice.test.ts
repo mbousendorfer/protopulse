@@ -336,3 +336,11 @@ describe('moderation', () => {
     expect(d.inbox.convs.filter(c => c.note === 'Reported as spam by you').length).toBe(3)
   })
 })
+
+describe('Sage’s Trail Week label', () => {
+  it('the seed has Trail Week conversations, labelled, and Nova’s rule for it', () => {
+    const s = initialState()
+    expect(s.inbox.convs.filter(c => c.labels?.includes('Trail Week')).length).toBe(4)
+    expect(s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === 'Trail Week')?.origin).toBe('Sage · Trail Week campaign')
+  })
+})

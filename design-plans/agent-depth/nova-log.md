@@ -47,3 +47,4 @@
 - 25/11 · Moderation · Nova en Act signale le spam (action `nova-spam` existante) ; en Draft une carte « 3 bot comments » à approuver d'un coup · un like automatique par Nova sur les arrivées · les likes de Nova viennent avec ses réponses positives du seed ; un like par arrivée serait du bruit au journal.
 - 25/11 · Moderation · « Report as spam » ajoute au plus un mot (le plus long, ≥ 5 lettres) à la règle spam de Nova · apprendre tout le message · une règle trop large cacherait de vrais clients.
 - 25/11 · Moderation · avis : ni masquer, ni signaler, ni supprimer (le menu le dit) · comme Agorapulse (Google ne le permet pas).
+- 25/11 · Demande de Sage (label de campagne) · `?label=` + 4 conversations Trail Week + règle seed `ir-trailweek` · laisser Sage créer la règle au chargement · la campagne est déjà live dans le seed, sa règle doit déjà exister.
