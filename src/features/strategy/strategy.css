@@ -113,3 +113,4 @@
 .moment-body p { margin-top: 2px; }
 @media (max-width: 640px) { .moment { grid-template-columns: minmax(0, 1fr); gap: var(--s2); } }
 .moments-head { flex-wrap: wrap; }
+.cad-incl { display: block; }

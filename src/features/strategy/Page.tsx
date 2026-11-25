@@ -435,7 +435,7 @@ function CampaignView() {
                     <Net n={p.network} />
                     <span className="ellipsis" title={p.title}>{p.title}</span>
                     <span className="mono faint">{fmtDate(c.base + p.day * DAY)}</span>
-                    {p.published && <Check size={13} className="ok" aria-label="Published" />}
+                    {p.published && <Check size={14} className="ok" aria-label="Published" />}
                   </li>
                 ))}
               </ul>
@@ -586,7 +586,7 @@ function Pillars() {
           <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
           {edit ? null : (
             <div className="row tight">
-              <span className="row tight faint lock-note"><Lock size={13} />Sage suggests, you decide</span>
+              <span className="row tight faint lock-note"><Lock size={14} />Sage suggests, you decide</span>
               <Btn size="sm" onClick={() => setEdit(structuredClone(s.strategy.pillars))}><Pencil size={14} />Edit pillars</Btn>
             </div>
           )}
@@ -622,8 +622,11 @@ function Pillars() {
             <tbody>
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
-                  <td><Net n={c.network} size={20} /></td>
-                  <td className="r">{c.network === 'instagram' && repair > 0 && <span className="faint">incl. {repair} on Fernway Repair · </span>}{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}</td>
+                  <td><span className="row tight nowrap"><Net n={c.network} size={20} />{NETWORK_LABEL[c.network]}</span></td>
+                  <td className="r">
+                    <span className="num">{week[c.network] ?? 0}</span>{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}
+                    {c.network === 'instagram' && repair > 0 && <span className="faint t-xs cad-incl">incl. {repair} on Fernway Repair</span>}
+                  </td>
                   <td className="r">
                     <span className="stepper">
                       <Btn size="xs" variant="ghost" icon aria-label={`Lower ${NETWORK_LABEL[c.network]} target`} onClick={() => d({ type: 'strategy/cadence', network: c.network, target: c.target - 1 })}><Minus size={12} /></Btn>

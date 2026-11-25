@@ -97,3 +97,7 @@
   .report-layout { display: block; }
   .report { box-shadow: none; border: 0; }
 }
+/* Post titles are long: the title takes its own line above its bar instead of being cut. */
+.roi-sold .hbars { gap: var(--s3); }
+.roi-sold .hbar { grid-template-columns: minmax(0, 1fr) 64px; row-gap: 4px; }
+.roi-sold .hbar > span:first-child { grid-column: 1 / -1; white-space: normal; overflow: visible; color: var(--ink); }

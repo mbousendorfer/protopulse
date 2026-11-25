@@ -61,7 +61,11 @@ export function Team() {
               <p className="muted">{a.role}</p>
               <div className="now-line"><span className="faint">Now</span> {a.status === 'on' ? a.now : `Paused${a.pausedUntil ? ` until ${a.pausedUntil}` : ''}`}</div>
               <div>
-                <div className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</div>
+                <div className="row between autonomy-line">
+                  <span className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</span>
+                  {/* Asking for more autonomy needs you: caution, like every other "waits for you". */}
+                  {promo && <Pill tone="caution">Asks for more autonomy</Pill>}
+                </div>
                 <StackBar h={6} parts={[
                   { label: 'Suggest', value: lv('suggest'), color: 'var(--lift-2)' },
                   { label: 'Draft', value: lv('draft'), color: `color-mix(in srgb, var(--a-${a.id}) 40%, transparent)` },
@@ -77,7 +81,6 @@ export function Team() {
               <div className="row">
                 <Link to={`/agents/${a.id}`} className="btn sm">Open profile</Link>
                 {pending > 0 && <Link to="/" className="btn sm ghost">{pending} need you</Link>}
-                {promo && <Pill tone="signal">Asks for more autonomy</Pill>}
                 <span className="spacer" />
                 {a.status === 'on' ? <PauseMenu id={a.id} />
                   : <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}

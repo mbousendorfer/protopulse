@@ -5,7 +5,8 @@
 .agent-link:hover { color: var(--action-ink); }
 .now-line { font-size: var(--t-md); color: var(--ink-2); }
 .agent-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0; }
-.agent-stats div { display: flex; flex-direction: column-reverse; }
+.agent-stats div { display: flex; flex-direction: column-reverse; justify-content: flex-end; }
+.autonomy-line { margin-bottom: 4px; min-height: 22px; }
 .agent-stats dt { font-size: var(--t-xs); color: var(--ink-3); }
 .agent-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; }
 .h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }

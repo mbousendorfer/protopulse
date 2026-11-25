@@ -7,7 +7,7 @@ import { ago } from '../../app/time'
 import { now } from '../../app/core'
 import { AGENTS, agentName } from '../../data/agents'
 import { checkMessage, voiceSample } from '../../data/playbook'
-import { Btn, Empty, Mark, Pill, Seg, Switch } from '../../ui'
+import { Btn, Empty, Filters, Mark, Pill, Seg, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
 import { appliesTo, proposalsFor, rulesFor, scopeLabel, type ScopedRule } from './rules'
 import './rules.css'
@@ -175,8 +175,8 @@ function RuleList({ items, kinds, agent }: { items: PlaybookRule[] | ScopedRule[
             </div>
             <div className="pb-actions">
               <Switch checked={!r.paused} onChange={() => d({ type: 'playbook/toggleRule', id: r.id })} label={r.paused ? `Resume “${r.text}”` : `Pause “${r.text}”`} hideLabel />
-              <Btn size="xs" variant="ghost" icon aria-label={`Edit “${r.text}”`} onClick={() => { setEditing(r.id); setDraft(r.text) }}><Pencil size={13} /></Btn>
-              <Btn size="xs" variant="ghost" icon aria-label={`Delete “${r.text}”`} onClick={() => del(r)}><Trash2 size={13} /></Btn>
+              <Btn size="xs" variant="ghost" icon aria-label={`Edit “${r.text}”`} onClick={() => { setEditing(r.id); setDraft(r.text) }}><Pencil size={14} /></Btn>
+              <Btn size="xs" variant="ghost" icon aria-label={`Delete “${r.text}”`} onClick={() => del(r)}><Trash2 size={14} /></Btn>
             </div>
           </li>
         )
@@ -203,7 +203,7 @@ function RuleList({ items, kinds, agent }: { items: PlaybookRule[] | ScopedRule[
     <div className="stack">
       <div className="row">
         <div className="pb-search"><Search size={14} aria-hidden /><input className="input" placeholder={kinds ? 'Search rules' : 'Search facts'} value={q} onChange={e => setQ(e.target.value)} aria-label="Search" /></div>
-        <Seg name={`pb-agent-${kinds ? 'r' : 'f'}`} label="Agent" size="sm" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: a.name }))]} />
+        <Filters label="Agent" value={filter} onChange={setFilter} items={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: <><Mark agent={a.id} />{a.name}</> }))]} />
       </div>
       {undo}
       {adding ? <AddRule kinds={!!kinds} onClose={() => setAdding(false)} /> : <Btn className="self-start" onClick={() => setAdding(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>}
