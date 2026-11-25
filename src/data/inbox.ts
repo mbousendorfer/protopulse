@@ -37,6 +37,8 @@ export type Conversation = {
   /** Who reviewed it: Nova reviews what she settled alone, a person what they looked at. */
   reviewedBy?: 'nova' | Assignee
   notes?: Note[]
+  /** Inbox rules that fit but that Nova only proposes (her rules action is on Suggest or Draft). */
+  suggested?: string[]
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
   settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }

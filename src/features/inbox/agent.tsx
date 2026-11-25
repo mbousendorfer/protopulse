@@ -3,11 +3,15 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { flagged, isLead } from '../desk/parts'
 import type { State } from '../../app/state'
 import { CONTACTS, withTeam } from '../../data/inbox'
-import { NEEDS_YOU, onResolveInbox, onUndoInbox, virtualConvs, type CardConv } from './slice'
+import { NEEDS_YOU, onResolveInbox, reduceInbox, onUndoInbox, virtualConvs, type CardConv } from './slice'
+import { matches, thenText, whenText, wordsOf, type RuleOp } from './rules'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
-  interface IntentTypes { reply: { name: string } }
+  interface IntentTypes {
+    reply: { name: string }
+    inboxRule: { words: string[]; then: RuleOp }
+  }
 }
 declare module '../../app/types' {
   interface Handoff {
@@ -50,12 +54,47 @@ const reply = defineIntent({
   },
 })
 
+/** "Make Nova label refund requests as Refund", "assign press to Claire", "hide messages about crypto": a new Inbox rule. */
+const inboxRule = defineIntent({
+  kind: 'inboxRule', owner: 'nova', order: 55,
+  parse: t => {
+    const q = t.replace(/^(?:make|have|ask|let)\s+nova\s+|^nova,?\s+/, '').replace(/^(?:please\s+)?(?:always\s+)?/, '')
+    let m = q.match(/^(?:label|tag)\s+(.+?)\s+(?:as|with)\s+["“]?(.+?)["”]?$/)
+    if (m) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'label', value: cap(m[2].trim()) } }
+    m = q.match(/^assign\s+(.+?)\s+to\s+(claire|me|sam)$/)
+    if (m) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'assign', value: m[2] === 'claire' ? 'claire' : 'sam' } }
+    m = q.match(/^hide\s+(.+)$/)
+    if (m && wordsOf(m[1]).length) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'hide' } }
+    m = q.match(/^(?:mark\s+(.+?)\s+(?:as\s+)?reviewed|review\s+(.+))$/)
+    if (m) return { kind: 'inboxRule', words: wordsOf(m[1] ?? m[2]), then: { op: 'review' } }
+  },
+  bar: (i, { s, d, go }) => {
+    if (!i.words.length) return { text: 'Which words should I look for? Try “label refund requests as Refund”.' }
+    const rule = { words: i.words, then: i.then }
+    const n = s.inbox.convs.filter(c => matches({ ...rule, id: '', on: true, uses: 0, origin: '' }, withTeam(c))).length
+    return {
+      text: `Done. When a message ${whenText(rule)}, I’ll ${thenText(i.then).toLowerCase()}.${n ? ` ${n} conversation${n > 1 ? 's' : ''} already match: I applied it there too.` : ''} You can undo it from the journal.`,
+      after: () => d({ type: 'inbox/ruleAdd', rule, applyNow: true, origin: 'You asked in ⌘K' }),
+      ctas: [{ label: 'See the rules', run: () => go('/inbox?rules=1') }],
+    }
+  },
+  chat: (i, { s }) => {
+    if (!i.words.length) return { replies: [{ from: 'nova', text: 'Which words should I look for? Try “label refund requests as Refund”.' }], effects: [] }
+    const rule = { words: i.words, then: i.then }
+    const n = s.inbox.convs.filter(c => matches({ ...rule, id: '', on: true, uses: 0, origin: '' }, withTeam(c))).length
+    return {
+      replies: [{ from: 'nova', text: `Done. When a message ${whenText(rule)}, I’ll ${thenText(i.then).toLowerCase()}.${n ? ` ${n} conversation${n > 1 ? 's' : ''} already match: I applied it there too.` : ''} It’s in Inbox › Rules.` }],
+      effects: [st => reduceInbox(st, { type: 'inbox/ruleAdd', rule, applyNow: true, origin: 'You asked in Chat' })],
+    }
+  },
+})
+
 const nova: AgentModule = {
   id: 'nova',
   script: SCRIPT,
   onResolve: onResolveInbox,
   onUndo: onUndoInbox,
-  intents: [reply],
+  intents: [reply, inboxRule],
   batches: [{
     id: 'nova', agent: 'nova', match: h => h.agent === 'nova' && h.kind === 'approval' && h.preview?.type === 'reply' && !h.proposal,
     ready: h => h.confidence >= 80 && !flagged(h),

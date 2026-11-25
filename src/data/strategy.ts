@@ -40,6 +40,8 @@ export type Campaign = {
   source?: string
   /** Iris's recap report, under /insights/reports/:id. */
   reportId?: string
+  /** What Sage assumed because the brief didn't say. */
+  assumptions?: string[]
 }
 
 export const CAMPAIGNS: Campaign[] = [
@@ -233,27 +235,67 @@ const PRODUCTS: { re: RegExp; name: string; audience: string; msg: string[] }[] 
 ]
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const BRAND = { name: 'Fernway', audience: 'Followers aged 25–40 who engaged in the last 90 days', msg: ['Gear that lasts', 'Go outside more'] }
+export const PRODUCT_NAMES = PRODUCTS.map(p => p.name)
 
-export function generatePlan(id: string, brief: string, now: number, opts: { budget?: number; source?: string } = {}): Campaign {
-  const prod = PRODUCTS.find(p => p.re.test(brief)) ?? { name: 'Fernway', audience: 'Followers aged 25–40 who engaged in the last 90 days', msg: ['Gear that lasts', 'Go outside more'] }
-  const num = brief.match(/(\d[\d,.]*)\s*(k\b|pre-?orders?|sign-?ups?|sales|orders|requests|followers|€|euros?)?/i)
-  let target = num ? Math.round(parseFloat(num[1].replace(/,/g, '')) * (num[2]?.toLowerCase() === 'k' ? 1000 : 1)) : 300
-  if (!target || target < 10) target = 300
-  const unit = num?.[2] ? (/pre/i.test(num[2]) ? 'pre-orders' : /sign/i.test(num[2]) ? 'sign-ups' : /request/i.test(num[2]) ? 'requests' : /follow/i.test(num[2]) ? 'new followers' : /€|euro/i.test(num[2]) ? 'revenue from social (€)' : 'orders') : /pre-?order/i.test(brief) ? 'pre-orders' : 'sign-ups'
-  // Launch date: "March 15", "15 March", "in March"… default: 3 weeks from now.
-  const lower = brief.toLowerCase()
+export type GoalUnit = 'pre-orders' | 'orders' | 'sign-ups' | 'requests' | 'new followers' | 'revenue from social (€)'
+export const GOAL_UNITS: GoalUnit[] = ['pre-orders', 'orders', 'sign-ups', 'requests', 'new followers', 'revenue from social (€)']
+
+/** A brief as Sage reads it: the sentence, plus whatever the optional fields or Sage's questions settled. */
+export type BriefInput = { text: string; product?: string; launch?: number; goal?: { target: number; unit: GoalUnit }; budget?: number; audience?: string; networks?: Network[] }
+export type BriefGap = 'goal' | 'launch'
+
+/** The number that says it worked, if the text gives one: “300 pre-orders”, “2k orders”, “€40,000”. */
+export function readGoal(text: string): BriefInput['goal'] {
+  const found = [...text.matchAll(/(€\s*)?(\d[\d,.]*)\s*(k\b)?\s*(?:(?!pre|sign|sale|order|request|follow)[a-z-]+\s+)?(pre-?orders?|sign-?ups?|sales|orders?|requests?|followers|€|euros?)?/gi)].map(m => {
+    const target = Math.round(parseFloat(m[2].replace(/,/g, '')) * (m[3] ? 1000 : 1))
+    const u = (m[4] ?? '').toLowerCase()
+    const unit: GoalUnit = m[1] || /€|euro/.test(u) ? 'revenue from social (€)' : /pre/.test(u) ? 'pre-orders' : /sign/.test(u) ? 'sign-ups' : /request/.test(u) ? 'requests' : /follow/.test(u) ? 'new followers' : /order|sale/.test(u) ? 'orders' : /pre-?order/i.test(text) ? 'pre-orders' : 'sign-ups'
+    return { target, unit, named: !!(m[1] || m[3] || m[4]) }
+  })
+  // A number with a unit wins; a bare one counts only if it can't be a day or a year.
+  const g = found.find(x => x.named && x.target >= 10) ?? found.find(x => x.target >= 100 && !(x.target >= 1900 && x.target <= 2100))
+  return g && { target: g.target, unit: g.unit }
+}
+
+/** The launch date, if the text gives one: “March 15”, “15 March”, “in March”, “in 3 weeks”, “next month”. */
+export function readLaunch(text: string, now: number): number | undefined {
+  const lower = text.toLowerCase()
+  const weeks = lower.match(/in (\d+|two|three|four|six) weeks?/)
+  if (weeks) return now + ({ two: 2, three: 3, four: 4, six: 6 }[weeks[1]] ?? +weeks[1]) * 7 * DAY
+  const nd = new Date(now)
+  if (/next month/.test(lower)) return new Date(nd.getFullYear(), nd.getMonth() + 1, 1, 9).getTime()
+  if (/next week/.test(lower)) return now + 7 * DAY
   const mi = MONTHS.findIndex(m => new RegExp(`\\b${m}`).test(lower))
-  const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\s*(?:k|pre|sign|order|request|follow|€|%))/)
-  let launch = now + 21 * DAY
-  if (mi >= 0) {
-    const nd = new Date(now)
-    const year = mi < nd.getMonth() ? nd.getFullYear() + 1 : nd.getFullYear()
-    launch = new Date(year, mi, dm ? Math.min(28, +dm[1]) : 1, 9).getTime()
-  }
+  if (mi < 0) return
+  const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\s*(?:k\b|pre|sign|order|request|follow|€|%|,\d|\d))/)
+  const year = mi < nd.getMonth() ? nd.getFullYear() + 1 : nd.getFullYear()
+  return new Date(year, mi, dm ? Math.min(28, +dm[1]) : 1, 9).getTime()
+}
+
+/** What the brief says, and the two things Sage won't guess when a person is there to answer: the goal and the date. */
+export function readBrief(text: string, now: number, fields: Partial<BriefInput> = {}): { input: BriefInput; missing: BriefGap[] } {
+  const input: BriefInput = { text, ...fields, goal: fields.goal ?? readGoal(text), launch: fields.launch ?? readLaunch(text, now) }
+  return { input, missing: [...(input.goal ? [] : ['goal' as const]), ...(input.launch ? [] : ['launch' as const])] }
+}
+
+export function generatePlan(id: string, brief: string | BriefInput, now: number, opts: { budget?: number; source?: string } = {}): Campaign {
+  const { input, missing } = readBrief(typeof brief === 'string' ? brief : brief.text, now, typeof brief === 'string' ? {} : brief)
+  const text = input.text
+  const prod = PRODUCTS.find(p => p.name === input.product) ?? (input.product ? undefined : PRODUCTS.find(p => p.re.test(text))) ?? BRAND
+  const target = input.goal?.target ?? 300
+  const unit: GoalUnit = input.goal?.unit ?? (/pre-?order/i.test(text) ? 'pre-orders' : 'sign-ups')
+  const launch = input.launch ?? now + 21 * DAY
+  // Sage says what it assumed when nobody was there to ask (a brief from another agent).
+  const assumptions = [
+    ...(missing.includes('goal') ? [`Goal: ${target.toLocaleString('en-GB')} ${unit}, the brief gives no number`] : []),
+    ...(missing.includes('launch') ? [`Launch on ${new Date(launch).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}, 3 weeks out: the brief gives no date`] : []),
+  ]
+  const brief_ = text
   const start = launch - 5 * DAY, end = launch + 9 * DAY
   const dayOf = (t: number) => Math.round((t - now) / DAY)
   const L = dayOf(launch)
-  const name = `${prod.name} ${/launch/i.test(brief) ? 'launch' : 'campaign'}`
+  const name = `${prod.name} ${/launch/i.test(text) ? 'launch' : 'campaign'}`
   const posts: CPost[] = [
     { id: `${id}-1`, phase: 'Teasing', network: 'instagram', day: L - 5, title: `Something is coming: ${prod.name} teaser`, pillar: 'Gear that lasts' },
     { id: `${id}-2`, phase: 'Teasing', network: 'tiktok', day: L - 3, title: 'Behind the scenes: the rain test', pillar: 'Gear that lasts' },
@@ -266,18 +308,21 @@ export function generatePlan(id: string, brief: string, now: number, opts: { bud
     { id: `${id}-9`, phase: 'Follow-up', network: 'tiktok', day: L + 6, title: 'Your first week with it', pillar: 'Community' },
     { id: `${id}-10`, phase: 'Follow-up', network: 'linkedin', day: L + 8, title: 'Launch numbers and what we learned', pillar: 'Trail stories' },
   ]
-  const budget = opts.budget ?? (target >= 1000 ? 1200 : 600)
+  const budget = input.budget ?? opts.budget ?? (target >= 1000 ? 1200 : 600)
+  // Networks Sam ticked: posts elsewhere move to them, in turn.
+  const nets = input.networks?.length ? input.networks : undefined
+  const placed = nets ? posts.map((p, i) => (nets.includes(p.network) ? p : { ...p, network: nets[i % nets.length] })) : posts
   return {
-    id, name, status: 'review', brief, createdAt: now, base: now, source: opts.source,
+    id, name, status: 'review', brief: brief_, createdAt: now, base: now, source: opts.source, assumptions: assumptions.length ? assumptions : undefined,
     goal: { label: unit, target, current: 0 }, start, end,
     kpis: [unit[0].toUpperCase() + unit.slice(1), 'Reach on Instagram and TikTok', 'Saves and shares on launch posts'],
-    messages: prod.msg, audience: prod.audience,
+    messages: prod.msg, audience: input.audience || prod.audience,
     phases: [
       { name: 'Teasing', start, end: launch - DAY, summary: 'Teaser, behind the scenes, the why' },
       { name: 'Launch', start: launch, end: launch + 4 * DAY, summary: 'Reveal, proof, answers to every question' },
       { name: 'Follow-up', start: launch + 5 * DAY, end, summary: 'Customer stories, numbers, last call' },
     ],
-    posts,
+    posts: placed,
     tasks: [
       { id: `${id}-t1`, label: `Write and schedule the ${posts.length} posts`, agent: 'atlas', status: 'todo' },
       { id: `${id}-t2`, label: `Answer ${prod.name} questions and send ${unit} links`, agent: 'nova', status: 'todo' },

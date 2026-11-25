@@ -56,7 +56,11 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
 ## 6. Livrer
 - Commit (message en anglais, sujet `UI next level: <résumé>`), push, `gh pr create` : titre identique, corps =
   commits relus, findings (règle / preuve / fix), ce qui a été écarté et pourquoi, captures avant/après.
-- `gh pr merge --squash --delete-branch`. Puis `git switch --detach origin/main` après fetch.
+- Juste avant de merger : `git fetch` puis `git merge origin/main` dans la branche, et relance `npx tsc --noEmit`,
+  `npm run build` et `npm test` sur le résultat (deux PR vertes chacune peuvent casser main ensemble : #37 + #50).
+  Rouge → corrige, repousse, recommence.
+- `gh pr merge --squash --delete-branch` (Matt l'a autorisé le 25/11 pour les PR de la loop). Puis
+  `git switch --detach origin/main` après fetch. Vérifie que le CI de main repasse vert au tick suivant.
 - Écris dans STATE le SHA de `origin/main` **d'avant** ton merge (ton propre commit est ignoré au tick suivant).
 - `ScheduleWakeup` 300 s.
 

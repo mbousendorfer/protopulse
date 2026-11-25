@@ -1,6 +1,6 @@
 // Iris owns the performance numbers. Every screen, report, Chat answer and ⌘K answer reads them here, never typed again.
 import type { Network } from '../../app/types'
-import { BEST_CELL, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
+import { BEST_CELL, DAILY_REACH, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
 
 export type SocialNet = keyof typeof BEST_CELL
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -61,6 +61,26 @@ export function kpis(period: Period, n: NetFilter) {
     return k
   })
 }
+/** A window of `days` days ending `offset` days ago (0 = today), within the 90 days Iris keeps. */
+export type Range = { days: number; offset: number }
+const sum = (xs: number[]) => xs.reduce((t, x) => t + x, 0)
+const windowOf = (r: Range) => DAILY_REACH.slice(DAILY_REACH.length - r.offset - r.days, DAILY_REACH.length - r.offset)
+
+/**
+ * KPIs for any window: counts follow daily reach in that window, against the same base period's totals; rates and
+ * times stay those of the base period (the shortest of 7, 30 or 90 days that covers it).
+ */
+export function rangeKpis(r: Range, n: NetFilter) {
+  const base = ([7, 30, 90] as Period[]).find(p => p >= r.days) ?? 90
+  if (r.offset === 0 && r.days === base) return kpis(base, n)
+  const total = sum(DAILY_REACH.slice(-base))
+  const f = sum(windowOf(r)) / total
+  const before = { days: r.days, offset: r.offset + r.days }
+  const g = before.offset + before.days <= DAILY_REACH.length ? sum(windowOf(before)) / total : undefined
+  return kpis(base, n).map(k => (['reach', 'followers', 'clicks', 'replies'].includes(k.key) ? { ...k, value: k.value * f, prev: g ? k.value * g : k.prev * f } : k))
+}
+export const reachSeries = (r: Range) => windowOf(r)
+
 export const kpi = (key: string, period: Period = 7, n: NetFilter = 'all') => kpis(period, n).find(k => k.key === key)!
 /** Change against the previous period: percent for counts, points for rates, minutes for times. */
 export const change = (k: { value: number; prev: number; fmt: string }) => (k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100)
