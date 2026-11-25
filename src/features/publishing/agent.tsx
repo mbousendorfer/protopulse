@@ -6,7 +6,7 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { flagged } from '../desk/parts'
-import { actVisuals, ideasDue, onResolvePublishing, publishDue, publishingDue, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
+import { actVisuals, licencesDue, tickLicences, ideasDue, onResolvePublishing, publishDue, publishingDue, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
 import { SCRIPT } from './script'
 import { guardsDue, tickGuards } from './guards'
 import { approvalsDue, sendToClaire, tickApprovals } from './approvals'
@@ -174,11 +174,12 @@ const atlas: AgentModule = {
   onUndo: (s, l) => undoCards(unfill(l.idea ? unscheduleIdea(s, l.idea) : s, l.queuePosts ?? []), l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
   // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t),
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t) || licencesDue(s),
   tick: (s, t) => {
     let next = publishDue(tickIdeas(s, t), t)
     if (visualsDue(next)) next = actVisuals(next)
     if (approvalsDue(next)) next = tickApprovals(next)
+    if (licencesDue(next)) next = tickLicences(next)
     return guardsDue(next) ? tickGuards(next) : next
   },
   intents: [post, postClaire, firstComment, fillQueue],

@@ -21,6 +21,7 @@ import { uid } from '../../app/core'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { QUIET_WORDS, isQuiet, notesOn } from './notes'
+import { expiring, search } from './media'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -388,11 +389,15 @@ function MediaLibrary() {
   const [tag, setTag] = useState('All')
   const [open, setOpen] = useState<Media | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [q, setQ] = useState('')
+  const [newTag, setNewTag] = useState('')
   const file = useRef<HTMLInputElement>(null)
   const forPost = useRef<string | undefined>(undefined)
   const library = libraryOf(s)
   const tags = useMemo(() => ['All', ...Array.from(new Set(library.flatMap(m => m.tags)))], [library])
-  const list = library.filter(m => tag === 'All' || m.tags.includes(tag))
+  const list = search(library.filter(m => tag === 'All' || m.tags.includes(tag)), q)
+  const ending = expiring(s, now)
+  const shownOpen = open && (library.find(m => m.id === open.id) ?? open)
   const waiting = waitingForVisual(s)
   const useCount = (m: Media) => m.used + s.publishing.posts.filter(p => p.media === m.name && p.status !== 'published').length
   const upload = (post?: string) => { forPost.current = post; setError(null); file.current?.click() }
@@ -425,7 +430,21 @@ function MediaLibrary() {
           </section>
         )
       })}
+      {ending.map(e => {
+        const card = s.handoffs.find(h => h.topic === 'Licence' && h.ref === e.media.name)
+        return (
+          <section key={e.media.id} className="media-missing card pad">
+            <ImageOff size={18} />
+            <div className="grow">
+              <b>The licence for “{e.media.title}” ends on {new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</b>
+              <p className="muted">{e.media.rights}. Used by {e.posts.map(p => `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${NETWORK_LABEL[p.network]}`).join(', ')}.{e.swap ? ` Atlas would put “${e.swap.title}” instead.` : ''}</p>
+            </div>
+            {e.swap && <Btn variant="primary" onClick={() => (card ? d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? 'Swap' } }) : d({ type: 'publishing/swapMedia', from: e.media.name, to: e.swap!.name }))}>Swap for “{e.swap.title}”</Btn>}
+          </section>
+        )
+      })}
       <div className="media-bar">
+        <input className="input media-search" type="search" aria-label="Search media" placeholder="Search media" value={q} onChange={e => setQ(e.target.value)} />
         <div className="grow"><Filters label="Filter media" value={tag} onChange={setTag} items={tags.map(t => ({ value: t, label: t }))} /></div>
         {error && <span className="cmp-error" role="alert">{error}</span>}
         <Btn onClick={() => upload()}><Upload size={14} />Upload</Btn>
@@ -449,7 +468,12 @@ function MediaLibrary() {
               <div><dt>Rights</dt><dd>{open.rights}</dd></div>
               <div><dt>Used in posts</dt><dd className="num">{useCount(open)}</dd></div>
               <div><dt>Added</dt><dd>{open.added}</dd></div>
-              <div><dt>Tags</dt><dd className="row tight">{open.tags.map(t => <span key={t} className="chip">{t}</span>)}</dd></div>
+              <div><dt>Tags</dt><dd className="pub-labels">
+                {shownOpen!.tags.map(t => <span key={t} className="chip">{t}<Btn size="xs" variant="ghost" icon aria-label={`Remove the tag ${t}`} onClick={() => d({ type: 'publishing/mediaTags', id: open.id, tags: shownOpen!.tags.filter(x => x !== t) })}><X size={12} /></Btn></span>)}
+                <form onSubmit={e => { e.preventDefault(); if (newTag.trim()) d({ type: 'publishing/mediaTags', id: open.id, tags: [...shownOpen!.tags, newTag] }); setNewTag('') }}>
+                  <input className="input" aria-label="Add a tag" placeholder="Add a tag" value={newTag} onChange={e => setNewTag(e.target.value)} />
+                </form>
+              </dd></div>
             </dl>
           </div>
         )}

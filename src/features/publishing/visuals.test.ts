@@ -25,8 +25,9 @@ test('on Act, Atlas gives the waiting post a visual and schedules it; Undo bring
   expect(repair(s).media).toBe('workshop')
   expect(repair(s).status).toBe('scheduled')
   expect(s.handoffs.some(h => h.id === 'h-visual')).toBe(false)
-  expect(s.log[0].text).toMatch(/^Picked “Annecy repair workshop”/)
-  s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+  const picked = s.log.find(l => /^Picked “Annecy repair workshop”/.test(l.text))!
+  expect(picked).toBeDefined()
+  s = reducer(s, { type: 'core/undo', id: picked.id })
   expect(repair(s).status).toBe('needs')
   expect(repair(s).media).toBeUndefined()
   expect(s.handoffs.some(h => h.id === 'h-visual')).toBe(true)
