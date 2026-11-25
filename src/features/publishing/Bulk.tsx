@@ -16,6 +16,7 @@ import { RETRY_OPTIONS, failureCardOf, type Retry } from './failures'
 import { FORMAT_LABEL } from './formats'
 import { perfOf } from './perf'
 import { knownLabels } from './labels'
+import { captionOf, commentOf, query, shown } from './links'
 
 const when = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · ${hhmm(t)}`
 
@@ -198,7 +199,7 @@ export function PostPreview() {
         )}
         {!p ? <p className="muted">This post no longer exists.</p> : (
           <div className="pub-prev">
-            <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={p.firstComment} /></div>
+            <div className="pub-prev-net"><NetworkPreview network={p.network} text={captionOf(p)} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={commentOf(p)} /></div>
             <dl className="pub-prev-meta">
               <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status === 'unapproved' ? 'To approve' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>
@@ -206,6 +207,7 @@ export function PostPreview() {
               <div><dt>Labels</dt><dd><LabelsEdit p={p} /></dd></div>
               {p.format && <div><dt>Format</dt><dd>{FORMAT_LABEL[p.format]}</dd></div>}
               {p.firstComment && <div><dt>First comment</dt><dd>{p.firstComment}</dd></div>}
+              {p.link && <div><dt>Link</dt><dd><span className="mono">{shown(p.link)}</span>{p.link.utm && <span className="faint t-xs"> → {p.link.url}?{query(p.link)}</span>}</dd></div>}
               {p.campaign && <div><dt>Campaign</dt><dd>{p.campaign}</dd></div>}
               {p.stats && !perf && <div><dt>Results</dt><dd className="num">{p.stats.reach.toLocaleString('en-GB')} reach · {p.stats.er}% engagement</dd></div>}
               {p.note && <div><dt>Note</dt><dd>{p.note}</dd></div>}
