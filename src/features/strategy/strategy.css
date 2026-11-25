@@ -109,3 +109,6 @@
 .pillar-edit .warn { color: var(--caution); }
 .sage-check { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); }
 .sage-check p { max-width: 72ch; }
+.moment { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: var(--s4); align-items: center; padding: 12px var(--s4); }
+.moment-body p { margin-top: 2px; }
+@media (max-width: 640px) { .moment { grid-template-columns: minmax(0, 1fr); gap: var(--s2); } }

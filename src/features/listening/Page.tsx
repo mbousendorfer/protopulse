@@ -3,6 +3,7 @@ import ManageCompetitors from './Manage'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
+import type { Network } from '../../app/types'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
@@ -10,7 +11,7 @@ import {
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -188,6 +189,9 @@ function EventView() {
 function Benchmark() {
   const { s, d } = useStore()
   const now = useNow()
+  const [params, setParams] = useSearchParams()
+  const nets = benchNetworks(s)
+  const net = nets.find(n => n === params.get('net')) ?? 'all'
   const [comp, setComp] = useState<string>('all')
   // Only competitors Echo still watches: a removed or paused one leaves the benchmark, as the Manage page promises.
   const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
@@ -195,9 +199,11 @@ function Benchmark() {
   const sov = shareOfVoice(s)
   const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...tracked.map(c => ({ ...c, us: false }))].map(r => ({ ...r, sov: sov[r.id] ?? 0 }))
   const backfilling = s.listening.watch.filter(w => w.tracking && !competitorReady(s, w))
-  const posts = TOP_POSTS.filter(p => watched.has(p.competitor) && (comp === 'all' || p.competitor === comp))
+  const posts = TOP_POSTS.filter(p => watched.has(p.competitor) && (comp === 'all' || p.competitor === comp) && (net === 'all' || p.network === net))
   return (
     <div className="stack lg">
+      <Filters label="Network" value={net} onChange={v => setParams(v === 'all' ? {} : { net: v })} items={[{ value: 'all', label: 'All networks' }, ...nets.map(n => ({ value: n, label: NETWORK_LABEL[n] }))]} />
+      {net !== 'all' ? <NetworkBench n={net} /> : <>
       <section className="card">
         <div className="card-head"><h2>Side by side <span className="faint">· last 30 days</span></h2></div>
         <div className="table-wrap">
@@ -224,6 +230,7 @@ function Benchmark() {
           <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
         </div>
       </section>
+      </>}
 
       <section className="card">
         <div className="card-head"><h2 className="row tight"><Mark agent="echo" />Lessons</h2><span className="faint">What Echo would test, from what works for them</span></div>
@@ -644,5 +651,53 @@ function Creators() {
         )}
       </Sheet>
     </div>
+  )
+}
+
+/** One network side by side: Iris's numbers for Fernway, Echo's for the rivals, and Echo's reading. */
+function NetworkBench({ n }: { n: Network }) {
+  const { s, d } = useStore()
+  const rows = networkRows(s, n)
+  const read = networkRead(s, n)
+  const mine = ourTop(n)
+  const theirs = read.them && theirTop(n, read.them.id)
+  return (
+    <>
+      <section className="card pad echo-read">
+        <Mark agent="echo" />
+        <div className="stack">
+          <div><div className="section-title mb-1">Echo’s read · {NETWORK_LABEL[n]}</div><p>{read.text}</p></div>
+          {read.them && read.them.er > (rows.find(r => r.us)?.er ?? 0) && <Btn size="sm" className="self-start" onClick={() => d({ type: 'listening/testFormat', network: n, competitor: read.them!.id })}><Mark agent="atlas" />Atlas tests their format</Btn>}
+        </div>
+      </section>
+      <section className="card">
+        <div className="card-head"><h2 className="row tight"><Net n={n} />{NETWORK_LABEL[n]} <span className="faint">· last 30 days</span></h2><span className="faint">Ranked by engagement rate</span></div>
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Brand</th><th className="r">Followers</th><th className="r">Posts per week</th><th className="r">Engagement rate</th><th className="r">Rank</th></tr></thead>
+            <tbody>
+              {rows.map(r => (
+                <tr key={r.id} className={r.us ? 'us' : ''}>
+                  <td>{r.us ? <b>{r.name}</b> : <Link to={`/listening/competitors/profile/${r.id}`}>{r.name}</Link>}</td>
+                  <td className="r">{(r.followers / 1000).toFixed(r.followers < 10000 ? 1 : 0)}k</td>
+                  <td className="r">{r.perWeek}</td>
+                  <td className="r">{r.er}%</td>
+                  <td className="r">{r.rank} of {rows.length}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      {(mine || theirs) && (
+        <section className="card">
+          <div className="card-head"><h2>Best post · yours and {read.them?.name ?? 'theirs'}</h2></div>
+          <ul className="top-posts">
+            {mine && <li><div className="row tight"><b>Fernway</b><span className="faint">· {mine.author}</span></div><p className="tp-title">{mine.title}</p><p className="mono faint">{mine.reach.toLocaleString('en-GB')} reach · {mine.er}% engagement</p></li>}
+            {theirs && <li><div className="row tight"><b>{competitorName(s, theirs.competitor)}</b><span className="faint">· {theirs.format}</span></div><p className="tp-title">{theirs.title}</p><p className="mono faint">{theirs.views} views · {theirs.er}% engagement</p><p className="tp-take"><Mark agent="echo" /><span>{theirs.takeaway}</span></p></li>}
+          </ul>
+        </section>
+      )}
+    </>
   )
 }
