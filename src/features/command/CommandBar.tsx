@@ -8,6 +8,7 @@ import type { State } from '../../app/state'
 import { groupOf, type Action } from '../../app/reducer'
 import { useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
+import { pronoun } from '../../app/core'
 import { AGENTS, agentName, NETWORK_LABEL } from '../../data/agents'
 import { EXAMPLES, OWNER, draftPost, parse, type Intent } from '../../data/command'
 import { Btn, Kbd, Mark, Menu, Thinking } from '../../ui'
@@ -144,7 +145,7 @@ function AnswerView({ run, agentName: name, onReroute }: { run: Run; agentName: 
 
 const THINK: Record<AgentId, string> = {
   nova: 'Nova is checking the inbox and the Playbook…', atlas: 'Atlas is reading the calendar and the Playbook…', iris: 'Iris is pulling the numbers…',
-  echo: 'Echo is scanning competitors and mentions…', sage: 'Sage is reading the plan and the pillars…',
+  echo: 'Echo is scanning competitors and mentions…', sage: 'Sage is reading the plan and the pillars…', juno: 'Juno is watching the latest videos…',
 }
 
 /** The scripted answer for one intent. `go` navigates and closes the bar. */
@@ -247,7 +248,7 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
     case 'overnight': {
       const items = s.log.filter(l => l.agent === i.agent && l.at >= s.brief.since).slice(0, 6)
       return {
-        text: items.length ? `Since ${hhmm(s.brief.since)} yesterday, ${agentName(i.agent)} did ${items.length} thing${items.length > 1 ? 's' : ''} on ${['nova', 'iris', 'echo'].includes(i.agent) ? 'her' : 'its'} own. Here are the latest.` : `${agentName(i.agent)} didn’t act alone since ${hhmm(s.brief.since)} yesterday.`,
+        text: items.length ? `Since ${hhmm(s.brief.since)} yesterday, ${agentName(i.agent)} did ${items.length} thing${items.length > 1 ? 's' : ''} on ${pronoun(i.agent)} own. Here are the latest.` : `${agentName(i.agent)} didn’t act alone since ${hhmm(s.brief.since)} yesterday.`,
         visual: items.length ? <ul className="cmdk-list-mini">{items.map(l => <li key={l.id}><span className="mono faint">{hhmm(l.at)}</span><span className="ellipsis">{l.text}</span>{l.status === 'undone' && <span className="faint">undone</span>}</li>)}</ul> : undefined,
         ctas: [{ label: 'Open Activity', run: () => go('/activity') }],
       }

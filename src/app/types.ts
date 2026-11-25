@@ -1,6 +1,6 @@
 // Shared domain types. Feature-specific types live next to their feature.
 
-export type AgentId = 'nova' | 'atlas' | 'iris' | 'echo' | 'sage'
+export type AgentId = 'nova' | 'atlas' | 'iris' | 'echo' | 'sage' | 'juno'
 export type Autonomy = 'suggest' | 'draft' | 'act'
 export type Risk = 'safe' | 'risky' | 'destructive'
 export type Network = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'youtube' | 'x' | 'google' | 'trustpilot'

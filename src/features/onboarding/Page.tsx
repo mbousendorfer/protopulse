@@ -42,6 +42,7 @@ const TOMORROW: Record<AgentId, string> = {
   iris: 'Writes your first morning brief at 07:00: what happened, what needs you.',
   echo: 'Starts watching Peakline, Norrø, Trailkind and Basecamp Co., plus every mention of Fernway.',
   sage: 'Reads your last 90 days and proposes 4 editorial pillars and a posting cadence.',
+  juno: 'Watches your YouTube channel and lives, and turns each new video into clips for you to review.',
 }
 
 const levelFor = (risk: string, p: Preset): Autonomy => p === 'cautious' ? (risk === 'safe' ? 'draft' : 'suggest') : p === 'balanced' ? (risk === 'safe' ? 'act' : 'draft') : 'act'
@@ -52,7 +53,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0)
   const [connected, setConnected] = useState<string[]>([])
   const [kept, setKept] = useState<Record<string, { keep: boolean; text: string }>>({})
-  const [presets, setPresets] = useState<Record<AgentId, Preset>>({ nova: 'cautious', atlas: 'cautious', iris: 'cautious', echo: 'cautious', sage: 'cautious' })
+  const [presets, setPresets] = useState<Record<AgentId, Preset>>({ nova: 'cautious', atlas: 'cautious', iris: 'cautious', echo: 'cautious', sage: 'cautious', juno: 'cautious' })
 
   const finish = (skip = false) => {
     d({ type: 'core/onboarded' })
@@ -202,7 +203,7 @@ function Team() {
   return (
     <section className="onb-step">
       <h1>Meet your team</h1>
-      <p className="lede">Five agents, one per department. They work around the clock and only come to you when a person is needed.</p>
+      <p className="lede">Six agents, one per department. They work around the clock and only come to you when a person is needed.</p>
       <div className="onb-team">
         {AGENTS.map(a => (
           <article key={a.id} className="card pad onb-agent">

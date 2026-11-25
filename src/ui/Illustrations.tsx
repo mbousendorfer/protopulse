@@ -8,7 +8,7 @@ import './illustrations.css'
 
 const HUE: Record<AgentId, string> = {
   nova: 'var(--a-nova, #e8608a)', atlas: 'var(--a-atlas, #3d7bf2)', iris: 'var(--a-iris, #8b6cf0)',
-  echo: 'var(--a-echo, #14a89a)', sage: 'var(--a-sage, #5aa83c)',
+  echo: 'var(--a-echo, #14a89a)', sage: 'var(--a-sage, #5aa83c)', juno: 'var(--a-juno, #12A87A)',
 }
 const SUN = 'var(--primary)'
 const WATER = 'var(--chart)'
@@ -118,7 +118,7 @@ export function OnboardingScene({ step }: { step: number }) {
         <path d="M160 26 L170 26 L170 50 L165 45 L160 50Z" fill={HUE.nova} />
       </>}
       {step === 2 && agents.map((c, i) => (
-        <g key={i} transform={`translate(${44 + i * 38} ${i % 2 ? 66 : 54})`}>
+        <g key={i} transform={`translate(${30 + i * 36} ${i % 2 ? 66 : 54})`}>
           <circle r="16" fill={c} /><circle cx="-5" cy="-2" r="2" fill="var(--panel)" /><circle cx="5" cy="-2" r="2" fill="var(--panel)" />
           <path d="M-5 5 Q0 9 5 5" stroke="var(--panel)" strokeWidth="2" fill="none" strokeLinecap="round" />
         </g>
@@ -166,6 +166,15 @@ export function AgentScene({ agent }: { agent: AgentId }) {
         {agent === 'echo' && [44, 62, 80].map((r, i) => (
           <circle key={r} cx="120" cy="80" r={r} fill="none" stroke={c} strokeWidth="3" opacity={0.5 - i * 0.14} />
         ))}
+        {agent === 'juno' && <>
+          <rect x="16" y="30" width="78" height="50" rx="10" fill="var(--panel)" />
+          <path d="M48 44 l16 11 l-16 11z" fill={c} />
+          <rect x="146" y="88" width="78" height="10" rx="5" fill="var(--panel)" />
+          <rect x="146" y="104" width="78" height="10" rx="5" fill="var(--panel)" />
+          {[[150, 26], [180, 30], [214, 8]].map(([x, w]) => <rect key={x} x={x} y="90" width={w} height="6" rx="3" fill={mix(c, 55)} />)}
+          {[[150, 40], [196, 24]].map(([x, w]) => <rect key={x} x={x} y="106" width={w} height="6" rx="3" fill={mix(c, 35)} />)}
+          <rect x="186" y="84" width="3" height="34" rx="1.5" fill={SUN} />
+        </>}
         {agent === 'sage' && <>
           <path d="M16 34 l20 -6 l20 6 l20 -6 v56 l-20 6 l-20 -6 l-20 6z" fill="var(--panel)" />
           <path d="M24 74 q10 -18 22 -10 t24 -20" stroke={c} strokeWidth="2.5" strokeDasharray="3 5" fill="none" strokeLinecap="round" />

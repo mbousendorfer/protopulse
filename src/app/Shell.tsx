@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity, BookOpen, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
-  Radar, Search, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
+  Radar, Search, Clapperboard, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
@@ -23,14 +23,15 @@ const DEPTS: { to: string; label: string; agent: AgentId; icon: ReactNode }[] = 
   { to: '/insights', label: 'Insights', agent: 'iris', icon: <LineChart size={16} /> },
   { to: '/listening', label: 'Listening', agent: 'echo', icon: <Radar size={16} /> },
   { to: '/strategy', label: 'Strategy', agent: 'sage', icon: <Target size={16} /> },
+  { to: '/video', label: 'Video', agent: 'juno', icon: <Clapperboard size={16} /> },
 ]
 
 const CRUMB: Record<string, string> = {
-  '': 'Desk', focus: 'Focus', inbox: 'Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy',
+  '': 'Desk', focus: 'Focus', inbox: 'Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy', video: 'Video',
   agents: 'Agents', chats: 'Chats', activity: 'Activity', playbook: 'Playbook', settings: 'Settings', onboarding: 'Onboarding',
 }
 
-const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', a: '/agents', y: '/activity', b: '/playbook' }
+const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/activity', b: '/playbook' }
 
 export default function Shell() {
   const { s, d } = useStore()
@@ -223,7 +224,7 @@ function Notifications() {
 
 const SHORTCUTS: [string, string][] = [
   ['⌘K or /', 'Ask or brief an agent'], ['F', 'Process the Desk in Focus'], ['G then D', 'Desk'], ['G then I', 'Inbox'], ['G then P', 'Publishing'],
-  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Playbook'],
+  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then V', 'Video'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Playbook'],
   ['↑ / ↓ or J / K', 'Desk and Focus: next / previous card'], ['A', 'Desk and Focus: approve, or pick the recommended option'], ['1–9', 'Desk and Focus: pick an option'],
   ['E', 'Desk and Focus: edit (⌘↵ approves the edit)'], ['R then 1–4', 'Desk and Focus: reject with a reason'], ['S then 1–4', 'Desk and Focus: snooze'],
   ['T / N', 'Autonomy request: try for a week / not yet'], ['C', 'Desk and Focus: ask Claire'], ['Z', 'Focus: undo the last decision'],

@@ -94,6 +94,7 @@ const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' |
   iris: [{ at: Date.UTC(2025, 9, 30), text: 'Anomaly alerts moved to Act', kind: 'up' }],
   echo: [{ at: Date.UTC(2025, 10, 3), text: 'Mention filing moved to Act', kind: 'up' }],
   sage: [],
+  juno: [{ at: Date.UTC(2025, 10, 10), text: 'Caption fixes moved to Act', kind: 'up' }],
 }
 
 export function AgentProfile() {

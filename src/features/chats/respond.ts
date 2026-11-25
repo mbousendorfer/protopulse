@@ -10,9 +10,9 @@ export type Route = { intent: Intent; agent: AgentId; raw: string; mentioned?: A
 
 /** "@Atlas, a post about…" or "… @iris" → the mentioned agent leads, the rest is parsed as usual. */
 export function routeText(raw: string): Route {
-  const m = raw.match(/@(nova|atlas|iris|echo|sage)\b/i)
+  const m = raw.match(/@(nova|atlas|iris|echo|sage|juno)\b/i)
   const mentioned = m ? (m[1].toLowerCase() as AgentId) : undefined
-  const clean = raw.replace(/@(nova|atlas|iris|echo|sage)\b[,:]?\s*/gi, '').trim()
+  const clean = raw.replace(/@(nova|atlas|iris|echo|sage|juno)\b[,:]?\s*/gi, '').trim()
   const { intent, forced } = parse(mentioned ? `${mentioned} ${clean}` : clean)
   return { intent, agent: mentioned ?? forced ?? OWNER[intent.kind], raw: clean, mentioned }
 }
