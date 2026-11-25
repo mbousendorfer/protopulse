@@ -81,7 +81,7 @@ export const AGENTS: Agent[] = [
       { id: 'iris-report', perWeek: 1, example: 'Monday: last week’s results, ready for Claire', label: 'Write and share the weekly report with Claire', risk: 'risky', autonomy: 'draft', reviewed: 4, approvedUnchanged: 75,
         says: says('Iris prepares the numbers. You write the report.', 'Iris writes the report and waits for you before sharing it with Claire.', 'Iris shares the report with Claire every Monday on her own.') },
       { id: 'iris-anomaly', perWeek: 2, example: 'TikTok reach dropped 38% over three posts', label: 'Raise anomalies', risk: 'safe', autonomy: 'act', reviewed: 14, approvedUnchanged: 93,
-        says: says('Iris lists anomalies in the weekly report only.', 'Iris drafts an explanation and asks before raising it.', 'Iris raises anomalies to your Desk as soon as she sees them.') },
+        says: says('Iris lists anomalies in Insights. You decide what to do.', 'Iris brings each anomaly to your Desk with what she’d do about it.', 'Iris does what she’d recommend, like asking Atlas for a post, and tells you in the journal.') },
       { id: 'iris-boost', perWeek: 1, example: 'Your Ember Fleece reel is beating its average by 4×', label: 'Recommend a paid boost', risk: 'destructive', autonomy: 'suggest', locked: true,
         lockReason: 'Spending money always needs a person.',
         says: says('Iris suggests posts to boost with a budget. You decide.', '', '') },
