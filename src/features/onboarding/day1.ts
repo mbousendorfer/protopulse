@@ -1,13 +1,13 @@
 // Day 1: the workspace a new user lands in. Derived from the Day 30 seed: the imported history stays (posts, inbox,
 // analytics come from the networks), what agents did over 30 days goes, and the Desk holds only today's first results.
 import type { State } from '../../app/state'
-import type { AgentId, Handoff, LogEntry, Network, PlaybookRule } from '../../app/types'
+import type { AgentId, Flagged, Handoff, LogEntry, Network, PlaybookRule } from '../../app/types'
 import { DAY, MIN } from '../../app/time'
 import { HANDOFFS } from '../../data/desk'
 import { FACTS, RULES } from '../../data/playbook'
 import { PILLAR_PERF } from '../../data/insights'
 import { spotIdeas } from '../publishing/ideasModel'
-import type { Conversation } from '../../data/inbox'
+import type { Conversation, ConvStatus } from '../../data/inbox'
 import { ALL_ACCOUNTS, INTEGRATIONS, andList, PROPOSALS, levelFor, netOf, pickOf, presetOf, type Setup } from './model'
 
 /** The three questions from last night Nova answers first. Rewritten with the first name, as the kept rule asks. */
@@ -23,6 +23,7 @@ const COMPETITOR_NAMES: Record<string, string> = { peakline: 'Peakline', norro: 
 export const firstBriefAt = (startedAt: number) => { const d = new Date(startedAt + DAY); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 0).getTime() }
 
 const list = andList
+const WAITING: ConvStatus[] = ['draft', 'escalated', 'claire', 'takeover']
 
 export function buildDay1(base: State, setup: Setup, t: number): State {
   const onNet = (n?: Network) => !!n && setup.connected.some(id => netOf(id) === n)
@@ -85,7 +86,9 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
 
   // Atlas: ideas from the imported posts, at the levels just chosen. The strongest one comes to the Desk.
   const atlasLevels = Object.fromEntries(agents.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
-  let ideas = social ? spotIdeas(t, base.publishing.posts, atlasLevels, rules) : []
+  // Only what went out on the networks is imported: drafts and scheduled posts were made in Protopulse.
+  const posts = base.publishing.posts.filter(p => p.status === 'published')
+  let ideas = social ? spotIdeas(t, posts, atlasLevels, rules) : []
   const top = ideas.find(i => i.key === 'storm-snow') ?? ideas[0]
   if (top) {
     ideas = ideas.map(i => (i.id === top.id ? { ...i, handoff: DAY1_IDS.atlas } : i))
@@ -123,6 +126,19 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
   }
   if (watched.length) log.push({ agent: 'echo', at: at(45), text: `Started watching ${list(watched.map(id => COMPETITOR_NAMES[id]))}`, reason: 'Competitors you kept', status: 'done', link: '/listening' })
 
+  // Conversations no Day 1 card is about: before Protopulse, you answered them yourself.
+  const onDesk = new Set(cards.map(h => h.id))
+  const flat = (f: Flagged) => (typeof f === 'string' ? f : f.text)
+  convs = convs.map(c => {
+    if (c.status === 'hidden') return { ...c, note: c.note?.replace('by Nova', 'by you') }
+    if (!WAITING.includes(c.status) || (c.handoff && onDesk.has(c.handoff))) return c
+    const reply = c.draft?.length ? [{ id: `${c.id}-you`, from: 'you' as const, text: c.draft.map(flat).join(' '), at: Math.min(c.at + 20 * MIN, t - MIN) }] : []
+    return {
+      ...c, status: 'you' as const, unread: false, handoff: undefined, note: undefined, draft: undefined, assignee: c.assignee === 'claire' ? undefined : c.assignee,
+      messages: [...c.messages.map(m => (m.from === 'nova' ? { ...m, from: 'you' as const, auto: false, undoUntil: undefined } : m)), ...reply],
+    }
+  })
+
   return {
     ...base,
     phase: 'day1',
@@ -135,8 +151,10 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
     brief: { read: false, since: t },
     engine: { ...base.engine, live: true, cursor: 0, nextAt: t + 60_000 },
     inbox: { ...base.inbox, convs },
-    // Posts waiting on Day 30 cards go back to plain drafts.
-    publishing: { ...base.publishing, ideas, posts: base.publishing.posts.map(p => (p.status === 'needs' ? { ...p, status: 'draft' as const, note: undefined, handoff: undefined } : p)) },
+    // No plan yet: Atlas proposes the first one on Thursday.
+    publishing: { ...base.publishing, ideas, posts, plan: { status: 'upcoming', version: 0, items: [] } },
+    // Sage has run no campaign yet; its standing proposals are all still open.
+    strategy: { ...base.strategy, campaigns: [], proposals: base.strategy.proposals.map(p => ({ ...p, status: 'proposed' as const })) },
     playbook: { ...base.playbook, rules, escalate: base.playbook.escalate.map(e => (e.id === 'e-press' ? { ...e, on: press.keep, label: press.text } : e)) },
     listening: { ...base.listening, watch: base.listening.watch.filter(w => watched.includes(w.id)).map(w => ({ ...w, since: t })) },
     chats: { list: [] },

@@ -58,6 +58,13 @@ test('Day 1 with every default: the first results on the Desk, no 30-day history
   expect(s.listening.watch).toHaveLength(4)
   expect(s.publishing.ideas.find(i => i.handoff === 'd1-atlas')).toBeTruthy()
   expect(s.publishing.posts.some(p => p.status === 'needs')).toBe(false)
+  // Nothing Protopulse would have made over 30 days: no waiting conversation without its card, no scheduled post, plan or campaign.
+  const onDesk = new Set(ids(s))
+  expect(s.inbox.convs.filter(c => ['draft', 'escalated', 'claire', 'takeover'].includes(c.status)).every(c => c.handoff && onDesk.has(c.handoff))).toBe(true)
+  expect(s.inbox.convs.some(c => /by Nova/.test(c.note ?? ''))).toBe(false)
+  expect(s.publishing.posts.every(p => p.status === 'published')).toBe(true)
+  expect(s.publishing.plan).toMatchObject({ status: 'upcoming', items: [] })
+  expect(s.strategy.campaigns).toHaveLength(0)
   expect(firstBriefAt(NOW)).toBe(T(7, 0, 1))
 })
 
