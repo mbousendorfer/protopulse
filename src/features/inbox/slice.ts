@@ -4,8 +4,8 @@ import { hhmm, MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
 import type { Escalation } from '../../data/playbook'
 import { actionOf } from '../../app/core'
-import { fill, SAVED, type SavedReply } from './saved'
-import { didText, effect, matches, RULES, thenText, whenText, type InboxRule, type RuleOp } from './rules'
+import { fill, firstName, SAVED, type SavedReply } from './saved'
+import { didText, effect, matches, RULES, TEAM_DELAY, thenText, whenText, type InboxRule, type RuleOp } from './rules'
 
 declare module '../../app/types' {
   interface LogEntry {
@@ -17,7 +17,7 @@ declare module '../../app/types' {
     inboxRule?: string
   }
 }
-import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
+import { CONVERSATIONS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
@@ -62,7 +62,9 @@ const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x :
 
 /** What waits on Sam in the Inbox. Shared by the Needs you view and the rail badge so they always agree. */
 export const NEEDS_YOU: Conversation['status'][] = ['draft', 'escalated', 'takeover']
-export const inboxNeedsCount = (s: State) => [...virtualConvs(s), ...s.inbox.convs].filter(c => NEEDS_YOU.includes(c.status)).length
+/** Needs Sam: waiting on a person, and not handed to a teammate who answers it. */
+export const needsYou = (c: Conversation) => NEEDS_YOU.includes(c.status) && !(c.assignee && TEAMMATES.includes(c.assignee))
+export const inboxNeedsCount = (s: State) => [...virtualConvs(s), ...s.inbox.convs].filter(needsYou).length
 
 type Reply = Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
 const replyOf = (h: Pick<Handoff, 'preview'>) => (h.preview?.type === 'reply' ? h.preview : undefined)
@@ -149,7 +151,7 @@ const attachmentNote = (c: Conversation) => (c.attachments ?? []).filter(a => !a
 const hasDraft = (c: Conversation) => (c.status === 'draft' || c.status === 'escalated') && !!c.draft?.length
 /** What a person sent or looked at is reviewed. */
 const BY_SAM = { reviewed: true, reviewedBy: 'sam' } as const
-const NAME: Record<Assignee, string> = { sam: 'you', claire: 'Claire' }
+const NAME: Record<Assignee, string> = { sam: 'you', claire: 'Claire', leo: 'Léo', yanis: 'Yanis' }
 
 /** A draft started from a saved reply went out: that reply's count goes up. */
 const bumpSaved = (s: State, ...ids: (string | undefined)[]): State => {
@@ -174,7 +176,7 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
       case 'hide': return { status: 'hidden', note: 'Hidden by you' }
       case 'unhide': return { status: c.draft?.length ? 'draft' : 'auto', note: undefined }
       case 'reviewed': return { reviewed: a.value, reviewedBy: a.value ? 'sam' : undefined, unread: false }
-      case 'assign': return { assignee: a.value }
+      case 'assign': return { assignee: a.value, teamDue: a.value && TEAMMATES.includes(a.value) ? t + TEAM_DELAY : undefined }
       case 'label': return { labels: [...new Set([...(c.labels ?? []), a.value])] }
       case 'unlabel': return { labels: (c.labels ?? []).filter(l => l !== a.value) }
       case 'sentiment': return { sentiment: a.value }
@@ -631,7 +633,9 @@ export function responseStats(s: State, t: number) {
 }
 
 const SOON = 15 * MIN
-const soon = (s: State, t: number) => waitingList(s, t).filter(x => !x.w.over && x.w.due - t <= SOON && !s.inbox.warned?.includes(x.c.id))
+/** About to miss its target and on Sam or Claire (Léo and Yanis answer their own). */
+const soon = (s: State, t: number) => waitingList(s, t).filter(x => !x.w.over && x.w.due - t <= SOON && !s.inbox.warned?.includes(x.c.id) && !onTeammate(x.c))
+const onTeammate = (c: Conversation) => !!c.assignee && TEAMMATES.includes(c.assignee)
 /** Nova's warning cards whose conversations were all answered since. */
 const staleWarnings = (s: State, t: number) => {
   const still = new Set(waitingList(s, t).map(x => x.c.id))
@@ -655,9 +659,32 @@ export function warnLate(s: State, t: number, items: { c: Conversation; w: Wait 
   })
 }
 
-export const dueInbox = (s: State, t: number) => soon(s, t).length > 0 || staleWarnings(s, t).length > 0
+export const dueInbox = (s: State, t: number) => soon(s, t).length > 0 || staleWarnings(s, t).length > 0 || teamDue(s, t).length > 0
 export function tickInbox(s: State, t: number): State {
-  let next = staleWarnings(s, t).reduce((x, h) => removeHandoff(x, h.id), s)
+  let next = teamReplies(s, t)
+  next = staleWarnings(next, t).reduce((x, h) => removeHandoff(x, h.id), next)
   next = warnLate(next, t, soon(next, t))
   return next
+}
+
+/* ---------- Teammates ---------- */
+
+const TEAM_REPLY: Partial<Record<Assignee, (first: string) => string>> = {
+  leo: n => `${n}, I’ve checked your order: it’s with the carrier and moving again, you’ll have it within 2 working days. Tracking is in your inbox. Léo, Fernway care`,
+  yanis: () => 'Hello! Thanks for thinking of us. I’m Yanis, I handle wholesale at Fernway. I’m sending our trade price list and minimums by email today.',
+}
+const teamDue = (s: State, t: number) => s.inbox.convs.filter(c => c.teamDue && c.teamDue <= t && c.assignee && TEAMMATES.includes(c.assignee) && waitingOn(c))
+
+/** Léo and Yanis answer what is assigned to them: Nova's draft if she wrote one, else their own words. */
+function teamReplies(s: State, t: number): State {
+  return teamDue(s, t).reduce((next, c) => {
+    const who = c.assignee!
+    const text = c.draft?.length ? plain(c.draft) : TEAM_REPLY[who]?.(firstName(c)) ?? ''
+    const done = patch(next, c.id, x => ({
+      status: 'you', draft: undefined, unread: false, teamDue: undefined, reviewed: true, reviewedBy: who,
+      messages: [...x.messages, { id: uid('m'), from: 'you', by: who, text, at: Math.max(x.teamDue ?? t, waitSince(x)) }],
+    }))
+    const line = `${ROSTER[who].short} replied to ${c.author}`
+    return c.handoff && done.handoffs.some(h => h.id === c.handoff) ? settleCard(done, c, line, 'done') : pushLog(done, { agent: 'nova', text: line, status: 'done', reason: `Assigned to ${ROSTER[who].short}`, link: `/inbox/${c.id}` })
+  }, s)
 }

@@ -245,7 +245,7 @@ describe('response time', () => {
     const { tickInbox, waitingList } = await import('./slice')
     const { now } = await import('../../app/core')
     let s = initialState()
-    const next = waitingList(s, now(s)).filter(x => !x.w.over).sort((a, b) => a.w.due - b.w.due)[0]
+    const next = waitingList(s, now(s)).filter(x => !x.w.over && !['leo', 'yanis'].includes(x.c.assignee ?? '')).sort((a, b) => a.w.due - b.w.due)[0]
     const t = next.w.due - 10 * 60_000
     s = tickInbox(s, t)
     const card = s.handoffs.find(h => h.sla?.includes(next.c.id))!
@@ -254,5 +254,28 @@ describe('response time', () => {
     s = reducer(s, { type: 'inbox/send', id: next.c.id, text: 'On it' })
     s = tickInbox(s, t)
     expect(s.handoffs.some(h => h.id === card.id)).toBe(card.sla!.length > 1)
+  })
+})
+
+describe('team', () => {
+  it('what is with Léo or Yanis is not Sam’s, and they answer it when due', async () => {
+    const { needsYou, tickInbox, inboxNeedsCount } = await import('./slice')
+    let s = initialState()
+    expect(needsYou(conv(s, 'c-hotel'))).toBe(false)
+    const before = inboxNeedsCount(s)
+    s = reducer(s, { type: 'inbox/bulk', ids: ['c-ana'], op: 'assign', value: 'leo' })
+    expect(inboxNeedsCount(s)).toBe(before - 1)
+    s = tickInbox(s, Math.max(conv(s, 'c-ana').teamDue!, conv(s, 'c-hotel').teamDue!) + 1)
+    expect(conv(s, 'c-ana')).toMatchObject({ status: 'you', reviewedBy: 'leo' })
+    expect(conv(s, 'c-ana').messages.slice(-1)[0]).toMatchObject({ from: 'you', by: 'leo' })
+    expect(conv(s, 'c-hotel').messages.slice(-1)[0].text).toMatch(/I’m Yanis/)
+    expect(s.log.some(l => l.text === 'Yanis replied to Hôtel Les Cimes')).toBe(true)
+  })
+
+  it('the wholesale rule assigns to Yanis on arrival', async () => {
+    const { matches, RULES, didText } = await import('./rules')
+    const r = RULES.find(x => x.id === 'ir-wholesale')!
+    expect(matches(r, conv(initialState(), 'c-hotel'))).toBe(true)
+    expect(didText(r.then, 'Hôtel Les Cimes')).toBe('Assigned Hôtel Les Cimes to Yanis')
   })
 })

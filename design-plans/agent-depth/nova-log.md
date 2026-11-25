@@ -33,3 +33,7 @@
 - 25/11 · SLA · la carte d'alerte est une carte `news` du groupe Needs you avec « Open them » (tri Waiting longest) et disparaît quand tout est répondu · une approbation · rien à approuver : c'est un rappel qui mène au travail.
 - 25/11 · SLA · « attend » = Needs you + Waiting on Claire, depuis le dernier message du client · depuis le premier message · c'est ce que le client ressent.
 - 25/11 · Contrat Iris · `responseStats` / `waitingList` exposés, demande `requests/iris-from-nova-response-times.md`.
+- 25/11 · Team · « takeover » généralisé : une personne a repris la main = l'assigné ; une conversation confiée à Léo ou Yanis sort des groupes de Sam vers « With your team » (hors badge) · nouveau statut · aucun écran existant à changer, le badge garde son sens.
+- 25/11 · Team · Léo et Yanis répondent seuls 4 min après assignation (scripté, heartbeat) ; Claire non · faire répondre Claire aussi · Claire garde son rôle d'approbatrice (circuit Ask Claire existant).
+- 25/11 · Team · section Team dans la barre latérale (ouvert + en retard par personne) à la place des vues « Assigned to me / to Claire » · vue « Team » séparée · même information, un clic de moins.
+- 25/11 · Team · l'alerte SLA ignore ce qui est chez Léo ou Yanis · alerter Sam pour tout · ils répondent d'eux-mêmes, l'alerte serait du bruit.
