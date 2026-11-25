@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
 import { DAY, dayLabel } from '../../app/time'
@@ -30,6 +30,9 @@ const updateCampaign = (s: State, id: string, f: (c: Campaign) => Campaign): Sta
 
 /** Sage's pillars and weekly cadence: the one source. Atlas (Ideas, plan review, calendar) and the Playbook read them here. */
 export const targetsOf = (s: State) => targetsFrom(s.strategy)
+/** What actually went out, per pillar (% of posts, 30 days) and per network (posts, 7 days), from Atlas's posts. */
+export const mixOf = (s: State, t = now(s)) => pillarMix(s.publishing.posts, s.strategy.pillars.map(p => p.name), t)
+export const lastWeekOf = (s: State, t = now(s)) => postsLastWeek(s.publishing.posts, t)
 
 declare module '../../app/types' {
   interface LogEntry {

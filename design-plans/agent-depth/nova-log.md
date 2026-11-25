@@ -15,3 +15,5 @@
 - 25/11 · pitch Review / To review · **Go** · — · tel que pitché.
 - 25/11 · Review · répondre (Send, approuver, Desk) marque revu par Sam · laisser « to review » après réponse · « To review » = ce qu'une personne n'a pas encore regardé ; une réponse envoyée a été regardée.
 - 25/11 · Review · états sauvegardés d'avant : réponses auto et spam caché par Nova comptent comme revus par Nova (`withTeam`) · bump de version d'état · un bump efface la session du testeur.
+- 25/11 · Escalades · mots-clés par règle intégrée (blessure, presse, juridique, budget, prix), seuils pour créateur (> 50k) et remboursement (> €150), mots longs du libellé pour une règle ajoutée par Sam · vrai classifieur · prototype mocké ; une règle ajoutée a quand même un effet visible.
+- 25/11 · Escalades · vérifiées à l'arrivée (événements Nova) seulement, pas sur les conversations du seed · re-scanner le seed · le seed est déjà trié à la main ; re-trier changerait le Desk validé.

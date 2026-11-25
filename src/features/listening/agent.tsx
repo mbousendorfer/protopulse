@@ -5,7 +5,7 @@ import { AlertsTable } from '../insights/alerts'
 import { now } from '../../app/core'
 import { ago } from '../../app/time'
 import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
-import { moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
+import { alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -66,8 +66,8 @@ const competitor = defineIntent({
 function Alerts() {
   const { s, d } = useStore()
   return (
-    <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo raises these on your Desk as soon as they happen, and copies Claire when you ask."
-      subjects={[{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]}
+    <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo checks these every minute against her mention feed and raises a match on your Desk, at most once an hour (once a day for daily rules). She copies Claire when you ask."
+      subjects={alertSubjects(s)}
       conditions={['gets more than', 'grows faster than']} units={[' negative mentions in 1 h', ' mentions in 1 h', ' mention from press', '% in a day']}
       onSave={alert => d({ type: 'listening/alertSave', alert })} onToggle={id => d({ type: 'listening/alertToggle', id })} onDelete={id => d({ type: 'listening/alertDelete', id })} />
   )

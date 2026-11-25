@@ -2,6 +2,7 @@ import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, LogEntry } from '../../app/types'
 import { MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
+import type { Escalation } from '../../data/playbook'
 import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
@@ -37,7 +38,14 @@ type Reply = Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
 const replyOf = (h: Pick<Handoff, 'preview'>) => (h.preview?.type === 'reply' ? h.preview : undefined)
 
 /** The conversation a Nova card carries: kind, mood and who it is. Old saved cards have none, so read the network and the topic. */
-export type CardConv = { type: ConvType; sentiment: Sentiment; contact?: string; stars?: number; intent?: number; post?: string; reply?: string }
+export type CardConv = {
+  type: ConvType; sentiment: Sentiment; contact?: string; stars?: number; intent?: number; post?: string
+  /** What Nova sends when she answers alone (she resolved the doubts flagged in the draft). */
+  reply?: string
+  /** Author's audience, for the "creators above 50k" escalation. */
+  followers?: number
+  note?: string
+}
 export function kindOf(h: Pick<Handoff, 'conv' | 'context' | 'topic' | 'title'>, p: Reply): CardConv {
   if (h.conv) return h.conv
   return {
@@ -51,7 +59,7 @@ function cardConv(h: Omit<Handoff, 'id' | 'at'>, p: Reply, id: string, at: numbe
   const k = kindOf(h, p)
   return {
     id, contact: k.contact, author: p.author, network: p.network, type: k.type, sentiment: k.sentiment, stars: k.stars, intent: k.intent, post: k.post,
-    at, handoff: card, unread: true, labels: [],
+    at, handoff: card, unread: true, labels: [], note: k.note,
     status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
     messages: [{ id: `${id}-q`, from: 'them', text: p.text, at: at - MIN }],
     draft: p.draft, rules: h.rules,
@@ -310,4 +318,60 @@ export function onUndoInbox(s: State, entry: LogEntry): State {
   const alone = next.inbox.convs.find(x => x.messages.some(m => m.log === entry.id && !m.undone))
   const msg = alone?.messages.find(m => m.log === entry.id)
   return alone && msg ? undoAlone(next, alone, msg) : next
+}
+
+/* ---------- Playbook escalations, applied on arrival ---------- */
+
+/** What each built-in escalation listens for. A rule Sam adds in Agents › Escalation listens for the long words of its label. */
+const ESC_WORDS: Record<string, RegExp> = {
+  'e-injury': /injur|\bhurt|\bfell\b|\bfall(?:en|ing)?\b|bleed|hospital|\bknee|ankle|wrist|\bburn|recall|unsafe|dangerous/i,
+  'e-press': /journalist|reporter|article|editor\b|magazine|newspaper|podcast|writing a (?:piece|story)|for a story/i,
+  'e-legal': /lawyer|legal|attorney|\bsue\b|suing|court|lawsuit|consumer protection/i,
+  'e-budget': /\bmy rate\b|\bfee\b|paid (?:collab|partnership)|sponsor|media kit/i,
+  'e-pricing': /\bprice|discount|promo code|coupon/i,
+}
+const TOPIC: Record<string, string> = { 'e-injury': 'Safety', 'e-press': 'Press', 'e-legal': 'Legal', 'e-creator': 'Creator', 'e-refund': 'Refund', 'e-budget': 'Creator', 'e-pricing': 'Pricing' }
+const labelWords = (label: string) => {
+  const w = label.toLowerCase().match(/[a-zà-ÿ]{5,}/g) ?? []
+  return w.length ? new RegExp(w.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i') : /$^/
+}
+export type EscalationHit = Pick<Escalation, 'id' | 'label' | 'to'> & { topic: string }
+
+/** The first escalation rule that is on for Nova and matches what came in, in the Playbook's order. */
+export function escalationFor(s: State, text: string, meta: { followers?: number; refund?: number } = {}): EscalationHit | undefined {
+  for (const e of s.playbook.escalate) {
+    if (!e.on || !e.agents.includes('nova')) continue
+    const hit = e.id === 'e-creator' ? (meta.followers ?? 0) > 50_000 : e.id === 'e-refund' ? (meta.refund ?? 0) > 150 : (ESC_WORDS[e.id] ?? labelWords(e.label)).test(text)
+    if (hit) return { id: e.id, label: e.label, to: e.to, topic: TOPIC[e.id] ?? 'Escalation' }
+  }
+}
+
+/** The largest euro amount Nova's draft would refund or exchange. */
+const refundOf = (p: Reply) => Math.max(0, ...(p.attachments ?? []).map(a => Number(a.match(/€\s?(\d+(?:[.,]\d+)?)/)?.[1].replace(',', '.') ?? 0)))
+
+/** The escalation a Nova reply card would trigger, if any. */
+export const escalationOf = (s: State, h: Omit<Handoff, 'id' | 'at'>) => {
+  const p = replyOf(h)
+  return p ? escalationFor(s, p.text, { followers: h.conv?.followers, refund: refundOf(p) }) : undefined
+}
+
+/**
+ * A message that matches an escalation rule never gets Nova's own answer, whatever her autonomy: it goes to Your call
+ * (or to Claire when the rule says so) with a holding reply, and the journal quotes the rule.
+ */
+export function escalate(s: State, h: Omit<Handoff, 'id' | 'at'>, hit: EscalationHit, ref: string): State {
+  const p = replyOf(h)!
+  const t = now(s)
+  const first = p.author.replace(/^@/, '').split(/[\s._·]/)[0]
+  const name = first.charAt(0).toUpperCase() + first.slice(1)
+  const holding = `${name}, thank you for telling us. ${hit.id === 'e-injury' ? 'We’re sorry, and we hope you’re OK. ' : ''}A member of our team will get back to you today.`
+  const why = `Escalated · rule “${hit.label}”`
+  let next = pushHandoff(s, {
+    ...structuredClone(h), kind: 'approval', action: 'nova-sensitive', topic: hit.topic, urgency: 'urgent', ref,
+    why: `${why}. Nova never answers this herself, whatever her autonomy.`, rules: [hit.label], sources: undefined,
+    conv: { ...kindOf(h, p), note: why }, preview: { ...p, draft: [holding], attachments: undefined },
+  })
+  const id = next.handoffs[0].id
+  if (hit.to === 'claire') next = updateHandoff(next, id, { lane: 'claire', claire: { askedAt: t, dueAt: t + 45_000 } })
+  return pushLog(next, { agent: 'nova', text: `Escalated ${p.author} to ${hit.to === 'claire' ? 'Claire' : 'you'} · rule: ${hit.label}`, status: 'done', reason: 'Playbook escalation, whatever the autonomy', link: `/inbox/h:${id}` })
 }

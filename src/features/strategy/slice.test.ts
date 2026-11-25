@@ -157,3 +157,14 @@ test('Day 1: approving Sage’s first card sets the pillars and cadence it shows
   s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
   expect(targetsOf(s).cadence).toMatchObject({ instagram: 5, tiktok: 4, facebook: 3, linkedin: 3, youtube: 1, x: 1 })
 })
+
+test('pillar shares and last week’s posts are read from Atlas’s posts, and move when a post goes out', async () => {
+  const { mixOf, lastWeekOf } = await import('./slice')
+  let s = initialState()
+  expect(mixOf(s)).toEqual({ 'Gear that lasts': 41, 'Trail stories': 32, 'Repair & care': 18, Community: 9 })
+  const ig = lastWeekOf(s).instagram ?? 0
+  const t = now(s)
+  s = { ...s, publishing: { ...s.publishing, posts: [...s.publishing.posts, { id: 'x', network: 'instagram', at: t - 3_600_000, text: 'A customer photo', status: 'published', author: 'atlas', pillar: 'Community' }] } }
+  expect(mixOf(s).Community).toBe(11)
+  expect(lastWeekOf(s).instagram).toBe(ig + 1)
+})

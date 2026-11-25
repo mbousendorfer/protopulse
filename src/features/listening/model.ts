@@ -2,7 +2,8 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { MENTIONS, type Mention, type Sentiment } from '../../data/listening'
+import { MENTIONS, type Mention, type Search, type Sentiment } from '../../data/listening'
+import type { Alert } from '../insights/alerts'
 
 /** Every mention Echo has filed: the ones that arrived during the session first, then the seeded ones. */
 export const allMentions = (s: State): Mention[] => [...s.listening.live, ...MENTIONS]
@@ -39,6 +40,8 @@ export const WEEK = 7 * DAY
 /** Echo's 30-day baseline for negative brand mentions per hour. Her spike guardrail is 3× this. */
 export const USUAL_NEGATIVE_PER_HOUR = 8
 export const SPIKE_FACTOR = 3
+/** The spike threshold Sam sees in Echo's guardrails is the one she applies: “3× usual…” → 3. */
+export const spikeFactor = (s: State) => parseFloat(s.agents.find(a => a.id === 'echo')?.guardrails.find(g => g.id === 'g1')?.value ?? '') || SPIKE_FACTOR
 
 const SPIKE_AUTHORS = ['r/ultralight', '@leo_alpes', '@anna.trails', '@marc_bivouac', 'r/CampingGear', '@juliette.hikes', '@tom_gr5', '@elise.rando', '@quentin.peaks', '@sara.outdoor', '@bastien_k', '@camille.r', '@florian.alps', '@mila.trek', '@nathan.ski', '@oceane.v', '@paulin.gr20', '@ruben.mtb', '@salome.trail', '@theo.camp', '@ugo.alpes', '@valentin.r', '@wendy.hike', '@yann.peaks', '@zelie.bv', '@adrien.m', '@berenice.k']
 const SPIKE_TEXTS = [
@@ -70,3 +73,55 @@ export function negativeLastHour(s: State) {
   })
   return { count: series[9], series, ratio: series[9] / USUAL_NEGATIVE_PER_HOUR }
 }
+
+/* ---------- Guardrails: counts and caps ---------- */
+
+/** “11 of 15” → 15. The cap is whatever Sam typed in the guardrail. */
+const capOf = (s: State, id: string, fallback: number) => Number(s.agents.find(a => a.id === 'echo')?.guardrails.find(g => g.id === id)?.value.match(/of (\d+)/)?.[1]) || fallback
+export const searchCap = (s: State) => capOf(s, 'g3', 15)
+export const competitorCap = (s: State) => capOf(s, 'g2', 6)
+export const activeSearches = (s: State) => s.listening.searches.filter(x => !x.paused).length
+export const watchedCount = (s: State) => s.listening.watch.filter(w => w.tracking).length
+
+/* ---------- Searches ---------- */
+
+/** A new search takes 10 minutes to collect its first week. */
+export const FILL_MS = 10 * MIN
+const hash = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7)
+/** How many mentions a new search finds in a week, from its keywords: the same answer every time. */
+export const searchTarget = (x: Search) => 120 + (hash(x.keywords.toLowerCase()) % 780)
+/** The search's 7-day volume as of `t`, and whether Echo is still collecting it. */
+export function searchVolume(x: Search, t: number) {
+  if (!x.startedAt) return { volume: x.volume, collecting: false, progress: 1 }
+  const progress = Math.min(1, Math.max(0, (t - x.startedAt) / FILL_MS))
+  return { volume: Math.round(searchTarget(x) * progress), collecting: progress < 1, progress }
+}
+
+/* ---------- Alert rules ---------- */
+
+/** How long a rule stays quiet after it fired. */
+export const alertWindow = (a: Alert) => (/1 h/.test(a.unit) ? 60 * MIN : DAY)
+
+/** What a rule measures right now, and the mentions behind it. */
+export function alertValue(s: State, a: Alert): { value: number; ms: Mention[] } {
+  const t = now(s)
+  const scope = (m: Mention) => a.subject === 'brand' || m.search === a.subject
+  const inLast = (ms: number) => visibleMentions(s).filter(m => scope(m) && m.at > t - ms && m.at <= t)
+  if (a.subject === 'competitors') {
+    // Competitor searches only report weekly volumes: Echo reads them per hour.
+    const week = s.listening.searches.filter(x => ['s5', 's6', 's7', 's8'].includes(x.id) && !x.paused).reduce((n, x) => n + x.volume, 0)
+    return { value: /1 h/.test(a.unit) && !/negative/.test(a.unit) ? Math.round(week / 168) : 0, ms: [] }
+  }
+  if (/negative/.test(a.unit)) { const ms = inLast(60 * MIN).filter(m => sentimentOf(s, m) === 'negative'); return { value: ms.length, ms } }
+  if (/press/.test(a.unit)) { const ms = inLast(DAY).filter(m => m.network === 'Web'); return { value: ms.length, ms } }
+  if (/% in a day/.test(a.unit)) {
+    const day = inLast(DAY), before = visibleMentions(s).filter(m => scope(m) && m.at > t - 2 * DAY && m.at <= t - DAY).length
+    return { value: before ? Math.round(((day.length - before) / before) * 100) : day.length ? 100 : 0, ms: day }
+  }
+  const ms = inLast(60 * MIN)
+  return { value: ms.length, ms }
+}
+
+/** What an Echo alert rule can watch, as the rule editor lists it. */
+export const alertSubjects = (s: State) => [{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]
+export const alertSentence = (s: State, a: Alert) => `${alertSubjects(s).find(x => x.value === a.subject)?.label ?? a.subject} ${a.condition} ${a.threshold.toLocaleString('en-GB')}${a.unit}`

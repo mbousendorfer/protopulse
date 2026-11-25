@@ -124,3 +124,57 @@ describe('Echo · competitor moves', () => {
     expect(s.handoffs.some(h => h.topic === 'Competitor' && /Trailkind/.test(h.title))).toBe(false)
   })
 })
+
+describe('Echo · searches, alert rules and guardrails', () => {
+  const echo = (s: State) => s.agents.find(a => a.id === 'echo')!
+  const g = (s: State, id: string) => echo(s).guardrails.find(x => x.id === id)!.value
+
+  it('a new search collects for 10 minutes, then shows its volume', async () => {
+    const { searchVolume } = await import('./model')
+    const s = reducer(s0(), { type: 'listening/searchSave', search: { id: '', name: 'Seams', keywords: 'storm jacket seams', exclude: '', volume: 0 } })
+    const x = s.listening.searches[0]
+    expect(searchVolume(x, x.startedAt!).collecting).toBe(true)
+    const done = searchVolume(x, x.startedAt! + 11 * MIN)
+    expect(done.collecting).toBe(false)
+    expect(done.volume).toBeGreaterThan(0)
+  })
+
+  it('the search cap shown in the guardrail is the one applied', () => {
+    let s = s0()
+    expect(g(s, 'g3')).toBe('11 of 15')
+    s = reducer(s, { type: 'core/guardrail', agent: 'echo', id: 'g3', value: '11 of 11' })
+    const before = s.listening.searches.length
+    s = reducer(s, { type: 'listening/searchSave', search: { id: '', name: 'X', keywords: 'x', exclude: '', volume: 0 } })
+    expect(s.listening.searches.length).toBe(before)
+    expect(s.notice?.text).toMatch(/search slots/)
+    s = reducer(s, { type: 'listening/searchToggle', id: 's1' })
+    expect(g(s, 'g3')).toBe('10 of 11')
+  })
+
+  it('a rule that matches raises a card once, and Nova can reply to what it found', () => {
+    let s = reducer(s0(), { type: 'listening/alertSave', alert: { id: '', subject: 's3', condition: 'gets more than', threshold: 5, unit: ' mentions in 1 h', to: 'desk', on: true } })
+    s = fire(level(s, 'draft'))
+    const h = s.handoffs.find(x => x.ref?.startsWith('alert:'))!
+    expect(h.title).toMatch(/Storm Jacket/)
+    s = reducer(at(s, s.clock.base + 2 * MIN), { type: 'core/heartbeat' })
+    expect(s.handoffs.filter(x => x.ref === h.ref)).toHaveLength(1)
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'option', option: h.options![0].label, index: 0 } })
+    expect(s.handoffs.filter(x => x.agent === 'nova' && x.topic === 'Mention reply').length).toBeGreaterThan(5)
+  })
+
+  it('the brand negative rule joins the spike instead of a second card, and copies Claire', () => {
+    const s = fire(level(s0(), 'draft'))
+    expect(s.handoffs.some(x => x.ref === 'alert:la1')).toBe(false)
+    expect(s.log.some(l => /Copied Claire|Claire is copied/.test(l.text))).toBe(true)
+  })
+
+  it('raising the spike threshold in the guardrail keeps the spike off the Desk', () => {
+    const s = fire(reducer(level(s0(), 'draft'), { type: 'core/guardrail', agent: 'echo', id: 'g1', value: '5× usual negative volume in 1 h' }))
+    expect(spikeCard(s)).toBeUndefined()
+  })
+
+  it('nothing fires on a fresh workspace', () => {
+    const s = reducer(s0(), { type: 'core/heartbeat' })
+    expect(s.handoffs.some(x => x.ref?.startsWith('alert:'))).toBe(false)
+  })
+})

@@ -119,3 +119,26 @@ describe('review', () => {
     expect(s.inbox.convs.filter(c => !c.reviewed).map(c => c.id)).toEqual(todo)
   })
 })
+
+describe('Playbook escalations on arrival', () => {
+  it('an injury goes to Your call with the rule quoted, even with complaints on Act', async () => {
+    let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-complaint', level: 'act' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-injury' })
+    const h = s.handoffs.find(x => x.ref === 'ev-injury')!
+    expect(h).toMatchObject({ action: 'nova-sensitive', topic: 'Safety', rules: ['Injury, safety or product recall'] })
+    expect(s.log[0].text).toBe('Escalated @lucie.alpine to you · rule: Injury, safety or product recall')
+    const { virtualConvs } = await import('./slice')
+    expect(virtualConvs(s).find(c => c.handoff === h.id)).toMatchObject({ status: 'escalated', note: 'Escalated · rule “Injury, safety or product recall”' })
+  })
+
+  it('turning the rule off lets Nova handle it like any complaint; a press rule goes to Claire', async () => {
+    const { escalationFor } = await import('./slice')
+    let s = reducer(initialState(), { type: 'playbook/escalate', id: 'e-injury', on: false })
+    expect(s.playbook.escalate.find(e => e.id === 'e-injury')?.on).toBe(false)
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-injury' })
+    expect(s.handoffs.find(x => x.ref === 'ev-injury')?.action).toBe('nova-complaint')
+    expect(escalationFor(s, 'I’m a reporter at Outdoor Weekly, writing a piece on PFAS')).toMatchObject({ id: 'e-press', to: 'claire' })
+    expect(escalationFor(s, 'Love it!', { followers: 120_000 })?.id).toBe('e-creator')
+    expect(escalationFor(s, 'Where is my order?')).toBeUndefined()
+  })
+})
