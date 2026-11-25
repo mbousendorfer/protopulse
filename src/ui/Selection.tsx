@@ -70,7 +70,8 @@ export function SelectAll({ sel, label = 'Select all' }: { sel: Selection; label
 export type BulkAction = { label: ReactNode; onRun: () => void; primary?: boolean; note?: string; disabled?: boolean; icon?: ReactNode }
 
 /** Selection toolbar: sits at the top of the list it acts on, replacing nothing else, one line. */
-export function BulkBar({ count, noun = 'selected', actions, onClear }: { count: number; noun?: string; actions: BulkAction[]; onClear: () => void }) {
+/** `children`: extra controls after the actions (a menu such as Tag), same size and look. */
+export function BulkBar({ count, noun = 'selected', actions, onClear, children }: { count: number; noun?: string; actions: BulkAction[]; onClear: () => void; children?: ReactNode }) {
   if (!count) return null
   return (
     <div className="bulk-bar" role="toolbar" aria-label="Actions on the selection">
@@ -80,6 +81,7 @@ export function BulkBar({ count, noun = 'selected', actions, onClear }: { count:
           {a.icon}{a.label}
         </Btn>
       ))}
+      {children}
       {/* Why some items are skipped is said on screen, not in a tooltip. */}
       {actions.filter(a => a.note).map((a, i) => <span key={`n${i}`} className="faint bulk-note">{a.note}</span>)}
       <span className="spacer" />
