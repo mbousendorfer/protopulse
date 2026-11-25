@@ -106,7 +106,7 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
         {c.status === 'ready' && <><Btn size="sm" onClick={stop(() => nav(`/video/clips/${c.id}`))}>Review</Btn><Btn size="sm" variant="primary" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn><NotNow c={c} size="sm" /></>}
         {c.status === 'snoozed' && <><Pill>Back tomorrow 08:00</Pill><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn></>}
         {c.status === 'sent' && <Link className="link-btn" to="/publishing/calendar" onClick={e => e.stopPropagation()}>{posts.length ? `Scheduled ${posts.map(p => `${new Date(p!.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(p!.at)}`)[0]}${posts.length > 1 ? ` +${posts.length - 1}` : ''}` : 'In the calendar'}</Link>}
-        {c.status === 'published' && c.stats && <span className="muted t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement</span>}
+        {c.status === 'published' && c.stats && <span className="muted t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span>}
       </div>
     </article>
   )

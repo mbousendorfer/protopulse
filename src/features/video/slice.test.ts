@@ -4,6 +4,7 @@ import { reducer, type Action } from '../../app/reducer'
 import { now } from '../../app/core'
 import { PHASES, PHASE_MS, SEEDS, TRANSCRIPT } from '../../data/video'
 import { clipLengthOf, clipPosts as clipPosts2, rescore } from './model'
+import { clipPerf as irisClipPerf } from '../insights/metrics'
 
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
@@ -229,6 +230,8 @@ test('a sent clip becomes Published at its posts’ time, with numbers, and good
   const c = s.video.clips.find(x => x.id === 'clip-live-zips')!
   expect(c.status).toBe('published')
   expect(c.stats!.views).toBeGreaterThan(0)
+  // Iris's numbers: the same as Insights, Chat and ⌘K read.
+  expect(c.stats).toEqual(irisClipPerf(s, c.id, rescore(c, TRANSCRIPT.live).total))
   expect(s.log.some(l => l.text.startsWith('“Zips break, not fabric” is out:'))).toBe(true)
   const news = s.handoffs.find(h => h.ref === 'clip-live-zips')
   expect(news?.kind).toBe('news')
