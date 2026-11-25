@@ -28,6 +28,10 @@ Pas de POC. La barre : un social media manager doit croire, pendant 45 minutes, 
 
 **Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas » · « Make a LinkedIn version of this clip » · « Why is this clip not going out? » · « Which clip did best last week? » · « Pick a better cover ».
 
+7. **Echo apporte la conclusion, pas le flux.** Un SMM qui suit sa marque et ses concurrents dans Agorapulse retrouve ses recherches, ses chiffres et ses alertes, et voit qu'Echo lui dit ce qui se passe et quoi faire.
+
+**Tâches du scénario de test (Listening)** : « Track what people say about the Storm Jacket seams » · « Why is negative volume up? » · « How do we compare with Trailkind on TikTok? » · « Who are the creators talking about Peakline? ».
+
 Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage d'autonomie lisible par l'utilisateur métier, la validation d'un plan, un journal de ce que l'agent a fait avec annulation, un brief livré avant la journée, une mémoire de marque visible. Anti-patterns à éviter : autopilote sans revue sur le contenu public, promesse « autopilot » opaque, crédits IA opaques, fonctions annoncées non livrées.
 
 ---
@@ -105,18 +109,24 @@ Planning : brief à 07:00, rapport hebdo le lundi 08:00, bilans de campagne en f
 Garde-fous : partage uniquement à Sam et Claire · budget boost mensuel affiché (€1,500, €580 utilisés).
 
 ### Echo — Listening
-Planning : 24/7. Activité type : « Watching Peakline's launch comments ».
+Planning : 24/7. Activité type : « Watching Peakline's launch comments ». Echo écoute, trie, chiffre et alerte ; elle
+transforme ce qu'elle entend en objets pour les autres (réponse ou DM chez Nova, post chez Atlas, brief chez Sage) et
+apporte la conclusion plutôt que le flux. Tous ses chiffres (écran, ⌘K, Chat, Desk) se lisent dans `listening/model.ts`.
 
-| Action | Risque | Cran | Verrou |
+| Action | Risque | Cran | Ce que change le cran |
 |---|---|---|---|
-| Tag and file mentions | safe | Act | |
-| Raise competitor events | safe | Act | |
+| Tag and file mentions | safe | Act | Suggest : « + tag » proposés sur chaque mention · Draft : carte « Tag N new mentions? » · Act : Echo tague, journal + Undo. Ce qu'elle classe seule compte comme vu |
+| Raise competitor events | safe | Act | Suggest : ligne de digest · Draft/Act : carte Desk (concurrents ajoutés compris) |
 | Hand a trend to Atlas | safe | Draft | |
-| Propose a counter-move to a competitor | risky | Suggest | |
-| Raise a negative spike | safe | Act | |
-| Tell the sales team (email digest) | risky | Draft | |
+| Propose a counter-move to a competitor | risky | Suggest | Verrouillé côté Atlas : tout ce qui répond à un concurrent, Sam le publie |
+| Handle a negative spike | risky | Draft | Suggest : ligne de digest · Draft : carte Urgent à trois coups · Act : Echo met Atlas en pause et demande une déclaration à Claire, Undo 30 min |
+| Tell the sales team (email digest) | risky | Draft | Suggest : ce qu'il faudrait dire, rien n'est envoyé · Draft : l'email en carte (« can't be unsent ») · Act : envoi direct |
+| Shortlist creators for a collab | safe | Draft | Suggest : note · Draft : carte (DM, shortlist, pas un fit) · Act : shortlist + Undo. Le DM de Nova reste toujours une carte |
 
-Garde-fous : seuil de pic = 3× le volume négatif habituel en 1 h · 4 concurrents · 12 recherches actives.
+Garde-fous appliqués : seuil de pic = « 3× » lu dans le garde-fou (modifiable) sur une moyenne de 8 négatifs/h ·
+concurrents suivis « 4 of 6 » et recherches actives « 11 of 15 » : le compte suit l'état, le plafond après « of » est
+appliqué à l'ajout, à la création et à la reprise (refus inline avec lien vers le garde-fou). Règles d'alerte (onglet
+Alerts) évaluées chaque minute sur le flux, une fois par heure (ou par jour) au plus.
 
 ### Sage — Strategy
 Planning : à la demande pour les campagnes ; suit les campagnes live au fil des jours, lève les temps forts 3 semaines avant. Source unique des piliers, de la cadence et des campagnes (`targetsOf(s)`, `mixOf(s)`, `lastWeekOf(s)`, `themesOf(s)`), lus par Atlas et Iris.
@@ -272,24 +282,35 @@ Onglets : **Reports** · **Explore** · **Anomalies**.
 
 ### 6.5 Listening — Echo
 
-Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veille concurrentielle est le cœur, avec deux sous-vues aussi profondes l'une que l'autre.
+Onglets : **Competitors** · **Mentions** · **Creators** · **Trends** · **Searches**. Les badges veulent dire « needs you » :
+événements sans riposte, mentions non vues qui demandent un humain, créateurs à fit sans suite.
 
-- **Gérer les concurrents** (« Manage competitors ») : liste des concurrents suivis avec site, comptes par réseau (icône + handle), date de début de suivi, nombre d'événements ; ajouter (nom, site, comptes), modifier, mettre en pause ou retirer (avec confirmation). Les événements et filtres ne montrent que les concurrents suivis.
-- **Competitors · Events** (réagir) :
-  - fil d'événements détectés chez les 4 concurrents : lancement produit, baisse de prix, nouvelle campagne, post viral, bad buzz, partenariat créateur, changement de cadence ;
-  - chaque événement : concurrent, type, preuve (post ou page source avec aperçu), impact estimé, ce qu'Echo en pense ;
-  - **ripostes proposées**, confiées en un clic : « Counter-post by Atlas » (crée un brouillon côté Publishing, verrouillé en Suggest parce qu'il mentionne un concurrent), « Brief Sage » (crée un brief de campagne), « Tell sales » (email mocké, aperçu), « Nothing to do » ;
-  - suivi de chaque riposte (« Counter-post published · 3.2% ER vs 2.1% average »).
-- **Competitors · Benchmark** (apprendre) :
-  - tableau comparatif Fernway vs concurrents : abonnés et croissance, cadence par réseau, engagement moyen, formats dominants, part de voix ;
-  - **top posts des concurrents** (30 derniers jours) avec ce qu'Echo en tire : « Trailkind's 3-second hooks get 2× completion » ;
-  - **leçons** d'Echo, chacune avec une action : « Test it » (envoie l'idée à Atlas) ou « Dismiss » ;
-  - fiche concurrent : profil, comptes, derniers événements, posts, positionnement prix.
-- **Mentions** : sélection multiple (Ask Nova to reply crée des brouillons sur le Desk, Hide/Unhide, Tag, corriger le sentiment, Hand to Atlas), panneau de détail, export CSV. Les **règles d'alerte** d'Echo (seuils sur la marque, les concurrents ou une recherche, vers le Desk ou Claire) se règlent sur sa fiche agent, onglet Alerts.
-- **Mentions** : fil avec sentiment, source, portée, filtres ; mentions de produits ; les mentions à risque montent sur le Desk.
-- **Trends** : tendances détectées avec croissance, réseaux, adéquation à la marque (High / Medium / Low avec raison), exemples ; **Hand to Atlas**.
-- **Searches** : recherches actives (marque, produits, concurrents, thèmes comme « PFAS rainwear », « GR20 »), mots-clés et exclusions, volume ; créer, éditer, mettre en pause une recherche.
-- Une **alerte de pic négatif** reste une remontée Urgent sur le Desk avec actions (pause d'Atlas, réponse d'attente de Nova, demander une déclaration à Claire). Pas de Crisis room dédiée.
+- **Gérer les concurrents** (« Manage competitors ») : site (lien réel), comptes par réseau, date de suivi, nombre
+  d'événements ; ajouter (plafond du garde-fou), modifier, pause, retirer. Un concurrent ajouté est « lu » en 10 min
+  (30 derniers jours) : ligne au Benchmark, fiche, part de voix, puis un premier événement dans l'heure.
+- **Competitors · Events** : fil des événements (seedés et nés des concurrents ajoutés), page d'événement avec preuve,
+  impact, lecture d'Echo et ripostes qui agissent : contre-post d'Atlas (Suggest verrouillé), brief Sage, email aux
+  ventes selon le cran, Nova, leçon, rien. Régler un événement ici retire toutes ses cartes du Desk.
+- **Competitors · Benchmark** : sélecteur de réseau (`?net=`). « All networks » : tableau comparatif, part de voix
+  recalculée parmi les marques suivies (somme 100), top posts, leçons. Par réseau : Fernway (chiffres d'Iris, posts
+  réels d'Atlas sur 7 jours) et les concurrents classés par taux d'engagement, meilleur post de chacun, lecture d'Echo,
+  « Atlas tests their format ».
+- **Mentions** : barre de sentiment, filtres sentiment / produit / tag, à risque, masquées ; non vues en gras (ouvrir =
+  vu, « Mark N as seen ») ; sélection multiple (Nova reply, Hide, Hand to Atlas, Tag, corriger le sentiment), panneau
+  de détail, export CSV. **Manage tags…** : tags éditables avec règle (produit, presse, créateur, concurrent, mots),
+  appliquée à tout le flux avec Undo.
+- **Creators** : auteurs de 5 000 personnes ou plus, audience, sentiment, concurrents qu'ils citent, verdict d'Echo
+  (fit = positif, ≥ 10k, pas signé ailleurs) ; fiche ; Shortlist, « Propose a collab » (DM de Nova sur le Desk).
+- **Trends** : tendances avec croissance, réseaux, adéquation, exemples ; Hand to Atlas.
+- **Searches** : table (slots « N of 15 »), une nouvelle recherche collecte ~10 min puis affiche son volume. Chaque
+  recherche ouvre sa page : lecture d'Echo (ce qui domine sur 24 h, le mot partagé par les plaintes, la voix la plus
+  forte, les réponses en attente), quatre chiffres nommés, son propre fil. Mots-clés : tous les mots d'un mot-clé,
+  n'importe quel mot-clé, moins les exclusions.
+- **Pic négatif** (⇧D) : 27 vraies mentions entrent dans le flux ; le garde-fou lève la carte Urgent avec trois coups
+  qui agissent (pause d'Atlas + déclaration chez Claire, une carte de réponses Nova pour les 27, surveiller 2 h puis
+  rendre compte). Pas de Crisis room.
+- ⌘K / Chat : « negative mentions », « Who are the creators talking about Peakline? », « How do we compare with
+  Trailkind on TikTok? », « What is Peakline up to? » répondent avec les chiffres de l'écran.
 
 ### 6.6 Strategy — Sage
 
@@ -433,7 +454,7 @@ Un module de données par domaine, typé. Toutes les dates sont relatives au « 
 - 40 conversations Inbox + 15 contacts avec commandes ;
 - 30 posts dans le calendrier de la semaine courante et passée, 14 dans le plan proposé, 30 médias ;
 - 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
-- 4 concurrents, 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions, 8 tendances, 12 recherches ;
+- 4 concurrents (chiffres par réseau), 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions (+ 27 du pic), 5 tags à règle, 5 fiches créateurs, 8 tendances, 12 recherches, 3 règles d'alerte ;
 - 3 campagnes (1 live, 1 terminée, 1 à valider), 4 piliers, 6 cibles de cadence, 3 propositions, 4 temps forts ;
 - 25 règles de Playbook, 3 règles proposées, 20 faits ;
 - 120 entrées de journal ;
