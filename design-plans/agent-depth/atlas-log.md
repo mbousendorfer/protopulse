@@ -28,3 +28,7 @@
 - 25/11/2026 · Files · pas de demande à Sage : les posts de file sont des posts du calendrier, ils comptent déjà dans `targetsOf` · une cadence propre aux files · une seule source de cadence
 - 25/11/2026 · Demandes entrantes · `BEST_SLOT` calculé depuis `bestTime` d'Iris (données → Iris) · garder la table d'Atlas alignée à la main · un chiffre, un propriétaire ; Sage lit le même objet
 - 25/11/2026 · Demande d'Echo (retenir le jour) · `holdToday`/`releaseToday` = la pause du garde-fou (24 h) · une pause « jour calendaire » distincte · un seul mécanisme de pause, déjà déclenché seul par l'alerte
+- 25/11/2026 · Pitch B4 labels et filtres · **Go**
+- 25/11/2026 · Pitch B6 liens et UTM · **Go** (UTM + raccourci, X garde le lien simple, demande à Iris pour les clics)
+- 25/11/2026 · Pitch B7 notes de calendrier · **Go, plus simple** (notes + « quiet day » appliqué ; la note de lancement reste informative)
+- 25/11/2026 · Pitch B9 performance d'un post · **Go** (vs médiane, lecture d'Atlas, Recycle it, lien Insights)
