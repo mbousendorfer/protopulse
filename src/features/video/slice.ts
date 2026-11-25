@@ -3,12 +3,12 @@ import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
 import { DAY, T } from '../../app/time'
 import { actionOf, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
-import type { Pillar } from '../../data/publishing'
+import type { Pillar, Post } from '../../data/publishing'
 import {
   BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, captionSlips, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, NETWORK_FIT, captionSlips, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -239,6 +239,59 @@ export function undoVideoWork(s: State, captionFixes?: Record<string, number[]>,
   return next
 }
 
+/* ---------- After it goes out: published, with numbers ---------- */
+
+/** Average reach and engagement of the published posts on a network, the yardstick Iris uses. */
+export function networkAverage(s: State, n: string): { reach: number; er: number } | undefined {
+  const ps = s.publishing.posts.filter(p => p.network === n && p.status === 'published' && p.stats)
+  if (!ps.length) return undefined
+  return { reach: ps.reduce((a, p) => a + p.stats!.reach, 0) / ps.length, er: ps.reduce((a, p) => a + p.stats!.er, 0) / ps.length }
+}
+
+const postsOf = (s: State, c: Clip) => (c.posts ?? []).map(id => s.publishing.posts.find(p => p.id === id)).filter(p => !!p && p.status !== 'failed' && p.status !== 'draft') as Post[]
+
+/**
+ * A published clip's numbers: its posts' own stats when Atlas and Iris have them, else Juno's read of the first day.
+ * ponytail: the estimate (score × the network's average) stands in until Iris exposes `clipPerf`
+ * (requests/iris-from-juno-clip-perf.md); then this reads hers.
+ */
+export function clipPerf(s: State, c: Clip): { views: number; er: number } {
+  // Only the posts already out count.
+  const ps = postsOf(s, c).filter(p => p.at <= now(s))
+  const measured = ps.filter(p => p.stats)
+  if (measured.length) return { views: measured.reduce((a, p) => a + p.stats!.reach, 0), er: Math.round(measured.reduce((a, p) => a + p.stats!.er, 0) / measured.length * 10) / 10 }
+  const score = rescore(c, trOf(s, c)).total
+  const views = ps.reduce((a, p) => a + (networkAverage(s, p.network)?.reach ?? 8000) * (0.5 + (score - 50) / 30), 0)
+  const er = (networkAverage(s, ps[0]?.network ?? 'tiktok')?.er ?? 4) * (0.7 + (score - 50) / 60)
+  return { views: Math.round(views / 100) * 100, er: Math.round(er * 10) / 10 }
+}
+
+/** The first of a sent clip's posts: once it's past, the clip is out. */
+const outAt = (s: State, c: Clip) => { const ps = postsOf(s, c); return ps.length ? Math.min(...ps.map(p => p.at)) : Infinity }
+
+/** Clips whose posts all went out become Published with their numbers; one that beats its network's average is good news. */
+function publishDue(s: State, t: number): State {
+  let next = s
+  for (const c of s.video.clips.filter(x => x.status === 'sent' && outAt(s, x) <= t)) {
+    const stats = clipPerf(next, c)
+    const net = postsOf(next, c).filter(p => p.at <= t).sort((a, b) => a.at - b.at)[0]?.network ?? c.post.networks[0]
+    next = patchClips(next, [c.id], x => ({ ...x, status: 'published', stats }))
+    const avg = networkAverage(next, net)
+    const lift = avg ? stats.views / avg.reach : 1
+    const k = `${(stats.views / 1000).toFixed(1)}k`
+    next = pushLog(next, { agent: 'juno', text: `“${c.title}” is out: ${k} views, ${stats.er}% engagement on its first day`, status: 'done', reason: 'Atlas posted it at the planned time', link: `/video/clips/${c.id}` })
+    if (lift >= 1.5 && !next.handoffs.some(h => h.ref === c.id)) {
+      next = pushHandoff(next, {
+        agent: 'juno', kind: 'news', urgency: 'week', topic: 'Clip', group: 'good', ref: c.id,
+        title: `“${c.title}” passed ${k} views`, context: `${stats.er}% engagement, ${lift.toFixed(1)}× your ${NETWORK_FIT[net] ?? net} average.`,
+        why: `Juno cut it from “${sourceOf(next, c.source)?.title ?? 'your video'}”. ${c.why.split('. ')[0]}.`, confidence: 90, link: `/video/clips/${c.id}`,
+        cta: { label: 'Find more moments in that video', to: `/video/sources/${c.source}` },
+      })
+    }
+  }
+  return next
+}
+
 /* ---------- Sources ---------- */
 
 function newSource(s: State, src: Source): State {
@@ -305,12 +358,12 @@ export function tickVideo(s: State, t: number): State {
   }
   const back = next.video.clips.filter(c => c.status === 'snoozed' && (c.back ?? Infinity) <= t).map(c => c.id)
   if (back.length) next = patchClips(next, back, c => ({ ...c, status: 'ready', back: undefined }))
-  return next
+  return publishDue(next, t)
 }
 
 export const videoDue = (s: State, t: number) =>
   s.video.sources.some(src => src.status === 'processing' && !!src.startedAt && t - src.startedAt >= (isPrivate(src.url) ? PHASE_MS : PHASES.length * PHASE_MS)) ||
-  s.video.clips.some(c => c.status === 'snoozed' && (c.back ?? Infinity) <= t)
+  s.video.clips.some(c => (c.status === 'snoozed' && (c.back ?? Infinity) <= t) || (c.status === 'sent' && outAt(s, c) <= t))
 
 /* ---------- Desk ---------- */
 

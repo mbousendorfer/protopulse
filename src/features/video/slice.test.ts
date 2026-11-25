@@ -219,3 +219,18 @@ test('length per network: a 70 s clip goes to LinkedIn only, and loses Flow poin
   expect(rescore({ ...long, post: { ...long.post, networks: ['linkedin'] } }, t).reasons.flow).not.toMatch(/longer than/)
   expect(rescore(long, t).reasons.flow).toMatch(/longer than 60 s, TikTok and Reels cut it off/)
 })
+
+test('a sent clip becomes Published at its posts’ time, with numbers, and good news when it beats its network', () => {
+  let s = run(initialState(), { type: 'video/send', ids: ['clip-live-zips'] })
+  const last = Math.min(...s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips').map(p => p.at))
+  s = run(s, { type: 'core/heartbeat' })
+  expect(s.video.clips.find(c => c.id === 'clip-live-zips')?.status).toBe('sent')
+  s = run(later(s, last - now(s) + 1000), { type: 'core/heartbeat' })
+  const c = s.video.clips.find(x => x.id === 'clip-live-zips')!
+  expect(c.status).toBe('published')
+  expect(c.stats!.views).toBeGreaterThan(0)
+  expect(s.log.some(l => l.text.startsWith('“Zips break, not fabric” is out:'))).toBe(true)
+  const news = s.handoffs.find(h => h.ref === 'clip-live-zips')
+  expect(news?.kind).toBe('news')
+  expect(news?.title).toContain(`${(c.stats!.views / 1000).toFixed(1)}k views`)
+})
