@@ -18,17 +18,18 @@ import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
+import Roi from './RoiTab'
 import { ReportOut, SaveTemplate, Schedules, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
 import './insights.css'
 
-type Tab = 'reports' | 'explore' | 'anomalies'
+type Tab = 'reports' | 'explore' | 'roi' | 'anomalies'
 
 export default function InsightsPage() {
   const loc = useLocation()
   const nav = useNavigate()
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
-  const tab: Tab = seg === 'explore' ? 'explore' : seg === 'anomalies' ? 'anomalies' : 'reports'
+  const tab: Tab = seg === 'explore' ? 'explore' : seg === 'roi' ? 'roi' : seg === 'anomalies' ? 'anomalies' : 'reports'
   const openAnomalies = anomalyList(s).filter(a => a.open).length
 
   return (
@@ -37,6 +38,7 @@ export default function InsightsPage() {
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
         { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },
+        { value: 'roi', label: 'ROI' },
         { value: 'anomalies', label: 'Anomalies', count: openAnomalies },
       ]} />
       <Routes>
@@ -44,6 +46,7 @@ export default function InsightsPage() {
         <Route path="reports" element={<Reports />} />
         <Route path="reports/:id" element={<ReportView />} />
         <Route path="explore" element={<Explore />} />
+        <Route path="roi" element={<Roi />} />
         <Route path="anomalies" element={<Anomalies />} />
         <Route path="*" element={<Reports />} />
       </Routes>
