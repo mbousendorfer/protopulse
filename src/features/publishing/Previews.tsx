@@ -88,7 +88,7 @@ function stamp(at: number | string | undefined, published: boolean, now: number,
   }
 }
 
-type View = { text: string; words: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
+type View = { who: string; text: string; words: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
 
 const Brand = ({ size = 28, square }: { size?: number; square?: boolean }) => (
   <span className={`pv-brand ${square ? 'sq' : ''}`} style={{ width: size, height: size }} aria-hidden>
@@ -104,7 +104,7 @@ function Instagram(v: View) {
   return <>
     <header className="ig-head">
       <Brand size={32} />
-      <div className="ig-who"><b>fernway<Ico n="verified" size={12} className="ig-badge" /></b><span>Annecy, France</span></div>
+      <div className="ig-who"><b>{v.who}<Ico n="verified" size={12} className="ig-badge" /></b><span>Annecy, France</span></div>
       <Ellipsis size={22} aria-label="More" />
     </header>
     <div className="ig-media">
@@ -119,7 +119,7 @@ function Instagram(v: View) {
     </div>
     {likes > 1 && <p className="ig-likes"><Face name="trail" /><Face name="lake" />Liked by <b>lea.hikes</b> and <b>{plural(likes - 1, 'other')}</b></p>}
     {likes === 1 && <p className="ig-likes"><b>1 like</b></p>}
-    <p className="ig-cap"><b>fernway</b> <Caption v={v} cut={cutAt(v.text, 115, 1)} more="more" /></p>
+    <p className="ig-cap"><b>{v.who}</b> <Caption v={v} cut={cutAt(v.text, 115, 1)} more="more" /></p>
     {comments > 0 && <p className="ig-meta">{comments === 1 ? 'View 1 comment' : `View all ${full(comments)} comments`}</p>}
     <p className="ig-time">{v.when('ig')}</p>
   </>
@@ -280,10 +280,12 @@ type Props = {
   format?: Post['format']
   /** Shown under the post, as the brand's own first comment. */
   firstComment?: string
+  /** The profile it goes out on (Instagram: Fernway or Fernway Repair). */
+  who?: { handle: string }
 }
 
 /** The post as it will look in each network's own app, in the mode that network is mostly used in. */
-export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment }: Props) {
+export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment, who }: Props) {
   const now = useNow(60_000)
   const [ref, zoom] = useFit(network !== 'trustpilot')
   if (network === 'trustpilot') return <Empty title="No preview for Trustpilot" body="Trustpilot only shows customer reviews and your replies. Brands can’t publish posts there." />
@@ -296,8 +298,9 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
   const kind = chosen ?? format?.[1].toLowerCase()
   const caption = format ? raw.slice(format[0].length).replace(/^./, c => c.toUpperCase()) : raw
   const carousel = kind === 'carousel' ? Math.min(10, Math.max(2, +(caption.match(/\b(\d{1,2})\b/)?.[1] ?? 5))) : 1
+  const handle = (who?.handle ?? '@fernway').replace(/^@/, '')
   const v: View = {
-    text: caption, words, media, live, reach: stats?.reach ?? 0,
+    who: handle, text: caption, words, media, live, reach: stats?.reach ?? 0,
     n: share => Math.round(engaged * share),
     when: style => stamp(at, published, now, style),
     slides: slides ?? carousel, reel: kind === 'reel',
@@ -307,7 +310,7 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
     <div ref={ref} className="pv-fit">
       <div className={`pv pv-${network}`} style={{ zoom }} role="figure" aria-label={`Preview on ${network}`}>
         <Body {...v} />
-        {firstComment && <p className="pv-first"><b>fernway</b> {firstComment}</p>}
+        {firstComment && <p className="pv-first"><b>{handle}</b> {firstComment}</p>}
       </div>
     </div>
   )
