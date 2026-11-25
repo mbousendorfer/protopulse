@@ -1,6 +1,7 @@
 // Per network: the post's format and its first comment, both pre-filled by Atlas.
 import type { Network } from '../../app/types'
 import type { Pillar, Post } from '../../data/publishing'
+import { withLabels } from './labels'
 
 export type Format = NonNullable<Post['format']>
 export const FORMATS: Partial<Record<Network, Format[]>> = {
@@ -31,4 +32,4 @@ export function firstCommentFor(network: Network, text: string, pillar: Pillar):
 }
 
 /** Atlas fills what a post it writes doesn't say yet. */
-export const withFormat = (p: Post): Post => ({ ...p, format: p.format ?? formatFor(p.network, p.text), firstComment: p.firstComment ?? firstCommentFor(p.network, p.text, p.pillar) })
+export const withFormat = (p: Post): Post => withLabels({ ...p, format: p.format ?? formatFor(p.network, p.text), firstComment: p.firstComment ?? firstCommentFor(p.network, p.text, p.pillar) })
