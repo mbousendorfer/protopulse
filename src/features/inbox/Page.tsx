@@ -8,7 +8,7 @@ import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { CONTACTS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
+import { CONTACTS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -16,6 +16,7 @@ import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { dur, NEEDS_YOU, needsYou, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { SavedSheet } from './SavedSheet'
+import { LabelsSheet } from './LabelsSheet'
 import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
@@ -139,7 +140,8 @@ export default function InboxPage() {
 
   const filtersOn = network !== 'all' || type !== 'all' || sentiment !== 'all' || intent || q || label
   const clear = () => { setNetwork('all'); setType('all'); setSentiment('all'); setIntent(false); setQ(''); setLabel(null) }
-  const labels = [...new Set([...LABELS, ...s.inbox.rules.flatMap(r => (r.then.op === 'label' ? [r.then.value] : [])), ...all.flatMap(c => c.labels ?? [])])]
+  const labels = [...new Set([...s.inbox.labels, ...all.flatMap(c => c.labels ?? [])])]
+  const labelsOpen = params2.get('labels') === '1'
   const rulesOpen = params2.get('rules') === '1'
   const setRules = (o: boolean) => nav({ search: o ? '?rules=1' : '' })
   const savedOpen = params2.get('saved') === '1'
@@ -160,6 +162,7 @@ export default function InboxPage() {
       </PageHead>
       <RulesSheet open={rulesOpen} onOpenChange={setRules} labels={labels} />
       <SavedSheet open={savedOpen} onOpenChange={setSaved} seed={savedSeed} />
+      <LabelsSheet open={labelsOpen} onOpenChange={o => nav({ search: o ? '?labels=1' : '' })} />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
@@ -174,7 +177,7 @@ export default function InboxPage() {
           })}
           <span className="ib-side-title">Saved views</span>
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
-          <span className="ib-side-title">Labels</span>
+          <span className="ib-side-title row between nowrap">Labels<button className="link-btn t-xs" onClick={() => nav({ search: '?labels=1' })}>Manage</button></span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
           </div>
           <div className="ib-filters">

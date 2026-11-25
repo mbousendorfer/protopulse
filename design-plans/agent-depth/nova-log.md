@@ -37,3 +37,9 @@
 - 25/11 · Team · Léo et Yanis répondent seuls 4 min après assignation (scripté, heartbeat) ; Claire non · faire répondre Claire aussi · Claire garde son rôle d'approbatrice (circuit Ask Claire existant).
 - 25/11 · Team · section Team dans la barre latérale (ouvert + en retard par personne) à la place des vues « Assigned to me / to Claire » · vue « Team » séparée · même information, un clic de moins.
 - 25/11 · Team · l'alerte SLA ignore ce qui est chez Léo ou Yanis · alerter Sam pour tout · ils répondent d'eux-mêmes, l'alerte serait du bruit.
+- 25/11 · pitch Label management · **Go** · — · tel que pitché.
+- 25/11 · pitch Moderation · **Go** · — · tel que pitché.
+- 25/11 · pitch Filters and saved views · **Go** · — · tel que pitché.
+- 25/11 · pitch Comments under their post · **Go** · — · tel que pitché.
+- 25/11 · Labels · liste stockée dans l'état de l'Inbox (`labels`) au lieu de la constante · garder `LABELS` · un label supprimé reviendrait sinon.
+- 25/11 · Labels · portée Inbox seulement (pas de portée Publishing) · scope Inbox/Publishing d'Agorapulse · les labels de Publishing sont chez Atlas.
