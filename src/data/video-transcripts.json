@@ -1,1 +1,9491 @@
-{"repair":{"duration":50.39,"sentences":[{"i":0,"s":0.75,"e":6.07,"text":"What do you do when a strap tears after three years on the trail?","tr":{"fr":"Que faire quand une sangle lâche après trois ans de sentier ?"}},{"i":1,"s":7.23,"e":11.01,"text":"Um, most brands would just sell you a new bag.","tr":{"fr":"La plupart des marques vous vendraient un sac neuf."}},{"i":2,"s":11.42,"e":15.98,"text":"This Ridge 28L came back to our Annecy workshop last week.","tr":{"fr":"Ce Ridge 28L est revenu à notre atelier d’Annecy la semaine dernière."}},{"i":3,"s":16.39,"e":21.07,"text":"So first, we unpick the old webbing, one stitch at a time.","tr":{"fr":"D’abord, on découd l’ancienne sangle, point par point."}},{"i":4,"s":22.03,"e":27.57,"text":"Then we cut new webbing, uh, from the same roll we use in production.","tr":{"fr":"Puis on coupe une sangle neuve, du même rouleau qu’en production."}},{"i":5,"s":27.98,"e":31.32,"text":"Forty-two bar-tack stitches hold it in place.","tr":{"fr":"Quarante-deux points d’arrêt la tiennent en place."}},{"i":6,"s":32.58,"e":36.8,"text":"It took twenty minutes, and it cost the owner nothing.","tr":{"fr":"Ça a pris vingt minutes, et ça n’a rien coûté à son propriétaire."}},{"i":7,"s":37.21,"e":40.68,"text":"Every Ridge comes with free repairs for life.","tr":{"fr":"Chaque Ridge est réparé gratuitement, à vie."}},{"i":8,"s":41.54,"e":45.88,"text":"You know, the greenest bag is the one you already own.","tr":{"fr":"Le sac le plus écologique, c’est celui que vous avez déjà."}},{"i":9,"s":46.29,"e":49.83,"text":"Send it to Annecy, and we’ll stitch it back.","tr":{"fr":"Envoyez-le à Annecy, on le recoud."}}],"words":[{"i":0,"w":"What","s":0.75,"e":1.09,"sent":0},{"i":1,"w":"do","s":1.15,"e":1.38,"sent":0},{"i":2,"w":"you","s":1.44,"e":1.73,"sent":0},{"i":3,"w":"do","s":1.78,"e":2.01,"sent":0},{"i":4,"w":"when","s":2.07,"e":2.41,"sent":0},{"i":5,"w":"a","s":2.47,"e":2.65,"sent":0},{"i":6,"w":"strap","s":2.71,"e":3.1,"sent":0},{"i":7,"w":"tears","s":3.16,"e":3.56,"sent":0},{"i":8,"w":"after","s":3.62,"e":4.01,"sent":0},{"i":9,"w":"three","s":4.07,"e":4.47,"sent":0},{"i":10,"w":"years","s":4.53,"e":4.92,"sent":0},{"i":11,"w":"on","s":4.98,"e":5.21,"sent":0},{"i":12,"w":"the","s":5.27,"e":5.56,"sent":0},{"i":13,"w":"trail?","s":5.62,"e":6.07,"sent":0},{"i":14,"w":"Um,","s":7.23,"e":7.51,"sent":1,"filler":true},{"i":15,"w":"most","s":7.57,"e":7.91,"sent":1},{"i":16,"w":"brands","s":7.97,"e":8.42,"sent":1},{"i":17,"w":"would","s":8.48,"e":8.88,"sent":1},{"i":18,"w":"just","s":8.94,"e":9.28,"sent":1},{"i":19,"w":"sell","s":9.34,"e":9.68,"sent":1},{"i":20,"w":"you","s":9.74,"e":10.03,"sent":1},{"i":21,"w":"a","s":10.09,"e":10.26,"sent":1},{"i":22,"w":"new","s":10.32,"e":10.61,"sent":1},{"i":23,"w":"bag.","s":10.67,"e":11.01,"sent":1},{"i":24,"w":"This","s":11.42,"e":11.76,"sent":2},{"i":25,"w":"Ridge","s":11.82,"e":12.21,"sent":2},{"i":26,"w":"28L","s":12.27,"e":12.56,"sent":2},{"i":27,"w":"came","s":12.62,"e":12.96,"sent":2},{"i":28,"w":"back","s":13.02,"e":13.36,"sent":2},{"i":29,"w":"to","s":13.42,"e":13.65,"sent":2},{"i":30,"w":"our","s":13.71,"e":13.99,"sent":2},{"i":31,"w":"Annecy","s":14.05,"e":14.5,"sent":2},{"i":32,"w":"workshop","s":14.56,"e":15.12,"sent":2},{"i":33,"w":"last","s":15.18,"e":15.52,"sent":2},{"i":34,"w":"week.","s":15.58,"e":15.98,"sent":2},{"i":35,"w":"So","s":16.39,"e":16.62,"sent":3,"filler":true},{"i":36,"w":"first,","s":16.68,"e":17.13,"sent":3},{"i":37,"w":"we","s":17.19,"e":17.42,"sent":3},{"i":38,"w":"unpick","s":17.48,"e":17.93,"sent":3},{"i":39,"w":"the","s":17.99,"e":18.27,"sent":3},{"i":40,"w":"old","s":18.33,"e":18.62,"sent":3},{"i":41,"w":"webbing,","s":18.68,"e":19.24,"sent":3},{"i":42,"w":"one","s":19.3,"e":19.58,"sent":3},{"i":43,"w":"stitch","s":19.64,"e":20.09,"sent":3},{"i":44,"w":"at","s":20.15,"e":20.38,"sent":3},{"i":45,"w":"a","s":20.44,"e":20.62,"sent":3},{"i":46,"w":"time.","s":20.68,"e":21.07,"sent":3},{"i":47,"w":"Then","s":22.03,"e":22.37,"sent":4},{"i":48,"w":"we","s":22.43,"e":22.66,"sent":4},{"i":49,"w":"cut","s":22.72,"e":23,"sent":4},{"i":50,"w":"new","s":23.06,"e":23.35,"sent":4},{"i":51,"w":"webbing,","s":23.41,"e":23.97,"sent":4},{"i":52,"w":"uh,","s":24.03,"e":24.31,"sent":4,"filler":true},{"i":53,"w":"from","s":24.37,"e":24.71,"sent":4},{"i":54,"w":"the","s":24.77,"e":25.06,"sent":4},{"i":55,"w":"same","s":25.12,"e":25.46,"sent":4},{"i":56,"w":"roll","s":25.52,"e":25.86,"sent":4},{"i":57,"w":"we","s":25.92,"e":26.15,"sent":4},{"i":58,"w":"use","s":26.21,"e":26.49,"sent":4},{"i":59,"w":"in","s":26.55,"e":26.78,"sent":4},{"i":60,"w":"production.","s":26.84,"e":27.57,"sent":4},{"i":61,"w":"Forty-two","s":27.98,"e":28.59,"sent":5},{"i":62,"w":"bar-tack","s":28.65,"e":29.21,"sent":5},{"i":63,"w":"stitches","s":29.27,"e":29.83,"sent":5},{"i":64,"w":"hold","s":29.89,"e":30.23,"sent":5},{"i":65,"w":"it","s":30.29,"e":30.52,"sent":5},{"i":66,"w":"in","s":30.58,"e":30.81,"sent":5},{"i":67,"w":"place.","s":30.87,"e":31.32,"sent":5},{"i":68,"w":"It","s":32.58,"e":32.81,"sent":6},{"i":69,"w":"took","s":32.87,"e":33.21,"sent":6},{"i":70,"w":"twenty","s":33.27,"e":33.72,"sent":6},{"i":71,"w":"minutes,","s":33.78,"e":34.34,"sent":6},{"i":72,"w":"and","s":34.4,"e":34.69,"sent":6},{"i":73,"w":"it","s":34.75,"e":34.98,"sent":6},{"i":74,"w":"cost","s":35.04,"e":35.38,"sent":6},{"i":75,"w":"the","s":35.44,"e":35.72,"sent":6},{"i":76,"w":"owner","s":35.78,"e":36.18,"sent":6},{"i":77,"w":"nothing.","s":36.24,"e":36.8,"sent":6},{"i":78,"w":"Every","s":37.21,"e":37.6,"sent":7},{"i":79,"w":"Ridge","s":37.66,"e":38.06,"sent":7},{"i":80,"w":"comes","s":38.12,"e":38.51,"sent":7},{"i":81,"w":"with","s":38.57,"e":38.91,"sent":7},{"i":82,"w":"free","s":38.97,"e":39.31,"sent":7},{"i":83,"w":"repairs","s":39.37,"e":39.88,"sent":7},{"i":84,"w":"for","s":39.94,"e":40.22,"sent":7},{"i":85,"w":"life.","s":40.28,"e":40.68,"sent":7},{"i":86,"w":"You","s":41.54,"e":41.82,"sent":8},{"i":87,"w":"know,","s":41.88,"e":42.28,"sent":8},{"i":88,"w":"the","s":42.34,"e":42.62,"sent":8},{"i":89,"w":"greenest","s":42.68,"e":43.24,"sent":8},{"i":90,"w":"bag","s":43.3,"e":43.59,"sent":8},{"i":91,"w":"is","s":43.65,"e":43.88,"sent":8},{"i":92,"w":"the","s":43.94,"e":44.22,"sent":8},{"i":93,"w":"one","s":44.28,"e":44.57,"sent":8},{"i":94,"w":"you","s":44.63,"e":44.91,"sent":8},{"i":95,"w":"already","s":44.97,"e":45.48,"sent":8},{"i":96,"w":"own.","s":45.54,"e":45.88,"sent":8},{"i":97,"w":"Send","s":46.29,"e":46.63,"sent":9},{"i":98,"w":"it","s":46.69,"e":46.92,"sent":9},{"i":99,"w":"to","s":46.98,"e":47.21,"sent":9},{"i":100,"w":"Annecy,","s":47.27,"e":47.77,"sent":9},{"i":101,"w":"and","s":47.83,"e":48.12,"sent":9},{"i":102,"w":"we’ll","s":48.18,"e":48.57,"sent":9},{"i":103,"w":"stitch","s":48.63,"e":49.08,"sent":9},{"i":104,"w":"it","s":49.14,"e":49.37,"sent":9},{"i":105,"w":"back.","s":49.43,"e":49.83,"sent":9}],"shots":[{"s":0,"e":12.6,"label":"Shot 1","focus":0.5},{"s":12.6,"e":25.2,"label":"Shot 2","focus":0.42},{"s":25.2,"e":37.79,"label":"Shot 3","focus":0.6},{"s":37.79,"e":50.39,"label":"Shot 4","focus":0.5}]},"gr20":{"duration":32.73,"sentences":[{"i":0,"s":0.75,"e":3.33,"text":"Three days of rain on the GR20.","tr":{"fr":"Trois jours de pluie sur le GR20."}},{"i":1,"s":4.38,"e":7.98,"text":"Um, we knew the forecast, and we went anyway.","tr":{"fr":"On connaissait la météo, on y est allés quand même."}},{"i":2,"s":8.39,"e":11.57,"text":"At the refuge, everything else was soaked.","tr":{"fr":"Au refuge, tout le reste était trempé."}},{"i":3,"s":11.98,"e":17.29,"text":"The Storm Jacket stayed dry: twenty thousand millimetres of waterproofing.","tr":{"fr":"La Storm Jacket est restée sèche : vingt mille millimètres d’imperméabilité."}},{"i":4,"s":18.25,"e":20.18,"text":"The membrane is PFAS-free.","tr":{"fr":"La membrane est sans PFAS."}},{"i":5,"s":20.59,"e":23.77,"text":"The hood stays on in forty-kilometre wind.","tr":{"fr":"La capuche tient par quarante kilomètres heure de vent."}},{"i":6,"s":24.93,"e":27.49,"text":"Like, I stopped checking the sky.","tr":{"fr":"J’ai arrêté de regarder le ciel."}},{"i":7,"s":27.9,"e":32.17,"text":"Two hundred and twenty euros, and built to be repaired.","tr":{"fr":"Deux cent vingt euros, et faite pour être réparée."}}],"words":[{"i":0,"w":"Three","s":0.75,"e":1.15,"sent":0},{"i":1,"w":"days","s":1.21,"e":1.54,"sent":0},{"i":2,"w":"of","s":1.6,"e":1.83,"sent":0},{"i":3,"w":"rain","s":1.9,"e":2.23,"sent":0},{"i":4,"w":"on","s":2.29,"e":2.52,"sent":0},{"i":5,"w":"the","s":2.58,"e":2.87,"sent":0},{"i":6,"w":"GR20.","s":2.93,"e":3.33,"sent":0},{"i":7,"w":"Um,","s":4.38,"e":4.67,"sent":1,"filler":true},{"i":8,"w":"we","s":4.73,"e":4.96,"sent":1},{"i":9,"w":"knew","s":5.02,"e":5.36,"sent":1},{"i":10,"w":"the","s":5.42,"e":5.71,"sent":1},{"i":11,"w":"forecast,","s":5.76,"e":6.38,"sent":1},{"i":12,"w":"and","s":6.44,"e":6.72,"sent":1},{"i":13,"w":"we","s":6.78,"e":7.01,"sent":1},{"i":14,"w":"went","s":7.07,"e":7.41,"sent":1},{"i":15,"w":"anyway.","s":7.47,"e":7.98,"sent":1},{"i":16,"w":"At","s":8.39,"e":8.62,"sent":2},{"i":17,"w":"the","s":8.68,"e":8.96,"sent":2},{"i":18,"w":"refuge,","s":9.02,"e":9.53,"sent":2},{"i":19,"w":"everything","s":9.59,"e":10.26,"sent":2},{"i":20,"w":"else","s":10.32,"e":10.66,"sent":2},{"i":21,"w":"was","s":10.72,"e":11,"sent":2},{"i":22,"w":"soaked.","s":11.06,"e":11.57,"sent":2},{"i":23,"w":"The","s":11.98,"e":12.26,"sent":3},{"i":24,"w":"Storm","s":12.32,"e":12.72,"sent":3},{"i":25,"w":"Jacket","s":12.78,"e":13.23,"sent":3},{"i":26,"w":"stayed","s":13.29,"e":13.74,"sent":3},{"i":27,"w":"dry:","s":13.8,"e":14.14,"sent":3},{"i":28,"w":"twenty","s":14.2,"e":14.65,"sent":3},{"i":29,"w":"thousand","s":14.71,"e":15.27,"sent":3},{"i":30,"w":"millimetres","s":15.33,"e":16.05,"sent":3},{"i":31,"w":"of","s":16.11,"e":16.34,"sent":3},{"i":32,"w":"waterproofing.","s":16.4,"e":17.29,"sent":3},{"i":33,"w":"The","s":18.25,"e":18.54,"sent":4},{"i":34,"w":"membrane","s":18.6,"e":19.16,"sent":4},{"i":35,"w":"is","s":19.22,"e":19.45,"sent":4},{"i":36,"w":"PFAS-free.","s":19.51,"e":20.18,"sent":4},{"i":37,"w":"The","s":20.59,"e":20.87,"sent":5},{"i":38,"w":"hood","s":20.93,"e":21.27,"sent":5},{"i":39,"w":"stays","s":21.33,"e":21.73,"sent":5},{"i":40,"w":"on","s":21.79,"e":22.02,"sent":5},{"i":41,"w":"in","s":22.08,"e":22.31,"sent":5},{"i":42,"w":"forty-kilometre","s":22.37,"e":23.31,"sent":5},{"i":43,"w":"wind.","s":23.37,"e":23.77,"sent":5},{"i":44,"w":"Like,","s":24.93,"e":25.32,"sent":6,"filler":true},{"i":45,"w":"I","s":25.38,"e":25.56,"sent":6},{"i":46,"w":"stopped","s":25.62,"e":26.12,"sent":6},{"i":47,"w":"checking","s":26.18,"e":26.74,"sent":6},{"i":48,"w":"the","s":26.8,"e":27.09,"sent":6},{"i":49,"w":"sky.","s":27.15,"e":27.49,"sent":6},{"i":50,"w":"Two","s":27.9,"e":28.18,"sent":7},{"i":51,"w":"hundred","s":28.24,"e":28.75,"sent":7},{"i":52,"w":"and","s":28.81,"e":29.09,"sent":7},{"i":53,"w":"twenty","s":29.15,"e":29.6,"sent":7},{"i":54,"w":"euros,","s":29.66,"e":30.11,"sent":7},{"i":55,"w":"and","s":30.17,"e":30.46,"sent":7},{"i":56,"w":"built","s":30.52,"e":30.91,"sent":7},{"i":57,"w":"to","s":30.97,"e":31.2,"sent":7},{"i":58,"w":"be","s":31.26,"e":31.49,"sent":7},{"i":59,"w":"repaired.","s":31.55,"e":32.17,"sent":7}],"shots":[{"s":0,"e":8.18,"label":"Shot 1","focus":0.5},{"s":8.18,"e":16.36,"label":"Shot 2","focus":0.42},{"s":16.36,"e":24.55,"label":"Shot 3","focus":0.6},{"s":24.55,"e":32.73,"label":"Shot 4","focus":0.5}]},"live":{"duration":42.45,"sentences":[{"i":0,"s":0.4,"e":5.35,"speaker":"host","text":"Welcome to Repair Friday, I’m Camille, and Léo runs our workshop.","tr":{"fr":"Bienvenue à Repair Friday, je suis Camille, et Léo dirige notre atelier."}},{"i":1,"s":6,"e":8,"speaker":"guest","text":"Um, thanks for having me.","tr":{"fr":"Merci de m’accueillir."}},{"i":2,"s":8.86,"e":10.91,"speaker":"host","text":"Léo, what breaks the most?","tr":{"fr":"Léo, qu’est-ce qui casse le plus ?"}},{"i":3,"s":11.37,"e":15.08,"speaker":"guest","text":"The thing that breaks most is zips, not fabric.","tr":{"fr":"Ce qui casse le plus, ce sont les zips, pas le tissu."}},{"i":4,"s":15.44,"e":18.62,"speaker":"guest","text":"We repaired twelve hundred bags this year.","tr":{"fr":"On a réparé mille deux cents sacs cette année."}},{"i":5,"s":19.88,"e":25.18,"speaker":"host","text":"Here’s a question from Inès: can I send a bag I bought second-hand?","tr":{"fr":"Une question d’Inès : je peux envoyer un sac acheté d’occasion ?"}},{"i":6,"s":25.74,"e":29.55,"speaker":"guest","text":"Yes, the repair follows the bag, not the receipt.","tr":{"fr":"Oui, la réparation suit le sac, pas le ticket."}},{"i":7,"s":30.61,"e":31.86,"speaker":"host","text":"And the bottles?","tr":{"fr":"Et les gourdes ?"}},{"i":8,"s":32.32,"e":37.28,"speaker":"guest","text":"The Summit Bottle has a lifetime warranty, even if you dent it.","tr":{"fr":"La Summit Bottle est garantie à vie, même cabossée."}},{"i":9,"s":38.24,"e":41.89,"speaker":"host","text":"Uh, that’s all for today, see you next Friday.","tr":{"fr":"C’est tout pour aujourd’hui, à vendredi prochain."}}],"words":[{"i":0,"w":"Welcome","s":0.4,"e":0.91,"sent":0},{"i":1,"w":"to","s":0.96,"e":1.19,"sent":0},{"i":2,"w":"Repair","s":1.25,"e":1.7,"sent":0},{"i":3,"w":"Friday,","s":1.76,"e":2.27,"sent":0},{"i":4,"w":"I’m","s":2.33,"e":2.62,"sent":0},{"i":5,"w":"Camille,","s":2.68,"e":3.24,"sent":0},{"i":6,"w":"and","s":3.3,"e":3.58,"sent":0},{"i":7,"w":"Léo","s":3.64,"e":3.93,"sent":0},{"i":8,"w":"runs","s":3.99,"e":4.33,"sent":0},{"i":9,"w":"our","s":4.39,"e":4.67,"sent":0},{"i":10,"w":"workshop.","s":4.73,"e":5.35,"sent":0},{"i":11,"w":"Um,","s":6,"e":6.29,"sent":1,"filler":true},{"i":12,"w":"thanks","s":6.35,"e":6.8,"sent":1},{"i":13,"w":"for","s":6.86,"e":7.14,"sent":1},{"i":14,"w":"having","s":7.2,"e":7.65,"sent":1},{"i":15,"w":"me.","s":7.71,"e":8,"sent":1},{"i":16,"w":"Léo,","s":8.86,"e":9.2,"sent":2},{"i":17,"w":"what","s":9.26,"e":9.6,"sent":2},{"i":18,"w":"breaks","s":9.66,"e":10.11,"sent":2},{"i":19,"w":"the","s":10.17,"e":10.46,"sent":2},{"i":20,"w":"most?","s":10.52,"e":10.91,"sent":2},{"i":21,"w":"The","s":11.37,"e":11.66,"sent":3},{"i":22,"w":"thing","s":11.72,"e":12.11,"sent":3},{"i":23,"w":"that","s":12.17,"e":12.51,"sent":3},{"i":24,"w":"breaks","s":12.57,"e":13.02,"sent":3},{"i":25,"w":"most","s":13.08,"e":13.42,"sent":3},{"i":26,"w":"is","s":13.48,"e":13.71,"sent":3},{"i":27,"w":"zips,","s":13.77,"e":14.17,"sent":3},{"i":28,"w":"not","s":14.23,"e":14.51,"sent":3},{"i":29,"w":"fabric.","s":14.57,"e":15.08,"sent":3},{"i":30,"w":"We","s":15.44,"e":15.67,"sent":4},{"i":31,"w":"repaired","s":15.73,"e":16.29,"sent":4},{"i":32,"w":"twelve","s":16.35,"e":16.8,"sent":4},{"i":33,"w":"hundred","s":16.86,"e":17.36,"sent":4},{"i":34,"w":"bags","s":17.42,"e":17.76,"sent":4},{"i":35,"w":"this","s":17.82,"e":18.16,"sent":4},{"i":36,"w":"year.","s":18.22,"e":18.62,"sent":4},{"i":37,"w":"Here’s","s":19.88,"e":20.32,"sent":5},{"i":38,"w":"a","s":20.39,"e":20.56,"sent":5},{"i":39,"w":"question","s":20.62,"e":21.18,"sent":5},{"i":40,"w":"from","s":21.24,"e":21.58,"sent":5},{"i":41,"w":"Inès:","s":21.64,"e":22.04,"sent":5},{"i":42,"w":"can","s":22.09,"e":22.38,"sent":5},{"i":43,"w":"I","s":22.44,"e":22.61,"sent":5},{"i":44,"w":"send","s":22.67,"e":23.01,"sent":5},{"i":45,"w":"a","s":23.07,"e":23.25,"sent":5},{"i":46,"w":"bag","s":23.31,"e":23.59,"sent":5},{"i":47,"w":"I","s":23.65,"e":23.83,"sent":5},{"i":48,"w":"bought","s":23.89,"e":24.34,"sent":5},{"i":49,"w":"second-hand?","s":24.4,"e":25.18,"sent":5},{"i":50,"w":"Yes,","s":25.74,"e":26.08,"sent":6},{"i":51,"w":"the","s":26.14,"e":26.42,"sent":6},{"i":52,"w":"repair","s":26.48,"e":26.93,"sent":6},{"i":53,"w":"follows","s":26.99,"e":27.5,"sent":6},{"i":54,"w":"the","s":27.56,"e":27.84,"sent":6},{"i":55,"w":"bag,","s":27.9,"e":28.24,"sent":6},{"i":56,"w":"not","s":28.3,"e":28.59,"sent":6},{"i":57,"w":"the","s":28.65,"e":28.93,"sent":6},{"i":58,"w":"receipt.","s":28.99,"e":29.55,"sent":6},{"i":59,"w":"And","s":30.61,"e":30.9,"sent":7},{"i":60,"w":"the","s":30.96,"e":31.24,"sent":7},{"i":61,"w":"bottles?","s":31.3,"e":31.86,"sent":7},{"i":62,"w":"The","s":32.32,"e":32.61,"sent":8},{"i":63,"w":"Summit","s":32.67,"e":33.12,"sent":8},{"i":64,"w":"Bottle","s":33.18,"e":33.63,"sent":8},{"i":65,"w":"has","s":33.69,"e":33.97,"sent":8},{"i":66,"w":"a","s":34.03,"e":34.21,"sent":8},{"i":67,"w":"lifetime","s":34.27,"e":34.83,"sent":8},{"i":68,"w":"warranty,","s":34.89,"e":35.5,"sent":8},{"i":69,"w":"even","s":35.56,"e":35.9,"sent":8},{"i":70,"w":"if","s":35.96,"e":36.19,"sent":8},{"i":71,"w":"you","s":36.25,"e":36.54,"sent":8},{"i":72,"w":"dent","s":36.6,"e":36.94,"sent":8},{"i":73,"w":"it.","s":37,"e":37.28,"sent":8},{"i":74,"w":"Uh,","s":38.24,"e":38.53,"sent":9,"filler":true},{"i":75,"w":"that’s","s":38.59,"e":39.04,"sent":9},{"i":76,"w":"all","s":39.1,"e":39.38,"sent":9},{"i":77,"w":"for","s":39.44,"e":39.73,"sent":9},{"i":78,"w":"today,","s":39.79,"e":40.24,"sent":9},{"i":79,"w":"see","s":40.3,"e":40.58,"sent":9},{"i":80,"w":"you","s":40.64,"e":40.93,"sent":9},{"i":81,"w":"next","s":40.99,"e":41.33,"sent":9},{"i":82,"w":"Friday.","s":41.39,"e":41.89,"sent":9}],"shots":[{"s":0,"e":10.61,"label":"Shot 1","focus":0.5},{"s":10.61,"e":21.23,"label":"Shot 2","focus":0.42},{"s":21.23,"e":31.84,"label":"Shot 3","focus":0.6},{"s":31.84,"e":42.45,"label":"Shot 4","focus":0.5}],"chapters":[{"title":"Welcome","s":0,"e":8.86,"display":"00:00"},{"title":"What breaks most","s":8.86,"e":19.88,"display":"06:40"},{"title":"Your questions","s":19.88,"e":30.61,"display":"24:15"},{"title":"The bottle warranty","s":30.61,"e":42.45,"display":"41:30"}]}}
+{
+ "repair": {
+  "duration": 126.63,
+  "sentences": [
+   {
+    "i": 0,
+    "s": 0.4,
+    "e": 4.03,
+    "text": "What do you do when a strap tears after three years on the trail?",
+    "tr": {
+     "fr": "Que faire quand une bretelle se déchire après trois ans de sentiers ?",
+     "de": "Was tun, wenn ein Gurt nach drei Jahren auf dem Trail reißt?",
+     "es": "¿Qué haces cuando una correa se rompe tras tres años de senderos?",
+     "it": "Cosa fai quando uno spallaccio si strappa dopo tre anni di sentieri?"
+    }
+   },
+   {
+    "i": 1,
+    "s": 4.38,
+    "e": 7.42,
+    "text": "Um, most brands would just sell you a new bag.",
+    "tr": {
+     "fr": "La plupart des marques vous vendraient simplement un sac neuf.",
+     "de": "Die meisten Marken würden dir einfach einen neuen Rucksack verkaufen.",
+     "es": "La mayoría de las marcas te venderían una mochila nueva.",
+     "it": "La maggior parte dei marchi ti venderebbe uno zaino nuovo."
+    }
+   },
+   {
+    "i": 2,
+    "s": 8.42,
+    "e": 12.85,
+    "text": "Hi, I'm Léa, and I sew bags at the Fernway repair workshop.",
+    "tr": {
+     "fr": "Bonjour, je suis Léa, je couds des sacs à l'atelier de réparation Fernway.",
+     "de": "Hallo, ich bin Léa und nähe Rucksäcke in der Fernway-Reparaturwerkstatt.",
+     "es": "Hola, soy Léa y coso mochilas en el taller de reparación de Fernway.",
+     "it": "Ciao, sono Léa e cucio zaini nel laboratorio di riparazione Fernway."
+    }
+   },
+   {
+    "i": 3,
+    "s": 13.2,
+    "e": 17.25,
+    "text": "This Ridge 28L came back to our Annecy workshop last week.",
+    "tr": {
+     "fr": "Ce Ridge 28L est revenu à notre atelier d'Annecy la semaine dernière.",
+     "de": "Dieser Ridge 28L kam letzte Woche zurück in unsere Werkstatt in Annecy.",
+     "es": "Esta Ridge 28L volvió la semana pasada a nuestro taller de Annecy.",
+     "it": "Questo Ridge 28L è tornato la settimana scorsa nel nostro laboratorio di Annecy."
+    }
+   },
+   {
+    "i": 4,
+    "s": 17.6,
+    "e": 22.07,
+    "text": "The left shoulder strap, you know, ripped right where the webbing joins the bag.",
+    "tr": {
+     "fr": "La bretelle gauche s'est arrachée juste là où la sangle rejoint le sac.",
+     "de": "Der linke Schultergurt ist genau dort gerissen, wo das Gurtband am Rucksack sitzt.",
+     "es": "La hombrera izquierda se rompió justo donde la cinta se une a la mochila.",
+     "it": "Lo spallaccio sinistro si è strappato proprio dove la fettuccia si unisce allo zaino."
+    }
+   },
+   {
+    "i": 5,
+    "s": 22.42,
+    "e": 25.67,
+    "text": "That's the spot that takes the most load when the pack is full.",
+    "tr": {
+     "fr": "C'est l'endroit qui encaisse le plus quand le sac est plein.",
+     "de": "Genau dort liegt die meiste Last, wenn der Rucksack voll ist.",
+     "es": "Es el punto que más carga soporta cuando la mochila va llena.",
+     "it": "È il punto che regge più carico quando lo zaino è pieno."
+    }
+   },
+   {
+    "i": 6,
+    "s": 26.02,
+    "e": 29.76,
+    "text": "Um, first, I unpick the old webbing, very slowly.",
+    "tr": {
+     "fr": "D'abord, je découds l'ancienne sangle, très lentement.",
+     "de": "Zuerst trenne ich das alte Gurtband ab, ganz langsam.",
+     "es": "Primero descoso la cinta vieja, muy despacio.",
+     "it": "Per prima cosa scucio la vecchia fettuccia, molto lentamente."
+    }
+   },
+   {
+    "i": 7,
+    "s": 30.11,
+    "e": 35.76,
+    "text": "If you rush this part, uh, you tear the fabric around it, and then it's a much bigger job.",
+    "tr": {
+     "fr": "Si on se précipite, on déchire le tissu autour, et le travail devient bien plus gros.",
+     "de": "Wer hier hetzt, reißt den Stoff drumherum ein, und dann wird es viel mehr Arbeit.",
+     "es": "Si vas con prisa, rompes la tela de alrededor y el trabajo se complica mucho.",
+     "it": "Se hai fretta, strappi il tessuto intorno e il lavoro diventa molto più grande."
+    }
+   },
+   {
+    "i": 8,
+    "s": 36.96,
+    "e": 41.56,
+    "text": "Next, I cut new webbing from the same roll we use on the production line.",
+    "tr": {
+     "fr": "Ensuite, je coupe une sangle neuve dans le même rouleau que la production.",
+     "de": "Dann schneide ich neues Gurtband von derselben Rolle wie in der Produktion.",
+     "es": "Después corto cinta nueva del mismo rollo que usamos en producción.",
+     "it": "Poi taglio una fettuccia nuova dallo stesso rotolo della produzione."
+    }
+   },
+   {
+    "i": 9,
+    "s": 41.91,
+    "e": 46.77,
+    "text": "It's the exact same colour, so, like, nobody will ever see the repair.",
+    "tr": {
+     "fr": "C'est exactement la même couleur, donc personne ne verra la réparation.",
+     "de": "Es ist genau dieselbe Farbe, also sieht niemand die Reparatur.",
+     "es": "Es exactamente el mismo color, así que nadie verá la reparación.",
+     "it": "È esattamente lo stesso colore, quindi nessuno vedrà la riparazione."
+    }
+   },
+   {
+    "i": 10,
+    "s": 47.12,
+    "e": 51.83,
+    "text": "Then I slide a reinforcement patch under the strap and pin everything in place.",
+    "tr": {
+     "fr": "Puis je glisse un renfort sous la bretelle et j'épingle le tout.",
+     "de": "Dann schiebe ich einen Verstärkungsflicken unter den Gurt und stecke alles fest.",
+     "es": "Luego pongo un parche de refuerzo bajo la correa y lo sujeto todo.",
+     "it": "Poi infilo una toppa di rinforzo sotto lo spallaccio e fisso tutto."
+    }
+   },
+   {
+    "i": 11,
+    "s": 52.18,
+    "e": 54.94,
+    "text": "Now, this is the fun part, the bar tack.",
+    "tr": {
+     "fr": "Et maintenant, la partie amusante : la bride d'arrêt.",
+     "de": "Jetzt kommt der schöne Teil: der Riegel.",
+     "es": "Ahora viene lo divertido: la presilla.",
+     "it": "Ora la parte divertente: la travetta."
+    }
+   },
+   {
+    "i": 12,
+    "s": 55.29,
+    "e": 59.92,
+    "text": "We switch to a heavy-duty machine, with, um, a thicker bonded thread.",
+    "tr": {
+     "fr": "On passe sur une machine industrielle, avec un fil plus épais.",
+     "de": "Wir wechseln an eine Industriemaschine mit dickerem Garn.",
+     "es": "Pasamos a una máquina industrial, con un hilo más grueso.",
+     "it": "Passiamo a una macchina industriale, con un filo più spesso."
+    }
+   },
+   {
+    "i": 13,
+    "s": 60.27,
+    "e": 63.94,
+    "text": "That's forty-two bar-tack stitches on the same centimetre.",
+    "tr": {
+     "fr": "Quarante-deux points de bride sur le même centimètre.",
+     "de": "Das sind zweiundvierzig Riegelstiche auf einem Zentimeter.",
+     "es": "Son cuarenta y dos puntadas de presilla en un mismo centímetro.",
+     "it": "Sono quarantadue punti di travetta nello stesso centimetro."
+    }
+   },
+   {
+    "i": 14,
+    "s": 64.29,
+    "e": 69.13,
+    "text": "It spreads the load, so the strap pulls on the whole patch, not on one seam.",
+    "tr": {
+     "fr": "Elle répartit la charge : la bretelle tire sur tout le renfort, pas sur une seule couture.",
+     "de": "Er verteilt die Last, der Gurt zieht am ganzen Flicken statt an einer Naht.",
+     "es": "Reparte la carga: la correa tira de todo el parche, no de una costura.",
+     "it": "Distribuisce il carico: lo spallaccio tira su tutta la toppa, non su una cucitura."
+    }
+   },
+   {
+    "i": 15,
+    "s": 70.03,
+    "e": 74.27,
+    "text": "Honestly, uh, the factory version only has twenty-eight stitches.",
+    "tr": {
+     "fr": "Honnêtement, la version d'usine n'a que vingt-huit points.",
+     "de": "Ehrlich gesagt hat die Werksversion nur achtundzwanzig Stiche.",
+     "es": "La verdad, la versión de fábrica solo tiene veintiocho puntadas.",
+     "it": "Sinceramente, la versione di fabbrica ha solo ventotto punti."
+    }
+   },
+   {
+    "i": 16,
+    "s": 74.62,
+    "e": 78.97,
+    "text": "So, you know, the repaired bag is actually stronger than a new one.",
+    "tr": {
+     "fr": "Donc le sac réparé est plus solide qu'un sac neuf.",
+     "de": "Der reparierte Rucksack ist also stärker als ein neuer.",
+     "es": "Así que la mochila reparada es más fuerte que una nueva.",
+     "it": "Quindi lo zaino riparato è più forte di uno nuovo."
+    }
+   },
+   {
+    "i": 17,
+    "s": 79.32,
+    "e": 83.57,
+    "text": "Last check, I hang ten kilos on the strap and give it a good shake.",
+    "tr": {
+     "fr": "Dernier test : je suspends dix kilos à la bretelle et je secoue bien.",
+     "de": "Letzter Test: zehn Kilo an den Gurt hängen und kräftig schütteln.",
+     "es": "Última prueba: cuelgo diez kilos de la correa y la sacudo bien.",
+     "it": "Ultimo controllo: appendo dieci chili allo spallaccio e scuoto bene."
+    }
+   },
+   {
+    "i": 18,
+    "s": 83.92,
+    "e": 86.54,
+    "text": "Nothing moves, so it's ready to go home.",
+    "tr": {
+     "fr": "Rien ne bouge, il peut rentrer chez lui.",
+     "de": "Nichts bewegt sich, er kann nach Hause.",
+     "es": "No se mueve nada, lista para volver a casa.",
+     "it": "Non si muove niente, è pronto per tornare a casa."
+    }
+   },
+   {
+    "i": 19,
+    "s": 87.94,
+    "e": 91.12,
+    "text": "It took twenty minutes, and it cost the owner nothing.",
+    "tr": {
+     "fr": "Ça a pris vingt minutes, et ça n'a rien coûté à son propriétaire.",
+     "de": "Es hat zwanzig Minuten gedauert und den Besitzer nichts gekostet.",
+     "es": "Llevó veinte minutos y no le costó nada a su dueño.",
+     "it": "Ci sono voluti venti minuti, e al proprietario non è costato nulla."
+    }
+   },
+   {
+    "i": 20,
+    "s": 91.47,
+    "e": 96.81,
+    "text": "People always ask me why we repair bags instead of, like, just sending a new one.",
+    "tr": {
+     "fr": "On me demande toujours pourquoi on répare au lieu d'envoyer un sac neuf.",
+     "de": "Man fragt mich oft, warum wir reparieren, statt einfach einen neuen zu schicken.",
+     "es": "Siempre me preguntan por qué reparamos en vez de enviar una nueva.",
+     "it": "Mi chiedono sempre perché ripariamo invece di mandarne uno nuovo."
+    }
+   },
+   {
+    "i": 21,
+    "s": 97.16,
+    "e": 101.65,
+    "text": "A new Ridge costs a hundred and forty euros, and a lot of carbon to make.",
+    "tr": {
+     "fr": "Un Ridge neuf coûte cent quarante euros, et beaucoup de carbone à fabriquer.",
+     "de": "Ein neuer Ridge kostet hundertvierzig Euro und viel CO2 in der Herstellung.",
+     "es": "Una Ridge nueva cuesta ciento cuarenta euros y mucho carbono fabricarla.",
+     "it": "Un Ridge nuovo costa centoquaranta euro, e molto carbonio per produrlo."
+    }
+   },
+   {
+    "i": 22,
+    "s": 102,
+    "e": 105.8,
+    "text": "This year, um, we repaired twelve hundred bags in this room.",
+    "tr": {
+     "fr": "Cette année, on a réparé mille deux cents sacs dans cette pièce.",
+     "de": "Dieses Jahr haben wir in diesem Raum zwölfhundert Rucksäcke repariert.",
+     "es": "Este año hemos reparado mil doscientas mochilas en esta sala.",
+     "it": "Quest'anno abbiamo riparato milleduecento zaini in questa stanza."
+    }
+   },
+   {
+    "i": 23,
+    "s": 106.15,
+    "e": 109.62,
+    "text": "Every one of them went back on a trail instead of into a bin.",
+    "tr": {
+     "fr": "Chacun est reparti sur un sentier plutôt qu'à la poubelle.",
+     "de": "Jeder davon ging zurück auf den Trail statt in den Müll.",
+     "es": "Cada una volvió a un sendero en vez de a la basura.",
+     "it": "Ognuno è tornato su un sentiero invece che nella spazzatura."
+    }
+   },
+   {
+    "i": 24,
+    "s": 109.97,
+    "e": 112.63,
+    "text": "Every Ridge comes with free repairs for life.",
+    "tr": {
+     "fr": "Chaque Ridge est réparé gratuitement à vie.",
+     "de": "Jeder Ridge wird ein Leben lang kostenlos repariert.",
+     "es": "Cada Ridge tiene reparaciones gratis de por vida.",
+     "it": "Ogni Ridge ha riparazioni gratuite a vita."
+    }
+   },
+   {
+    "i": 25,
+    "s": 112.98,
+    "e": 117.57,
+    "text": "Torn strap, broken buckle, dead zip, uh, whatever happened to it.",
+    "tr": {
+     "fr": "Bretelle déchirée, boucle cassée, zip mort, quoi qu'il soit arrivé.",
+     "de": "Gerissener Gurt, kaputte Schnalle, defekter Reißverschluss, egal was passiert ist.",
+     "es": "Correa rota, hebilla rota, cremallera muerta, pase lo que pase.",
+     "it": "Spallaccio strappato, fibbia rotta, zip andata, qualunque cosa sia successa."
+    }
+   },
+   {
+    "i": 26,
+    "s": 118.57,
+    "e": 122.77,
+    "text": "And on Fridays, we, um, open the workshop and repair live.",
+    "tr": {
+     "fr": "Et le vendredi, on ouvre l'atelier et on répare en direct.",
+     "de": "Und freitags öffnen wir die Werkstatt und reparieren live.",
+     "es": "Y los viernes abrimos el taller y reparamos en directo.",
+     "it": "E il venerdì apriamo il laboratorio e ripariamo in diretta."
+    }
+   },
+   {
+    "i": 27,
+    "s": 123.12,
+    "e": 125.83,
+    "text": "Send it to Annecy, and we'll stitch it back.",
+    "tr": {
+     "fr": "Envoyez-le à Annecy, on le recoud.",
+     "de": "Schick ihn nach Annecy, wir nähen ihn wieder zusammen.",
+     "es": "Envíala a Annecy y la volvemos a coser.",
+     "it": "Mandalo ad Annecy, e lo ricuciamo."
+    }
+   }
+  ],
+  "words": [
+   {
+    "i": 0,
+    "w": "What",
+    "s": 0.4,
+    "e": 0.68,
+    "sent": 0
+   },
+   {
+    "i": 1,
+    "w": "do",
+    "s": 0.68,
+    "e": 0.84,
+    "sent": 0
+   },
+   {
+    "i": 2,
+    "w": "you",
+    "s": 0.84,
+    "e": 1.06,
+    "sent": 0
+   },
+   {
+    "i": 3,
+    "w": "do",
+    "s": 1.06,
+    "e": 1.23,
+    "sent": 0
+   },
+   {
+    "i": 4,
+    "w": "when",
+    "s": 1.23,
+    "e": 1.5,
+    "sent": 0
+   },
+   {
+    "i": 5,
+    "w": "a",
+    "s": 1.5,
+    "e": 1.61,
+    "sent": 0
+   },
+   {
+    "i": 6,
+    "w": "strap",
+    "s": 1.61,
+    "e": 1.94,
+    "sent": 0
+   },
+   {
+    "i": 7,
+    "w": "tears",
+    "s": 1.94,
+    "e": 2.27,
+    "sent": 0
+   },
+   {
+    "i": 8,
+    "w": "after",
+    "s": 2.27,
+    "e": 2.6,
+    "sent": 0
+   },
+   {
+    "i": 9,
+    "w": "three",
+    "s": 2.6,
+    "e": 2.93,
+    "sent": 0
+   },
+   {
+    "i": 10,
+    "w": "years",
+    "s": 2.93,
+    "e": 3.26,
+    "sent": 0
+   },
+   {
+    "i": 11,
+    "w": "on",
+    "s": 3.26,
+    "e": 3.43,
+    "sent": 0
+   },
+   {
+    "i": 12,
+    "w": "the",
+    "s": 3.43,
+    "e": 3.65,
+    "sent": 0
+   },
+   {
+    "i": 13,
+    "w": "trail?",
+    "s": 3.65,
+    "e": 4.03,
+    "sent": 0
+   },
+   {
+    "i": 14,
+    "w": "Um,",
+    "s": 4.38,
+    "e": 4.74,
+    "sent": 1,
+    "filler": true
+   },
+   {
+    "i": 15,
+    "w": "most",
+    "s": 4.86,
+    "e": 5.16,
+    "sent": 1
+   },
+   {
+    "i": 16,
+    "w": "brands",
+    "s": 5.16,
+    "e": 5.58,
+    "sent": 1
+   },
+   {
+    "i": 17,
+    "w": "would",
+    "s": 5.58,
+    "e": 5.93,
+    "sent": 1
+   },
+   {
+    "i": 18,
+    "w": "just",
+    "s": 5.93,
+    "e": 6.23,
+    "sent": 1
+   },
+   {
+    "i": 19,
+    "w": "sell",
+    "s": 6.23,
+    "e": 6.53,
+    "sent": 1
+   },
+   {
+    "i": 20,
+    "w": "you",
+    "s": 6.53,
+    "e": 6.77,
+    "sent": 1
+   },
+   {
+    "i": 21,
+    "w": "a",
+    "s": 6.77,
+    "e": 6.89,
+    "sent": 1
+   },
+   {
+    "i": 22,
+    "w": "new",
+    "s": 6.89,
+    "e": 7.12,
+    "sent": 1
+   },
+   {
+    "i": 23,
+    "w": "bag.",
+    "s": 7.12,
+    "e": 7.42,
+    "sent": 1
+   },
+   {
+    "i": 24,
+    "w": "Hi,",
+    "s": 8.42,
+    "e": 8.8,
+    "sent": 2
+   },
+   {
+    "i": 25,
+    "w": "I'm",
+    "s": 8.92,
+    "e": 9.2,
+    "sent": 2
+   },
+   {
+    "i": 26,
+    "w": "Léa,",
+    "s": 9.2,
+    "e": 9.55,
+    "sent": 2
+   },
+   {
+    "i": 27,
+    "w": "and",
+    "s": 9.67,
+    "e": 9.94,
+    "sent": 2
+   },
+   {
+    "i": 28,
+    "w": "I",
+    "s": 9.94,
+    "e": 10.08,
+    "sent": 2
+   },
+   {
+    "i": 29,
+    "w": "sew",
+    "s": 10.08,
+    "e": 10.35,
+    "sent": 2
+   },
+   {
+    "i": 30,
+    "w": "bags",
+    "s": 10.35,
+    "e": 10.69,
+    "sent": 2
+   },
+   {
+    "i": 31,
+    "w": "at",
+    "s": 10.69,
+    "e": 10.89,
+    "sent": 2
+   },
+   {
+    "i": 32,
+    "w": "the",
+    "s": 10.89,
+    "e": 11.16,
+    "sent": 2
+   },
+   {
+    "i": 33,
+    "w": "Fernway",
+    "s": 11.16,
+    "e": 11.7,
+    "sent": 2
+   },
+   {
+    "i": 34,
+    "w": "repair",
+    "s": 11.7,
+    "e": 12.17,
+    "sent": 2
+   },
+   {
+    "i": 35,
+    "w": "workshop.",
+    "s": 12.17,
+    "e": 12.85,
+    "sent": 2
+   },
+   {
+    "i": 36,
+    "w": "This",
+    "s": 13.2,
+    "e": 13.54,
+    "sent": 3
+   },
+   {
+    "i": 37,
+    "w": "Ridge",
+    "s": 13.54,
+    "e": 13.95,
+    "sent": 3
+   },
+   {
+    "i": 38,
+    "w": "28L",
+    "s": 13.95,
+    "e": 14.23,
+    "sent": 3
+   },
+   {
+    "i": 39,
+    "w": "came",
+    "s": 14.23,
+    "e": 14.57,
+    "sent": 3
+   },
+   {
+    "i": 40,
+    "w": "back",
+    "s": 14.57,
+    "e": 14.91,
+    "sent": 3
+   },
+   {
+    "i": 41,
+    "w": "to",
+    "s": 14.91,
+    "e": 15.12,
+    "sent": 3
+   },
+   {
+    "i": 42,
+    "w": "our",
+    "s": 15.12,
+    "e": 15.39,
+    "sent": 3
+   },
+   {
+    "i": 43,
+    "w": "Annecy",
+    "s": 15.39,
+    "e": 15.87,
+    "sent": 3
+   },
+   {
+    "i": 44,
+    "w": "workshop",
+    "s": 15.87,
+    "e": 16.49,
+    "sent": 3
+   },
+   {
+    "i": 45,
+    "w": "last",
+    "s": 16.49,
+    "e": 16.83,
+    "sent": 3
+   },
+   {
+    "i": 46,
+    "w": "week.",
+    "s": 16.83,
+    "e": 17.25,
+    "sent": 3
+   },
+   {
+    "i": 47,
+    "w": "The",
+    "s": 17.6,
+    "e": 17.83,
+    "sent": 4
+   },
+   {
+    "i": 48,
+    "w": "left",
+    "s": 17.83,
+    "e": 18.12,
+    "sent": 4
+   },
+   {
+    "i": 49,
+    "w": "shoulder",
+    "s": 18.12,
+    "e": 18.63,
+    "sent": 4
+   },
+   {
+    "i": 50,
+    "w": "strap,",
+    "s": 18.63,
+    "e": 19.04,
+    "sent": 4
+   },
+   {
+    "i": 51,
+    "w": "you",
+    "s": 19.16,
+    "e": 19.36,
+    "sent": 4,
+    "filler": true
+   },
+   {
+    "i": 52,
+    "w": "know,",
+    "s": 19.36,
+    "e": 19.66,
+    "sent": 4,
+    "filler": true
+   },
+   {
+    "i": 53,
+    "w": "ripped",
+    "s": 19.78,
+    "e": 20.13,
+    "sent": 4
+   },
+   {
+    "i": 54,
+    "w": "right",
+    "s": 20.13,
+    "e": 20.42,
+    "sent": 4
+   },
+   {
+    "i": 55,
+    "w": "where",
+    "s": 20.42,
+    "e": 20.72,
+    "sent": 4
+   },
+   {
+    "i": 56,
+    "w": "the",
+    "s": 20.72,
+    "e": 20.92,
+    "sent": 4
+   },
+   {
+    "i": 57,
+    "w": "webbing",
+    "s": 20.92,
+    "e": 21.32,
+    "sent": 4
+   },
+   {
+    "i": 58,
+    "w": "joins",
+    "s": 21.32,
+    "e": 21.62,
+    "sent": 4
+   },
+   {
+    "i": 59,
+    "w": "the",
+    "s": 21.62,
+    "e": 21.82,
+    "sent": 4
+   },
+   {
+    "i": 60,
+    "w": "bag.",
+    "s": 21.82,
+    "e": 22.07,
+    "sent": 4
+   },
+   {
+    "i": 61,
+    "w": "That's",
+    "s": 22.42,
+    "e": 22.78,
+    "sent": 5
+   },
+   {
+    "i": 62,
+    "w": "the",
+    "s": 22.78,
+    "e": 22.98,
+    "sent": 5
+   },
+   {
+    "i": 63,
+    "w": "spot",
+    "s": 22.98,
+    "e": 23.23,
+    "sent": 5
+   },
+   {
+    "i": 64,
+    "w": "that",
+    "s": 23.23,
+    "e": 23.49,
+    "sent": 5
+   },
+   {
+    "i": 65,
+    "w": "takes",
+    "s": 23.49,
+    "e": 23.79,
+    "sent": 5
+   },
+   {
+    "i": 66,
+    "w": "the",
+    "s": 23.79,
+    "e": 23.99,
+    "sent": 5
+   },
+   {
+    "i": 67,
+    "w": "most",
+    "s": 23.99,
+    "e": 24.25,
+    "sent": 5
+   },
+   {
+    "i": 68,
+    "w": "load",
+    "s": 24.25,
+    "e": 24.5,
+    "sent": 5
+   },
+   {
+    "i": 69,
+    "w": "when",
+    "s": 24.5,
+    "e": 24.76,
+    "sent": 5
+   },
+   {
+    "i": 70,
+    "w": "the",
+    "s": 24.76,
+    "e": 24.96,
+    "sent": 5
+   },
+   {
+    "i": 71,
+    "w": "pack",
+    "s": 24.96,
+    "e": 25.21,
+    "sent": 5
+   },
+   {
+    "i": 72,
+    "w": "is",
+    "s": 25.21,
+    "e": 25.37,
+    "sent": 5
+   },
+   {
+    "i": 73,
+    "w": "full.",
+    "s": 25.37,
+    "e": 25.67,
+    "sent": 5
+   },
+   {
+    "i": 74,
+    "w": "Um,",
+    "s": 26.02,
+    "e": 26.38,
+    "sent": 6,
+    "filler": true
+   },
+   {
+    "i": 75,
+    "w": "first,",
+    "s": 26.5,
+    "e": 27.08,
+    "sent": 6
+   },
+   {
+    "i": 76,
+    "w": "I",
+    "s": 27.2,
+    "e": 27.31,
+    "sent": 6
+   },
+   {
+    "i": 77,
+    "w": "unpick",
+    "s": 27.31,
+    "e": 27.72,
+    "sent": 6
+   },
+   {
+    "i": 78,
+    "w": "the",
+    "s": 27.72,
+    "e": 27.95,
+    "sent": 6
+   },
+   {
+    "i": 79,
+    "w": "old",
+    "s": 27.95,
+    "e": 28.18,
+    "sent": 6
+   },
+   {
+    "i": 80,
+    "w": "webbing,",
+    "s": 28.18,
+    "e": 28.7,
+    "sent": 6
+   },
+   {
+    "i": 81,
+    "w": "very",
+    "s": 28.82,
+    "e": 29.18,
+    "sent": 6
+   },
+   {
+    "i": 82,
+    "w": "slowly.",
+    "s": 29.18,
+    "e": 29.76,
+    "sent": 6
+   },
+   {
+    "i": 83,
+    "w": "If",
+    "s": 30.11,
+    "e": 30.28,
+    "sent": 7
+   },
+   {
+    "i": 84,
+    "w": "you",
+    "s": 30.28,
+    "e": 30.5,
+    "sent": 7
+   },
+   {
+    "i": 85,
+    "w": "rush",
+    "s": 30.5,
+    "e": 30.77,
+    "sent": 7
+   },
+   {
+    "i": 86,
+    "w": "this",
+    "s": 30.77,
+    "e": 31.05,
+    "sent": 7
+   },
+   {
+    "i": 87,
+    "w": "part,",
+    "s": 31.05,
+    "e": 31.38,
+    "sent": 7
+   },
+   {
+    "i": 88,
+    "w": "uh,",
+    "s": 31.5,
+    "e": 31.79,
+    "sent": 7,
+    "filler": true
+   },
+   {
+    "i": 89,
+    "w": "you",
+    "s": 31.91,
+    "e": 32.14,
+    "sent": 7
+   },
+   {
+    "i": 90,
+    "w": "tear",
+    "s": 32.14,
+    "e": 32.44,
+    "sent": 7
+   },
+   {
+    "i": 91,
+    "w": "the",
+    "s": 32.44,
+    "e": 32.68,
+    "sent": 7
+   },
+   {
+    "i": 92,
+    "w": "fabric",
+    "s": 32.68,
+    "e": 33.09,
+    "sent": 7
+   },
+   {
+    "i": 93,
+    "w": "around",
+    "s": 33.09,
+    "e": 33.5,
+    "sent": 7
+   },
+   {
+    "i": 94,
+    "w": "it,",
+    "s": 33.5,
+    "e": 33.74,
+    "sent": 7
+   },
+   {
+    "i": 95,
+    "w": "and",
+    "s": 33.86,
+    "e": 34.09,
+    "sent": 7
+   },
+   {
+    "i": 96,
+    "w": "then",
+    "s": 34.09,
+    "e": 34.38,
+    "sent": 7
+   },
+   {
+    "i": 97,
+    "w": "it's",
+    "s": 34.38,
+    "e": 34.67,
+    "sent": 7
+   },
+   {
+    "i": 98,
+    "w": "a",
+    "s": 34.67,
+    "e": 34.78,
+    "sent": 7
+   },
+   {
+    "i": 99,
+    "w": "much",
+    "s": 34.78,
+    "e": 35.07,
+    "sent": 7
+   },
+   {
+    "i": 100,
+    "w": "bigger",
+    "s": 35.07,
+    "e": 35.48,
+    "sent": 7
+   },
+   {
+    "i": 101,
+    "w": "job.",
+    "s": 35.48,
+    "e": 35.76,
+    "sent": 7
+   },
+   {
+    "i": 102,
+    "w": "Next,",
+    "s": 36.96,
+    "e": 37.49,
+    "sent": 8
+   },
+   {
+    "i": 103,
+    "w": "I",
+    "s": 37.61,
+    "e": 37.73,
+    "sent": 8
+   },
+   {
+    "i": 104,
+    "w": "cut",
+    "s": 37.73,
+    "e": 37.96,
+    "sent": 8
+   },
+   {
+    "i": 105,
+    "w": "new",
+    "s": 37.96,
+    "e": 38.19,
+    "sent": 8
+   },
+   {
+    "i": 106,
+    "w": "webbing",
+    "s": 38.19,
+    "e": 38.66,
+    "sent": 8
+   },
+   {
+    "i": 107,
+    "w": "from",
+    "s": 38.66,
+    "e": 38.95,
+    "sent": 8
+   },
+   {
+    "i": 108,
+    "w": "the",
+    "s": 38.95,
+    "e": 39.18,
+    "sent": 8
+   },
+   {
+    "i": 109,
+    "w": "same",
+    "s": 39.18,
+    "e": 39.47,
+    "sent": 8
+   },
+   {
+    "i": 110,
+    "w": "roll",
+    "s": 39.47,
+    "e": 39.76,
+    "sent": 8
+   },
+   {
+    "i": 111,
+    "w": "we",
+    "s": 39.76,
+    "e": 39.94,
+    "sent": 8
+   },
+   {
+    "i": 112,
+    "w": "use",
+    "s": 39.94,
+    "e": 40.17,
+    "sent": 8
+   },
+   {
+    "i": 113,
+    "w": "on",
+    "s": 40.17,
+    "e": 40.34,
+    "sent": 8
+   },
+   {
+    "i": 114,
+    "w": "the",
+    "s": 40.34,
+    "e": 40.57,
+    "sent": 8
+   },
+   {
+    "i": 115,
+    "w": "production",
+    "s": 40.57,
+    "e": 41.21,
+    "sent": 8
+   },
+   {
+    "i": 116,
+    "w": "line.",
+    "s": 41.21,
+    "e": 41.56,
+    "sent": 8
+   },
+   {
+    "i": 117,
+    "w": "It's",
+    "s": 41.91,
+    "e": 42.22,
+    "sent": 9
+   },
+   {
+    "i": 118,
+    "w": "the",
+    "s": 42.22,
+    "e": 42.47,
+    "sent": 9
+   },
+   {
+    "i": 119,
+    "w": "exact",
+    "s": 42.47,
+    "e": 42.85,
+    "sent": 9
+   },
+   {
+    "i": 120,
+    "w": "same",
+    "s": 42.85,
+    "e": 43.16,
+    "sent": 9
+   },
+   {
+    "i": 121,
+    "w": "colour,",
+    "s": 43.16,
+    "e": 43.66,
+    "sent": 9
+   },
+   {
+    "i": 122,
+    "w": "so,",
+    "s": 43.78,
+    "e": 44.18,
+    "sent": 9
+   },
+   {
+    "i": 123,
+    "w": "like,",
+    "s": 44.3,
+    "e": 44.74,
+    "sent": 9,
+    "filler": true
+   },
+   {
+    "i": 124,
+    "w": "nobody",
+    "s": 44.86,
+    "e": 45.26,
+    "sent": 9
+   },
+   {
+    "i": 125,
+    "w": "will",
+    "s": 45.26,
+    "e": 45.55,
+    "sent": 9
+   },
+   {
+    "i": 126,
+    "w": "ever",
+    "s": 45.55,
+    "e": 45.84,
+    "sent": 9
+   },
+   {
+    "i": 127,
+    "w": "see",
+    "s": 45.84,
+    "e": 46.07,
+    "sent": 9
+   },
+   {
+    "i": 128,
+    "w": "the",
+    "s": 46.07,
+    "e": 46.3,
+    "sent": 9
+   },
+   {
+    "i": 129,
+    "w": "repair.",
+    "s": 46.3,
+    "e": 46.77,
+    "sent": 9
+   },
+   {
+    "i": 130,
+    "w": "Then",
+    "s": 47.12,
+    "e": 47.41,
+    "sent": 10
+   },
+   {
+    "i": 131,
+    "w": "I",
+    "s": 47.41,
+    "e": 47.53,
+    "sent": 10
+   },
+   {
+    "i": 132,
+    "w": "slide",
+    "s": 47.53,
+    "e": 47.88,
+    "sent": 10
+   },
+   {
+    "i": 133,
+    "w": "a",
+    "s": 47.88,
+    "e": 48,
+    "sent": 10
+   },
+   {
+    "i": 134,
+    "w": "reinforcement",
+    "s": 48,
+    "e": 48.82,
+    "sent": 10
+   },
+   {
+    "i": 135,
+    "w": "patch",
+    "s": 48.82,
+    "e": 49.18,
+    "sent": 10
+   },
+   {
+    "i": 136,
+    "w": "under",
+    "s": 49.18,
+    "e": 49.53,
+    "sent": 10
+   },
+   {
+    "i": 137,
+    "w": "the",
+    "s": 49.53,
+    "e": 49.77,
+    "sent": 10
+   },
+   {
+    "i": 138,
+    "w": "strap",
+    "s": 49.77,
+    "e": 50.12,
+    "sent": 10
+   },
+   {
+    "i": 139,
+    "w": "and",
+    "s": 50.12,
+    "e": 50.35,
+    "sent": 10
+   },
+   {
+    "i": 140,
+    "w": "pin",
+    "s": 50.35,
+    "e": 50.59,
+    "sent": 10
+   },
+   {
+    "i": 141,
+    "w": "everything",
+    "s": 50.59,
+    "e": 51.24,
+    "sent": 10
+   },
+   {
+    "i": 142,
+    "w": "in",
+    "s": 51.24,
+    "e": 51.42,
+    "sent": 10
+   },
+   {
+    "i": 143,
+    "w": "place.",
+    "s": 51.42,
+    "e": 51.83,
+    "sent": 10
+   },
+   {
+    "i": 144,
+    "w": "Now,",
+    "s": 52.18,
+    "e": 52.58,
+    "sent": 11
+   },
+   {
+    "i": 145,
+    "w": "this",
+    "s": 52.7,
+    "e": 52.98,
+    "sent": 11
+   },
+   {
+    "i": 146,
+    "w": "is",
+    "s": 52.98,
+    "e": 53.15,
+    "sent": 11
+   },
+   {
+    "i": 147,
+    "w": "the",
+    "s": 53.15,
+    "e": 53.37,
+    "sent": 11
+   },
+   {
+    "i": 148,
+    "w": "fun",
+    "s": 53.37,
+    "e": 53.6,
+    "sent": 11
+   },
+   {
+    "i": 149,
+    "w": "part,",
+    "s": 53.6,
+    "e": 53.93,
+    "sent": 11
+   },
+   {
+    "i": 150,
+    "w": "the",
+    "s": 54.05,
+    "e": 54.31,
+    "sent": 11
+   },
+   {
+    "i": 151,
+    "w": "bar",
+    "s": 54.31,
+    "e": 54.56,
+    "sent": 11
+   },
+   {
+    "i": 152,
+    "w": "tack.",
+    "s": 54.56,
+    "e": 54.94,
+    "sent": 11
+   },
+   {
+    "i": 153,
+    "w": "We",
+    "s": 55.29,
+    "e": 55.47,
+    "sent": 12
+   },
+   {
+    "i": 154,
+    "w": "switch",
+    "s": 55.47,
+    "e": 55.89,
+    "sent": 12
+   },
+   {
+    "i": 155,
+    "w": "to",
+    "s": 55.89,
+    "e": 56.07,
+    "sent": 12
+   },
+   {
+    "i": 156,
+    "w": "a",
+    "s": 56.07,
+    "e": 56.19,
+    "sent": 12
+   },
+   {
+    "i": 157,
+    "w": "heavy-duty",
+    "s": 56.19,
+    "e": 56.86,
+    "sent": 12
+   },
+   {
+    "i": 158,
+    "w": "machine,",
+    "s": 56.86,
+    "e": 57.41,
+    "sent": 12
+   },
+   {
+    "i": 159,
+    "w": "with,",
+    "s": 57.53,
+    "e": 57.9,
+    "sent": 12
+   },
+   {
+    "i": 160,
+    "w": "um,",
+    "s": 58.02,
+    "e": 58.38,
+    "sent": 12,
+    "filler": true
+   },
+   {
+    "i": 161,
+    "w": "a",
+    "s": 58.5,
+    "e": 58.61,
+    "sent": 12
+   },
+   {
+    "i": 162,
+    "w": "thicker",
+    "s": 58.61,
+    "e": 59.07,
+    "sent": 12
+   },
+   {
+    "i": 163,
+    "w": "bonded",
+    "s": 59.07,
+    "e": 59.47,
+    "sent": 12
+   },
+   {
+    "i": 164,
+    "w": "thread.",
+    "s": 59.47,
+    "e": 59.92,
+    "sent": 12
+   },
+   {
+    "i": 165,
+    "w": "That's",
+    "s": 60.27,
+    "e": 60.71,
+    "sent": 13
+   },
+   {
+    "i": 166,
+    "w": "forty-two",
+    "s": 60.71,
+    "e": 61.33,
+    "sent": 13
+   },
+   {
+    "i": 167,
+    "w": "bar-tack",
+    "s": 61.33,
+    "e": 61.89,
+    "sent": 13
+   },
+   {
+    "i": 168,
+    "w": "stitches",
+    "s": 61.89,
+    "e": 62.45,
+    "sent": 13
+   },
+   {
+    "i": 169,
+    "w": "on",
+    "s": 62.45,
+    "e": 62.64,
+    "sent": 13
+   },
+   {
+    "i": 170,
+    "w": "the",
+    "s": 62.64,
+    "e": 62.89,
+    "sent": 13
+   },
+   {
+    "i": 171,
+    "w": "same",
+    "s": 62.89,
+    "e": 63.2,
+    "sent": 13
+   },
+   {
+    "i": 172,
+    "w": "centimetre.",
+    "s": 63.2,
+    "e": 63.94,
+    "sent": 13
+   },
+   {
+    "i": 173,
+    "w": "It",
+    "s": 64.29,
+    "e": 64.46,
+    "sent": 14
+   },
+   {
+    "i": 174,
+    "w": "spreads",
+    "s": 64.46,
+    "e": 64.91,
+    "sent": 14
+   },
+   {
+    "i": 175,
+    "w": "the",
+    "s": 64.91,
+    "e": 65.14,
+    "sent": 14
+   },
+   {
+    "i": 176,
+    "w": "load,",
+    "s": 65.14,
+    "e": 65.47,
+    "sent": 14
+   },
+   {
+    "i": 177,
+    "w": "so",
+    "s": 65.59,
+    "e": 65.77,
+    "sent": 14
+   },
+   {
+    "i": 178,
+    "w": "the",
+    "s": 65.77,
+    "e": 66,
+    "sent": 14
+   },
+   {
+    "i": 179,
+    "w": "strap",
+    "s": 66,
+    "e": 66.35,
+    "sent": 14
+   },
+   {
+    "i": 180,
+    "w": "pulls",
+    "s": 66.35,
+    "e": 66.69,
+    "sent": 14
+   },
+   {
+    "i": 181,
+    "w": "on",
+    "s": 66.69,
+    "e": 66.87,
+    "sent": 14
+   },
+   {
+    "i": 182,
+    "w": "the",
+    "s": 66.87,
+    "e": 67.1,
+    "sent": 14
+   },
+   {
+    "i": 183,
+    "w": "whole",
+    "s": 67.1,
+    "e": 67.45,
+    "sent": 14
+   },
+   {
+    "i": 184,
+    "w": "patch,",
+    "s": 67.45,
+    "e": 67.85,
+    "sent": 14
+   },
+   {
+    "i": 185,
+    "w": "not",
+    "s": 67.97,
+    "e": 68.24,
+    "sent": 14
+   },
+   {
+    "i": 186,
+    "w": "on",
+    "s": 68.24,
+    "e": 68.45,
+    "sent": 14
+   },
+   {
+    "i": 187,
+    "w": "one",
+    "s": 68.45,
+    "e": 68.72,
+    "sent": 14
+   },
+   {
+    "i": 188,
+    "w": "seam.",
+    "s": 68.72,
+    "e": 69.13,
+    "sent": 14
+   },
+   {
+    "i": 189,
+    "w": "Honestly,",
+    "s": 70.03,
+    "e": 70.68,
+    "sent": 15
+   },
+   {
+    "i": 190,
+    "w": "uh,",
+    "s": 70.8,
+    "e": 71.08,
+    "sent": 15,
+    "filler": true
+   },
+   {
+    "i": 191,
+    "w": "the",
+    "s": 71.2,
+    "e": 71.44,
+    "sent": 15
+   },
+   {
+    "i": 192,
+    "w": "factory",
+    "s": 71.44,
+    "e": 71.91,
+    "sent": 15
+   },
+   {
+    "i": 193,
+    "w": "version",
+    "s": 71.91,
+    "e": 72.38,
+    "sent": 15
+   },
+   {
+    "i": 194,
+    "w": "only",
+    "s": 72.38,
+    "e": 72.68,
+    "sent": 15
+   },
+   {
+    "i": 195,
+    "w": "has",
+    "s": 72.68,
+    "e": 72.91,
+    "sent": 15
+   },
+   {
+    "i": 196,
+    "w": "twenty-eight",
+    "s": 72.91,
+    "e": 73.68,
+    "sent": 15
+   },
+   {
+    "i": 197,
+    "w": "stitches.",
+    "s": 73.68,
+    "e": 74.27,
+    "sent": 15
+   },
+   {
+    "i": 198,
+    "w": "So,",
+    "s": 74.62,
+    "e": 75.03,
+    "sent": 16
+   },
+   {
+    "i": 199,
+    "w": "you",
+    "s": 75.15,
+    "e": 75.35,
+    "sent": 16,
+    "filler": true
+   },
+   {
+    "i": 200,
+    "w": "know,",
+    "s": 75.35,
+    "e": 75.65,
+    "sent": 16,
+    "filler": true
+   },
+   {
+    "i": 201,
+    "w": "the",
+    "s": 75.77,
+    "e": 76,
+    "sent": 16
+   },
+   {
+    "i": 202,
+    "w": "repaired",
+    "s": 76,
+    "e": 76.54,
+    "sent": 16
+   },
+   {
+    "i": 203,
+    "w": "bag",
+    "s": 76.54,
+    "e": 76.77,
+    "sent": 16
+   },
+   {
+    "i": 204,
+    "w": "is",
+    "s": 76.77,
+    "e": 76.95,
+    "sent": 16
+   },
+   {
+    "i": 205,
+    "w": "actually",
+    "s": 76.95,
+    "e": 77.48,
+    "sent": 16
+   },
+   {
+    "i": 206,
+    "w": "stronger",
+    "s": 77.48,
+    "e": 78.02,
+    "sent": 16
+   },
+   {
+    "i": 207,
+    "w": "than",
+    "s": 78.02,
+    "e": 78.31,
+    "sent": 16
+   },
+   {
+    "i": 208,
+    "w": "a",
+    "s": 78.31,
+    "e": 78.43,
+    "sent": 16
+   },
+   {
+    "i": 209,
+    "w": "new",
+    "s": 78.43,
+    "e": 78.67,
+    "sent": 16
+   },
+   {
+    "i": 210,
+    "w": "one.",
+    "s": 78.67,
+    "e": 78.97,
+    "sent": 16
+   },
+   {
+    "i": 211,
+    "w": "Last",
+    "s": 79.32,
+    "e": 79.62,
+    "sent": 17
+   },
+   {
+    "i": 212,
+    "w": "check,",
+    "s": 79.62,
+    "e": 80.05,
+    "sent": 17
+   },
+   {
+    "i": 213,
+    "w": "I",
+    "s": 80.17,
+    "e": 80.3,
+    "sent": 17
+   },
+   {
+    "i": 214,
+    "w": "hang",
+    "s": 80.3,
+    "e": 80.6,
+    "sent": 17
+   },
+   {
+    "i": 215,
+    "w": "ten",
+    "s": 80.6,
+    "e": 80.84,
+    "sent": 17
+   },
+   {
+    "i": 216,
+    "w": "kilos",
+    "s": 80.84,
+    "e": 81.21,
+    "sent": 17
+   },
+   {
+    "i": 217,
+    "w": "on",
+    "s": 81.21,
+    "e": 81.39,
+    "sent": 17
+   },
+   {
+    "i": 218,
+    "w": "the",
+    "s": 81.39,
+    "e": 81.63,
+    "sent": 17
+   },
+   {
+    "i": 219,
+    "w": "strap",
+    "s": 81.63,
+    "e": 82,
+    "sent": 17
+   },
+   {
+    "i": 220,
+    "w": "and",
+    "s": 82,
+    "e": 82.24,
+    "sent": 17
+   },
+   {
+    "i": 221,
+    "w": "give",
+    "s": 82.24,
+    "e": 82.54,
+    "sent": 17
+   },
+   {
+    "i": 222,
+    "w": "it",
+    "s": 82.54,
+    "e": 82.72,
+    "sent": 17
+   },
+   {
+    "i": 223,
+    "w": "a",
+    "s": 82.72,
+    "e": 82.84,
+    "sent": 17
+   },
+   {
+    "i": 224,
+    "w": "good",
+    "s": 82.84,
+    "e": 83.15,
+    "sent": 17
+   },
+   {
+    "i": 225,
+    "w": "shake.",
+    "s": 83.15,
+    "e": 83.57,
+    "sent": 17
+   },
+   {
+    "i": 226,
+    "w": "Nothing",
+    "s": 83.92,
+    "e": 84.4,
+    "sent": 18
+   },
+   {
+    "i": 227,
+    "w": "moves,",
+    "s": 84.4,
+    "e": 84.82,
+    "sent": 18
+   },
+   {
+    "i": 228,
+    "w": "so",
+    "s": 84.94,
+    "e": 85.12,
+    "sent": 18
+   },
+   {
+    "i": 229,
+    "w": "it's",
+    "s": 85.12,
+    "e": 85.43,
+    "sent": 18
+   },
+   {
+    "i": 230,
+    "w": "ready",
+    "s": 85.43,
+    "e": 85.8,
+    "sent": 18
+   },
+   {
+    "i": 231,
+    "w": "to",
+    "s": 85.8,
+    "e": 85.98,
+    "sent": 18
+   },
+   {
+    "i": 232,
+    "w": "go",
+    "s": 85.98,
+    "e": 86.17,
+    "sent": 18
+   },
+   {
+    "i": 233,
+    "w": "home.",
+    "s": 86.17,
+    "e": 86.54,
+    "sent": 18
+   },
+   {
+    "i": 234,
+    "w": "It",
+    "s": 87.94,
+    "e": 88.11,
+    "sent": 19
+   },
+   {
+    "i": 235,
+    "w": "took",
+    "s": 88.11,
+    "e": 88.4,
+    "sent": 19
+   },
+   {
+    "i": 236,
+    "w": "twenty",
+    "s": 88.4,
+    "e": 88.8,
+    "sent": 19
+   },
+   {
+    "i": 237,
+    "w": "minutes,",
+    "s": 88.8,
+    "e": 89.32,
+    "sent": 19
+   },
+   {
+    "i": 238,
+    "w": "and",
+    "s": 89.44,
+    "e": 89.65,
+    "sent": 19
+   },
+   {
+    "i": 239,
+    "w": "it",
+    "s": 89.65,
+    "e": 89.82,
+    "sent": 19
+   },
+   {
+    "i": 240,
+    "w": "cost",
+    "s": 89.82,
+    "e": 90.09,
+    "sent": 19
+   },
+   {
+    "i": 241,
+    "w": "the",
+    "s": 90.09,
+    "e": 90.3,
+    "sent": 19
+   },
+   {
+    "i": 242,
+    "w": "owner",
+    "s": 90.3,
+    "e": 90.63,
+    "sent": 19
+   },
+   {
+    "i": 243,
+    "w": "nothing.",
+    "s": 90.63,
+    "e": 91.12,
+    "sent": 19
+   },
+   {
+    "i": 244,
+    "w": "People",
+    "s": 91.47,
+    "e": 91.9,
+    "sent": 20
+   },
+   {
+    "i": 245,
+    "w": "always",
+    "s": 91.9,
+    "e": 92.34,
+    "sent": 20
+   },
+   {
+    "i": 246,
+    "w": "ask",
+    "s": 92.34,
+    "e": 92.59,
+    "sent": 20
+   },
+   {
+    "i": 247,
+    "w": "me",
+    "s": 92.59,
+    "e": 92.78,
+    "sent": 20
+   },
+   {
+    "i": 248,
+    "w": "why",
+    "s": 92.78,
+    "e": 93.02,
+    "sent": 20
+   },
+   {
+    "i": 249,
+    "w": "we",
+    "s": 93.02,
+    "e": 93.21,
+    "sent": 20
+   },
+   {
+    "i": 250,
+    "w": "repair",
+    "s": 93.21,
+    "e": 93.65,
+    "sent": 20
+   },
+   {
+    "i": 251,
+    "w": "bags",
+    "s": 93.65,
+    "e": 93.96,
+    "sent": 20
+   },
+   {
+    "i": 252,
+    "w": "instead",
+    "s": 93.96,
+    "e": 94.46,
+    "sent": 20
+   },
+   {
+    "i": 253,
+    "w": "of,",
+    "s": 94.46,
+    "e": 94.7,
+    "sent": 20
+   },
+   {
+    "i": 254,
+    "w": "like,",
+    "s": 94.82,
+    "e": 95.26,
+    "sent": 20,
+    "filler": true
+   },
+   {
+    "i": 255,
+    "w": "just",
+    "s": 95.38,
+    "e": 95.68,
+    "sent": 20
+   },
+   {
+    "i": 256,
+    "w": "sending",
+    "s": 95.68,
+    "e": 96.15,
+    "sent": 20
+   },
+   {
+    "i": 257,
+    "w": "a",
+    "s": 96.15,
+    "e": 96.27,
+    "sent": 20
+   },
+   {
+    "i": 258,
+    "w": "new",
+    "s": 96.27,
+    "e": 96.51,
+    "sent": 20
+   },
+   {
+    "i": 259,
+    "w": "one.",
+    "s": 96.51,
+    "e": 96.81,
+    "sent": 20
+   },
+   {
+    "i": 260,
+    "w": "A",
+    "s": 97.16,
+    "e": 97.28,
+    "sent": 21
+   },
+   {
+    "i": 261,
+    "w": "new",
+    "s": 97.28,
+    "e": 97.51,
+    "sent": 21
+   },
+   {
+    "i": 262,
+    "w": "Ridge",
+    "s": 97.51,
+    "e": 97.87,
+    "sent": 21
+   },
+   {
+    "i": 263,
+    "w": "costs",
+    "s": 97.87,
+    "e": 98.23,
+    "sent": 21
+   },
+   {
+    "i": 264,
+    "w": "a",
+    "s": 98.23,
+    "e": 98.35,
+    "sent": 21
+   },
+   {
+    "i": 265,
+    "w": "hundred",
+    "s": 98.35,
+    "e": 98.82,
+    "sent": 21
+   },
+   {
+    "i": 266,
+    "w": "and",
+    "s": 98.82,
+    "e": 99.06,
+    "sent": 21
+   },
+   {
+    "i": 267,
+    "w": "forty",
+    "s": 99.06,
+    "e": 99.41,
+    "sent": 21
+   },
+   {
+    "i": 268,
+    "w": "euros,",
+    "s": 99.41,
+    "e": 99.83,
+    "sent": 21
+   },
+   {
+    "i": 269,
+    "w": "and",
+    "s": 99.95,
+    "e": 100.18,
+    "sent": 21
+   },
+   {
+    "i": 270,
+    "w": "a",
+    "s": 100.18,
+    "e": 100.3,
+    "sent": 21
+   },
+   {
+    "i": 271,
+    "w": "lot",
+    "s": 100.3,
+    "e": 100.54,
+    "sent": 21
+   },
+   {
+    "i": 272,
+    "w": "of",
+    "s": 100.54,
+    "e": 100.71,
+    "sent": 21
+   },
+   {
+    "i": 273,
+    "w": "carbon",
+    "s": 100.71,
+    "e": 101.12,
+    "sent": 21
+   },
+   {
+    "i": 274,
+    "w": "to",
+    "s": 101.12,
+    "e": 101.3,
+    "sent": 21
+   },
+   {
+    "i": 275,
+    "w": "make.",
+    "s": 101.3,
+    "e": 101.65,
+    "sent": 21
+   },
+   {
+    "i": 276,
+    "w": "This",
+    "s": 102,
+    "e": 102.24,
+    "sent": 22
+   },
+   {
+    "i": 277,
+    "w": "year,",
+    "s": 102.24,
+    "e": 102.52,
+    "sent": 22
+   },
+   {
+    "i": 278,
+    "w": "um,",
+    "s": 102.64,
+    "e": 103,
+    "sent": 22,
+    "filler": true
+   },
+   {
+    "i": 279,
+    "w": "we",
+    "s": 103.12,
+    "e": 103.29,
+    "sent": 22
+   },
+   {
+    "i": 280,
+    "w": "repaired",
+    "s": 103.29,
+    "e": 103.82,
+    "sent": 22
+   },
+   {
+    "i": 281,
+    "w": "twelve",
+    "s": 103.82,
+    "e": 104.23,
+    "sent": 22
+   },
+   {
+    "i": 282,
+    "w": "hundred",
+    "s": 104.23,
+    "e": 104.7,
+    "sent": 22
+   },
+   {
+    "i": 283,
+    "w": "bags",
+    "s": 104.7,
+    "e": 104.99,
+    "sent": 22
+   },
+   {
+    "i": 284,
+    "w": "in",
+    "s": 104.99,
+    "e": 105.16,
+    "sent": 22
+   },
+   {
+    "i": 285,
+    "w": "this",
+    "s": 105.16,
+    "e": 105.45,
+    "sent": 22
+   },
+   {
+    "i": 286,
+    "w": "room.",
+    "s": 105.45,
+    "e": 105.8,
+    "sent": 22
+   },
+   {
+    "i": 287,
+    "w": "Every",
+    "s": 106.15,
+    "e": 106.49,
+    "sent": 23
+   },
+   {
+    "i": 288,
+    "w": "one",
+    "s": 106.49,
+    "e": 106.71,
+    "sent": 23
+   },
+   {
+    "i": 289,
+    "w": "of",
+    "s": 106.71,
+    "e": 106.88,
+    "sent": 23
+   },
+   {
+    "i": 290,
+    "w": "them",
+    "s": 106.88,
+    "e": 107.16,
+    "sent": 23
+   },
+   {
+    "i": 291,
+    "w": "went",
+    "s": 107.16,
+    "e": 107.44,
+    "sent": 23
+   },
+   {
+    "i": 292,
+    "w": "back",
+    "s": 107.44,
+    "e": 107.72,
+    "sent": 23
+   },
+   {
+    "i": 293,
+    "w": "on",
+    "s": 107.72,
+    "e": 107.89,
+    "sent": 23
+   },
+   {
+    "i": 294,
+    "w": "a",
+    "s": 107.89,
+    "e": 108,
+    "sent": 23
+   },
+   {
+    "i": 295,
+    "w": "trail",
+    "s": 108,
+    "e": 108.34,
+    "sent": 23
+   },
+   {
+    "i": 296,
+    "w": "instead",
+    "s": 108.34,
+    "e": 108.78,
+    "sent": 23
+   },
+   {
+    "i": 297,
+    "w": "of",
+    "s": 108.78,
+    "e": 108.95,
+    "sent": 23
+   },
+   {
+    "i": 298,
+    "w": "into",
+    "s": 108.95,
+    "e": 109.23,
+    "sent": 23
+   },
+   {
+    "i": 299,
+    "w": "a",
+    "s": 109.23,
+    "e": 109.34,
+    "sent": 23
+   },
+   {
+    "i": 300,
+    "w": "bin.",
+    "s": 109.34,
+    "e": 109.62,
+    "sent": 23
+   },
+   {
+    "i": 301,
+    "w": "Every",
+    "s": 109.97,
+    "e": 110.32,
+    "sent": 24
+   },
+   {
+    "i": 302,
+    "w": "Ridge",
+    "s": 110.32,
+    "e": 110.66,
+    "sent": 24
+   },
+   {
+    "i": 303,
+    "w": "comes",
+    "s": 110.66,
+    "e": 111.01,
+    "sent": 24
+   },
+   {
+    "i": 304,
+    "w": "with",
+    "s": 111.01,
+    "e": 111.3,
+    "sent": 24
+   },
+   {
+    "i": 305,
+    "w": "free",
+    "s": 111.3,
+    "e": 111.59,
+    "sent": 24
+   },
+   {
+    "i": 306,
+    "w": "repairs",
+    "s": 111.59,
+    "e": 112.05,
+    "sent": 24
+   },
+   {
+    "i": 307,
+    "w": "for",
+    "s": 112.05,
+    "e": 112.28,
+    "sent": 24
+   },
+   {
+    "i": 308,
+    "w": "life.",
+    "s": 112.28,
+    "e": 112.63,
+    "sent": 24
+   },
+   {
+    "i": 309,
+    "w": "Torn",
+    "s": 112.98,
+    "e": 113.37,
+    "sent": 25
+   },
+   {
+    "i": 310,
+    "w": "strap,",
+    "s": 113.37,
+    "e": 113.93,
+    "sent": 25
+   },
+   {
+    "i": 311,
+    "w": "broken",
+    "s": 114.05,
+    "e": 114.44,
+    "sent": 25
+   },
+   {
+    "i": 312,
+    "w": "buckle,",
+    "s": 114.44,
+    "e": 114.89,
+    "sent": 25
+   },
+   {
+    "i": 313,
+    "w": "dead",
+    "s": 115.01,
+    "e": 115.33,
+    "sent": 25
+   },
+   {
+    "i": 314,
+    "w": "zip,",
+    "s": 115.33,
+    "e": 115.65,
+    "sent": 25
+   },
+   {
+    "i": 315,
+    "w": "uh,",
+    "s": 115.77,
+    "e": 116.06,
+    "sent": 25,
+    "filler": true
+   },
+   {
+    "i": 316,
+    "w": "whatever",
+    "s": 116.18,
+    "e": 116.68,
+    "sent": 25
+   },
+   {
+    "i": 317,
+    "w": "happened",
+    "s": 116.68,
+    "e": 117.18,
+    "sent": 25
+   },
+   {
+    "i": 318,
+    "w": "to",
+    "s": 117.18,
+    "e": 117.35,
+    "sent": 25
+   },
+   {
+    "i": 319,
+    "w": "it.",
+    "s": 117.35,
+    "e": 117.57,
+    "sent": 25
+   },
+   {
+    "i": 320,
+    "w": "And",
+    "s": 118.57,
+    "e": 118.84,
+    "sent": 26
+   },
+   {
+    "i": 321,
+    "w": "on",
+    "s": 118.84,
+    "e": 119.04,
+    "sent": 26
+   },
+   {
+    "i": 322,
+    "w": "Fridays,",
+    "s": 119.04,
+    "e": 119.65,
+    "sent": 26
+   },
+   {
+    "i": 323,
+    "w": "we,",
+    "s": 119.77,
+    "e": 120.09,
+    "sent": 26
+   },
+   {
+    "i": 324,
+    "w": "um,",
+    "s": 120.21,
+    "e": 120.57,
+    "sent": 26,
+    "filler": true
+   },
+   {
+    "i": 325,
+    "w": "open",
+    "s": 120.69,
+    "e": 120.99,
+    "sent": 26
+   },
+   {
+    "i": 326,
+    "w": "the",
+    "s": 120.99,
+    "e": 121.22,
+    "sent": 26
+   },
+   {
+    "i": 327,
+    "w": "workshop",
+    "s": 121.22,
+    "e": 121.76,
+    "sent": 26
+   },
+   {
+    "i": 328,
+    "w": "and",
+    "s": 121.76,
+    "e": 122,
+    "sent": 26
+   },
+   {
+    "i": 329,
+    "w": "repair",
+    "s": 122,
+    "e": 122.41,
+    "sent": 26
+   },
+   {
+    "i": 330,
+    "w": "live.",
+    "s": 122.41,
+    "e": 122.77,
+    "sent": 26
+   },
+   {
+    "i": 331,
+    "w": "Send",
+    "s": 123.12,
+    "e": 123.44,
+    "sent": 27
+   },
+   {
+    "i": 332,
+    "w": "it",
+    "s": 123.44,
+    "e": 123.63,
+    "sent": 27
+   },
+   {
+    "i": 333,
+    "w": "to",
+    "s": 123.63,
+    "e": 123.83,
+    "sent": 27
+   },
+   {
+    "i": 334,
+    "w": "Annecy,",
+    "s": 123.83,
+    "e": 124.34,
+    "sent": 27
+   },
+   {
+    "i": 335,
+    "w": "and",
+    "s": 124.46,
+    "e": 124.67,
+    "sent": 27
+   },
+   {
+    "i": 336,
+    "w": "we'll",
+    "s": 124.67,
+    "e": 124.99,
+    "sent": 27
+   },
+   {
+    "i": 337,
+    "w": "stitch",
+    "s": 124.99,
+    "e": 125.35,
+    "sent": 27
+   },
+   {
+    "i": 338,
+    "w": "it",
+    "s": 125.35,
+    "e": 125.51,
+    "sent": 27
+   },
+   {
+    "i": 339,
+    "w": "back.",
+    "s": 125.51,
+    "e": 125.83,
+    "sent": 27
+   }
+  ],
+  "shots": [
+   {
+    "s": 0,
+    "e": 4.23,
+    "label": "Hands on the torn strap",
+    "focus": 0.5
+   },
+   {
+    "s": 4.23,
+    "e": 8.27,
+    "label": "Stitching close-up",
+    "focus": 0.6
+   },
+   {
+    "s": 8.27,
+    "e": 17.45,
+    "label": "Lake Annecy from above",
+    "focus": 0.4
+   },
+   {
+    "s": 17.45,
+    "e": 25.87,
+    "label": "The Ridge 28L on the bench",
+    "focus": 0.62
+   },
+   {
+    "s": 25.87,
+    "e": 36.81,
+    "label": "Unpicking the old webbing",
+    "focus": 0.58
+   },
+   {
+    "s": 36.81,
+    "e": 46.97,
+    "label": "Cutting new webbing",
+    "focus": 0.56
+   },
+   {
+    "s": 46.97,
+    "e": 52.03,
+    "label": "Placing the patch",
+    "focus": 0.55
+   },
+   {
+    "s": 52.03,
+    "e": 69.88,
+    "label": "The heavy-duty machine",
+    "focus": 0.4
+   },
+   {
+    "s": 69.88,
+    "e": 79.17,
+    "label": "Bar tack close-up",
+    "focus": 0.36
+   },
+   {
+    "s": 79.17,
+    "e": 87.79,
+    "label": "Checking the strap",
+    "focus": 0.42
+   },
+   {
+    "s": 87.79,
+    "e": 101.85,
+    "label": "Hands at the machine",
+    "focus": 0.5
+   },
+   {
+    "s": 101.85,
+    "e": 109.82,
+    "label": "The repair workshop",
+    "focus": 0.7
+   },
+   {
+    "s": 109.82,
+    "e": 118.42,
+    "label": "Close-up of the stitching",
+    "focus": 0.6
+   },
+   {
+    "s": 118.42,
+    "e": 122.97,
+    "label": "Repair Friday at the bench",
+    "focus": 0.45
+   },
+   {
+    "s": 122.97,
+    "e": 126.63,
+    "label": "Back on the trail",
+    "focus": 0.6
+   }
+  ]
+ },
+ "gr20": {
+  "duration": 128.57,
+  "sentences": [
+   {
+    "i": 0,
+    "s": 0.4,
+    "e": 2.76,
+    "text": "Three days of rain on the GR20.",
+    "tr": {
+     "fr": "Trois jours de pluie sur le GR20.",
+     "de": "Drei Tage Regen auf dem GR20.",
+     "es": "Tres días de lluvia en el GR20.",
+     "it": "Tre giorni di pioggia sul GR20."
+    }
+   },
+   {
+    "i": 1,
+    "s": 3.11,
+    "e": 5.74,
+    "text": "And, um, I stayed dry the whole way.",
+    "tr": {
+     "fr": "Et je suis restée au sec tout du long.",
+     "de": "Und ich bin die ganze Zeit trocken geblieben.",
+     "es": "Y me mantuve seca todo el camino.",
+     "it": "E sono rimasta asciutta per tutto il percorso."
+    }
+   },
+   {
+    "i": 2,
+    "s": 6.09,
+    "e": 11.2,
+    "text": "Hi, it's Léa from Fernway, and this is the Storm Jacket after a proper test.",
+    "tr": {
+     "fr": "Bonjour, c'est Léa de Fernway, et voici la Storm Jacket après un vrai test.",
+     "de": "Hallo, hier ist Léa von Fernway, und das ist die Storm Jacket nach einem echten Test.",
+     "es": "Hola, soy Léa de Fernway, y esta es la Storm Jacket tras una prueba de verdad.",
+     "it": "Ciao, sono Léa di Fernway, e questa è la Storm Jacket dopo un vero test."
+    }
+   },
+   {
+    "i": 3,
+    "s": 12.1,
+    "e": 18.18,
+    "text": "The GR20 crosses Corsica from north to south, it's, like, the hardest trail in Europe.",
+    "tr": {
+     "fr": "Le GR20 traverse la Corse du nord au sud, c'est le sentier le plus dur d'Europe.",
+     "de": "Der GR20 durchquert Korsika von Nord nach Süd, der härteste Weg Europas.",
+     "es": "El GR20 cruza Córcega de norte a sur, es el sendero más duro de Europa.",
+     "it": "Il GR20 attraversa la Corsica da nord a sud, è il sentiero più duro d'Europa."
+    }
+   },
+   {
+    "i": 4,
+    "s": 18.53,
+    "e": 22.53,
+    "text": "We planned five days, and, uh, the forecast said sun.",
+    "tr": {
+     "fr": "On avait prévu cinq jours, et la météo annonçait du soleil.",
+     "de": "Wir hatten fünf Tage geplant, und die Vorhersage sagte Sonne.",
+     "es": "Planeamos cinco días, y la previsión decía sol.",
+     "it": "Avevamo previsto cinque giorni, e il meteo diceva sole."
+    }
+   },
+   {
+    "i": 5,
+    "s": 22.88,
+    "e": 26.53,
+    "text": "On the first morning, at Calenzana, it started to rain.",
+    "tr": {
+     "fr": "Le premier matin, à Calenzana, il s'est mis à pleuvoir.",
+     "de": "Am ersten Morgen in Calenzana fing es an zu regnen.",
+     "es": "La primera mañana, en Calenzana, empezó a llover.",
+     "it": "La prima mattina, a Calenzana, ha cominciato a piovere."
+    }
+   },
+   {
+    "i": 6,
+    "s": 26.88,
+    "e": 30.26,
+    "text": "And, you know, it didn't really stop for three days.",
+    "tr": {
+     "fr": "Et ça ne s'est pas vraiment arrêté pendant trois jours.",
+     "de": "Und es hat drei Tage lang kaum aufgehört.",
+     "es": "Y no paró de verdad en tres días.",
+     "it": "E non ha davvero smesso per tre giorni."
+    }
+   },
+   {
+    "i": 7,
+    "s": 31.46,
+    "e": 33.97,
+    "text": "So this was the perfect test for the jacket.",
+    "tr": {
+     "fr": "Le test parfait pour la veste.",
+     "de": "Also der perfekte Test für die Jacke.",
+     "es": "Así que era la prueba perfecta para la chaqueta.",
+     "it": "Quindi era il test perfetto per la giacca."
+    }
+   },
+   {
+    "i": 8,
+    "s": 34.32,
+    "e": 39.31,
+    "text": "The Storm Jacket is a three-layer shell, and it weighs three hundred and forty grams.",
+    "tr": {
+     "fr": "La Storm Jacket est une coque trois couches de trois cent quarante grammes.",
+     "de": "Die Storm Jacket ist eine Dreilagen-Hardshell und wiegt dreihundertvierzig Gramm.",
+     "es": "La Storm Jacket es una capa de tres capas y pesa trescientos cuarenta gramos.",
+     "it": "La Storm Jacket è un guscio a tre strati e pesa trecentoquaranta grammi."
+    }
+   },
+   {
+    "i": 9,
+    "s": 39.66,
+    "e": 44.45,
+    "text": "On the ridge to Ortu di u Piobbu, the wind, um, nearly knocked me over.",
+    "tr": {
+     "fr": "Sur la crête vers Ortu di u Piobbu, le vent a failli me renverser.",
+     "de": "Auf dem Grat nach Ortu di u Piobbu hat mich der Wind fast umgeworfen.",
+     "es": "En la cresta hacia Ortu di u Piobbu, el viento casi me tumba.",
+     "it": "Sulla cresta verso Ortu di u Piobbu, il vento mi ha quasi buttata giù."
+    }
+   },
+   {
+    "i": 10,
+    "s": 44.8,
+    "e": 50.19,
+    "text": "The hood stays on in forty-kilometre wind, and honestly, that's the first thing I check.",
+    "tr": {
+     "fr": "La capuche tient par vent de quarante kilomètres-heure, c'est la première chose que je vérifie.",
+     "de": "Die Kapuze hält bei vierzig Stundenkilometern Wind, und das prüfe ich immer zuerst.",
+     "es": "La capucha aguanta con viento de cuarenta kilómetros por hora, y es lo primero que miro.",
+     "it": "Il cappuccio resta su con vento a quaranta all'ora, ed è la prima cosa che controllo."
+    }
+   },
+   {
+    "i": 11,
+    "s": 50.54,
+    "e": 53.5,
+    "text": "The pit zips are, like, my favourite detail.",
+    "tr": {
+     "fr": "Les zips d'aération sont mon détail préféré.",
+     "de": "Die Unterarm-Reißverschlüsse sind mein Lieblingsdetail.",
+     "es": "Las cremalleras de ventilación son mi detalle favorito.",
+     "it": "Le zip di ventilazione sono il mio dettaglio preferito."
+    }
+   },
+   {
+    "i": 12,
+    "s": 53.85,
+    "e": 57.64,
+    "text": "You open them on the climbs, so you don't get wet from the inside.",
+    "tr": {
+     "fr": "On les ouvre dans les montées pour ne pas se mouiller de l'intérieur.",
+     "de": "Man öffnet sie bergauf, damit man nicht von innen nass wird.",
+     "es": "Las abres en las subidas para no mojarte por dentro.",
+     "it": "Le apri in salita, così non ti bagni da dentro."
+    }
+   },
+   {
+    "i": 13,
+    "s": 57.99,
+    "e": 61.41,
+    "text": "That's the part people forget, uh, sweat is water too.",
+    "tr": {
+     "fr": "C'est ce qu'on oublie : la transpiration, c'est aussi de l'eau.",
+     "de": "Das vergessen viele: Schweiß ist auch Wasser.",
+     "es": "Es lo que la gente olvida: el sudor también es agua.",
+     "it": "È quello che si dimentica: anche il sudore è acqua."
+    }
+   },
+   {
+    "i": 14,
+    "s": 62.41,
+    "e": 66.02,
+    "text": "On day two, we walked eight hours in fog, on wet granite.",
+    "tr": {
+     "fr": "Le deuxième jour, huit heures de marche dans le brouillard, sur du granit mouillé.",
+     "de": "Am zweiten Tag liefen wir acht Stunden im Nebel über nassen Granit.",
+     "es": "El segundo día caminamos ocho horas en la niebla, sobre granito mojado.",
+     "it": "Il secondo giorno, otto ore nella nebbia, su granito bagnato."
+    }
+   },
+   {
+    "i": 15,
+    "s": 66.37,
+    "e": 68.96,
+    "text": "At the refuge, everything else was soaked.",
+    "tr": {
+     "fr": "Au refuge, tout le reste était trempé.",
+     "de": "In der Hütte war alles andere durchnässt.",
+     "es": "En el refugio, todo lo demás estaba empapado.",
+     "it": "Al rifugio, tutto il resto era fradicio."
+    }
+   },
+   {
+    "i": 16,
+    "s": 69.31,
+    "e": 74.03,
+    "text": "My trousers, my boots, my map, but, um, not my top layer.",
+    "tr": {
+     "fr": "Pantalon, chaussures, carte, mais pas le haut.",
+     "de": "Hose, Schuhe, Karte, aber nicht meine obere Schicht.",
+     "es": "Pantalones, botas, mapa, pero no mi capa de arriba.",
+     "it": "Pantaloni, scarponi, mappa, ma non lo strato di sopra."
+    }
+   },
+   {
+    "i": 17,
+    "s": 74.38,
+    "e": 79.2,
+    "text": "The Storm Jacket stayed dry: twenty thousand millimetres of waterproofing.",
+    "tr": {
+     "fr": "La Storm Jacket est restée sèche : vingt mille millimètres d'imperméabilité.",
+     "de": "Die Storm Jacket blieb trocken: zwanzigtausend Millimeter Wassersäule.",
+     "es": "La Storm Jacket siguió seca: veinte mil milímetros de impermeabilidad.",
+     "it": "La Storm Jacket è rimasta asciutta: ventimila millimetri di impermeabilità."
+    }
+   },
+   {
+    "i": 18,
+    "s": 79.55,
+    "e": 83.7,
+    "text": "The membrane is PFAS-free, you know, no forever chemicals.",
+    "tr": {
+     "fr": "La membrane est sans PFAS, sans polluants éternels.",
+     "de": "Die Membran ist PFAS-frei, keine Ewigkeitschemikalien.",
+     "es": "La membrana no lleva PFAS, nada de químicos eternos.",
+     "it": "La membrana è senza PFAS, niente inquinanti eterni."
+    }
+   },
+   {
+    "i": 19,
+    "s": 84.7,
+    "e": 90.66,
+    "text": "Underneath, I wore the Ember Fleece, because, uh, the Storm Jacket is a shell, not a coat.",
+    "tr": {
+     "fr": "Dessous, je portais l'Ember Fleece, car la Storm Jacket est une coque, pas un manteau.",
+     "de": "Darunter trug ich die Ember Fleece, denn die Storm Jacket ist eine Hülle, kein Mantel.",
+     "es": "Debajo llevaba el Ember Fleece, porque la Storm Jacket es una capa, no un abrigo.",
+     "it": "Sotto avevo l'Ember Fleece, perché la Storm Jacket è un guscio, non un cappotto."
+    }
+   },
+   {
+    "i": 20,
+    "s": 91.01,
+    "e": 94.54,
+    "text": "It keeps you dry, but it doesn't keep you warm on its own.",
+    "tr": {
+     "fr": "Elle garde au sec, mais seule, elle ne tient pas chaud.",
+     "de": "Sie hält trocken, aber allein nicht warm.",
+     "es": "Te mantiene seca, pero sola no abriga.",
+     "it": "Ti tiene asciutta, ma da sola non ti scalda."
+    }
+   },
+   {
+    "i": 21,
+    "s": 95.84,
+    "e": 99.94,
+    "text": "Day three was the steepest part, with chains on the rock, in the rain.",
+    "tr": {
+     "fr": "Le troisième jour, la partie la plus raide, avec des chaînes sur le rocher, sous la pluie.",
+     "de": "Tag drei war der steilste Teil, mit Ketten am Fels, im Regen.",
+     "es": "El tercer día fue lo más empinado, con cadenas en la roca, bajo la lluvia.",
+     "it": "Il terzo giorno, il tratto più ripido, con catene sulla roccia, sotto la pioggia."
+    }
+   },
+   {
+    "i": 22,
+    "s": 100.29,
+    "e": 104.9,
+    "text": "The Velcro cuffs held, and, like, no water ran down my sleeves.",
+    "tr": {
+     "fr": "Les poignets à scratch ont tenu, pas une goutte dans les manches.",
+     "de": "Die Klettbündchen hielten, kein Wasser lief in die Ärmel.",
+     "es": "Los puños de velcro aguantaron y no entró agua por las mangas.",
+     "it": "I polsini in velcro hanno tenuto, niente acqua nelle maniche."
+    }
+   },
+   {
+    "i": 23,
+    "s": 105.25,
+    "e": 108.8,
+    "text": "Then, finally, um, the sun came out above Ascu.",
+    "tr": {
+     "fr": "Puis, enfin, le soleil est sorti au-dessus d'Ascu.",
+     "de": "Dann kam über Ascu endlich die Sonne raus.",
+     "es": "Y por fin salió el sol sobre Ascu.",
+     "it": "Poi, finalmente, è uscito il sole sopra Ascu."
+    }
+   },
+   {
+    "i": 24,
+    "s": 109.15,
+    "e": 114.79,
+    "text": "After three days, the jacket has, uh, no leaks, no peeling, no broken zip.",
+    "tr": {
+     "fr": "Après trois jours : aucune fuite, rien ne pèle, aucun zip cassé.",
+     "de": "Nach drei Tagen: keine Lecks, nichts löst sich, kein kaputter Reißverschluss.",
+     "es": "Tras tres días: sin goteras, sin desprenderse, sin cremalleras rotas.",
+     "it": "Dopo tre giorni: nessuna infiltrazione, niente si stacca, nessuna zip rotta."
+    }
+   },
+   {
+    "i": 25,
+    "s": 115.14,
+    "e": 119.12,
+    "text": "So, would I take it again? Yes, you know, without thinking.",
+    "tr": {
+     "fr": "Alors, je la reprendrais ? Oui, sans hésiter.",
+     "de": "Würde ich sie wieder mitnehmen? Ja, ohne nachzudenken.",
+     "es": "¿La volvería a llevar? Sí, sin pensarlo.",
+     "it": "La riprenderei? Sì, senza pensarci."
+    }
+   },
+   {
+    "i": 26,
+    "s": 120.02,
+    "e": 123.35,
+    "text": "Two hundred and twenty euros, and built to be repaired.",
+    "tr": {
+     "fr": "Deux cent vingt euros, et conçue pour être réparée.",
+     "de": "Zweihundertzwanzig Euro, und gebaut, um repariert zu werden.",
+     "es": "Doscientos veinte euros, y hecha para repararse.",
+     "it": "Duecentoventi euro, e fatta per essere riparata."
+    }
+   },
+   {
+    "i": 27,
+    "s": 123.7,
+    "e": 127.77,
+    "text": "Next video, um, the last two days, and a lot more sun.",
+    "tr": {
+     "fr": "Prochaine vidéo : les deux derniers jours, avec beaucoup plus de soleil.",
+     "de": "Im nächsten Video: die letzten zwei Tage, mit viel mehr Sonne.",
+     "es": "En el próximo vídeo, los dos últimos días, con mucho más sol.",
+     "it": "Nel prossimo video, gli ultimi due giorni, con molto più sole."
+    }
+   }
+  ],
+  "words": [
+   {
+    "i": 0,
+    "w": "Three",
+    "s": 0.4,
+    "e": 0.84,
+    "sent": 0
+   },
+   {
+    "i": 1,
+    "w": "days",
+    "s": 0.84,
+    "e": 1.21,
+    "sent": 0
+   },
+   {
+    "i": 2,
+    "w": "of",
+    "s": 1.21,
+    "e": 1.43,
+    "sent": 0
+   },
+   {
+    "i": 3,
+    "w": "rain",
+    "s": 1.43,
+    "e": 1.8,
+    "sent": 0
+   },
+   {
+    "i": 4,
+    "w": "on",
+    "s": 1.8,
+    "e": 2.02,
+    "sent": 0
+   },
+   {
+    "i": 5,
+    "w": "the",
+    "s": 2.02,
+    "e": 2.31,
+    "sent": 0
+   },
+   {
+    "i": 6,
+    "w": "GR20.",
+    "s": 2.31,
+    "e": 2.76,
+    "sent": 0
+   },
+   {
+    "i": 7,
+    "w": "And,",
+    "s": 3.11,
+    "e": 3.56,
+    "sent": 1
+   },
+   {
+    "i": 8,
+    "w": "um,",
+    "s": 3.68,
+    "e": 4.04,
+    "sent": 1,
+    "filler": true
+   },
+   {
+    "i": 9,
+    "w": "I",
+    "s": 4.16,
+    "e": 4.27,
+    "sent": 1
+   },
+   {
+    "i": 10,
+    "w": "stayed",
+    "s": 4.27,
+    "e": 4.67,
+    "sent": 1
+   },
+   {
+    "i": 11,
+    "w": "dry",
+    "s": 4.67,
+    "e": 4.89,
+    "sent": 1
+   },
+   {
+    "i": 12,
+    "w": "the",
+    "s": 4.89,
+    "e": 5.12,
+    "sent": 1
+   },
+   {
+    "i": 13,
+    "w": "whole",
+    "s": 5.12,
+    "e": 5.46,
+    "sent": 1
+   },
+   {
+    "i": 14,
+    "w": "way.",
+    "s": 5.46,
+    "e": 5.74,
+    "sent": 1
+   },
+   {
+    "i": 15,
+    "w": "Hi,",
+    "s": 6.09,
+    "e": 6.47,
+    "sent": 2
+   },
+   {
+    "i": 16,
+    "w": "it's",
+    "s": 6.59,
+    "e": 6.91,
+    "sent": 2
+   },
+   {
+    "i": 17,
+    "w": "Léa",
+    "s": 6.91,
+    "e": 7.16,
+    "sent": 2
+   },
+   {
+    "i": 18,
+    "w": "from",
+    "s": 7.16,
+    "e": 7.48,
+    "sent": 2
+   },
+   {
+    "i": 19,
+    "w": "Fernway,",
+    "s": 7.48,
+    "e": 8.05,
+    "sent": 2
+   },
+   {
+    "i": 20,
+    "w": "and",
+    "s": 8.17,
+    "e": 8.41,
+    "sent": 2
+   },
+   {
+    "i": 21,
+    "w": "this",
+    "s": 8.41,
+    "e": 8.71,
+    "sent": 2
+   },
+   {
+    "i": 22,
+    "w": "is",
+    "s": 8.71,
+    "e": 8.9,
+    "sent": 2
+   },
+   {
+    "i": 23,
+    "w": "the",
+    "s": 8.9,
+    "e": 9.14,
+    "sent": 2
+   },
+   {
+    "i": 24,
+    "w": "Storm",
+    "s": 9.14,
+    "e": 9.5,
+    "sent": 2
+   },
+   {
+    "i": 25,
+    "w": "Jacket",
+    "s": 9.5,
+    "e": 9.93,
+    "sent": 2
+   },
+   {
+    "i": 26,
+    "w": "after",
+    "s": 9.93,
+    "e": 10.29,
+    "sent": 2
+   },
+   {
+    "i": 27,
+    "w": "a",
+    "s": 10.29,
+    "e": 10.41,
+    "sent": 2
+   },
+   {
+    "i": 28,
+    "w": "proper",
+    "s": 10.41,
+    "e": 10.84,
+    "sent": 2
+   },
+   {
+    "i": 29,
+    "w": "test.",
+    "s": 10.84,
+    "e": 11.2,
+    "sent": 2
+   },
+   {
+    "i": 30,
+    "w": "The",
+    "s": 12.1,
+    "e": 12.39,
+    "sent": 3
+   },
+   {
+    "i": 31,
+    "w": "GR20",
+    "s": 12.39,
+    "e": 12.76,
+    "sent": 3
+   },
+   {
+    "i": 32,
+    "w": "crosses",
+    "s": 12.76,
+    "e": 13.34,
+    "sent": 3
+   },
+   {
+    "i": 33,
+    "w": "Corsica",
+    "s": 13.34,
+    "e": 13.93,
+    "sent": 3
+   },
+   {
+    "i": 34,
+    "w": "from",
+    "s": 13.93,
+    "e": 14.3,
+    "sent": 3
+   },
+   {
+    "i": 35,
+    "w": "north",
+    "s": 14.3,
+    "e": 14.74,
+    "sent": 3
+   },
+   {
+    "i": 36,
+    "w": "to",
+    "s": 14.74,
+    "e": 14.96,
+    "sent": 3
+   },
+   {
+    "i": 37,
+    "w": "south,",
+    "s": 14.96,
+    "e": 15.47,
+    "sent": 3
+   },
+   {
+    "i": 38,
+    "w": "it's,",
+    "s": 15.59,
+    "e": 15.95,
+    "sent": 3
+   },
+   {
+    "i": 39,
+    "w": "like,",
+    "s": 16.07,
+    "e": 16.5,
+    "sent": 3,
+    "filler": true
+   },
+   {
+    "i": 40,
+    "w": "the",
+    "s": 16.62,
+    "e": 16.84,
+    "sent": 3
+   },
+   {
+    "i": 41,
+    "w": "hardest",
+    "s": 16.84,
+    "e": 17.27,
+    "sent": 3
+   },
+   {
+    "i": 42,
+    "w": "trail",
+    "s": 17.27,
+    "e": 17.59,
+    "sent": 3
+   },
+   {
+    "i": 43,
+    "w": "in",
+    "s": 17.59,
+    "e": 17.75,
+    "sent": 3
+   },
+   {
+    "i": 44,
+    "w": "Europe.",
+    "s": 17.75,
+    "e": 18.18,
+    "sent": 3
+   },
+   {
+    "i": 45,
+    "w": "We",
+    "s": 18.53,
+    "e": 18.72,
+    "sent": 4
+   },
+   {
+    "i": 46,
+    "w": "planned",
+    "s": 18.72,
+    "e": 19.25,
+    "sent": 4
+   },
+   {
+    "i": 47,
+    "w": "five",
+    "s": 19.25,
+    "e": 19.58,
+    "sent": 4
+   },
+   {
+    "i": 48,
+    "w": "days,",
+    "s": 19.58,
+    "e": 19.97,
+    "sent": 4
+   },
+   {
+    "i": 49,
+    "w": "and,",
+    "s": 20.09,
+    "e": 20.54,
+    "sent": 4
+   },
+   {
+    "i": 50,
+    "w": "uh,",
+    "s": 20.66,
+    "e": 20.95,
+    "sent": 4,
+    "filler": true
+   },
+   {
+    "i": 51,
+    "w": "the",
+    "s": 21.07,
+    "e": 21.32,
+    "sent": 4
+   },
+   {
+    "i": 52,
+    "w": "forecast",
+    "s": 21.32,
+    "e": 21.89,
+    "sent": 4
+   },
+   {
+    "i": 53,
+    "w": "said",
+    "s": 21.89,
+    "e": 22.21,
+    "sent": 4
+   },
+   {
+    "i": 54,
+    "w": "sun.",
+    "s": 22.21,
+    "e": 22.53,
+    "sent": 4
+   },
+   {
+    "i": 55,
+    "w": "On",
+    "s": 22.88,
+    "e": 23.03,
+    "sent": 5
+   },
+   {
+    "i": 56,
+    "w": "the",
+    "s": 23.03,
+    "e": 23.24,
+    "sent": 5
+   },
+   {
+    "i": 57,
+    "w": "first",
+    "s": 23.24,
+    "e": 23.56,
+    "sent": 5
+   },
+   {
+    "i": 58,
+    "w": "morning,",
+    "s": 23.56,
+    "e": 24.03,
+    "sent": 5
+   },
+   {
+    "i": 59,
+    "w": "at",
+    "s": 24.15,
+    "e": 24.37,
+    "sent": 5
+   },
+   {
+    "i": 60,
+    "w": "Calenzana,",
+    "s": 24.37,
+    "e": 25.18,
+    "sent": 5
+   },
+   {
+    "i": 61,
+    "w": "it",
+    "s": 25.3,
+    "e": 25.48,
+    "sent": 5
+   },
+   {
+    "i": 62,
+    "w": "started",
+    "s": 25.48,
+    "e": 25.97,
+    "sent": 5
+   },
+   {
+    "i": 63,
+    "w": "to",
+    "s": 25.97,
+    "e": 26.16,
+    "sent": 5
+   },
+   {
+    "i": 64,
+    "w": "rain.",
+    "s": 26.16,
+    "e": 26.53,
+    "sent": 5
+   },
+   {
+    "i": 65,
+    "w": "And,",
+    "s": 26.88,
+    "e": 27.33,
+    "sent": 6
+   },
+   {
+    "i": 66,
+    "w": "you",
+    "s": 27.45,
+    "e": 27.65,
+    "sent": 6,
+    "filler": true
+   },
+   {
+    "i": 67,
+    "w": "know,",
+    "s": 27.65,
+    "e": 27.95,
+    "sent": 6,
+    "filler": true
+   },
+   {
+    "i": 68,
+    "w": "it",
+    "s": 28.07,
+    "e": 28.24,
+    "sent": 6
+   },
+   {
+    "i": 69,
+    "w": "didn't",
+    "s": 28.24,
+    "e": 28.64,
+    "sent": 6
+   },
+   {
+    "i": 70,
+    "w": "really",
+    "s": 28.64,
+    "e": 29.05,
+    "sent": 6
+   },
+   {
+    "i": 71,
+    "w": "stop",
+    "s": 29.05,
+    "e": 29.34,
+    "sent": 6
+   },
+   {
+    "i": 72,
+    "w": "for",
+    "s": 29.34,
+    "e": 29.57,
+    "sent": 6
+   },
+   {
+    "i": 73,
+    "w": "three",
+    "s": 29.57,
+    "e": 29.91,
+    "sent": 6
+   },
+   {
+    "i": 74,
+    "w": "days.",
+    "s": 29.91,
+    "e": 30.26,
+    "sent": 6
+   },
+   {
+    "i": 75,
+    "w": "So",
+    "s": 31.46,
+    "e": 31.63,
+    "sent": 7
+   },
+   {
+    "i": 76,
+    "w": "this",
+    "s": 31.63,
+    "e": 31.91,
+    "sent": 7
+   },
+   {
+    "i": 77,
+    "w": "was",
+    "s": 31.91,
+    "e": 32.13,
+    "sent": 7
+   },
+   {
+    "i": 78,
+    "w": "the",
+    "s": 32.13,
+    "e": 32.35,
+    "sent": 7
+   },
+   {
+    "i": 79,
+    "w": "perfect",
+    "s": 32.35,
+    "e": 32.8,
+    "sent": 7
+   },
+   {
+    "i": 80,
+    "w": "test",
+    "s": 32.8,
+    "e": 33.08,
+    "sent": 7
+   },
+   {
+    "i": 81,
+    "w": "for",
+    "s": 33.08,
+    "e": 33.3,
+    "sent": 7
+   },
+   {
+    "i": 82,
+    "w": "the",
+    "s": 33.3,
+    "e": 33.52,
+    "sent": 7
+   },
+   {
+    "i": 83,
+    "w": "jacket.",
+    "s": 33.52,
+    "e": 33.97,
+    "sent": 7
+   },
+   {
+    "i": 84,
+    "w": "The",
+    "s": 34.32,
+    "e": 34.54,
+    "sent": 8
+   },
+   {
+    "i": 85,
+    "w": "Storm",
+    "s": 34.54,
+    "e": 34.87,
+    "sent": 8
+   },
+   {
+    "i": 86,
+    "w": "Jacket",
+    "s": 34.87,
+    "e": 35.25,
+    "sent": 8
+   },
+   {
+    "i": 87,
+    "w": "is",
+    "s": 35.25,
+    "e": 35.42,
+    "sent": 8
+   },
+   {
+    "i": 88,
+    "w": "a",
+    "s": 35.42,
+    "e": 35.53,
+    "sent": 8
+   },
+   {
+    "i": 89,
+    "w": "three-layer",
+    "s": 35.53,
+    "e": 36.19,
+    "sent": 8
+   },
+   {
+    "i": 90,
+    "w": "shell,",
+    "s": 36.19,
+    "e": 36.57,
+    "sent": 8
+   },
+   {
+    "i": 91,
+    "w": "and",
+    "s": 36.69,
+    "e": 36.92,
+    "sent": 8
+   },
+   {
+    "i": 92,
+    "w": "it",
+    "s": 36.92,
+    "e": 37.1,
+    "sent": 8
+   },
+   {
+    "i": 93,
+    "w": "weighs",
+    "s": 37.1,
+    "e": 37.51,
+    "sent": 8
+   },
+   {
+    "i": 94,
+    "w": "three",
+    "s": 37.51,
+    "e": 37.86,
+    "sent": 8
+   },
+   {
+    "i": 95,
+    "w": "hundred",
+    "s": 37.86,
+    "e": 38.32,
+    "sent": 8
+   },
+   {
+    "i": 96,
+    "w": "and",
+    "s": 38.32,
+    "e": 38.55,
+    "sent": 8
+   },
+   {
+    "i": 97,
+    "w": "forty",
+    "s": 38.55,
+    "e": 38.9,
+    "sent": 8
+   },
+   {
+    "i": 98,
+    "w": "grams.",
+    "s": 38.9,
+    "e": 39.31,
+    "sent": 8
+   },
+   {
+    "i": 99,
+    "w": "On",
+    "s": 39.66,
+    "e": 39.86,
+    "sent": 9
+   },
+   {
+    "i": 100,
+    "w": "the",
+    "s": 39.86,
+    "e": 40.12,
+    "sent": 9
+   },
+   {
+    "i": 101,
+    "w": "ridge",
+    "s": 40.12,
+    "e": 40.52,
+    "sent": 9
+   },
+   {
+    "i": 102,
+    "w": "to",
+    "s": 40.52,
+    "e": 40.72,
+    "sent": 9
+   },
+   {
+    "i": 103,
+    "w": "Ortu",
+    "s": 40.72,
+    "e": 41.05,
+    "sent": 9
+   },
+   {
+    "i": 104,
+    "w": "di",
+    "s": 41.05,
+    "e": 41.25,
+    "sent": 9
+   },
+   {
+    "i": 105,
+    "w": "u",
+    "s": 41.25,
+    "e": 41.39,
+    "sent": 9
+   },
+   {
+    "i": 106,
+    "w": "Piobbu,",
+    "s": 41.39,
+    "e": 41.92,
+    "sent": 9
+   },
+   {
+    "i": 107,
+    "w": "the",
+    "s": 42.04,
+    "e": 42.24,
+    "sent": 9
+   },
+   {
+    "i": 108,
+    "w": "wind,",
+    "s": 42.24,
+    "e": 42.55,
+    "sent": 9
+   },
+   {
+    "i": 109,
+    "w": "um,",
+    "s": 42.67,
+    "e": 43.03,
+    "sent": 9,
+    "filler": true
+   },
+   {
+    "i": 110,
+    "w": "nearly",
+    "s": 43.15,
+    "e": 43.53,
+    "sent": 9
+   },
+   {
+    "i": 111,
+    "w": "knocked",
+    "s": 43.53,
+    "e": 43.96,
+    "sent": 9
+   },
+   {
+    "i": 112,
+    "w": "me",
+    "s": 43.96,
+    "e": 44.13,
+    "sent": 9
+   },
+   {
+    "i": 113,
+    "w": "over.",
+    "s": 44.13,
+    "e": 44.45,
+    "sent": 9
+   },
+   {
+    "i": 114,
+    "w": "The",
+    "s": 44.8,
+    "e": 45.06,
+    "sent": 10
+   },
+   {
+    "i": 115,
+    "w": "hood",
+    "s": 45.06,
+    "e": 45.37,
+    "sent": 10
+   },
+   {
+    "i": 116,
+    "w": "stays",
+    "s": 45.37,
+    "e": 45.75,
+    "sent": 10
+   },
+   {
+    "i": 117,
+    "w": "on",
+    "s": 45.75,
+    "e": 45.94,
+    "sent": 10
+   },
+   {
+    "i": 118,
+    "w": "in",
+    "s": 45.94,
+    "e": 46.13,
+    "sent": 10
+   },
+   {
+    "i": 119,
+    "w": "forty-kilometre",
+    "s": 46.13,
+    "e": 47.13,
+    "sent": 10
+   },
+   {
+    "i": 120,
+    "w": "wind,",
+    "s": 47.13,
+    "e": 47.51,
+    "sent": 10
+   },
+   {
+    "i": 121,
+    "w": "and",
+    "s": 47.63,
+    "e": 47.88,
+    "sent": 10
+   },
+   {
+    "i": 122,
+    "w": "honestly,",
+    "s": 47.88,
+    "e": 48.48,
+    "sent": 10
+   },
+   {
+    "i": 123,
+    "w": "that's",
+    "s": 48.6,
+    "e": 48.95,
+    "sent": 10
+   },
+   {
+    "i": 124,
+    "w": "the",
+    "s": 48.95,
+    "e": 49.15,
+    "sent": 10
+   },
+   {
+    "i": 125,
+    "w": "first",
+    "s": 49.15,
+    "e": 49.45,
+    "sent": 10
+   },
+   {
+    "i": 126,
+    "w": "thing",
+    "s": 49.45,
+    "e": 49.75,
+    "sent": 10
+   },
+   {
+    "i": 127,
+    "w": "I",
+    "s": 49.75,
+    "e": 49.84,
+    "sent": 10
+   },
+   {
+    "i": 128,
+    "w": "check.",
+    "s": 49.84,
+    "e": 50.19,
+    "sent": 10
+   },
+   {
+    "i": 129,
+    "w": "The",
+    "s": 50.54,
+    "e": 50.77,
+    "sent": 11
+   },
+   {
+    "i": 130,
+    "w": "pit",
+    "s": 50.77,
+    "e": 50.99,
+    "sent": 11
+   },
+   {
+    "i": 131,
+    "w": "zips",
+    "s": 50.99,
+    "e": 51.27,
+    "sent": 11
+   },
+   {
+    "i": 132,
+    "w": "are,",
+    "s": 51.27,
+    "e": 51.56,
+    "sent": 11
+   },
+   {
+    "i": 133,
+    "w": "like,",
+    "s": 51.68,
+    "e": 52.11,
+    "sent": 11,
+    "filler": true
+   },
+   {
+    "i": 134,
+    "w": "my",
+    "s": 52.23,
+    "e": 52.41,
+    "sent": 11
+   },
+   {
+    "i": 135,
+    "w": "favourite",
+    "s": 52.41,
+    "e": 53.02,
+    "sent": 11
+   },
+   {
+    "i": 136,
+    "w": "detail.",
+    "s": 53.02,
+    "e": 53.5,
+    "sent": 11
+   },
+   {
+    "i": 137,
+    "w": "You",
+    "s": 53.85,
+    "e": 54.07,
+    "sent": 12
+   },
+   {
+    "i": 138,
+    "w": "open",
+    "s": 54.07,
+    "e": 54.36,
+    "sent": 12
+   },
+   {
+    "i": 139,
+    "w": "them",
+    "s": 54.36,
+    "e": 54.64,
+    "sent": 12
+   },
+   {
+    "i": 140,
+    "w": "on",
+    "s": 54.64,
+    "e": 54.81,
+    "sent": 12
+   },
+   {
+    "i": 141,
+    "w": "the",
+    "s": 54.81,
+    "e": 55.04,
+    "sent": 12
+   },
+   {
+    "i": 142,
+    "w": "climbs,",
+    "s": 55.04,
+    "e": 55.49,
+    "sent": 12
+   },
+   {
+    "i": 143,
+    "w": "so",
+    "s": 55.61,
+    "e": 55.77,
+    "sent": 12
+   },
+   {
+    "i": 144,
+    "w": "you",
+    "s": 55.77,
+    "e": 55.99,
+    "sent": 12
+   },
+   {
+    "i": 145,
+    "w": "don't",
+    "s": 55.99,
+    "e": 56.31,
+    "sent": 12
+   },
+   {
+    "i": 146,
+    "w": "get",
+    "s": 56.31,
+    "e": 56.52,
+    "sent": 12
+   },
+   {
+    "i": 147,
+    "w": "wet",
+    "s": 56.52,
+    "e": 56.73,
+    "sent": 12
+   },
+   {
+    "i": 148,
+    "w": "from",
+    "s": 56.73,
+    "e": 57,
+    "sent": 12
+   },
+   {
+    "i": 149,
+    "w": "the",
+    "s": 57,
+    "e": 57.21,
+    "sent": 12
+   },
+   {
+    "i": 150,
+    "w": "inside.",
+    "s": 57.21,
+    "e": 57.64,
+    "sent": 12
+   },
+   {
+    "i": 151,
+    "w": "That's",
+    "s": 57.99,
+    "e": 58.38,
+    "sent": 13
+   },
+   {
+    "i": 152,
+    "w": "the",
+    "s": 58.38,
+    "e": 58.6,
+    "sent": 13
+   },
+   {
+    "i": 153,
+    "w": "part",
+    "s": 58.6,
+    "e": 58.88,
+    "sent": 13
+   },
+   {
+    "i": 154,
+    "w": "people",
+    "s": 58.88,
+    "e": 59.27,
+    "sent": 13
+   },
+   {
+    "i": 155,
+    "w": "forget,",
+    "s": 59.27,
+    "e": 59.72,
+    "sent": 13
+   },
+   {
+    "i": 156,
+    "w": "uh,",
+    "s": 59.84,
+    "e": 60.13,
+    "sent": 13,
+    "filler": true
+   },
+   {
+    "i": 157,
+    "w": "sweat",
+    "s": 60.25,
+    "e": 60.6,
+    "sent": 13
+   },
+   {
+    "i": 158,
+    "w": "is",
+    "s": 60.6,
+    "e": 60.77,
+    "sent": 13
+   },
+   {
+    "i": 159,
+    "w": "water",
+    "s": 60.77,
+    "e": 61.12,
+    "sent": 13
+   },
+   {
+    "i": 160,
+    "w": "too.",
+    "s": 61.12,
+    "e": 61.41,
+    "sent": 13
+   },
+   {
+    "i": 161,
+    "w": "On",
+    "s": 62.41,
+    "e": 62.6,
+    "sent": 14
+   },
+   {
+    "i": 162,
+    "w": "day",
+    "s": 62.6,
+    "e": 62.86,
+    "sent": 14
+   },
+   {
+    "i": 163,
+    "w": "two,",
+    "s": 62.86,
+    "e": 63.17,
+    "sent": 14
+   },
+   {
+    "i": 164,
+    "w": "we",
+    "s": 63.29,
+    "e": 63.46,
+    "sent": 14
+   },
+   {
+    "i": 165,
+    "w": "walked",
+    "s": 63.46,
+    "e": 63.83,
+    "sent": 14
+   },
+   {
+    "i": 166,
+    "w": "eight",
+    "s": 63.83,
+    "e": 64.15,
+    "sent": 14
+   },
+   {
+    "i": 167,
+    "w": "hours",
+    "s": 64.15,
+    "e": 64.47,
+    "sent": 14
+   },
+   {
+    "i": 168,
+    "w": "in",
+    "s": 64.47,
+    "e": 64.63,
+    "sent": 14
+   },
+   {
+    "i": 169,
+    "w": "fog,",
+    "s": 64.63,
+    "e": 64.9,
+    "sent": 14
+   },
+   {
+    "i": 170,
+    "w": "on",
+    "s": 65.02,
+    "e": 65.21,
+    "sent": 14
+   },
+   {
+    "i": 171,
+    "w": "wet",
+    "s": 65.21,
+    "e": 65.46,
+    "sent": 14
+   },
+   {
+    "i": 172,
+    "w": "granite.",
+    "s": 65.46,
+    "e": 66.02,
+    "sent": 14
+   },
+   {
+    "i": 173,
+    "w": "At",
+    "s": 66.37,
+    "e": 66.56,
+    "sent": 15
+   },
+   {
+    "i": 174,
+    "w": "the",
+    "s": 66.56,
+    "e": 66.82,
+    "sent": 15
+   },
+   {
+    "i": 175,
+    "w": "refuge,",
+    "s": 66.82,
+    "e": 67.33,
+    "sent": 15
+   },
+   {
+    "i": 176,
+    "w": "everything",
+    "s": 67.45,
+    "e": 68.05,
+    "sent": 15
+   },
+   {
+    "i": 177,
+    "w": "else",
+    "s": 68.05,
+    "e": 68.31,
+    "sent": 15
+   },
+   {
+    "i": 178,
+    "w": "was",
+    "s": 68.31,
+    "e": 68.53,
+    "sent": 15
+   },
+   {
+    "i": 179,
+    "w": "soaked.",
+    "s": 68.53,
+    "e": 68.96,
+    "sent": 15
+   },
+   {
+    "i": 180,
+    "w": "My",
+    "s": 69.31,
+    "e": 69.52,
+    "sent": 16
+   },
+   {
+    "i": 181,
+    "w": "trousers,",
+    "s": 69.52,
+    "e": 70.2,
+    "sent": 16
+   },
+   {
+    "i": 182,
+    "w": "my",
+    "s": 70.32,
+    "e": 70.52,
+    "sent": 16
+   },
+   {
+    "i": 183,
+    "w": "boots,",
+    "s": 70.52,
+    "e": 70.98,
+    "sent": 16
+   },
+   {
+    "i": 184,
+    "w": "my",
+    "s": 71.1,
+    "e": 71.32,
+    "sent": 16
+   },
+   {
+    "i": 185,
+    "w": "map,",
+    "s": 71.32,
+    "e": 71.71,
+    "sent": 16
+   },
+   {
+    "i": 186,
+    "w": "but,",
+    "s": 71.83,
+    "e": 72.17,
+    "sent": 16
+   },
+   {
+    "i": 187,
+    "w": "um,",
+    "s": 72.29,
+    "e": 72.65,
+    "sent": 16,
+    "filler": true
+   },
+   {
+    "i": 188,
+    "w": "not",
+    "s": 72.77,
+    "e": 73.05,
+    "sent": 16
+   },
+   {
+    "i": 189,
+    "w": "my",
+    "s": 73.05,
+    "e": 73.26,
+    "sent": 16
+   },
+   {
+    "i": 190,
+    "w": "top",
+    "s": 73.26,
+    "e": 73.54,
+    "sent": 16
+   },
+   {
+    "i": 191,
+    "w": "layer.",
+    "s": 73.54,
+    "e": 74.03,
+    "sent": 16
+   },
+   {
+    "i": 192,
+    "w": "The",
+    "s": 74.38,
+    "e": 74.64,
+    "sent": 17
+   },
+   {
+    "i": 193,
+    "w": "Storm",
+    "s": 74.64,
+    "e": 75.02,
+    "sent": 17
+   },
+   {
+    "i": 194,
+    "w": "Jacket",
+    "s": 75.02,
+    "e": 75.47,
+    "sent": 17
+   },
+   {
+    "i": 195,
+    "w": "stayed",
+    "s": 75.47,
+    "e": 75.92,
+    "sent": 17
+   },
+   {
+    "i": 196,
+    "w": "dry:",
+    "s": 75.92,
+    "e": 76.24,
+    "sent": 17
+   },
+   {
+    "i": 197,
+    "w": "twenty",
+    "s": 76.24,
+    "e": 76.69,
+    "sent": 17
+   },
+   {
+    "i": 198,
+    "w": "thousand",
+    "s": 76.69,
+    "e": 77.27,
+    "sent": 17
+   },
+   {
+    "i": 199,
+    "w": "millimetres",
+    "s": 77.27,
+    "e": 78.04,
+    "sent": 17
+   },
+   {
+    "i": 200,
+    "w": "of",
+    "s": 78.04,
+    "e": 78.23,
+    "sent": 17
+   },
+   {
+    "i": 201,
+    "w": "waterproofing.",
+    "s": 78.23,
+    "e": 79.2,
+    "sent": 17
+   },
+   {
+    "i": 202,
+    "w": "The",
+    "s": 79.55,
+    "e": 79.83,
+    "sent": 18
+   },
+   {
+    "i": 203,
+    "w": "membrane",
+    "s": 79.83,
+    "e": 80.48,
+    "sent": 18
+   },
+   {
+    "i": 204,
+    "w": "is",
+    "s": 80.48,
+    "e": 80.7,
+    "sent": 18
+   },
+   {
+    "i": 205,
+    "w": "PFAS-free,",
+    "s": 80.7,
+    "e": 81.49,
+    "sent": 18
+   },
+   {
+    "i": 206,
+    "w": "you",
+    "s": 81.61,
+    "e": 81.81,
+    "sent": 18,
+    "filler": true
+   },
+   {
+    "i": 207,
+    "w": "know,",
+    "s": 81.81,
+    "e": 82.1,
+    "sent": 18,
+    "filler": true
+   },
+   {
+    "i": 208,
+    "w": "no",
+    "s": 82.22,
+    "e": 82.43,
+    "sent": 18
+   },
+   {
+    "i": 209,
+    "w": "forever",
+    "s": 82.43,
+    "e": 82.96,
+    "sent": 18
+   },
+   {
+    "i": 210,
+    "w": "chemicals.",
+    "s": 82.96,
+    "e": 83.7,
+    "sent": 18
+   },
+   {
+    "i": 211,
+    "w": "Underneath,",
+    "s": 84.7,
+    "e": 85.38,
+    "sent": 19
+   },
+   {
+    "i": 212,
+    "w": "I",
+    "s": 85.5,
+    "e": 85.62,
+    "sent": 19
+   },
+   {
+    "i": 213,
+    "w": "wore",
+    "s": 85.62,
+    "e": 85.9,
+    "sent": 19
+   },
+   {
+    "i": 214,
+    "w": "the",
+    "s": 85.9,
+    "e": 86.13,
+    "sent": 19
+   },
+   {
+    "i": 215,
+    "w": "Ember",
+    "s": 86.13,
+    "e": 86.46,
+    "sent": 19
+   },
+   {
+    "i": 216,
+    "w": "Fleece,",
+    "s": 86.46,
+    "e": 86.92,
+    "sent": 19
+   },
+   {
+    "i": 217,
+    "w": "because,",
+    "s": 87.04,
+    "e": 87.62,
+    "sent": 19
+   },
+   {
+    "i": 218,
+    "w": "uh,",
+    "s": 87.74,
+    "e": 88.03,
+    "sent": 19,
+    "filler": true
+   },
+   {
+    "i": 219,
+    "w": "the",
+    "s": 88.15,
+    "e": 88.37,
+    "sent": 19
+   },
+   {
+    "i": 220,
+    "w": "Storm",
+    "s": 88.37,
+    "e": 88.7,
+    "sent": 19
+   },
+   {
+    "i": 221,
+    "w": "Jacket",
+    "s": 88.7,
+    "e": 89.09,
+    "sent": 19
+   },
+   {
+    "i": 222,
+    "w": "is",
+    "s": 89.09,
+    "e": 89.25,
+    "sent": 19
+   },
+   {
+    "i": 223,
+    "w": "a",
+    "s": 89.25,
+    "e": 89.36,
+    "sent": 19
+   },
+   {
+    "i": 224,
+    "w": "shell,",
+    "s": 89.36,
+    "e": 89.75,
+    "sent": 19
+   },
+   {
+    "i": 225,
+    "w": "not",
+    "s": 89.87,
+    "e": 90.13,
+    "sent": 19
+   },
+   {
+    "i": 226,
+    "w": "a",
+    "s": 90.13,
+    "e": 90.27,
+    "sent": 19
+   },
+   {
+    "i": 227,
+    "w": "coat.",
+    "s": 90.27,
+    "e": 90.66,
+    "sent": 19
+   },
+   {
+    "i": 228,
+    "w": "It",
+    "s": 91.01,
+    "e": 91.2,
+    "sent": 20
+   },
+   {
+    "i": 229,
+    "w": "keeps",
+    "s": 91.2,
+    "e": 91.57,
+    "sent": 20
+   },
+   {
+    "i": 230,
+    "w": "you",
+    "s": 91.57,
+    "e": 91.82,
+    "sent": 20
+   },
+   {
+    "i": 231,
+    "w": "dry,",
+    "s": 91.82,
+    "e": 92.13,
+    "sent": 20
+   },
+   {
+    "i": 232,
+    "w": "but",
+    "s": 92.25,
+    "e": 92.47,
+    "sent": 20
+   },
+   {
+    "i": 233,
+    "w": "it",
+    "s": 92.47,
+    "e": 92.64,
+    "sent": 20
+   },
+   {
+    "i": 234,
+    "w": "doesn't",
+    "s": 92.64,
+    "e": 93.09,
+    "sent": 20
+   },
+   {
+    "i": 235,
+    "w": "keep",
+    "s": 93.09,
+    "e": 93.37,
+    "sent": 20
+   },
+   {
+    "i": 236,
+    "w": "you",
+    "s": 93.37,
+    "e": 93.59,
+    "sent": 20
+   },
+   {
+    "i": 237,
+    "w": "warm",
+    "s": 93.59,
+    "e": 93.87,
+    "sent": 20
+   },
+   {
+    "i": 238,
+    "w": "on",
+    "s": 93.87,
+    "e": 94.04,
+    "sent": 20
+   },
+   {
+    "i": 239,
+    "w": "its",
+    "s": 94.04,
+    "e": 94.26,
+    "sent": 20
+   },
+   {
+    "i": 240,
+    "w": "own.",
+    "s": 94.26,
+    "e": 94.54,
+    "sent": 20
+   },
+   {
+    "i": 241,
+    "w": "Day",
+    "s": 95.84,
+    "e": 96.07,
+    "sent": 21
+   },
+   {
+    "i": 242,
+    "w": "three",
+    "s": 96.07,
+    "e": 96.4,
+    "sent": 21
+   },
+   {
+    "i": 243,
+    "w": "was",
+    "s": 96.4,
+    "e": 96.62,
+    "sent": 21
+   },
+   {
+    "i": 244,
+    "w": "the",
+    "s": 96.62,
+    "e": 96.84,
+    "sent": 21
+   },
+   {
+    "i": 245,
+    "w": "steepest",
+    "s": 96.84,
+    "e": 97.34,
+    "sent": 21
+   },
+   {
+    "i": 246,
+    "w": "part,",
+    "s": 97.34,
+    "e": 97.68,
+    "sent": 21
+   },
+   {
+    "i": 247,
+    "w": "with",
+    "s": 97.8,
+    "e": 98.07,
+    "sent": 21
+   },
+   {
+    "i": 248,
+    "w": "chains",
+    "s": 98.07,
+    "e": 98.44,
+    "sent": 21
+   },
+   {
+    "i": 249,
+    "w": "on",
+    "s": 98.44,
+    "e": 98.6,
+    "sent": 21
+   },
+   {
+    "i": 250,
+    "w": "the",
+    "s": 98.6,
+    "e": 98.82,
+    "sent": 21
+   },
+   {
+    "i": 251,
+    "w": "rock,",
+    "s": 98.82,
+    "e": 99.14,
+    "sent": 21
+   },
+   {
+    "i": 252,
+    "w": "in",
+    "s": 99.26,
+    "e": 99.41,
+    "sent": 21
+   },
+   {
+    "i": 253,
+    "w": "the",
+    "s": 99.41,
+    "e": 99.62,
+    "sent": 21
+   },
+   {
+    "i": 254,
+    "w": "rain.",
+    "s": 99.62,
+    "e": 99.94,
+    "sent": 21
+   },
+   {
+    "i": 255,
+    "w": "The",
+    "s": 100.29,
+    "e": 100.53,
+    "sent": 22
+   },
+   {
+    "i": 256,
+    "w": "Velcro",
+    "s": 100.53,
+    "e": 100.95,
+    "sent": 22
+   },
+   {
+    "i": 257,
+    "w": "cuffs",
+    "s": 100.95,
+    "e": 101.32,
+    "sent": 22
+   },
+   {
+    "i": 258,
+    "w": "held,",
+    "s": 101.32,
+    "e": 101.68,
+    "sent": 22
+   },
+   {
+    "i": 259,
+    "w": "and,",
+    "s": 101.8,
+    "e": 102.26,
+    "sent": 22
+   },
+   {
+    "i": 260,
+    "w": "like,",
+    "s": 102.38,
+    "e": 102.81,
+    "sent": 22,
+    "filler": true
+   },
+   {
+    "i": 261,
+    "w": "no",
+    "s": 102.93,
+    "e": 103.13,
+    "sent": 22
+   },
+   {
+    "i": 262,
+    "w": "water",
+    "s": 103.13,
+    "e": 103.52,
+    "sent": 22
+   },
+   {
+    "i": 263,
+    "w": "ran",
+    "s": 103.52,
+    "e": 103.79,
+    "sent": 22
+   },
+   {
+    "i": 264,
+    "w": "down",
+    "s": 103.79,
+    "e": 104.12,
+    "sent": 22
+   },
+   {
+    "i": 265,
+    "w": "my",
+    "s": 104.12,
+    "e": 104.31,
+    "sent": 22
+   },
+   {
+    "i": 266,
+    "w": "sleeves.",
+    "s": 104.31,
+    "e": 104.9,
+    "sent": 22
+   },
+   {
+    "i": 267,
+    "w": "Then,",
+    "s": 105.25,
+    "e": 105.64,
+    "sent": 23
+   },
+   {
+    "i": 268,
+    "w": "finally,",
+    "s": 105.76,
+    "e": 106.4,
+    "sent": 23
+   },
+   {
+    "i": 269,
+    "w": "um,",
+    "s": 106.52,
+    "e": 106.88,
+    "sent": 23,
+    "filler": true
+   },
+   {
+    "i": 270,
+    "w": "the",
+    "s": 107,
+    "e": 107.25,
+    "sent": 23
+   },
+   {
+    "i": 271,
+    "w": "sun",
+    "s": 107.25,
+    "e": 107.5,
+    "sent": 23
+   },
+   {
+    "i": 272,
+    "w": "came",
+    "s": 107.5,
+    "e": 107.81,
+    "sent": 23
+   },
+   {
+    "i": 273,
+    "w": "out",
+    "s": 107.81,
+    "e": 108.06,
+    "sent": 23
+   },
+   {
+    "i": 274,
+    "w": "above",
+    "s": 108.06,
+    "e": 108.43,
+    "sent": 23
+   },
+   {
+    "i": 275,
+    "w": "Ascu.",
+    "s": 108.43,
+    "e": 108.8,
+    "sent": 23
+   },
+   {
+    "i": 276,
+    "w": "After",
+    "s": 109.15,
+    "e": 109.54,
+    "sent": 24
+   },
+   {
+    "i": 277,
+    "w": "three",
+    "s": 109.54,
+    "e": 109.92,
+    "sent": 24
+   },
+   {
+    "i": 278,
+    "w": "days,",
+    "s": 109.92,
+    "e": 110.31,
+    "sent": 24
+   },
+   {
+    "i": 279,
+    "w": "the",
+    "s": 110.43,
+    "e": 110.66,
+    "sent": 24
+   },
+   {
+    "i": 280,
+    "w": "jacket",
+    "s": 110.66,
+    "e": 111.07,
+    "sent": 24
+   },
+   {
+    "i": 281,
+    "w": "has,",
+    "s": 111.07,
+    "e": 111.36,
+    "sent": 24
+   },
+   {
+    "i": 282,
+    "w": "uh,",
+    "s": 111.48,
+    "e": 111.77,
+    "sent": 24,
+    "filler": true
+   },
+   {
+    "i": 283,
+    "w": "no",
+    "s": 111.89,
+    "e": 112.1,
+    "sent": 24
+   },
+   {
+    "i": 284,
+    "w": "leaks,",
+    "s": 112.1,
+    "e": 112.61,
+    "sent": 24
+   },
+   {
+    "i": 285,
+    "w": "no",
+    "s": 112.73,
+    "e": 112.92,
+    "sent": 24
+   },
+   {
+    "i": 286,
+    "w": "peeling,",
+    "s": 112.92,
+    "e": 113.49,
+    "sent": 24
+   },
+   {
+    "i": 287,
+    "w": "no",
+    "s": 113.61,
+    "e": 113.85,
+    "sent": 24
+   },
+   {
+    "i": 288,
+    "w": "broken",
+    "s": 113.85,
+    "e": 114.4,
+    "sent": 24
+   },
+   {
+    "i": 289,
+    "w": "zip.",
+    "s": 114.4,
+    "e": 114.79,
+    "sent": 24
+   },
+   {
+    "i": 290,
+    "w": "So,",
+    "s": 115.14,
+    "e": 115.55,
+    "sent": 25
+   },
+   {
+    "i": 291,
+    "w": "would",
+    "s": 115.67,
+    "e": 115.99,
+    "sent": 25
+   },
+   {
+    "i": 292,
+    "w": "I",
+    "s": 115.99,
+    "e": 116.1,
+    "sent": 25
+   },
+   {
+    "i": 293,
+    "w": "take",
+    "s": 116.1,
+    "e": 116.37,
+    "sent": 25
+   },
+   {
+    "i": 294,
+    "w": "it",
+    "s": 116.37,
+    "e": 116.53,
+    "sent": 25
+   },
+   {
+    "i": 295,
+    "w": "again?",
+    "s": 116.53,
+    "e": 116.91,
+    "sent": 25
+   },
+   {
+    "i": 296,
+    "w": "Yes,",
+    "s": 117.03,
+    "e": 117.42,
+    "sent": 25
+   },
+   {
+    "i": 297,
+    "w": "you",
+    "s": 117.54,
+    "e": 117.74,
+    "sent": 25,
+    "filler": true
+   },
+   {
+    "i": 298,
+    "w": "know,",
+    "s": 117.74,
+    "e": 118.03,
+    "sent": 25,
+    "filler": true
+   },
+   {
+    "i": 299,
+    "w": "without",
+    "s": 118.15,
+    "e": 118.58,
+    "sent": 25
+   },
+   {
+    "i": 300,
+    "w": "thinking.",
+    "s": 118.58,
+    "e": 119.12,
+    "sent": 25
+   },
+   {
+    "i": 301,
+    "w": "Two",
+    "s": 120.02,
+    "e": 120.27,
+    "sent": 26
+   },
+   {
+    "i": 302,
+    "w": "hundred",
+    "s": 120.27,
+    "e": 120.76,
+    "sent": 26
+   },
+   {
+    "i": 303,
+    "w": "and",
+    "s": 120.76,
+    "e": 121.01,
+    "sent": 26
+   },
+   {
+    "i": 304,
+    "w": "twenty",
+    "s": 121.01,
+    "e": 121.44,
+    "sent": 26
+   },
+   {
+    "i": 305,
+    "w": "euros,",
+    "s": 121.44,
+    "e": 121.88,
+    "sent": 26
+   },
+   {
+    "i": 306,
+    "w": "and",
+    "s": 122,
+    "e": 122.21,
+    "sent": 26
+   },
+   {
+    "i": 307,
+    "w": "built",
+    "s": 122.21,
+    "e": 122.52,
+    "sent": 26
+   },
+   {
+    "i": 308,
+    "w": "to",
+    "s": 122.52,
+    "e": 122.67,
+    "sent": 26
+   },
+   {
+    "i": 309,
+    "w": "be",
+    "s": 122.67,
+    "e": 122.83,
+    "sent": 26
+   },
+   {
+    "i": 310,
+    "w": "repaired.",
+    "s": 122.83,
+    "e": 123.35,
+    "sent": 26
+   },
+   {
+    "i": 311,
+    "w": "Next",
+    "s": 123.7,
+    "e": 124.07,
+    "sent": 27
+   },
+   {
+    "i": 312,
+    "w": "video,",
+    "s": 124.07,
+    "e": 124.59,
+    "sent": 27
+   },
+   {
+    "i": 313,
+    "w": "um,",
+    "s": 124.71,
+    "e": 125.07,
+    "sent": 27,
+    "filler": true
+   },
+   {
+    "i": 314,
+    "w": "the",
+    "s": 125.19,
+    "e": 125.44,
+    "sent": 27
+   },
+   {
+    "i": 315,
+    "w": "last",
+    "s": 125.44,
+    "e": 125.74,
+    "sent": 27
+   },
+   {
+    "i": 316,
+    "w": "two",
+    "s": 125.74,
+    "e": 125.98,
+    "sent": 27
+   },
+   {
+    "i": 317,
+    "w": "days,",
+    "s": 125.98,
+    "e": 126.35,
+    "sent": 27
+   },
+   {
+    "i": 318,
+    "w": "and",
+    "s": 126.47,
+    "e": 126.73,
+    "sent": 27
+   },
+   {
+    "i": 319,
+    "w": "a",
+    "s": 126.73,
+    "e": 126.86,
+    "sent": 27
+   },
+   {
+    "i": 320,
+    "w": "lot",
+    "s": 126.86,
+    "e": 127.12,
+    "sent": 27
+   },
+   {
+    "i": 321,
+    "w": "more",
+    "s": 127.12,
+    "e": 127.45,
+    "sent": 27
+   },
+   {
+    "i": 322,
+    "w": "sun.",
+    "s": 127.45,
+    "e": 127.77,
+    "sent": 27
+   }
+  ],
+  "shots": [
+   {
+    "s": 0,
+    "e": 5.94,
+    "label": "Hiker in the rain, hood up",
+    "focus": 0.78
+   },
+   {
+    "s": 5.94,
+    "e": 11.95,
+    "label": "Léa in the Storm Jacket",
+    "focus": 0.5
+   },
+   {
+    "s": 11.95,
+    "e": 22.73,
+    "label": "Corsica's ridges from above",
+    "focus": 0.58
+   },
+   {
+    "s": 22.73,
+    "e": 31.31,
+    "label": "Rain on the trail",
+    "focus": 0.5
+   },
+   {
+    "s": 31.31,
+    "e": 39.51,
+    "label": "Shell in the fog",
+    "focus": 0.48
+   },
+   {
+    "s": 39.51,
+    "e": 50.39,
+    "label": "Wind on the ridge",
+    "focus": 0.45
+   },
+   {
+    "s": 50.39,
+    "e": 62.26,
+    "label": "Climbing in the mist",
+    "focus": 0.47
+   },
+   {
+    "s": 62.26,
+    "e": 74.23,
+    "label": "Eight hours in fog",
+    "focus": 0.53
+   },
+   {
+    "s": 74.23,
+    "e": 79.4,
+    "label": "Dry under the shell",
+    "focus": 0.68
+   },
+   {
+    "s": 79.4,
+    "e": 95.69,
+    "label": "Morning mist",
+    "focus": 0.6
+   },
+   {
+    "s": 95.69,
+    "e": 100.14,
+    "label": "Rain on the jacket",
+    "focus": 0.57
+   },
+   {
+    "s": 100.14,
+    "e": 105.1,
+    "label": "Walking in the rain",
+    "focus": 0.47
+   },
+   {
+    "s": 105.1,
+    "e": 114.99,
+    "label": "Clouds lifting",
+    "focus": 0.5
+   },
+   {
+    "s": 114.99,
+    "e": 119.87,
+    "label": "On the ridge in the sun",
+    "focus": 0.72
+   },
+   {
+    "s": 119.87,
+    "e": 128.57,
+    "label": "Sun at last",
+    "focus": 0.53
+   }
+  ]
+ },
+ "live": {
+  "duration": 178.54,
+  "sentences": [
+   {
+    "i": 0,
+    "s": 0.4,
+    "e": 5.77,
+    "speaker": "host",
+    "text": "Hey everyone, welcome to Repair Friday, live from the Fernway workshop in Annecy.",
+    "tr": {
+     "fr": "Bonjour à tous, bienvenue au Repair Friday, en direct de l'atelier Fernway à Annecy.",
+     "de": "Hallo zusammen, willkommen beim Repair Friday, live aus der Fernway-Werkstatt in Annecy.",
+     "es": "Hola a todos, bienvenidos al Repair Friday, en directo desde el taller de Fernway en Annecy.",
+     "it": "Ciao a tutti, benvenuti al Repair Friday, in diretta dal laboratorio Fernway di Annecy."
+    }
+   },
+   {
+    "i": 1,
+    "s": 6.12,
+    "e": 10.88,
+    "speaker": "host",
+    "text": "I'm Camille, and, um, with me today is Léo, who runs the workshop.",
+    "tr": {
+     "fr": "Je suis Camille, et avec moi aujourd'hui, Léo, qui dirige l'atelier.",
+     "de": "Ich bin Camille, und heute ist Léo dabei, er leitet die Werkstatt.",
+     "es": "Soy Camille, y hoy me acompaña Léo, que dirige el taller.",
+     "it": "Sono Camille, e oggi con me c'è Léo, che dirige il laboratorio."
+    }
+   },
+   {
+    "i": 2,
+    "s": 11.23,
+    "e": 17.06,
+    "speaker": "guest",
+    "text": "Hi everyone, thanks for joining us, and, uh, sorry about the noise of the machines.",
+    "tr": {
+     "fr": "Bonjour à tous, merci d'être là, et pardon pour le bruit des machines.",
+     "de": "Hallo zusammen, danke fürs Zuschauen, und sorry für den Lärm der Maschinen.",
+     "es": "Hola a todos, gracias por venir, y perdón por el ruido de las máquinas.",
+     "it": "Ciao a tutti, grazie di essere qui, e scusate il rumore delle macchine."
+    }
+   },
+   {
+    "i": 3,
+    "s": 17.41,
+    "e": 21.28,
+    "speaker": "host",
+    "text": "So, Léo, for people who are new, what is Repair Friday?",
+    "tr": {
+     "fr": "Alors Léo, pour ceux qui découvrent, c'est quoi le Repair Friday ?",
+     "de": "Léo, für alle, die neu sind: Was ist Repair Friday?",
+     "es": "Léo, para quien sea nuevo, ¿qué es el Repair Friday?",
+     "it": "Léo, per chi è nuovo, cos'è il Repair Friday?"
+    }
+   },
+   {
+    "i": 4,
+    "s": 21.63,
+    "e": 26.73,
+    "speaker": "guest",
+    "text": "It's simple, every Friday we, like, open the workshop and fix your gear live.",
+    "tr": {
+     "fr": "C'est simple : chaque vendredi, on ouvre l'atelier et on répare votre matériel en direct.",
+     "de": "Ganz einfach: Jeden Freitag öffnen wir die Werkstatt und reparieren eure Ausrüstung live.",
+     "es": "Es sencillo: cada viernes abrimos el taller y reparamos vuestro equipo en directo.",
+     "it": "È semplice: ogni venerdì apriamo il laboratorio e ripariamo la vostra attrezzatura in diretta."
+    }
+   },
+   {
+    "i": 5,
+    "s": 27.08,
+    "e": 30.14,
+    "speaker": "guest",
+    "text": "It started as our answer to Black Friday, you know.",
+    "tr": {
+     "fr": "C'est né comme notre réponse au Black Friday.",
+     "de": "Es fing als unsere Antwort auf den Black Friday an.",
+     "es": "Empezó como nuestra respuesta al Black Friday.",
+     "it": "È nato come la nostra risposta al Black Friday."
+    }
+   },
+   {
+    "i": 6,
+    "s": 31.14,
+    "e": 34.97,
+    "speaker": "guest",
+    "text": "Instead of buying a new bag, um, you fix the one you have.",
+    "tr": {
+     "fr": "Au lieu d'acheter un sac neuf, on répare celui qu'on a.",
+     "de": "Statt einen neuen Rucksack zu kaufen, reparierst du deinen.",
+     "es": "En vez de comprar una mochila nueva, arreglas la que tienes.",
+     "it": "Invece di comprare uno zaino nuovo, ripari quello che hai."
+    }
+   },
+   {
+    "i": 7,
+    "s": 35.32,
+    "e": 37.13,
+    "speaker": "host",
+    "text": "And how many bags is that?",
+    "tr": {
+     "fr": "Et ça représente combien de sacs ?",
+     "de": "Und wie viele Rucksäcke sind das?",
+     "es": "¿Y cuántas mochilas son?",
+     "it": "E quanti zaini sono?"
+    }
+   },
+   {
+    "i": 8,
+    "s": 37.48,
+    "e": 39.97,
+    "speaker": "guest",
+    "text": "We repaired twelve hundred bags this year.",
+    "tr": {
+     "fr": "On a réparé mille deux cents sacs cette année.",
+     "de": "Wir haben dieses Jahr zwölfhundert Rucksäcke repariert.",
+     "es": "Este año hemos reparado mil doscientas mochilas.",
+     "it": "Quest'anno abbiamo riparato milleduecento zaini."
+    }
+   },
+   {
+    "i": 9,
+    "s": 40.32,
+    "e": 43.12,
+    "speaker": "host",
+    "text": "That's, like, more than three bags a day.",
+    "tr": {
+     "fr": "Ça fait plus de trois sacs par jour.",
+     "de": "Das sind mehr als drei Rucksäcke am Tag.",
+     "es": "Son más de tres mochilas al día.",
+     "it": "Sono più di tre zaini al giorno."
+    }
+   },
+   {
+    "i": 10,
+    "s": 44.02,
+    "e": 46.92,
+    "speaker": "host",
+    "text": "OK, so, Léo, what breaks most?",
+    "tr": {
+     "fr": "Alors Léo, qu'est-ce qui casse le plus ?",
+     "de": "Okay, Léo, was geht am häufigsten kaputt?",
+     "es": "Vale, Léo, ¿qué es lo que más se rompe?",
+     "it": "Allora Léo, cosa si rompe di più?"
+    }
+   },
+   {
+    "i": 11,
+    "s": 47.27,
+    "e": 50.26,
+    "speaker": "guest",
+    "text": "The thing that breaks most is zips, not fabric.",
+    "tr": {
+     "fr": "Ce qui casse le plus, ce sont les zips, pas le tissu.",
+     "de": "Am häufigsten gehen Reißverschlüsse kaputt, nicht der Stoff.",
+     "es": "Lo que más se rompe son las cremalleras, no la tela.",
+     "it": "Quello che si rompe di più sono le zip, non il tessuto."
+    }
+   },
+   {
+    "i": 12,
+    "s": 50.61,
+    "e": 54.56,
+    "speaker": "guest",
+    "text": "We see, like, four broken zips for every torn strap.",
+    "tr": {
+     "fr": "On voit quatre zips cassés pour une bretelle déchirée.",
+     "de": "Auf einen gerissenen Gurt kommen vier kaputte Reißverschlüsse.",
+     "es": "Vemos cuatro cremalleras rotas por cada correa rota.",
+     "it": "Vediamo quattro zip rotte per ogni spallaccio strappato."
+    }
+   },
+   {
+    "i": 13,
+    "s": 54.91,
+    "e": 58.67,
+    "speaker": "guest",
+    "text": "Uh, the slider wears out, and it stops closing the teeth.",
+    "tr": {
+     "fr": "Le curseur s'use et ne referme plus les dents.",
+     "de": "Der Schieber nutzt sich ab und schließt die Zähne nicht mehr.",
+     "es": "El cursor se desgasta y deja de cerrar los dientes.",
+     "it": "Il cursore si consuma e non chiude più i denti."
+    }
+   },
+   {
+    "i": 14,
+    "s": 59.02,
+    "e": 62.63,
+    "speaker": "guest",
+    "text": "Then buckles, when people, you know, step on them in the tent.",
+    "tr": {
+     "fr": "Puis les boucles, quand on marche dessus dans la tente.",
+     "de": "Dann Schnallen, wenn man im Zelt draufsteigt.",
+     "es": "Luego las hebillas, cuando las pisas en la tienda.",
+     "it": "Poi le fibbie, quando ci si cammina sopra in tenda."
+    }
+   },
+   {
+    "i": 15,
+    "s": 63.63,
+    "e": 64.59,
+    "speaker": "host",
+    "text": "And the fabric?",
+    "tr": {
+     "fr": "Et le tissu ?",
+     "de": "Und der Stoff?",
+     "es": "¿Y la tela?",
+     "it": "E il tessuto?"
+    }
+   },
+   {
+    "i": 16,
+    "s": 64.94,
+    "e": 67.51,
+    "speaker": "guest",
+    "text": "Fabric is actually the last thing to go.",
+    "tr": {
+     "fr": "Le tissu, c'est en fait ce qui lâche en dernier.",
+     "de": "Der Stoff gibt tatsächlich als Letztes nach.",
+     "es": "La tela es lo último en romperse.",
+     "it": "Il tessuto è l'ultima cosa a cedere."
+    }
+   },
+   {
+    "i": 17,
+    "s": 67.86,
+    "e": 71.52,
+    "speaker": "guest",
+    "text": "Even on the Ridge, um, the nylon is very hard to tear.",
+    "tr": {
+     "fr": "Même sur le Ridge, le nylon est très difficile à déchirer.",
+     "de": "Selbst beim Ridge ist das Nylon sehr reißfest.",
+     "es": "Incluso en la Ridge, el nailon es muy difícil de romper.",
+     "it": "Anche sul Ridge, il nylon è difficilissimo da strappare."
+    }
+   },
+   {
+    "i": 18,
+    "s": 71.87,
+    "e": 74.17,
+    "speaker": "host",
+    "text": "So the bag outlives the small parts.",
+    "tr": {
+     "fr": "Donc le sac survit aux petites pièces.",
+     "de": "Der Rucksack überlebt also die Kleinteile.",
+     "es": "Así que la mochila dura más que las piezas pequeñas.",
+     "it": "Quindi lo zaino sopravvive ai piccoli pezzi."
+    }
+   },
+   {
+    "i": 19,
+    "s": 74.52,
+    "e": 77.71,
+    "speaker": "guest",
+    "text": "Exactly, and small parts are cheap to replace.",
+    "tr": {
+     "fr": "Exactement, et les petites pièces coûtent peu à remplacer.",
+     "de": "Genau, und Kleinteile sind günstig zu ersetzen.",
+     "es": "Exacto, y las piezas pequeñas son baratas de cambiar.",
+     "it": "Esatto, e i piccoli pezzi costano poco da sostituire."
+    }
+   },
+   {
+    "i": 20,
+    "s": 78.61,
+    "e": 82.13,
+    "speaker": "host",
+    "text": "Let's take your questions, there are already a lot in the chat.",
+    "tr": {
+     "fr": "Place à vos questions, il y en a déjà plein dans le chat.",
+     "de": "Zu euren Fragen, im Chat sind schon viele.",
+     "es": "Vamos con vuestras preguntas, ya hay muchas en el chat.",
+     "it": "Passiamo alle vostre domande, ce ne sono già tante in chat."
+    }
+   },
+   {
+    "i": 21,
+    "s": 82.48,
+    "e": 87.52,
+    "speaker": "host",
+    "text": "Chloé asks, um, my zip opens behind the slider, can I fix it at home?",
+    "tr": {
+     "fr": "Chloé demande : mon zip s'ouvre derrière le curseur, je peux le réparer chez moi ?",
+     "de": "Chloé fragt: Mein Reißverschluss geht hinter dem Schieber auf, kann ich das zu Hause reparieren?",
+     "es": "Chloé pregunta: mi cremallera se abre detrás del cursor, ¿puedo arreglarla en casa?",
+     "it": "Chloé chiede: la mia zip si apre dietro il cursore, posso ripararla a casa?"
+    }
+   },
+   {
+    "i": 22,
+    "s": 87.87,
+    "e": 92.95,
+    "speaker": "guest",
+    "text": "Yes, take a pair of pliers, and squeeze the back of the slider, very gently.",
+    "tr": {
+     "fr": "Oui, prenez une pince et serrez l'arrière du curseur, très doucement.",
+     "de": "Ja, nimm eine Zange und drück das hintere Ende des Schiebers ganz sanft zusammen.",
+     "es": "Sí, coge unos alicates y aprieta la parte trasera del cursor, muy suave.",
+     "it": "Sì, prendi una pinza e stringi il retro del cursore, molto delicatamente."
+    }
+   },
+   {
+    "i": 23,
+    "s": 93.3,
+    "e": 98.01,
+    "speaker": "guest",
+    "text": "A little bit on each side, and, you know, test it after every squeeze.",
+    "tr": {
+     "fr": "Un peu de chaque côté, et testez après chaque pression.",
+     "de": "Ein bisschen auf jeder Seite, und nach jedem Drücken testen.",
+     "es": "Un poco por cada lado, y pruébala después de cada apretón.",
+     "it": "Un po' per lato, e prova dopo ogni stretta."
+    }
+   },
+   {
+    "i": 24,
+    "s": 99.11,
+    "e": 100.53,
+    "speaker": "host",
+    "text": "And if that doesn't work?",
+    "tr": {
+     "fr": "Et si ça ne marche pas ?",
+     "de": "Und wenn das nicht klappt?",
+     "es": "¿Y si no funciona?",
+     "it": "E se non funziona?"
+    }
+   },
+   {
+    "i": 25,
+    "s": 100.88,
+    "e": 104.95,
+    "speaker": "guest",
+    "text": "Then we replace the slider, it takes, like, five minutes here.",
+    "tr": {
+     "fr": "Alors on remplace le curseur, ça prend cinq minutes ici.",
+     "de": "Dann tauschen wir den Schieber, das dauert hier fünf Minuten.",
+     "es": "Entonces cambiamos el cursor, aquí son cinco minutos.",
+     "it": "Allora cambiamo il cursore, qui ci vogliono cinque minuti."
+    }
+   },
+   {
+    "i": 26,
+    "s": 105.3,
+    "e": 106.79,
+    "speaker": "host",
+    "text": "Next one is from Tom.",
+    "tr": {
+     "fr": "La suivante vient de Tom.",
+     "de": "Die nächste ist von Tom.",
+     "es": "La siguiente es de Tom.",
+     "it": "La prossima è di Tom."
+    }
+   },
+   {
+    "i": 27,
+    "s": 107.14,
+    "e": 109.6,
+    "speaker": "host",
+    "text": "Can I send a bag I bought second-hand?",
+    "tr": {
+     "fr": "Je peux envoyer un sac acheté d'occasion ?",
+     "de": "Kann ich einen gebraucht gekauften Rucksack schicken?",
+     "es": "¿Puedo enviar una mochila que compré de segunda mano?",
+     "it": "Posso mandare uno zaino comprato di seconda mano?"
+    }
+   },
+   {
+    "i": 28,
+    "s": 109.95,
+    "e": 113.21,
+    "speaker": "guest",
+    "text": "Yes, the repair follows the bag, not the receipt.",
+    "tr": {
+     "fr": "Oui, la réparation suit le sac, pas le ticket de caisse.",
+     "de": "Ja, die Reparatur gehört zum Rucksack, nicht zum Kassenbon.",
+     "es": "Sí, la reparación va con la mochila, no con el tique.",
+     "it": "Sì, la riparazione segue lo zaino, non lo scontrino."
+    }
+   },
+   {
+    "i": 29,
+    "s": 113.56,
+    "e": 117.77,
+    "speaker": "guest",
+    "text": "If it's a Fernway bag, uh, we fix it, whoever owns it now.",
+    "tr": {
+     "fr": "Si c'est un sac Fernway, on le répare, peu importe à qui il appartient.",
+     "de": "Ist es ein Fernway-Rucksack, reparieren wir ihn, egal wem er gehört.",
+     "es": "Si es una mochila Fernway, la reparamos, sea de quien sea.",
+     "it": "Se è uno zaino Fernway, lo ripariamo, chiunque sia il proprietario."
+    }
+   },
+   {
+    "i": 30,
+    "s": 118.67,
+    "e": 122.96,
+    "speaker": "host",
+    "text": "I love that, it's, like, one more reason to buy second-hand.",
+    "tr": {
+     "fr": "J'adore, c'est une raison de plus d'acheter d'occasion.",
+     "de": "Das finde ich toll, ein Grund mehr, gebraucht zu kaufen.",
+     "es": "Me encanta, es una razón más para comprar de segunda mano.",
+     "it": "Adoro, è un motivo in più per comprare usato."
+    }
+   },
+   {
+    "i": 31,
+    "s": 123.31,
+    "e": 127.1,
+    "speaker": "host",
+    "text": "Last one, a buckle on my hip belt snapped, is that covered?",
+    "tr": {
+     "fr": "Dernière : une boucle de ma ceinture a cassé, c'est couvert ?",
+     "de": "Letzte Frage: Eine Schnalle am Hüftgurt ist gebrochen, ist das abgedeckt?",
+     "es": "Última: se rompió una hebilla del cinturón, ¿está cubierto?",
+     "it": "Ultima: si è rotta una fibbia della cintura, è coperta?"
+    }
+   },
+   {
+    "i": 32,
+    "s": 127.45,
+    "e": 132.03,
+    "speaker": "guest",
+    "text": "Totally, um, we post you a new one, and it clips on without sewing.",
+    "tr": {
+     "fr": "Bien sûr, on vous en envoie une neuve, elle se clipse sans couture.",
+     "de": "Absolut, wir schicken dir eine neue, die klickt man ohne Nähen an.",
+     "es": "Totalmente, te enviamos una nueva y se engancha sin coser.",
+     "it": "Certo, te ne mandiamo una nuova e si aggancia senza cucire."
+    }
+   },
+   {
+    "i": 33,
+    "s": 133.03,
+    "e": 136.92,
+    "speaker": "host",
+    "text": "Before we go, Léo, a lot of you asked about the Summit Bottle.",
+    "tr": {
+     "fr": "Avant de partir, Léo, beaucoup d'entre vous ont posé des questions sur la Summit Bottle.",
+     "de": "Bevor wir gehen, Léo: Viele haben nach der Summit Bottle gefragt.",
+     "es": "Antes de irnos, Léo, muchos habéis preguntado por la Summit Bottle.",
+     "it": "Prima di chiudere, Léo, in tanti avete chiesto della Summit Bottle."
+    }
+   },
+   {
+    "i": 34,
+    "s": 137.27,
+    "e": 141.49,
+    "speaker": "guest",
+    "text": "Right, the Summit Bottle has a lifetime warranty, even if you dent it.",
+    "tr": {
+     "fr": "Oui, la Summit Bottle est garantie à vie, même si vous la cabossez.",
+     "de": "Genau, die Summit Bottle hat lebenslange Garantie, auch mit Delle.",
+     "es": "Sí, la Summit Bottle tiene garantía de por vida, aunque la abolles.",
+     "it": "Sì, la Summit Bottle ha la garanzia a vita, anche se la ammacchi."
+    }
+   },
+   {
+    "i": 35,
+    "s": 141.84,
+    "e": 146.74,
+    "speaker": "guest",
+    "text": "Dropped it on a rock, lost the cap, you know, cracked the lid, we replace it.",
+    "tr": {
+     "fr": "Tombée sur un rocher, bouchon perdu, couvercle fêlé : on la remplace.",
+     "de": "Auf einen Stein gefallen, Deckel verloren, Verschluss gerissen: Wir ersetzen sie.",
+     "es": "Se cayó en una roca, perdiste el tapón, se rajó la tapa: la cambiamos.",
+     "it": "Caduta su una roccia, tappo perso, coperchio crepato: la sostituiamo."
+    }
+   },
+   {
+    "i": 36,
+    "s": 147.09,
+    "e": 147.98,
+    "speaker": "host",
+    "text": "Even the dents?",
+    "tr": {
+     "fr": "Même les bosses ?",
+     "de": "Auch die Dellen?",
+     "es": "¿Incluso las abolladuras?",
+     "it": "Anche le ammaccature?"
+    }
+   },
+   {
+    "i": 37,
+    "s": 148.33,
+    "e": 152.43,
+    "speaker": "guest",
+    "text": "Even the dents, uh, a dented bottle still keeps your water cold.",
+    "tr": {
+     "fr": "Même les bosses, une gourde cabossée garde l'eau fraîche.",
+     "de": "Auch die Dellen, eine verbeulte Flasche hält das Wasser trotzdem kalt.",
+     "es": "Incluso las abolladuras, una botella abollada sigue manteniendo el agua fría.",
+     "it": "Anche le ammaccature, una borraccia ammaccata tiene l'acqua fresca."
+    }
+   },
+   {
+    "i": 38,
+    "s": 153.43,
+    "e": 155.16,
+    "speaker": "host",
+    "text": "Which colours does it come in?",
+    "tr": {
+     "fr": "Elle existe en quelles couleurs ?",
+     "de": "In welchen Farben gibt es sie?",
+     "es": "¿En qué colores viene?",
+     "it": "In quali colori è disponibile?"
+    }
+   },
+   {
+    "i": 39,
+    "s": 155.51,
+    "e": 158.8,
+    "speaker": "guest",
+    "text": "Moss, Ember, Slate and Glacier, like the bags.",
+    "tr": {
+     "fr": "Moss, Ember, Slate et Glacier, comme les sacs.",
+     "de": "Moss, Ember, Slate und Glacier, wie die Rucksäcke.",
+     "es": "Moss, Ember, Slate y Glacier, como las mochilas.",
+     "it": "Moss, Ember, Slate e Glacier, come gli zaini."
+    }
+   },
+   {
+    "i": 40,
+    "s": 159.15,
+    "e": 161.29,
+    "speaker": "host",
+    "text": "And how do people send something in?",
+    "tr": {
+     "fr": "Et comment on vous envoie quelque chose ?",
+     "de": "Und wie schickt man euch etwas?",
+     "es": "¿Y cómo se os envía algo?",
+     "it": "E come si manda qualcosa?"
+    }
+   },
+   {
+    "i": 41,
+    "s": 161.64,
+    "e": 166,
+    "speaker": "guest",
+    "text": "The repair form is, like, linked below this live, and shipping is free.",
+    "tr": {
+     "fr": "Le formulaire de réparation est en lien sous ce live, et l'envoi est gratuit.",
+     "de": "Das Reparaturformular ist unter diesem Live verlinkt, der Versand ist kostenlos.",
+     "es": "El formulario de reparación está enlazado bajo este directo, y el envío es gratis.",
+     "it": "Il modulo di riparazione è linkato sotto questa diretta, e la spedizione è gratuita."
+    }
+   },
+   {
+    "i": 42,
+    "s": 166.35,
+    "e": 169.93,
+    "speaker": "host",
+    "text": "Thanks Léo, and thanks everyone for all the questions.",
+    "tr": {
+     "fr": "Merci Léo, et merci à tous pour vos questions.",
+     "de": "Danke, Léo, und danke euch allen für die Fragen.",
+     "es": "Gracias Léo, y gracias a todos por las preguntas.",
+     "it": "Grazie Léo, e grazie a tutti per le domande."
+    }
+   },
+   {
+    "i": 43,
+    "s": 170.28,
+    "e": 173.7,
+    "speaker": "guest",
+    "text": "Thank you, um, and send us photos of your repairs.",
+    "tr": {
+     "fr": "Merci, et envoyez-nous des photos de vos réparations.",
+     "de": "Danke, und schickt uns Fotos eurer Reparaturen.",
+     "es": "Gracias, y mandadnos fotos de vuestras reparaciones.",
+     "it": "Grazie, e mandateci le foto delle vostre riparazioni."
+    }
+   },
+   {
+    "i": 44,
+    "s": 174.05,
+    "e": 177.74,
+    "speaker": "host",
+    "text": "See you next Friday, same time, same workshop.",
+    "tr": {
+     "fr": "À vendredi prochain, même heure, même atelier.",
+     "de": "Bis nächsten Freitag, gleiche Zeit, gleiche Werkstatt.",
+     "es": "Hasta el viernes que viene, misma hora, mismo taller.",
+     "it": "Ci vediamo venerdì prossimo, stessa ora, stesso laboratorio."
+    }
+   }
+  ],
+  "words": [
+   {
+    "i": 0,
+    "w": "Hey",
+    "s": 0.4,
+    "e": 0.67,
+    "sent": 0
+   },
+   {
+    "i": 1,
+    "w": "everyone,",
+    "s": 0.67,
+    "e": 1.33,
+    "sent": 0
+   },
+   {
+    "i": 2,
+    "w": "welcome",
+    "s": 1.45,
+    "e": 1.96,
+    "sent": 0
+   },
+   {
+    "i": 3,
+    "w": "to",
+    "s": 1.96,
+    "e": 2.15,
+    "sent": 0
+   },
+   {
+    "i": 4,
+    "w": "Repair",
+    "s": 2.15,
+    "e": 2.6,
+    "sent": 0
+   },
+   {
+    "i": 5,
+    "w": "Friday,",
+    "s": 2.6,
+    "e": 3.11,
+    "sent": 0
+   },
+   {
+    "i": 6,
+    "w": "live",
+    "s": 3.23,
+    "e": 3.53,
+    "sent": 0
+   },
+   {
+    "i": 7,
+    "w": "from",
+    "s": 3.53,
+    "e": 3.84,
+    "sent": 0
+   },
+   {
+    "i": 8,
+    "w": "the",
+    "s": 3.84,
+    "e": 4.08,
+    "sent": 0
+   },
+   {
+    "i": 9,
+    "w": "Fernway",
+    "s": 4.08,
+    "e": 4.56,
+    "sent": 0
+   },
+   {
+    "i": 10,
+    "w": "workshop",
+    "s": 4.56,
+    "e": 5.11,
+    "sent": 0
+   },
+   {
+    "i": 11,
+    "w": "in",
+    "s": 5.11,
+    "e": 5.29,
+    "sent": 0
+   },
+   {
+    "i": 12,
+    "w": "Annecy.",
+    "s": 5.29,
+    "e": 5.77,
+    "sent": 0
+   },
+   {
+    "i": 13,
+    "w": "I'm",
+    "s": 6.12,
+    "e": 6.37,
+    "sent": 1
+   },
+   {
+    "i": 14,
+    "w": "Camille,",
+    "s": 6.37,
+    "e": 6.93,
+    "sent": 1
+   },
+   {
+    "i": 15,
+    "w": "and,",
+    "s": 7.05,
+    "e": 7.5,
+    "sent": 1
+   },
+   {
+    "i": 16,
+    "w": "um,",
+    "s": 7.62,
+    "e": 7.98,
+    "sent": 1,
+    "filler": true
+   },
+   {
+    "i": 17,
+    "w": "with",
+    "s": 8.1,
+    "e": 8.41,
+    "sent": 1
+   },
+   {
+    "i": 18,
+    "w": "me",
+    "s": 8.41,
+    "e": 8.59,
+    "sent": 1
+   },
+   {
+    "i": 19,
+    "w": "today",
+    "s": 8.59,
+    "e": 8.96,
+    "sent": 1
+   },
+   {
+    "i": 20,
+    "w": "is",
+    "s": 8.96,
+    "e": 9.15,
+    "sent": 1
+   },
+   {
+    "i": 21,
+    "w": "Léo,",
+    "s": 9.15,
+    "e": 9.46,
+    "sent": 1
+   },
+   {
+    "i": 22,
+    "w": "who",
+    "s": 9.58,
+    "e": 9.8,
+    "sent": 1
+   },
+   {
+    "i": 23,
+    "w": "runs",
+    "s": 9.8,
+    "e": 10.09,
+    "sent": 1
+   },
+   {
+    "i": 24,
+    "w": "the",
+    "s": 10.09,
+    "e": 10.31,
+    "sent": 1
+   },
+   {
+    "i": 25,
+    "w": "workshop.",
+    "s": 10.31,
+    "e": 10.88,
+    "sent": 1
+   },
+   {
+    "i": 26,
+    "w": "Hi",
+    "s": 11.23,
+    "e": 11.45,
+    "sent": 2
+   },
+   {
+    "i": 27,
+    "w": "everyone,",
+    "s": 11.45,
+    "e": 12.18,
+    "sent": 2
+   },
+   {
+    "i": 28,
+    "w": "thanks",
+    "s": 12.3,
+    "e": 12.73,
+    "sent": 2
+   },
+   {
+    "i": 29,
+    "w": "for",
+    "s": 12.73,
+    "e": 12.97,
+    "sent": 2
+   },
+   {
+    "i": 30,
+    "w": "joining",
+    "s": 12.97,
+    "e": 13.46,
+    "sent": 2
+   },
+   {
+    "i": 31,
+    "w": "us,",
+    "s": 13.46,
+    "e": 13.71,
+    "sent": 2
+   },
+   {
+    "i": 32,
+    "w": "and,",
+    "s": 13.83,
+    "e": 14.36,
+    "sent": 2
+   },
+   {
+    "i": 33,
+    "w": "uh,",
+    "s": 14.48,
+    "e": 14.76,
+    "sent": 2,
+    "filler": true
+   },
+   {
+    "i": 34,
+    "w": "sorry",
+    "s": 14.88,
+    "e": 15.22,
+    "sent": 2
+   },
+   {
+    "i": 35,
+    "w": "about",
+    "s": 15.22,
+    "e": 15.56,
+    "sent": 2
+   },
+   {
+    "i": 36,
+    "w": "the",
+    "s": 15.56,
+    "e": 15.78,
+    "sent": 2
+   },
+   {
+    "i": 37,
+    "w": "noise",
+    "s": 15.78,
+    "e": 16.11,
+    "sent": 2
+   },
+   {
+    "i": 38,
+    "w": "of",
+    "s": 16.11,
+    "e": 16.28,
+    "sent": 2
+   },
+   {
+    "i": 39,
+    "w": "the",
+    "s": 16.28,
+    "e": 16.51,
+    "sent": 2
+   },
+   {
+    "i": 40,
+    "w": "machines.",
+    "s": 16.51,
+    "e": 17.06,
+    "sent": 2
+   },
+   {
+    "i": 41,
+    "w": "So,",
+    "s": 17.41,
+    "e": 17.82,
+    "sent": 3
+   },
+   {
+    "i": 42,
+    "w": "Léo,",
+    "s": 17.94,
+    "e": 18.4,
+    "sent": 3
+   },
+   {
+    "i": 43,
+    "w": "for",
+    "s": 18.52,
+    "e": 18.73,
+    "sent": 3
+   },
+   {
+    "i": 44,
+    "w": "people",
+    "s": 18.73,
+    "e": 19.1,
+    "sent": 3
+   },
+   {
+    "i": 45,
+    "w": "who",
+    "s": 19.1,
+    "e": 19.31,
+    "sent": 3
+   },
+   {
+    "i": 46,
+    "w": "are",
+    "s": 19.31,
+    "e": 19.52,
+    "sent": 3
+   },
+   {
+    "i": 47,
+    "w": "new,",
+    "s": 19.52,
+    "e": 19.78,
+    "sent": 3
+   },
+   {
+    "i": 48,
+    "w": "what",
+    "s": 19.9,
+    "e": 20.2,
+    "sent": 3
+   },
+   {
+    "i": 49,
+    "w": "is",
+    "s": 20.2,
+    "e": 20.38,
+    "sent": 3
+   },
+   {
+    "i": 50,
+    "w": "Repair",
+    "s": 20.38,
+    "e": 20.8,
+    "sent": 3
+   },
+   {
+    "i": 51,
+    "w": "Friday?",
+    "s": 20.8,
+    "e": 21.28,
+    "sent": 3
+   },
+   {
+    "i": 52,
+    "w": "It's",
+    "s": 21.63,
+    "e": 21.9,
+    "sent": 4
+   },
+   {
+    "i": 53,
+    "w": "simple,",
+    "s": 21.9,
+    "e": 22.32,
+    "sent": 4
+   },
+   {
+    "i": 54,
+    "w": "every",
+    "s": 22.44,
+    "e": 22.85,
+    "sent": 4
+   },
+   {
+    "i": 55,
+    "w": "Friday",
+    "s": 22.85,
+    "e": 23.33,
+    "sent": 4
+   },
+   {
+    "i": 56,
+    "w": "we,",
+    "s": 23.33,
+    "e": 23.61,
+    "sent": 4
+   },
+   {
+    "i": 57,
+    "w": "like,",
+    "s": 23.73,
+    "e": 24.16,
+    "sent": 4,
+    "filler": true
+   },
+   {
+    "i": 58,
+    "w": "open",
+    "s": 24.28,
+    "e": 24.57,
+    "sent": 4
+   },
+   {
+    "i": 59,
+    "w": "the",
+    "s": 24.57,
+    "e": 24.81,
+    "sent": 4
+   },
+   {
+    "i": 60,
+    "w": "workshop",
+    "s": 24.81,
+    "e": 25.33,
+    "sent": 4
+   },
+   {
+    "i": 61,
+    "w": "and",
+    "s": 25.33,
+    "e": 25.56,
+    "sent": 4
+   },
+   {
+    "i": 62,
+    "w": "fix",
+    "s": 25.56,
+    "e": 25.8,
+    "sent": 4
+   },
+   {
+    "i": 63,
+    "w": "your",
+    "s": 25.8,
+    "e": 26.09,
+    "sent": 4
+   },
+   {
+    "i": 64,
+    "w": "gear",
+    "s": 26.09,
+    "e": 26.38,
+    "sent": 4
+   },
+   {
+    "i": 65,
+    "w": "live.",
+    "s": 26.38,
+    "e": 26.73,
+    "sent": 4
+   },
+   {
+    "i": 66,
+    "w": "It",
+    "s": 27.08,
+    "e": 27.25,
+    "sent": 5
+   },
+   {
+    "i": 67,
+    "w": "started",
+    "s": 27.25,
+    "e": 27.72,
+    "sent": 5
+   },
+   {
+    "i": 68,
+    "w": "as",
+    "s": 27.72,
+    "e": 27.89,
+    "sent": 5
+   },
+   {
+    "i": 69,
+    "w": "our",
+    "s": 27.89,
+    "e": 28.12,
+    "sent": 5
+   },
+   {
+    "i": 70,
+    "w": "answer",
+    "s": 28.12,
+    "e": 28.53,
+    "sent": 5
+   },
+   {
+    "i": 71,
+    "w": "to",
+    "s": 28.53,
+    "e": 28.7,
+    "sent": 5
+   },
+   {
+    "i": 72,
+    "w": "Black",
+    "s": 28.7,
+    "e": 29.05,
+    "sent": 5
+   },
+   {
+    "i": 73,
+    "w": "Friday,",
+    "s": 29.05,
+    "e": 29.52,
+    "sent": 5
+   },
+   {
+    "i": 74,
+    "w": "you",
+    "s": 29.64,
+    "e": 29.84,
+    "sent": 5,
+    "filler": true
+   },
+   {
+    "i": 75,
+    "w": "know.",
+    "s": 29.84,
+    "e": 30.14,
+    "sent": 5,
+    "filler": true
+   },
+   {
+    "i": 76,
+    "w": "Instead",
+    "s": 31.14,
+    "e": 31.65,
+    "sent": 6
+   },
+   {
+    "i": 77,
+    "w": "of",
+    "s": 31.65,
+    "e": 31.84,
+    "sent": 6
+   },
+   {
+    "i": 78,
+    "w": "buying",
+    "s": 31.84,
+    "e": 32.29,
+    "sent": 6
+   },
+   {
+    "i": 79,
+    "w": "a",
+    "s": 32.29,
+    "e": 32.42,
+    "sent": 6
+   },
+   {
+    "i": 80,
+    "w": "new",
+    "s": 32.42,
+    "e": 32.67,
+    "sent": 6
+   },
+   {
+    "i": 81,
+    "w": "bag,",
+    "s": 32.67,
+    "e": 32.99,
+    "sent": 6
+   },
+   {
+    "i": 82,
+    "w": "um,",
+    "s": 33.11,
+    "e": 33.49,
+    "sent": 6,
+    "filler": true
+   },
+   {
+    "i": 83,
+    "w": "you",
+    "s": 33.61,
+    "e": 33.82,
+    "sent": 6
+   },
+   {
+    "i": 84,
+    "w": "fix",
+    "s": 33.82,
+    "e": 34.03,
+    "sent": 6
+   },
+   {
+    "i": 85,
+    "w": "the",
+    "s": 34.03,
+    "e": 34.24,
+    "sent": 6
+   },
+   {
+    "i": 86,
+    "w": "one",
+    "s": 34.24,
+    "e": 34.45,
+    "sent": 6
+   },
+   {
+    "i": 87,
+    "w": "you",
+    "s": 34.45,
+    "e": 34.66,
+    "sent": 6
+   },
+   {
+    "i": 88,
+    "w": "have.",
+    "s": 34.66,
+    "e": 34.97,
+    "sent": 6
+   },
+   {
+    "i": 89,
+    "w": "And",
+    "s": 35.32,
+    "e": 35.59,
+    "sent": 7
+   },
+   {
+    "i": 90,
+    "w": "how",
+    "s": 35.59,
+    "e": 35.86,
+    "sent": 7
+   },
+   {
+    "i": 91,
+    "w": "many",
+    "s": 35.86,
+    "e": 36.19,
+    "sent": 7
+   },
+   {
+    "i": 92,
+    "w": "bags",
+    "s": 36.19,
+    "e": 36.53,
+    "sent": 7
+   },
+   {
+    "i": 93,
+    "w": "is",
+    "s": 36.53,
+    "e": 36.73,
+    "sent": 7
+   },
+   {
+    "i": 94,
+    "w": "that?",
+    "s": 36.73,
+    "e": 37.13,
+    "sent": 7
+   },
+   {
+    "i": 95,
+    "w": "We",
+    "s": 37.48,
+    "e": 37.65,
+    "sent": 8
+   },
+   {
+    "i": 96,
+    "w": "repaired",
+    "s": 37.65,
+    "e": 38.17,
+    "sent": 8
+   },
+   {
+    "i": 97,
+    "w": "twelve",
+    "s": 38.17,
+    "e": 38.58,
+    "sent": 8
+   },
+   {
+    "i": 98,
+    "w": "hundred",
+    "s": 38.58,
+    "e": 39.04,
+    "sent": 8
+   },
+   {
+    "i": 99,
+    "w": "bags",
+    "s": 39.04,
+    "e": 39.33,
+    "sent": 8
+   },
+   {
+    "i": 100,
+    "w": "this",
+    "s": 39.33,
+    "e": 39.62,
+    "sent": 8
+   },
+   {
+    "i": 101,
+    "w": "year.",
+    "s": 39.62,
+    "e": 39.97,
+    "sent": 8
+   },
+   {
+    "i": 102,
+    "w": "That's,",
+    "s": 40.32,
+    "e": 40.75,
+    "sent": 9
+   },
+   {
+    "i": 103,
+    "w": "like,",
+    "s": 40.87,
+    "e": 41.31,
+    "sent": 9,
+    "filler": true
+   },
+   {
+    "i": 104,
+    "w": "more",
+    "s": 41.43,
+    "e": 41.73,
+    "sent": 9
+   },
+   {
+    "i": 105,
+    "w": "than",
+    "s": 41.73,
+    "e": 42.03,
+    "sent": 9
+   },
+   {
+    "i": 106,
+    "w": "three",
+    "s": 42.03,
+    "e": 42.39,
+    "sent": 9
+   },
+   {
+    "i": 107,
+    "w": "bags",
+    "s": 42.39,
+    "e": 42.69,
+    "sent": 9
+   },
+   {
+    "i": 108,
+    "w": "a",
+    "s": 42.69,
+    "e": 42.81,
+    "sent": 9
+   },
+   {
+    "i": 109,
+    "w": "day.",
+    "s": 42.81,
+    "e": 43.12,
+    "sent": 9
+   },
+   {
+    "i": 110,
+    "w": "OK,",
+    "s": 44.02,
+    "e": 44.6,
+    "sent": 10
+   },
+   {
+    "i": 111,
+    "w": "so,",
+    "s": 44.72,
+    "e": 45.13,
+    "sent": 10
+   },
+   {
+    "i": 112,
+    "w": "Léo,",
+    "s": 45.25,
+    "e": 45.71,
+    "sent": 10
+   },
+   {
+    "i": 113,
+    "w": "what",
+    "s": 45.83,
+    "e": 46.13,
+    "sent": 10
+   },
+   {
+    "i": 114,
+    "w": "breaks",
+    "s": 46.13,
+    "e": 46.55,
+    "sent": 10
+   },
+   {
+    "i": 115,
+    "w": "most?",
+    "s": 46.55,
+    "e": 46.92,
+    "sent": 10
+   },
+   {
+    "i": 116,
+    "w": "The",
+    "s": 47.27,
+    "e": 47.48,
+    "sent": 11
+   },
+   {
+    "i": 117,
+    "w": "thing",
+    "s": 47.48,
+    "e": 47.81,
+    "sent": 11
+   },
+   {
+    "i": 118,
+    "w": "that",
+    "s": 47.81,
+    "e": 48.08,
+    "sent": 11
+   },
+   {
+    "i": 119,
+    "w": "breaks",
+    "s": 48.08,
+    "e": 48.46,
+    "sent": 11
+   },
+   {
+    "i": 120,
+    "w": "most",
+    "s": 48.46,
+    "e": 48.74,
+    "sent": 11
+   },
+   {
+    "i": 121,
+    "w": "is",
+    "s": 48.74,
+    "e": 48.9,
+    "sent": 11
+   },
+   {
+    "i": 122,
+    "w": "zips,",
+    "s": 48.9,
+    "e": 49.22,
+    "sent": 11
+   },
+   {
+    "i": 123,
+    "w": "not",
+    "s": 49.34,
+    "e": 49.65,
+    "sent": 11
+   },
+   {
+    "i": 124,
+    "w": "fabric.",
+    "s": 49.65,
+    "e": 50.26,
+    "sent": 11
+   },
+   {
+    "i": 125,
+    "w": "We",
+    "s": 50.61,
+    "e": 50.81,
+    "sent": 12
+   },
+   {
+    "i": 126,
+    "w": "see,",
+    "s": 50.81,
+    "e": 51.13,
+    "sent": 12
+   },
+   {
+    "i": 127,
+    "w": "like,",
+    "s": 51.25,
+    "e": 51.69,
+    "sent": 12,
+    "filler": true
+   },
+   {
+    "i": 128,
+    "w": "four",
+    "s": 51.81,
+    "e": 52.16,
+    "sent": 12
+   },
+   {
+    "i": 129,
+    "w": "broken",
+    "s": 52.16,
+    "e": 52.65,
+    "sent": 12
+   },
+   {
+    "i": 130,
+    "w": "zips",
+    "s": 52.65,
+    "e": 53,
+    "sent": 12
+   },
+   {
+    "i": 131,
+    "w": "for",
+    "s": 53,
+    "e": 53.29,
+    "sent": 12
+   },
+   {
+    "i": 132,
+    "w": "every",
+    "s": 53.29,
+    "e": 53.71,
+    "sent": 12
+   },
+   {
+    "i": 133,
+    "w": "torn",
+    "s": 53.71,
+    "e": 54.06,
+    "sent": 12
+   },
+   {
+    "i": 134,
+    "w": "strap.",
+    "s": 54.06,
+    "e": 54.56,
+    "sent": 12
+   },
+   {
+    "i": 135,
+    "w": "Uh,",
+    "s": 54.91,
+    "e": 55.19,
+    "sent": 13,
+    "filler": true
+   },
+   {
+    "i": 136,
+    "w": "the",
+    "s": 55.31,
+    "e": 55.56,
+    "sent": 13
+   },
+   {
+    "i": 137,
+    "w": "slider",
+    "s": 55.56,
+    "e": 55.98,
+    "sent": 13
+   },
+   {
+    "i": 138,
+    "w": "wears",
+    "s": 55.98,
+    "e": 56.34,
+    "sent": 13
+   },
+   {
+    "i": 139,
+    "w": "out,",
+    "s": 56.34,
+    "e": 56.64,
+    "sent": 13
+   },
+   {
+    "i": 140,
+    "w": "and",
+    "s": 56.76,
+    "e": 57,
+    "sent": 13
+   },
+   {
+    "i": 141,
+    "w": "it",
+    "s": 57,
+    "e": 57.18,
+    "sent": 13
+   },
+   {
+    "i": 142,
+    "w": "stops",
+    "s": 57.18,
+    "e": 57.54,
+    "sent": 13
+   },
+   {
+    "i": 143,
+    "w": "closing",
+    "s": 57.54,
+    "e": 58.01,
+    "sent": 13
+   },
+   {
+    "i": 144,
+    "w": "the",
+    "s": 58.01,
+    "e": 58.25,
+    "sent": 13
+   },
+   {
+    "i": 145,
+    "w": "teeth.",
+    "s": 58.25,
+    "e": 58.67,
+    "sent": 13
+   },
+   {
+    "i": 146,
+    "w": "Then",
+    "s": 59.02,
+    "e": 59.26,
+    "sent": 14
+   },
+   {
+    "i": 147,
+    "w": "buckles,",
+    "s": 59.26,
+    "e": 59.71,
+    "sent": 14
+   },
+   {
+    "i": 148,
+    "w": "when",
+    "s": 59.83,
+    "e": 60.1,
+    "sent": 14
+   },
+   {
+    "i": 149,
+    "w": "people,",
+    "s": 60.1,
+    "e": 60.52,
+    "sent": 14
+   },
+   {
+    "i": 150,
+    "w": "you",
+    "s": 60.64,
+    "e": 60.84,
+    "sent": 14,
+    "filler": true
+   },
+   {
+    "i": 151,
+    "w": "know,",
+    "s": 60.84,
+    "e": 61.14,
+    "sent": 14,
+    "filler": true
+   },
+   {
+    "i": 152,
+    "w": "step",
+    "s": 61.26,
+    "e": 61.52,
+    "sent": 14
+   },
+   {
+    "i": 153,
+    "w": "on",
+    "s": 61.52,
+    "e": 61.68,
+    "sent": 14
+   },
+   {
+    "i": 154,
+    "w": "them",
+    "s": 61.68,
+    "e": 61.94,
+    "sent": 14
+   },
+   {
+    "i": 155,
+    "w": "in",
+    "s": 61.94,
+    "e": 62.1,
+    "sent": 14
+   },
+   {
+    "i": 156,
+    "w": "the",
+    "s": 62.1,
+    "e": 62.31,
+    "sent": 14
+   },
+   {
+    "i": 157,
+    "w": "tent.",
+    "s": 62.31,
+    "e": 62.63,
+    "sent": 14
+   },
+   {
+    "i": 158,
+    "w": "And",
+    "s": 63.63,
+    "e": 63.87,
+    "sent": 15
+   },
+   {
+    "i": 159,
+    "w": "the",
+    "s": 63.87,
+    "e": 64.11,
+    "sent": 15
+   },
+   {
+    "i": 160,
+    "w": "fabric?",
+    "s": 64.11,
+    "e": 64.59,
+    "sent": 15
+   },
+   {
+    "i": 161,
+    "w": "Fabric",
+    "s": 64.94,
+    "e": 65.38,
+    "sent": 16
+   },
+   {
+    "i": 162,
+    "w": "is",
+    "s": 65.38,
+    "e": 65.57,
+    "sent": 16
+   },
+   {
+    "i": 163,
+    "w": "actually",
+    "s": 65.57,
+    "e": 66.13,
+    "sent": 16
+   },
+   {
+    "i": 164,
+    "w": "the",
+    "s": 66.13,
+    "e": 66.38,
+    "sent": 16
+   },
+   {
+    "i": 165,
+    "w": "last",
+    "s": 66.38,
+    "e": 66.7,
+    "sent": 16
+   },
+   {
+    "i": 166,
+    "w": "thing",
+    "s": 66.7,
+    "e": 67.07,
+    "sent": 16
+   },
+   {
+    "i": 167,
+    "w": "to",
+    "s": 67.07,
+    "e": 67.26,
+    "sent": 16
+   },
+   {
+    "i": 168,
+    "w": "go.",
+    "s": 67.26,
+    "e": 67.51,
+    "sent": 16
+   },
+   {
+    "i": 169,
+    "w": "Even",
+    "s": 67.86,
+    "e": 68.13,
+    "sent": 17
+   },
+   {
+    "i": 170,
+    "w": "on",
+    "s": 68.13,
+    "e": 68.29,
+    "sent": 17
+   },
+   {
+    "i": 171,
+    "w": "the",
+    "s": 68.29,
+    "e": 68.5,
+    "sent": 17
+   },
+   {
+    "i": 172,
+    "w": "Ridge,",
+    "s": 68.5,
+    "e": 68.88,
+    "sent": 17
+   },
+   {
+    "i": 173,
+    "w": "um,",
+    "s": 69,
+    "e": 69.38,
+    "sent": 17,
+    "filler": true
+   },
+   {
+    "i": 174,
+    "w": "the",
+    "s": 69.5,
+    "e": 69.75,
+    "sent": 17
+   },
+   {
+    "i": 175,
+    "w": "nylon",
+    "s": 69.75,
+    "e": 70.13,
+    "sent": 17
+   },
+   {
+    "i": 176,
+    "w": "is",
+    "s": 70.13,
+    "e": 70.32,
+    "sent": 17
+   },
+   {
+    "i": 177,
+    "w": "very",
+    "s": 70.32,
+    "e": 70.64,
+    "sent": 17
+   },
+   {
+    "i": 178,
+    "w": "hard",
+    "s": 70.64,
+    "e": 70.95,
+    "sent": 17
+   },
+   {
+    "i": 179,
+    "w": "to",
+    "s": 70.95,
+    "e": 71.14,
+    "sent": 17
+   },
+   {
+    "i": 180,
+    "w": "tear.",
+    "s": 71.14,
+    "e": 71.52,
+    "sent": 17
+   },
+   {
+    "i": 181,
+    "w": "So",
+    "s": 71.87,
+    "e": 72.06,
+    "sent": 18
+   },
+   {
+    "i": 182,
+    "w": "the",
+    "s": 72.06,
+    "e": 72.31,
+    "sent": 18
+   },
+   {
+    "i": 183,
+    "w": "bag",
+    "s": 72.31,
+    "e": 72.55,
+    "sent": 18
+   },
+   {
+    "i": 184,
+    "w": "outlives",
+    "s": 72.55,
+    "e": 73.11,
+    "sent": 18
+   },
+   {
+    "i": 185,
+    "w": "the",
+    "s": 73.11,
+    "e": 73.36,
+    "sent": 18
+   },
+   {
+    "i": 186,
+    "w": "small",
+    "s": 73.36,
+    "e": 73.73,
+    "sent": 18
+   },
+   {
+    "i": 187,
+    "w": "parts.",
+    "s": 73.73,
+    "e": 74.17,
+    "sent": 18
+   },
+   {
+    "i": 188,
+    "w": "Exactly,",
+    "s": 74.52,
+    "e": 75.32,
+    "sent": 19
+   },
+   {
+    "i": 189,
+    "w": "and",
+    "s": 75.44,
+    "e": 75.68,
+    "sent": 19
+   },
+   {
+    "i": 190,
+    "w": "small",
+    "s": 75.68,
+    "e": 76.04,
+    "sent": 19
+   },
+   {
+    "i": 191,
+    "w": "parts",
+    "s": 76.04,
+    "e": 76.4,
+    "sent": 19
+   },
+   {
+    "i": 192,
+    "w": "are",
+    "s": 76.4,
+    "e": 76.63,
+    "sent": 19
+   },
+   {
+    "i": 193,
+    "w": "cheap",
+    "s": 76.63,
+    "e": 76.99,
+    "sent": 19
+   },
+   {
+    "i": 194,
+    "w": "to",
+    "s": 76.99,
+    "e": 77.17,
+    "sent": 19
+   },
+   {
+    "i": 195,
+    "w": "replace.",
+    "s": 77.17,
+    "e": 77.71,
+    "sent": 19
+   },
+   {
+    "i": 196,
+    "w": "Let's",
+    "s": 78.61,
+    "e": 78.95,
+    "sent": 20
+   },
+   {
+    "i": 197,
+    "w": "take",
+    "s": 78.95,
+    "e": 79.24,
+    "sent": 20
+   },
+   {
+    "i": 198,
+    "w": "your",
+    "s": 79.24,
+    "e": 79.53,
+    "sent": 20
+   },
+   {
+    "i": 199,
+    "w": "questions,",
+    "s": 79.53,
+    "e": 80.17,
+    "sent": 20
+   },
+   {
+    "i": 200,
+    "w": "there",
+    "s": 80.29,
+    "e": 80.59,
+    "sent": 20
+   },
+   {
+    "i": 201,
+    "w": "are",
+    "s": 80.59,
+    "e": 80.79,
+    "sent": 20
+   },
+   {
+    "i": 202,
+    "w": "already",
+    "s": 80.79,
+    "e": 81.19,
+    "sent": 20
+   },
+   {
+    "i": 203,
+    "w": "a",
+    "s": 81.19,
+    "e": 81.29,
+    "sent": 20
+   },
+   {
+    "i": 204,
+    "w": "lot",
+    "s": 81.29,
+    "e": 81.48,
+    "sent": 20
+   },
+   {
+    "i": 205,
+    "w": "in",
+    "s": 81.48,
+    "e": 81.63,
+    "sent": 20
+   },
+   {
+    "i": 206,
+    "w": "the",
+    "s": 81.63,
+    "e": 81.83,
+    "sent": 20
+   },
+   {
+    "i": 207,
+    "w": "chat.",
+    "s": 81.83,
+    "e": 82.13,
+    "sent": 20
+   },
+   {
+    "i": 208,
+    "w": "Chloé",
+    "s": 82.48,
+    "e": 82.95,
+    "sent": 21
+   },
+   {
+    "i": 209,
+    "w": "asks,",
+    "s": 82.95,
+    "e": 83.42,
+    "sent": 21
+   },
+   {
+    "i": 210,
+    "w": "um,",
+    "s": 83.54,
+    "e": 83.89,
+    "sent": 21,
+    "filler": true
+   },
+   {
+    "i": 211,
+    "w": "my",
+    "s": 84.01,
+    "e": 84.2,
+    "sent": 21
+   },
+   {
+    "i": 212,
+    "w": "zip",
+    "s": 84.2,
+    "e": 84.46,
+    "sent": 21
+   },
+   {
+    "i": 213,
+    "w": "opens",
+    "s": 84.46,
+    "e": 84.84,
+    "sent": 21
+   },
+   {
+    "i": 214,
+    "w": "behind",
+    "s": 84.84,
+    "e": 85.28,
+    "sent": 21
+   },
+   {
+    "i": 215,
+    "w": "the",
+    "s": 85.28,
+    "e": 85.53,
+    "sent": 21
+   },
+   {
+    "i": 216,
+    "w": "slider,",
+    "s": 85.53,
+    "e": 86.04,
+    "sent": 21
+   },
+   {
+    "i": 217,
+    "w": "can",
+    "s": 86.16,
+    "e": 86.41,
+    "sent": 21
+   },
+   {
+    "i": 218,
+    "w": "I",
+    "s": 86.41,
+    "e": 86.53,
+    "sent": 21
+   },
+   {
+    "i": 219,
+    "w": "fix",
+    "s": 86.53,
+    "e": 86.78,
+    "sent": 21
+   },
+   {
+    "i": 220,
+    "w": "it",
+    "s": 86.78,
+    "e": 86.96,
+    "sent": 21
+   },
+   {
+    "i": 221,
+    "w": "at",
+    "s": 86.96,
+    "e": 87.15,
+    "sent": 21
+   },
+   {
+    "i": 222,
+    "w": "home?",
+    "s": 87.15,
+    "e": 87.52,
+    "sent": 21
+   },
+   {
+    "i": 223,
+    "w": "Yes,",
+    "s": 87.87,
+    "e": 88.26,
+    "sent": 22
+   },
+   {
+    "i": 224,
+    "w": "take",
+    "s": 88.38,
+    "e": 88.7,
+    "sent": 22
+   },
+   {
+    "i": 225,
+    "w": "a",
+    "s": 88.7,
+    "e": 88.83,
+    "sent": 22
+   },
+   {
+    "i": 226,
+    "w": "pair",
+    "s": 88.83,
+    "e": 89.16,
+    "sent": 22
+   },
+   {
+    "i": 227,
+    "w": "of",
+    "s": 89.16,
+    "e": 89.35,
+    "sent": 22
+   },
+   {
+    "i": 228,
+    "w": "pliers,",
+    "s": 89.35,
+    "e": 89.87,
+    "sent": 22
+   },
+   {
+    "i": 229,
+    "w": "and",
+    "s": 89.99,
+    "e": 90.2,
+    "sent": 22
+   },
+   {
+    "i": 230,
+    "w": "squeeze",
+    "s": 90.2,
+    "e": 90.62,
+    "sent": 22
+   },
+   {
+    "i": 231,
+    "w": "the",
+    "s": 90.62,
+    "e": 90.83,
+    "sent": 22
+   },
+   {
+    "i": 232,
+    "w": "back",
+    "s": 90.83,
+    "e": 91.09,
+    "sent": 22
+   },
+   {
+    "i": 233,
+    "w": "of",
+    "s": 91.09,
+    "e": 91.25,
+    "sent": 22
+   },
+   {
+    "i": 234,
+    "w": "the",
+    "s": 91.25,
+    "e": 91.46,
+    "sent": 22
+   },
+   {
+    "i": 235,
+    "w": "slider,",
+    "s": 91.46,
+    "e": 91.88,
+    "sent": 22
+   },
+   {
+    "i": 236,
+    "w": "very",
+    "s": 92,
+    "e": 92.36,
+    "sent": 22
+   },
+   {
+    "i": 237,
+    "w": "gently.",
+    "s": 92.36,
+    "e": 92.95,
+    "sent": 22
+   },
+   {
+    "i": 238,
+    "w": "A",
+    "s": 93.3,
+    "e": 93.42,
+    "sent": 23
+   },
+   {
+    "i": 239,
+    "w": "little",
+    "s": 93.42,
+    "e": 93.84,
+    "sent": 23
+   },
+   {
+    "i": 240,
+    "w": "bit",
+    "s": 93.84,
+    "e": 94.08,
+    "sent": 23
+   },
+   {
+    "i": 241,
+    "w": "on",
+    "s": 94.08,
+    "e": 94.26,
+    "sent": 23
+   },
+   {
+    "i": 242,
+    "w": "each",
+    "s": 94.26,
+    "e": 94.56,
+    "sent": 23
+   },
+   {
+    "i": 243,
+    "w": "side,",
+    "s": 94.56,
+    "e": 94.92,
+    "sent": 23
+   },
+   {
+    "i": 244,
+    "w": "and,",
+    "s": 95.04,
+    "e": 95.57,
+    "sent": 23
+   },
+   {
+    "i": 245,
+    "w": "you",
+    "s": 95.69,
+    "e": 95.89,
+    "sent": 23,
+    "filler": true
+   },
+   {
+    "i": 246,
+    "w": "know,",
+    "s": 95.89,
+    "e": 96.19,
+    "sent": 23,
+    "filler": true
+   },
+   {
+    "i": 247,
+    "w": "test",
+    "s": 96.31,
+    "e": 96.6,
+    "sent": 23
+   },
+   {
+    "i": 248,
+    "w": "it",
+    "s": 96.6,
+    "e": 96.78,
+    "sent": 23
+   },
+   {
+    "i": 249,
+    "w": "after",
+    "s": 96.78,
+    "e": 97.13,
+    "sent": 23
+   },
+   {
+    "i": 250,
+    "w": "every",
+    "s": 97.13,
+    "e": 97.48,
+    "sent": 23
+   },
+   {
+    "i": 251,
+    "w": "squeeze.",
+    "s": 97.48,
+    "e": 98.01,
+    "sent": 23
+   },
+   {
+    "i": 252,
+    "w": "And",
+    "s": 99.11,
+    "e": 99.33,
+    "sent": 24
+   },
+   {
+    "i": 253,
+    "w": "if",
+    "s": 99.33,
+    "e": 99.49,
+    "sent": 24
+   },
+   {
+    "i": 254,
+    "w": "that",
+    "s": 99.49,
+    "e": 99.76,
+    "sent": 24
+   },
+   {
+    "i": 255,
+    "w": "doesn't",
+    "s": 99.76,
+    "e": 100.2,
+    "sent": 24
+   },
+   {
+    "i": 256,
+    "w": "work?",
+    "s": 100.2,
+    "e": 100.53,
+    "sent": 24
+   },
+   {
+    "i": 257,
+    "w": "Then",
+    "s": 100.88,
+    "e": 101.15,
+    "sent": 25
+   },
+   {
+    "i": 258,
+    "w": "we",
+    "s": 101.15,
+    "e": 101.31,
+    "sent": 25
+   },
+   {
+    "i": 259,
+    "w": "replace",
+    "s": 101.31,
+    "e": 101.75,
+    "sent": 25
+   },
+   {
+    "i": 260,
+    "w": "the",
+    "s": 101.75,
+    "e": 101.97,
+    "sent": 25
+   },
+   {
+    "i": 261,
+    "w": "slider,",
+    "s": 101.97,
+    "e": 102.4,
+    "sent": 25
+   },
+   {
+    "i": 262,
+    "w": "it",
+    "s": 102.52,
+    "e": 102.71,
+    "sent": 25
+   },
+   {
+    "i": 263,
+    "w": "takes,",
+    "s": 102.71,
+    "e": 103.16,
+    "sent": 25
+   },
+   {
+    "i": 264,
+    "w": "like,",
+    "s": 103.28,
+    "e": 103.72,
+    "sent": 25,
+    "filler": true
+   },
+   {
+    "i": 265,
+    "w": "five",
+    "s": 103.84,
+    "e": 104.13,
+    "sent": 25
+   },
+   {
+    "i": 266,
+    "w": "minutes",
+    "s": 104.13,
+    "e": 104.6,
+    "sent": 25
+   },
+   {
+    "i": 267,
+    "w": "here.",
+    "s": 104.6,
+    "e": 104.95,
+    "sent": 25
+   },
+   {
+    "i": 268,
+    "w": "Next",
+    "s": 105.3,
+    "e": 105.64,
+    "sent": 26
+   },
+   {
+    "i": 269,
+    "w": "one",
+    "s": 105.64,
+    "e": 105.91,
+    "sent": 26
+   },
+   {
+    "i": 270,
+    "w": "is",
+    "s": 105.91,
+    "e": 106.11,
+    "sent": 26
+   },
+   {
+    "i": 271,
+    "w": "from",
+    "s": 106.11,
+    "e": 106.45,
+    "sent": 26
+   },
+   {
+    "i": 272,
+    "w": "Tom.",
+    "s": 106.45,
+    "e": 106.79,
+    "sent": 26
+   },
+   {
+    "i": 273,
+    "w": "Can",
+    "s": 107.14,
+    "e": 107.39,
+    "sent": 27
+   },
+   {
+    "i": 274,
+    "w": "I",
+    "s": 107.39,
+    "e": 107.52,
+    "sent": 27
+   },
+   {
+    "i": 275,
+    "w": "send",
+    "s": 107.52,
+    "e": 107.83,
+    "sent": 27
+   },
+   {
+    "i": 276,
+    "w": "a",
+    "s": 107.83,
+    "e": 107.96,
+    "sent": 27
+   },
+   {
+    "i": 277,
+    "w": "bag",
+    "s": 107.96,
+    "e": 108.21,
+    "sent": 27
+   },
+   {
+    "i": 278,
+    "w": "I",
+    "s": 108.21,
+    "e": 108.34,
+    "sent": 27
+   },
+   {
+    "i": 279,
+    "w": "bought",
+    "s": 108.34,
+    "e": 108.78,
+    "sent": 27
+   },
+   {
+    "i": 280,
+    "w": "second-hand?",
+    "s": 108.78,
+    "e": 109.6,
+    "sent": 27
+   },
+   {
+    "i": 281,
+    "w": "Yes,",
+    "s": 109.95,
+    "e": 110.34,
+    "sent": 28
+   },
+   {
+    "i": 282,
+    "w": "the",
+    "s": 110.46,
+    "e": 110.7,
+    "sent": 28
+   },
+   {
+    "i": 283,
+    "w": "repair",
+    "s": 110.7,
+    "e": 111.11,
+    "sent": 28
+   },
+   {
+    "i": 284,
+    "w": "follows",
+    "s": 111.11,
+    "e": 111.59,
+    "sent": 28
+   },
+   {
+    "i": 285,
+    "w": "the",
+    "s": 111.59,
+    "e": 111.83,
+    "sent": 28
+   },
+   {
+    "i": 286,
+    "w": "bag,",
+    "s": 111.83,
+    "e": 112.12,
+    "sent": 28
+   },
+   {
+    "i": 287,
+    "w": "not",
+    "s": 112.24,
+    "e": 112.47,
+    "sent": 28
+   },
+   {
+    "i": 288,
+    "w": "the",
+    "s": 112.47,
+    "e": 112.7,
+    "sent": 28
+   },
+   {
+    "i": 289,
+    "w": "receipt.",
+    "s": 112.7,
+    "e": 113.21,
+    "sent": 28
+   },
+   {
+    "i": 290,
+    "w": "If",
+    "s": 113.56,
+    "e": 113.76,
+    "sent": 29
+   },
+   {
+    "i": 291,
+    "w": "it's",
+    "s": 113.76,
+    "e": 114.11,
+    "sent": 29
+   },
+   {
+    "i": 292,
+    "w": "a",
+    "s": 114.11,
+    "e": 114.24,
+    "sent": 29
+   },
+   {
+    "i": 293,
+    "w": "Fernway",
+    "s": 114.24,
+    "e": 114.8,
+    "sent": 29
+   },
+   {
+    "i": 294,
+    "w": "bag,",
+    "s": 114.8,
+    "e": 115.14,
+    "sent": 29
+   },
+   {
+    "i": 295,
+    "w": "uh,",
+    "s": 115.26,
+    "e": 115.55,
+    "sent": 29,
+    "filler": true
+   },
+   {
+    "i": 296,
+    "w": "we",
+    "s": 115.67,
+    "e": 115.87,
+    "sent": 29
+   },
+   {
+    "i": 297,
+    "w": "fix",
+    "s": 115.87,
+    "e": 116.14,
+    "sent": 29
+   },
+   {
+    "i": 298,
+    "w": "it,",
+    "s": 116.14,
+    "e": 116.41,
+    "sent": 29
+   },
+   {
+    "i": 299,
+    "w": "whoever",
+    "s": 116.53,
+    "e": 117.01,
+    "sent": 29
+   },
+   {
+    "i": 300,
+    "w": "owns",
+    "s": 117.01,
+    "e": 117.3,
+    "sent": 29
+   },
+   {
+    "i": 301,
+    "w": "it",
+    "s": 117.3,
+    "e": 117.48,
+    "sent": 29
+   },
+   {
+    "i": 302,
+    "w": "now.",
+    "s": 117.48,
+    "e": 117.77,
+    "sent": 29
+   },
+   {
+    "i": 303,
+    "w": "I",
+    "s": 118.67,
+    "e": 118.81,
+    "sent": 30
+   },
+   {
+    "i": 304,
+    "w": "love",
+    "s": 118.81,
+    "e": 119.13,
+    "sent": 30
+   },
+   {
+    "i": 305,
+    "w": "that,",
+    "s": 119.13,
+    "e": 119.53,
+    "sent": 30
+   },
+   {
+    "i": 306,
+    "w": "it's,",
+    "s": 119.65,
+    "e": 120.01,
+    "sent": 30
+   },
+   {
+    "i": 307,
+    "w": "like,",
+    "s": 120.13,
+    "e": 120.56,
+    "sent": 30,
+    "filler": true
+   },
+   {
+    "i": 308,
+    "w": "one",
+    "s": 120.68,
+    "e": 120.94,
+    "sent": 30
+   },
+   {
+    "i": 309,
+    "w": "more",
+    "s": 120.94,
+    "e": 121.25,
+    "sent": 30
+   },
+   {
+    "i": 310,
+    "w": "reason",
+    "s": 121.25,
+    "e": 121.69,
+    "sent": 30
+   },
+   {
+    "i": 311,
+    "w": "to",
+    "s": 121.69,
+    "e": 121.88,
+    "sent": 30
+   },
+   {
+    "i": 312,
+    "w": "buy",
+    "s": 121.88,
+    "e": 122.14,
+    "sent": 30
+   },
+   {
+    "i": 313,
+    "w": "second-hand.",
+    "s": 122.14,
+    "e": 122.96,
+    "sent": 30
+   },
+   {
+    "i": 314,
+    "w": "Last",
+    "s": 123.31,
+    "e": 123.66,
+    "sent": 31
+   },
+   {
+    "i": 315,
+    "w": "one,",
+    "s": 123.66,
+    "e": 124.02,
+    "sent": 31
+   },
+   {
+    "i": 316,
+    "w": "a",
+    "s": 124.14,
+    "e": 124.25,
+    "sent": 31
+   },
+   {
+    "i": 317,
+    "w": "buckle",
+    "s": 124.25,
+    "e": 124.66,
+    "sent": 31
+   },
+   {
+    "i": 318,
+    "w": "on",
+    "s": 124.66,
+    "e": 124.84,
+    "sent": 31
+   },
+   {
+    "i": 319,
+    "w": "my",
+    "s": 124.84,
+    "e": 125.01,
+    "sent": 31
+   },
+   {
+    "i": 320,
+    "w": "hip",
+    "s": 125.01,
+    "e": 125.25,
+    "sent": 31
+   },
+   {
+    "i": 321,
+    "w": "belt",
+    "s": 125.25,
+    "e": 125.54,
+    "sent": 31
+   },
+   {
+    "i": 322,
+    "w": "snapped,",
+    "s": 125.54,
+    "e": 126.06,
+    "sent": 31
+   },
+   {
+    "i": 323,
+    "w": "is",
+    "s": 126.18,
+    "e": 126.35,
+    "sent": 31
+   },
+   {
+    "i": 324,
+    "w": "that",
+    "s": 126.35,
+    "e": 126.62,
+    "sent": 31
+   },
+   {
+    "i": 325,
+    "w": "covered?",
+    "s": 126.62,
+    "e": 127.1,
+    "sent": 31
+   },
+   {
+    "i": 326,
+    "w": "Totally,",
+    "s": 127.45,
+    "e": 128.01,
+    "sent": 32
+   },
+   {
+    "i": 327,
+    "w": "um,",
+    "s": 128.13,
+    "e": 128.51,
+    "sent": 32,
+    "filler": true
+   },
+   {
+    "i": 328,
+    "w": "we",
+    "s": 128.63,
+    "e": 128.8,
+    "sent": 32
+   },
+   {
+    "i": 329,
+    "w": "post",
+    "s": 128.8,
+    "e": 129.1,
+    "sent": 32
+   },
+   {
+    "i": 330,
+    "w": "you",
+    "s": 129.1,
+    "e": 129.33,
+    "sent": 32
+   },
+   {
+    "i": 331,
+    "w": "a",
+    "s": 129.33,
+    "e": 129.45,
+    "sent": 32
+   },
+   {
+    "i": 332,
+    "w": "new",
+    "s": 129.45,
+    "e": 129.68,
+    "sent": 32
+   },
+   {
+    "i": 333,
+    "w": "one,",
+    "s": 129.68,
+    "e": 129.97,
+    "sent": 32
+   },
+   {
+    "i": 334,
+    "w": "and",
+    "s": 130.09,
+    "e": 130.33,
+    "sent": 32
+   },
+   {
+    "i": 335,
+    "w": "it",
+    "s": 130.33,
+    "e": 130.52,
+    "sent": 32
+   },
+   {
+    "i": 336,
+    "w": "clips",
+    "s": 130.52,
+    "e": 130.88,
+    "sent": 32
+   },
+   {
+    "i": 337,
+    "w": "on",
+    "s": 130.88,
+    "e": 131.06,
+    "sent": 32
+   },
+   {
+    "i": 338,
+    "w": "without",
+    "s": 131.06,
+    "e": 131.54,
+    "sent": 32
+   },
+   {
+    "i": 339,
+    "w": "sewing.",
+    "s": 131.54,
+    "e": 132.03,
+    "sent": 32
+   },
+   {
+    "i": 340,
+    "w": "Before",
+    "s": 133.03,
+    "e": 133.51,
+    "sent": 33
+   },
+   {
+    "i": 341,
+    "w": "we",
+    "s": 133.51,
+    "e": 133.71,
+    "sent": 33
+   },
+   {
+    "i": 342,
+    "w": "go,",
+    "s": 133.71,
+    "e": 133.99,
+    "sent": 33
+   },
+   {
+    "i": 343,
+    "w": "Léo,",
+    "s": 134.11,
+    "e": 134.57,
+    "sent": 33
+   },
+   {
+    "i": 344,
+    "w": "a",
+    "s": 134.69,
+    "e": 134.79,
+    "sent": 33
+   },
+   {
+    "i": 345,
+    "w": "lot",
+    "s": 134.79,
+    "e": 134.99,
+    "sent": 33
+   },
+   {
+    "i": 346,
+    "w": "of",
+    "s": 134.99,
+    "e": 135.14,
+    "sent": 33
+   },
+   {
+    "i": 347,
+    "w": "you",
+    "s": 135.14,
+    "e": 135.35,
+    "sent": 33
+   },
+   {
+    "i": 348,
+    "w": "asked",
+    "s": 135.35,
+    "e": 135.65,
+    "sent": 33
+   },
+   {
+    "i": 349,
+    "w": "about",
+    "s": 135.65,
+    "e": 135.96,
+    "sent": 33
+   },
+   {
+    "i": 350,
+    "w": "the",
+    "s": 135.96,
+    "e": 136.16,
+    "sent": 33
+   },
+   {
+    "i": 351,
+    "w": "Summit",
+    "s": 136.16,
+    "e": 136.51,
+    "sent": 33
+   },
+   {
+    "i": 352,
+    "w": "Bottle.",
+    "s": 136.51,
+    "e": 136.92,
+    "sent": 33
+   },
+   {
+    "i": 353,
+    "w": "Right,",
+    "s": 137.27,
+    "e": 137.7,
+    "sent": 34
+   },
+   {
+    "i": 354,
+    "w": "the",
+    "s": 137.82,
+    "e": 138.04,
+    "sent": 34
+   },
+   {
+    "i": 355,
+    "w": "Summit",
+    "s": 138.04,
+    "e": 138.43,
+    "sent": 34
+   },
+   {
+    "i": 356,
+    "w": "Bottle",
+    "s": 138.43,
+    "e": 138.82,
+    "sent": 34
+   },
+   {
+    "i": 357,
+    "w": "has",
+    "s": 138.82,
+    "e": 139.04,
+    "sent": 34
+   },
+   {
+    "i": 358,
+    "w": "a",
+    "s": 139.04,
+    "e": 139.15,
+    "sent": 34
+   },
+   {
+    "i": 359,
+    "w": "lifetime",
+    "s": 139.15,
+    "e": 139.65,
+    "sent": 34
+   },
+   {
+    "i": 360,
+    "w": "warranty,",
+    "s": 139.65,
+    "e": 140.21,
+    "sent": 34
+   },
+   {
+    "i": 361,
+    "w": "even",
+    "s": 140.33,
+    "e": 140.6,
+    "sent": 34
+   },
+   {
+    "i": 362,
+    "w": "if",
+    "s": 140.6,
+    "e": 140.77,
+    "sent": 34
+   },
+   {
+    "i": 363,
+    "w": "you",
+    "s": 140.77,
+    "e": 140.99,
+    "sent": 34
+   },
+   {
+    "i": 364,
+    "w": "dent",
+    "s": 140.99,
+    "e": 141.27,
+    "sent": 34
+   },
+   {
+    "i": 365,
+    "w": "it.",
+    "s": 141.27,
+    "e": 141.49,
+    "sent": 34
+   },
+   {
+    "i": 366,
+    "w": "Dropped",
+    "s": 141.84,
+    "e": 142.27,
+    "sent": 35
+   },
+   {
+    "i": 367,
+    "w": "it",
+    "s": 142.27,
+    "e": 142.44,
+    "sent": 35
+   },
+   {
+    "i": 368,
+    "w": "on",
+    "s": 142.44,
+    "e": 142.6,
+    "sent": 35
+   },
+   {
+    "i": 369,
+    "w": "a",
+    "s": 142.6,
+    "e": 142.71,
+    "sent": 35
+   },
+   {
+    "i": 370,
+    "w": "rock,",
+    "s": 142.71,
+    "e": 143.03,
+    "sent": 35
+   },
+   {
+    "i": 371,
+    "w": "lost",
+    "s": 143.15,
+    "e": 143.49,
+    "sent": 35
+   },
+   {
+    "i": 372,
+    "w": "the",
+    "s": 143.49,
+    "e": 143.76,
+    "sent": 35
+   },
+   {
+    "i": 373,
+    "w": "cap,",
+    "s": 143.76,
+    "e": 144.1,
+    "sent": 35
+   },
+   {
+    "i": 374,
+    "w": "you",
+    "s": 144.22,
+    "e": 144.42,
+    "sent": 35,
+    "filler": true
+   },
+   {
+    "i": 375,
+    "w": "know,",
+    "s": 144.42,
+    "e": 144.72,
+    "sent": 35,
+    "filler": true
+   },
+   {
+    "i": 376,
+    "w": "cracked",
+    "s": 144.84,
+    "e": 145.27,
+    "sent": 35
+   },
+   {
+    "i": 377,
+    "w": "the",
+    "s": 145.27,
+    "e": 145.48,
+    "sent": 35
+   },
+   {
+    "i": 378,
+    "w": "lid,",
+    "s": 145.48,
+    "e": 145.75,
+    "sent": 35
+   },
+   {
+    "i": 379,
+    "w": "we",
+    "s": 145.87,
+    "e": 146.05,
+    "sent": 35
+   },
+   {
+    "i": 380,
+    "w": "replace",
+    "s": 146.05,
+    "e": 146.51,
+    "sent": 35
+   },
+   {
+    "i": 381,
+    "w": "it.",
+    "s": 146.51,
+    "e": 146.74,
+    "sent": 35
+   },
+   {
+    "i": 382,
+    "w": "Even",
+    "s": 147.09,
+    "e": 147.37,
+    "sent": 36
+   },
+   {
+    "i": 383,
+    "w": "the",
+    "s": 147.37,
+    "e": 147.59,
+    "sent": 36
+   },
+   {
+    "i": 384,
+    "w": "dents?",
+    "s": 147.59,
+    "e": 147.98,
+    "sent": 36
+   },
+   {
+    "i": 385,
+    "w": "Even",
+    "s": 148.33,
+    "e": 148.61,
+    "sent": 37
+   },
+   {
+    "i": 386,
+    "w": "the",
+    "s": 148.61,
+    "e": 148.83,
+    "sent": 37
+   },
+   {
+    "i": 387,
+    "w": "dents,",
+    "s": 148.83,
+    "e": 149.22,
+    "sent": 37
+   },
+   {
+    "i": 388,
+    "w": "uh,",
+    "s": 149.34,
+    "e": 149.62,
+    "sent": 37,
+    "filler": true
+   },
+   {
+    "i": 389,
+    "w": "a",
+    "s": 149.74,
+    "e": 149.86,
+    "sent": 37
+   },
+   {
+    "i": 390,
+    "w": "dented",
+    "s": 149.86,
+    "e": 150.28,
+    "sent": 37
+   },
+   {
+    "i": 391,
+    "w": "bottle",
+    "s": 150.28,
+    "e": 150.7,
+    "sent": 37
+   },
+   {
+    "i": 392,
+    "w": "still",
+    "s": 150.7,
+    "e": 151.06,
+    "sent": 37
+   },
+   {
+    "i": 393,
+    "w": "keeps",
+    "s": 151.06,
+    "e": 151.42,
+    "sent": 37
+   },
+   {
+    "i": 394,
+    "w": "your",
+    "s": 151.42,
+    "e": 151.71,
+    "sent": 37
+   },
+   {
+    "i": 395,
+    "w": "water",
+    "s": 151.71,
+    "e": 152.07,
+    "sent": 37
+   },
+   {
+    "i": 396,
+    "w": "cold.",
+    "s": 152.07,
+    "e": 152.43,
+    "sent": 37
+   },
+   {
+    "i": 397,
+    "w": "Which",
+    "s": 153.43,
+    "e": 153.76,
+    "sent": 38
+   },
+   {
+    "i": 398,
+    "w": "colours",
+    "s": 153.76,
+    "e": 154.21,
+    "sent": 38
+   },
+   {
+    "i": 399,
+    "w": "does",
+    "s": 154.21,
+    "e": 154.49,
+    "sent": 38
+   },
+   {
+    "i": 400,
+    "w": "it",
+    "s": 154.49,
+    "e": 154.66,
+    "sent": 38
+   },
+   {
+    "i": 401,
+    "w": "come",
+    "s": 154.66,
+    "e": 154.94,
+    "sent": 38
+   },
+   {
+    "i": 402,
+    "w": "in?",
+    "s": 154.94,
+    "e": 155.16,
+    "sent": 38
+   },
+   {
+    "i": 403,
+    "w": "Moss,",
+    "s": 155.51,
+    "e": 156,
+    "sent": 39
+   },
+   {
+    "i": 404,
+    "w": "Ember,",
+    "s": 156.12,
+    "e": 156.53,
+    "sent": 39
+   },
+   {
+    "i": 405,
+    "w": "Slate",
+    "s": 156.65,
+    "e": 156.98,
+    "sent": 39
+   },
+   {
+    "i": 406,
+    "w": "and",
+    "s": 156.98,
+    "e": 157.2,
+    "sent": 39
+   },
+   {
+    "i": 407,
+    "w": "Glacier,",
+    "s": 157.2,
+    "e": 157.69,
+    "sent": 39
+   },
+   {
+    "i": 408,
+    "w": "like",
+    "s": 157.81,
+    "e": 158.14,
+    "sent": 39
+   },
+   {
+    "i": 409,
+    "w": "the",
+    "s": 158.14,
+    "e": 158.4,
+    "sent": 39
+   },
+   {
+    "i": 410,
+    "w": "bags.",
+    "s": 158.4,
+    "e": 158.8,
+    "sent": 39
+   },
+   {
+    "i": 411,
+    "w": "And",
+    "s": 159.15,
+    "e": 159.38,
+    "sent": 40
+   },
+   {
+    "i": 412,
+    "w": "how",
+    "s": 159.38,
+    "e": 159.61,
+    "sent": 40
+   },
+   {
+    "i": 413,
+    "w": "do",
+    "s": 159.61,
+    "e": 159.79,
+    "sent": 40
+   },
+   {
+    "i": 414,
+    "w": "people",
+    "s": 159.79,
+    "e": 160.19,
+    "sent": 40
+   },
+   {
+    "i": 415,
+    "w": "send",
+    "s": 160.19,
+    "e": 160.48,
+    "sent": 40
+   },
+   {
+    "i": 416,
+    "w": "something",
+    "s": 160.48,
+    "e": 161.06,
+    "sent": 40
+   },
+   {
+    "i": 417,
+    "w": "in?",
+    "s": 161.06,
+    "e": 161.29,
+    "sent": 40
+   },
+   {
+    "i": 418,
+    "w": "The",
+    "s": 161.64,
+    "e": 161.88,
+    "sent": 41
+   },
+   {
+    "i": 419,
+    "w": "repair",
+    "s": 161.88,
+    "e": 162.29,
+    "sent": 41
+   },
+   {
+    "i": 420,
+    "w": "form",
+    "s": 162.29,
+    "e": 162.58,
+    "sent": 41
+   },
+   {
+    "i": 421,
+    "w": "is,",
+    "s": 162.58,
+    "e": 162.82,
+    "sent": 41
+   },
+   {
+    "i": 422,
+    "w": "like,",
+    "s": 162.94,
+    "e": 163.37,
+    "sent": 41,
+    "filler": true
+   },
+   {
+    "i": 423,
+    "w": "linked",
+    "s": 163.49,
+    "e": 163.85,
+    "sent": 41
+   },
+   {
+    "i": 424,
+    "w": "below",
+    "s": 163.85,
+    "e": 164.16,
+    "sent": 41
+   },
+   {
+    "i": 425,
+    "w": "this",
+    "s": 164.16,
+    "e": 164.42,
+    "sent": 41
+   },
+   {
+    "i": 426,
+    "w": "live,",
+    "s": 164.42,
+    "e": 164.73,
+    "sent": 41
+   },
+   {
+    "i": 427,
+    "w": "and",
+    "s": 164.85,
+    "e": 165.06,
+    "sent": 41
+   },
+   {
+    "i": 428,
+    "w": "shipping",
+    "s": 165.06,
+    "e": 165.53,
+    "sent": 41
+   },
+   {
+    "i": 429,
+    "w": "is",
+    "s": 165.53,
+    "e": 165.69,
+    "sent": 41
+   },
+   {
+    "i": 430,
+    "w": "free.",
+    "s": 165.69,
+    "e": 166,
+    "sent": 41
+   },
+   {
+    "i": 431,
+    "w": "Thanks",
+    "s": 166.35,
+    "e": 166.88,
+    "sent": 42
+   },
+   {
+    "i": 432,
+    "w": "Léo,",
+    "s": 166.88,
+    "e": 167.26,
+    "sent": 42
+   },
+   {
+    "i": 433,
+    "w": "and",
+    "s": 167.38,
+    "e": 167.61,
+    "sent": 42
+   },
+   {
+    "i": 434,
+    "w": "thanks",
+    "s": 167.61,
+    "e": 168.03,
+    "sent": 42
+   },
+   {
+    "i": 435,
+    "w": "everyone",
+    "s": 168.03,
+    "e": 168.56,
+    "sent": 42
+   },
+   {
+    "i": 436,
+    "w": "for",
+    "s": 168.56,
+    "e": 168.8,
+    "sent": 42
+   },
+   {
+    "i": 437,
+    "w": "all",
+    "s": 168.8,
+    "e": 169.04,
+    "sent": 42
+   },
+   {
+    "i": 438,
+    "w": "the",
+    "s": 169.04,
+    "e": 169.27,
+    "sent": 42
+   },
+   {
+    "i": 439,
+    "w": "questions.",
+    "s": 169.27,
+    "e": 169.93,
+    "sent": 42
+   },
+   {
+    "i": 440,
+    "w": "Thank",
+    "s": 170.28,
+    "e": 170.63,
+    "sent": 43
+   },
+   {
+    "i": 441,
+    "w": "you,",
+    "s": 170.63,
+    "e": 170.92,
+    "sent": 43
+   },
+   {
+    "i": 442,
+    "w": "um,",
+    "s": 171.04,
+    "e": 171.42,
+    "sent": 43,
+    "filler": true
+   },
+   {
+    "i": 443,
+    "w": "and",
+    "s": 171.54,
+    "e": 171.78,
+    "sent": 43
+   },
+   {
+    "i": 444,
+    "w": "send",
+    "s": 171.78,
+    "e": 172.08,
+    "sent": 43
+   },
+   {
+    "i": 445,
+    "w": "us",
+    "s": 172.08,
+    "e": 172.26,
+    "sent": 43
+   },
+   {
+    "i": 446,
+    "w": "photos",
+    "s": 172.26,
+    "e": 172.68,
+    "sent": 43
+   },
+   {
+    "i": 447,
+    "w": "of",
+    "s": 172.68,
+    "e": 172.86,
+    "sent": 43
+   },
+   {
+    "i": 448,
+    "w": "your",
+    "s": 172.86,
+    "e": 173.16,
+    "sent": 43
+   },
+   {
+    "i": 449,
+    "w": "repairs.",
+    "s": 173.16,
+    "e": 173.7,
+    "sent": 43
+   },
+   {
+    "i": 450,
+    "w": "See",
+    "s": 174.05,
+    "e": 174.32,
+    "sent": 44
+   },
+   {
+    "i": 451,
+    "w": "you",
+    "s": 174.32,
+    "e": 174.58,
+    "sent": 44
+   },
+   {
+    "i": 452,
+    "w": "next",
+    "s": 174.58,
+    "e": 174.91,
+    "sent": 44
+   },
+   {
+    "i": 453,
+    "w": "Friday,",
+    "s": 174.91,
+    "e": 175.45,
+    "sent": 44
+   },
+   {
+    "i": 454,
+    "w": "same",
+    "s": 175.57,
+    "e": 175.98,
+    "sent": 44
+   },
+   {
+    "i": 455,
+    "w": "time,",
+    "s": 175.98,
+    "e": 176.48,
+    "sent": 44
+   },
+   {
+    "i": 456,
+    "w": "same",
+    "s": 176.6,
+    "e": 176.98,
+    "sent": 44
+   },
+   {
+    "i": 457,
+    "w": "workshop.",
+    "s": 176.98,
+    "e": 177.74,
+    "sent": 44
+   }
+  ],
+  "shots": [
+   {
+    "s": 0,
+    "e": 26.93,
+    "label": "Camille and Léo in the studio",
+    "focus": 0.72
+   },
+   {
+    "s": 26.93,
+    "e": 35.17,
+    "label": "The workshop floor",
+    "focus": 0.7
+   },
+   {
+    "s": 35.17,
+    "e": 43.87,
+    "label": "Twelve hundred bags",
+    "focus": 0.3
+   },
+   {
+    "s": 43.87,
+    "e": 54.76,
+    "label": "What breaks most",
+    "focus": 0.3
+   },
+   {
+    "s": 54.76,
+    "e": 58.87,
+    "label": "A worn zip slider",
+    "focus": 0.5
+   },
+   {
+    "s": 58.87,
+    "e": 71.72,
+    "label": "Buckles and fabric",
+    "focus": 0.62
+   },
+   {
+    "s": 71.72,
+    "e": 78.46,
+    "label": "Small parts, cheap fixes",
+    "focus": 0.3
+   },
+   {
+    "s": 78.46,
+    "e": 87.72,
+    "label": "Reading the chat",
+    "focus": 0.72
+   },
+   {
+    "s": 87.72,
+    "e": 105.15,
+    "label": "Fixing a slider",
+    "focus": 0.58
+   },
+   {
+    "s": 105.15,
+    "e": 123.16,
+    "label": "Second-hand bags",
+    "focus": 0.3
+   },
+   {
+    "s": 123.16,
+    "e": 132.88,
+    "label": "At the heavy-duty machine",
+    "focus": 0.4
+   },
+   {
+    "s": 132.88,
+    "e": 137.12,
+    "label": "The Summit Bottle question",
+    "focus": 0.72
+   },
+   {
+    "s": 137.12,
+    "e": 146.94,
+    "label": "A Summit Bottle by the lake",
+    "focus": 0.52
+   },
+   {
+    "s": 146.94,
+    "e": 159,
+    "label": "Even the dents",
+    "focus": 0.3
+   },
+   {
+    "s": 159,
+    "e": 166.2,
+    "label": "Sending a repair in",
+    "focus": 0.45
+   },
+   {
+    "s": 166.2,
+    "e": 178.54,
+    "label": "Saying goodbye",
+    "focus": 0.72
+   }
+  ],
+  "chapters": [
+   {
+    "title": "Welcome",
+    "s": 0,
+    "e": 43.87,
+    "display": "02:10"
+   },
+   {
+    "title": "What breaks most",
+    "s": 43.87,
+    "e": 78.46,
+    "display": "14:35"
+   },
+   {
+    "title": "Your questions",
+    "s": 78.46,
+    "e": 132.88,
+    "display": "29:50"
+   },
+   {
+    "title": "The bottle warranty",
+    "s": 132.88,
+    "e": 178.54,
+    "display": "45:20"
+   }
+  ]
+ }
+}
