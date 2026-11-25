@@ -1,6 +1,6 @@
 // Sage · Strategy: everything Sage plugs into the core (see src/app/agents-registry.ts).
 import { defineIntent, type AgentModule } from '../../app/agent-module'
-import { onResolveStrategy } from './slice'
+import { campaignsDue, closeCampaigns, onResolveStrategy, onUndoStrategy } from './slice'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -23,6 +23,9 @@ const sage: AgentModule = {
   id: 'sage',
   script: SCRIPT,
   onResolve: onResolveStrategy,
+  onUndo: onUndoStrategy,
+  due: campaignsDue,
+  tick: closeCampaigns,
   intents: [campaign],
 }
 export default sage

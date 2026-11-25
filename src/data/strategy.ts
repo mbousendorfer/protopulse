@@ -4,7 +4,8 @@ import type { Pillar as PillarName } from './publishing'
 
 export type CampaignStatus = 'brief' | 'review' | 'live' | 'done'
 export type Phase = { name: 'Teasing' | 'Launch' | 'Follow-up'; start: number; end: number; summary: string }
-export type CPost = { id: string; phase: Phase['name']; network: Network; day: number; title: string; published?: boolean }
+/** `postId`: the post in Atlas's calendar, when it isn't the same id. */
+export type CPost = { id: string; phase: Phase['name']; network: Network; day: number; title: string; published?: boolean; pillar?: PillarName; postId?: string }
 export type CTask = { id: string; label: string; agent: AgentId; status: 'todo' | 'doing' | 'done' }
 export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined' }
 export type Change = { kind: 'added' | 'removed' | 'changed'; text: string }
@@ -57,8 +58,8 @@ export const CAMPAIGNS: Campaign[] = [
       { id: 'tw3', phase: 'Launch', network: 'instagram', day: -1, title: 'Day 1: any trail counts', published: true },
       { id: 'tw4', phase: 'Launch', network: 'x', day: 0, title: 'Trail Week is live: join the challenge', published: true },
       { id: 'tw5', phase: 'Launch', network: 'tiktok', day: 0, title: 'Packing for Trail Week', published: true },
-      { id: 'tw6', phase: 'Launch', network: 'instagram', day: 2, title: 'Trail kit list, carousel' },
-      { id: 'tw7', phase: 'Launch', network: 'instagram', day: 4, title: 'Sunrise at Lac Blanc, reel' },
+      { id: 'tw6', phase: 'Launch', network: 'instagram', day: 2, title: 'Trail kit list, carousel', postId: 'p-21' },
+      { id: 'tw7', phase: 'Launch', network: 'instagram', day: 4, title: 'Sunrise at Lac Blanc, reel', postId: 'p-25' },
       { id: 'tw8', phase: 'Launch', network: 'facebook', day: 3, title: 'Your trails so far' },
       { id: 'tw9', phase: 'Follow-up', network: 'youtube', day: 8, title: 'Trail Week, the film' },
       { id: 'tw10', phase: 'Follow-up', network: 'instagram', day: 7, title: 'The 12 best trails you shared' },
@@ -134,7 +135,7 @@ export const CAMPAIGNS: Campaign[] = [
       { name: 'Follow-up', start: T(0, 0, 24), end: T(23, 59, 26), summary: 'Gift cards for late shoppers' },
     ],
     posts: [
-      { id: 'gg1', phase: 'Teasing', network: 'instagram', day: 13, title: 'What our team is giving this year' },
+      { id: 'gg1', phase: 'Teasing', network: 'instagram', day: 13, title: 'What our team is giving this year', pillar: 'Community' },
       { id: 'gg2', phase: 'Launch', network: 'instagram', day: 15, title: 'Gifts under €50, carousel' },
       { id: 'gg3', phase: 'Launch', network: 'tiktok', day: 16, title: 'Wrapping a Ridge without paper' },
       { id: 'gg4', phase: 'Launch', network: 'facebook', day: 17, title: 'Gifts under €150' },
@@ -218,16 +219,16 @@ export function generatePlan(id: string, brief: string, now: number, opts: { bud
   const L = dayOf(launch)
   const name = `${prod.name} ${/launch/i.test(brief) ? 'launch' : 'campaign'}`
   const posts: CPost[] = [
-    { id: `${id}-1`, phase: 'Teasing', network: 'instagram', day: L - 5, title: `Something is coming: ${prod.name} teaser` },
-    { id: `${id}-2`, phase: 'Teasing', network: 'tiktok', day: L - 3, title: 'Behind the scenes: the rain test' },
-    { id: `${id}-3`, phase: 'Teasing', network: 'linkedin', day: L - 2, title: `Why we spent 2 years on the ${prod.name}` },
-    { id: `${id}-4`, phase: 'Launch', network: 'instagram', day: L, title: `${prod.name} is here, carousel` },
-    { id: `${id}-5`, phase: 'Launch', network: 'tiktok', day: L, title: '4 hours in the rain in 30 seconds' },
-    { id: `${id}-6`, phase: 'Launch', network: 'facebook', day: L + 1, title: `${prod.name}: everything you asked` },
-    { id: `${id}-7`, phase: 'Launch', network: 'youtube', day: L + 2, title: 'Full review by the design team' },
-    { id: `${id}-8`, phase: 'Launch', network: 'instagram', day: L + 3, title: 'First customers, first trails' },
-    { id: `${id}-9`, phase: 'Follow-up', network: 'tiktok', day: L + 6, title: 'Your first week with it' },
-    { id: `${id}-10`, phase: 'Follow-up', network: 'linkedin', day: L + 8, title: 'Launch numbers and what we learned' },
+    { id: `${id}-1`, phase: 'Teasing', network: 'instagram', day: L - 5, title: `Something is coming: ${prod.name} teaser`, pillar: 'Gear that lasts' },
+    { id: `${id}-2`, phase: 'Teasing', network: 'tiktok', day: L - 3, title: 'Behind the scenes: the rain test', pillar: 'Gear that lasts' },
+    { id: `${id}-3`, phase: 'Teasing', network: 'linkedin', day: L - 2, title: `Why we spent 2 years on the ${prod.name}`, pillar: 'Repair & care' },
+    { id: `${id}-4`, phase: 'Launch', network: 'instagram', day: L, title: `${prod.name} is here, carousel`, pillar: 'Gear that lasts' },
+    { id: `${id}-5`, phase: 'Launch', network: 'tiktok', day: L, title: '4 hours in the rain in 30 seconds', pillar: 'Gear that lasts' },
+    { id: `${id}-6`, phase: 'Launch', network: 'facebook', day: L + 1, title: `${prod.name}: everything you asked`, pillar: 'Gear that lasts' },
+    { id: `${id}-7`, phase: 'Launch', network: 'youtube', day: L + 2, title: 'Full review by the design team', pillar: 'Gear that lasts' },
+    { id: `${id}-8`, phase: 'Launch', network: 'instagram', day: L + 3, title: 'First customers, first trails', pillar: 'Community' },
+    { id: `${id}-9`, phase: 'Follow-up', network: 'tiktok', day: L + 6, title: 'Your first week with it', pillar: 'Community' },
+    { id: `${id}-10`, phase: 'Follow-up', network: 'linkedin', day: L + 8, title: 'Launch numbers and what we learned', pillar: 'Trail stories' },
   ]
   const budget = opts.budget ?? (target >= 1000 ? 1200 : 600)
   return {
