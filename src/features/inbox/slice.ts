@@ -107,6 +107,8 @@ function settleCard(s: State, c: Conversation, text: string, status: 'approved' 
 const attachmentNote = (c: Conversation) => (c.attachments ?? []).filter(a => !a.removed).map(a => a.label).join(' · ')
 
 const hasDraft = (c: Conversation) => (c.status === 'draft' || c.status === 'escalated') && !!c.draft?.length
+/** What a person sent or looked at is reviewed. */
+const BY_SAM = { reviewed: true, reviewedBy: 'sam' } as const
 const NAME: Record<Assignee, string> = { sam: 'you', claire: 'Claire' }
 
 /** One action on many conversations: one journal line, one Undo. */
@@ -122,10 +124,10 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   const cards = s.handoffs.filter(h => picked.some(c => c.handoff === h.id))
   const change = (c: Conversation): Partial<Conversation> => {
     switch (a.op) {
-      case 'approve': return { status: 'you', draft: undefined, unread: false, messages: [...c.messages, { id: uid('m'), from: 'nova', text: plain(c.draft), at: t, approved: true }] }
+      case 'approve': return { status: 'you', draft: undefined, unread: false, ...BY_SAM, messages: [...c.messages, { id: uid('m'), from: 'nova', text: plain(c.draft), at: t, approved: true }] }
       case 'hide': return { status: 'hidden', note: 'Hidden by you' }
       case 'unhide': return { status: c.draft?.length ? 'draft' : 'auto', note: undefined }
-      case 'reviewed': return { reviewed: a.value, unread: false }
+      case 'reviewed': return { reviewed: a.value, reviewedBy: a.value ? 'sam' : undefined, unread: false }
       case 'assign': return { assignee: a.value }
       case 'label': return { labels: [...new Set([...(c.labels ?? []), a.value])] }
       case 'unlabel': return { labels: (c.labels ?? []).filter(l => l !== a.value) }
@@ -174,13 +176,13 @@ export function reduceInbox(s0: State, a: InboxAction): State {
     case 'inbox/approve': {
       const text = a.text ?? plain(c.draft)
       const edited = a.text !== undefined && a.text !== plain(c.draft)
-      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
+      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, ...BY_SAM, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
       next = settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved')
       if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
     }
     case 'inbox/send': {
-      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, messages: [...x.messages, { id: uid('m'), from: 'you', text: a.text, at: t }] }))
+      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, ...BY_SAM, messages: [...x.messages, { id: uid('m'), from: 'you', text: a.text, at: t }] }))
       next = settleCard(next, c, `You replied to ${c.author} yourself`, 'done')
       if (!c.handoff || next === s) next = pushLog(next, { agent: 'nova', text: `You replied to ${c.author} yourself`, status: 'done', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
@@ -227,7 +229,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
 
 /** Nova's reply sent alone, taken back: the message stays crossed out, the text comes back as a draft, the journal says so. */
 function undoAlone(s: State, c: Conversation, msg: Msg): State {
-  let next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)) }))
+  let next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], reviewed: false, reviewedBy: undefined, messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)) }))
   if (msg.log) next = { ...next, log: next.log.map(l => (l.id === msg.log ? { ...l, status: 'undone' as const } : l)) }
   if (msg.log && s.log.find(l => l.id === msg.log)?.status === 'undone') return next
   return pushLog(next, { agent: 'nova', text: `Undone: Nova’s reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
@@ -247,7 +249,7 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
   const base = cardConv(h, p, id, t)
   const sent = (base.attachments ?? []).map(a => a.label).join(' · ')
   const conv: Conversation = {
-    ...base, status: 'auto', unread: false, draft: undefined, attachments: undefined, note: sent ? `Sent with: ${sent}` : undefined,
+    ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, attachments: undefined, note: sent ? `Sent with: ${sent}` : undefined,
     messages: [{ ...base.messages[0], at: t - 2 * MIN }, { id: uid('m'), from: 'nova', text: kindOf(h, p).reply ?? plain(p.draft), at: t, auto: true, undoUntil: t + 10 * MIN, log: next.log[0].id }],
   }
   return { ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }
@@ -274,7 +276,7 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
   const draft = p ? plain(p.draft) : plain(conv.draft)
   const extras = attachmentNote(conv)
   const send = (status: ConvStatus, text = draft): Partial<Conversation> => ({
-    status: d.act ? 'auto' : status, unread: false, draft: undefined, note: extras ? `Sent with: ${extras}` : conv.note,
+    status: d.act ? 'auto' : status, unread: false, reviewed: true, reviewedBy: d.act ? 'nova' : 'sam', draft: undefined, note: extras ? `Sent with: ${extras}` : conv.note,
     messages: text ? [...conv.messages, { id: uid('m'), from: 'nova', text, at: t, approved: !d.act, auto: d.act, card: h.id }] : conv.messages,
   })
   let change: Partial<Conversation> | undefined
@@ -290,7 +292,7 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
     case 'trial': break
   }
   if (!change) return s0
-  const settled = { card: h.id, created, status: conv.status, draft: conv.draft, note: conv.note, unread: conv.unread }
+  const settled = { card: h.id, created, status: conv.status, draft: conv.draft, note: conv.note, unread: conv.unread, reviewed: conv.reviewed, reviewedBy: conv.reviewedBy }
   return patch(s, conv.id, { ...change, settled })
 }
 
@@ -303,7 +305,7 @@ export function onUndoInbox(s: State, entry: LogEntry): State {
     const b = c.settled
     next = b.created
       ? { ...next, inbox: { ...next.inbox, convs: next.inbox.convs.filter(x => x.id !== c.id) } }
-      : patch(next, c.id, { status: b.status, draft: b.draft, note: b.note, unread: b.unread, settled: undefined, messages: c.messages.filter(m => m.card !== h.id) })
+      : patch(next, c.id, { status: b.status, draft: b.draft, note: b.note, unread: b.unread, reviewed: b.reviewed, reviewedBy: b.reviewedBy, settled: undefined, messages: c.messages.filter(m => m.card !== h.id) })
   }
   const alone = next.inbox.convs.find(x => x.messages.some(m => m.log === entry.id && !m.undone))
   const msg = alone?.messages.find(m => m.log === entry.id)

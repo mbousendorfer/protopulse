@@ -73,6 +73,9 @@
 .media-missing { display: flex; align-items: center; gap: var(--s3); border-color: var(--caution-edge); flex-wrap: wrap; }
 .media-missing > svg { color: var(--caution); }
 .media-missing > .grow { flex: 1 1 360px; min-width: 0; }
+.pub-fail { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; border-color: var(--alert-edge); margin-bottom: var(--s4); }
+.pub-fail > svg { color: var(--alert); }
+.pub-fail > .grow { flex: 1 1 320px; min-width: 0; }
 .media-bar { display: flex; align-items: flex-start; gap: var(--s3); }
 .media-bar > .grow { min-width: 0; }
 .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s3); }

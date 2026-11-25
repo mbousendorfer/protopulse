@@ -101,3 +101,21 @@ describe('⌘K reply to', () => {
     expect(findConvo(s, 'nobody-here')).toBeUndefined()
   })
 })
+
+describe('review', () => {
+  it('Nova reviews what she settles alone, a person what they send; Review all is one Undo', () => {
+    let s = initialState()
+    expect(conv(s, 'c-tom').reviewedBy).toBe('nova')
+    expect(conv(s, 'c-lea').reviewed).toBeFalsy()
+    s = reducer(s, { type: 'core/autonomy', agent: 'nova', action: 'nova-complaint', level: 'act' })
+    expect(conv(s, 'c-lea')).toMatchObject({ reviewed: true, reviewedBy: 'nova' })
+    s = reducer(s, { type: 'inbox/approve', id: 'c-thomas' })
+    expect(conv(s, 'c-thomas')).toMatchObject({ reviewed: true, reviewedBy: 'sam' })
+    const todo = s.inbox.convs.filter(c => !c.reviewed).map(c => c.id)
+    expect(todo.length).toBeGreaterThan(0)
+    s = reducer(s, { type: 'inbox/bulk', ids: todo, op: 'reviewed', value: true })
+    expect(s.inbox.convs.every(c => c.reviewed)).toBe(true)
+    s = reducer(s, { type: 'inbox/undo' })
+    expect(s.inbox.convs.filter(c => !c.reviewed).map(c => c.id)).toEqual(todo)
+  })
+})

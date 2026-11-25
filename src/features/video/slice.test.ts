@@ -3,6 +3,7 @@ import { initialState, type State } from '../../app/state'
 import { reducer, type Action } from '../../app/reducer'
 import { now } from '../../app/core'
 import { PHASES, PHASE_MS, SEEDS, TRANSCRIPT } from '../../data/video'
+import { clipLengthOf, clipPosts as clipPosts2, rescore } from './model'
 
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
@@ -20,9 +21,11 @@ test('a new upload is processed, its clips arrive with a Desk card; approving th
   expect(card.preview).toEqual({ type: 'clip', clip: ready[0].id })
 
   s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
-  expect(s.video.clips.filter(c => c.source === 'gr20').every(c => c.status === 'sent')).toBe(true)
-  expect(clipPosts(s, 'gr20').length).toBeGreaterThanOrEqual(3)
-  expect(s.tester.filter(e => e.kind === 'video/decision')).toHaveLength(3)
+  // Hugo is on screen in the opening shot without a signed release: that clip stays.
+  expect(s.video.clips.filter(c => c.source === 'gr20' && c.status === 'sent')).toHaveLength(2)
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('ready')
+  expect(clipPosts(s, 'gr20').length).toBeGreaterThanOrEqual(2)
+  expect(s.tester.filter(e => e.kind === 'video/decision')).toHaveLength(2)
 
   s = run(s, { type: 'core/undo', id: s.log[0].id })
   expect(clipPosts(s, 'gr20')).toHaveLength(0)
@@ -183,4 +186,36 @@ test('a dub you ask for waits for review on Draft, and is ready on Act', () => {
   expect(clipOf(draft, id).audio).toMatchObject({ lang: 'it', dubs: ['it'], review: ['it'] })
   const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'it' })
   expect(clipOf(act, id).audio.review ?? []).toEqual([])
+})
+
+test('a guest without a signed release holds the clip, with the reason; recording the release lets it go', () => {
+  let s = done(run(initialState(), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  s = run(s, { type: 'video/send', ids: ['clip-gr20-refuge'] })
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('ready')
+  expect(s.notice?.text).toMatch(/Hugo is on screen without a signed release/)
+  s = run(s, { type: 'video/release', person: 'hugo', signed: true }, { type: 'video/send', ids: ['clip-gr20-refuge'] })
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('sent')
+})
+
+test('five clips per video per week: Juno sends the best and says why the others wait', () => {
+  // repair already has 2 out this week; 4 more found clips + 3 ready = 7 candidates for 3 places.
+  let s = run(initialState(), { type: 'video/find', source: 'repair', query: 'stitches webbing bin carbon', len: 20, count: 4 })
+  const ready = s.video.clips.filter(c => c.source === 'repair' && c.status === 'ready')
+  expect(ready.length).toBeGreaterThan(3)
+  s = run(s, { type: 'video/send', ids: ready.map(c => c.id) })
+  expect(s.video.clips.filter(c => c.source === 'repair' && (c.status === 'sent' || c.status === 'published'))).toHaveLength(5)
+  expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
+})
+
+test('length per network: a 70 s clip goes to LinkedIn only, and loses Flow points only for the networks that cut it', () => {
+  const s0 = initialState()
+  const c = s0.video.clips.find(x => x.id === 'clip-repair-twenty')!
+  const t = TRANSCRIPT.repair
+  const long = { ...c, end: t.sentences[27].e }
+  const dur = clipLengthOf(long, t)
+  expect(dur).toBeGreaterThan(60)
+  expect(dur).toBeLessThan(90)
+  expect(clipPosts2(long, s0.publishing.posts, now(s0), () => 'x', dur).map(p => p.network)).toEqual(['linkedin'])
+  expect(rescore({ ...long, post: { ...long.post, networks: ['linkedin'] } }, t).reasons.flow).not.toMatch(/longer than/)
+  expect(rescore(long, t).reasons.flow).toMatch(/longer than 60 s, TikTok and Reels cut it off/)
 })

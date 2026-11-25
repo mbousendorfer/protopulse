@@ -78,6 +78,8 @@ export type Clip = {
   back?: number
   /** Desk card it was sent from, so undoing that decision takes it back. */
   sentFrom?: string
+  /** When it went to Atlas: counts toward the weekly quota per video. */
+  sentAt?: number
   arrivedAt: number
 }
 
@@ -269,6 +271,13 @@ export function findMoments(t: Transcript, query: string, len: number, count: nu
   return out
 }
 
+/* ---------- Length per network ---------- */
+
+/** How long a clip may run on each network, in seconds (the guardrail “15–60 s · 90 s on LinkedIn”). */
+export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90 : 60 })
+export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
+export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
+
 /* ---------- Score ---------- */
 
 export const SCORE_LABEL: Record<ScoreKey, string> = { hook: 'Hook', flow: 'Flow', value: 'Value', trend: 'Trend' }
@@ -290,7 +299,8 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
   else if (firstSentence && /\?|\d/.test(firstSentence.text)) { hook += 6; hookWhy = 'Opens on a question or a number in the first 3 seconds' }
   flow -= Math.min(12, fill * 2) + Math.min(12, sil * 3)
   let flowWhy = fill || sil ? `${fill} filler${fill === 1 ? '' : 's'} and ${sil} long pause${sil === 1 ? '' : 's'} left` : 'No fillers or long pauses'
-  if (dur > 60) { flow -= 10; flowWhy = `${Math.round(dur)} s: longer than 60 s, Shorts and Reels cut it off` }
+  const tooLong = c.post.networks.filter(n => dur > lengthSpec(n).max + 0.5)
+  if (tooLong.length) { flow -= 10; flowWhy = `${Math.round(dur)} s: longer than ${lengthSpec(tooLong[0]).max} s, ${[...new Set(tooLong.map(n => NETWORK_FIT[n] ?? n))].join(' and ')} cut it off` }
   else if (dur < 12) { flow -= 6; flowWhy = `${Math.round(dur)} s: too short to land the point` }
   const score = { hook: clamp(hook), flow: clamp(flow), value: clamp(value), trend: clamp(trend) }
   const reasons = {
@@ -360,10 +370,10 @@ export const NETWORK_FIT: Partial<Record<Network, string>> = { tiktok: 'TikTok',
 const DAY0 = T(0, 0, 0)
 
 /** The posts a clip becomes: one per network, at Atlas's best free slot. */
-export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string): Post[] {
+export function clipPosts(c: Clip, posts: Post[], now: number, makeId: () => string, dur?: number): Post[] {
   const day = Math.floor((now - DAY0) / DAY)
   const out: Post[] = []
-  for (const n of c.post.networks) {
+  for (const n of c.post.networks.filter(x => dur === undefined || fitsLength(x, dur))) {
     const at = pickSlot(n, day, [...posts, ...out], now)
     out.push({ id: makeId(), network: n, at, text: c.post.text[n] ?? c.hook, media: `clip:${c.id}`, status: 'scheduled', author: 'atlas', pillar: c.pillar, note: `Clip by Juno: ${c.title}` })
   }

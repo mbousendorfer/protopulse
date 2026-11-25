@@ -16,11 +16,13 @@ import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
 import './inbox.css'
 
-type View = 'needs' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
+type View = 'needs' | 'review' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 const DAY_START = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
 const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; count?: (c: Conversation) => boolean; saved?: boolean }[] = [
   // Needs you = what waits on Sam, then what waits on Claire at the bottom (not counted: it doesn't need him). A conversation Sam took over stays here until he replies.
   { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) || c.status === 'claire', count: c => NEEDS_YOU.includes(c.status) },
+  // Agorapulse's core status: not looked at by anyone yet. Nova reviews what she settles alone.
+  { id: 'review', label: 'To review', match: c => !c.reviewed },
   { id: 'drafts', label: 'Nova’s drafts', match: c => c.status === 'draft' },
   { id: 'handled', label: 'Handled by Nova', match: c => c.status === 'auto' },
   { id: 'hidden', label: 'Hidden', match: c => c.status === 'hidden' },
@@ -177,6 +179,7 @@ export default function InboxPage() {
               <SelectAll sel={sel} label="Select every conversation in this view" />
               <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
               <span className="faint num">{list.length}</span>
+              {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
               <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
                 items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
             </div>
@@ -187,6 +190,7 @@ export default function InboxPage() {
 
           {!list.length ? (
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
+              : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="Nova reviews what she handles on her own. New conversations land here until someone looks at them." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
           ) : view === 'needs' && !label ? (
             <NeedsList list={list} sel={sel} currentId={id} onOpen={(cid, edit) => nav(`/inbox/${cid}`, { state: edit ? { edit: true } : undefined })} />
@@ -202,7 +206,7 @@ export default function InboxPage() {
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
                   <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title="Reviewed"><CheckCheck size={14} /></span>}</div>
+                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
                   <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>

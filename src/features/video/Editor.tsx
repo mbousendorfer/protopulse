@@ -7,14 +7,15 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BROLL, MUSIC, speakerName, type Source } from '../../data/video'
+import { BROLL, MUSIC, PEOPLE, speakerName, type Source } from '../../data/video'
+import { holdReason, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
 import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
-  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, captionSlips, clipPosts, clipText, extend, fillers, keptWords, removeFillers, rescore, silenceSaved, slipLabel,
+  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, captionSlips, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
   silences, toSRT, wordText, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
 } from './model'
 import { Frame, usePlayback, type Playback } from './Player'
@@ -245,7 +246,7 @@ function Inspector({ clip, pb, edit, score }: { clip: Clip; pb: Playback; edit: 
         {tab === 'layout' && <LayoutTab clip={clip} pb={pb} edit={edit} />}
         {tab === 'brand' && <BrandTab clip={clip} pb={pb} edit={edit} />}
         {tab === 'audio' && <AudioTab clip={clip} pb={pb} edit={edit} />}
-        {tab === 'post' && <PostTab clip={clip} edit={edit} score={score} />}
+        {tab === 'post' && <PostTab clip={clip} edit={edit} score={score} dur={pb.total} />}
       </div>
       <AskJuno clip={clip} pb={pb} edit={edit} />
     </section>
@@ -416,11 +417,14 @@ function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
   )
 }
 
-function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) => void; score: ReturnType<typeof rescore> }) {
-  const { s } = useStore()
+function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Clip>) => void; score: ReturnType<typeof rescore>; dur: number }) {
+  const { s, d } = useStore()
+  const open = clip.status === 'ready' || clip.status === 'snoozed'
+  const held = open ? holdReason(s, clip) : undefined
+  const who = open ? unreleased(s, clip) : []
   const now = useNow(30000)
   const [own, setOwn] = useState('')
-  const slots = useMemo(() => clipPosts(clip, s.publishing.posts, now, () => 'preview'), [clip, s.publishing.posts, now])
+  const slots = useMemo(() => clipPosts(clip, s.publishing.posts, now, () => 'preview', dur), [clip, s.publishing.posts, now, dur])
   const setNets = (n: Network, on: boolean) => {
     const networks = on ? [...clip.post.networks, n] : clip.post.networks.filter(x => x !== n)
     if (!networks.length) return
@@ -428,6 +432,13 @@ function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) =
   }
   return (
     <div className="stack">
+      {held && (
+        <div className="ed-flag" role="status">
+          <Mark agent="juno" />
+          <span className="grow">Not going out: {held}.</span>
+          {who.map(p => <Btn key={p} size="xs" onClick={() => d({ type: 'video/release', person: p, signed: true })}>{PEOPLE[p].name}’s release is signed</Btn>)}
+        </div>
+      )}
       <div className="ed-score">
         <div className="row between"><b>Virality score</b><b className="num ed-score-total">{score.total}</b></div>
         {(Object.keys(SCORE_LABEL) as ScoreKey[]).map(k => (
@@ -455,6 +466,7 @@ function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) =
       </Field>
       <Field label="Where it goes">
         <div className="row">{CLIP_NETWORKS.map(n => <label key={n} className="check-row"><input type="checkbox" className="check" checked={clip.post.networks.includes(n)} onChange={e => setNets(n, e.target.checked)} /><Net n={n} size={16} />{NETWORK_FIT[n]}</label>)}</div>
+        {clip.post.networks.filter(n => !fitsLength(n, dur)).map(n => <p key={n} className="muted t-sm">{NETWORK_FIT[n]}: {Math.round(dur)} s is outside {lengthSpec(n).min}–{lengthSpec(n).max} s, so Atlas won’t post it there.</p>)}
       </Field>
       {clip.post.networks.map(n => {
         const text = clip.post.text[n] ?? ''
