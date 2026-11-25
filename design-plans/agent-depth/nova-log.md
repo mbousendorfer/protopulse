@@ -9,3 +9,23 @@
 - 25/11 · ev-stove / ev-collab · `ref` vers `c-pierre` / `c-theo` · carte sans conversation · la décision du Desk (holding reply, Claire) met à jour la vraie conversation.
 - 25/11 · B5 Waiting on Claire · groupe en bas de Needs you, compteur gris (pas de badge) · vue séparée · §6.2 le place dans Needs you ; un badge veut dire « needs you », Claire ne l'est pas.
 - 25/11 · B8 ⌘K Reply to · recherche à l'exécution (contacts, auteurs, sans accents) ; le parse ne garde que le nom · table de noms · le parse n'a pas l'état ; la conversation qui attend Sam passe en premier.
+- 25/11 · pitch Garde-fous appliqués · **Drop** (sans commentaire) · — · réponse de l'humain ; la ligne reste au backlog en `dropped`.
+- 25/11 · pitch Escalades du Playbook · **Go** · — · tel que pitché.
+- 25/11 · pitch Inbox rules · **Go** · — · tel que pitché, deux PR.
+- 25/11 · pitch Review / To review · **Go** · — · tel que pitché.
+- 25/11 · Review · répondre (Send, approuver, Desk) marque revu par Sam · laisser « to review » après réponse · « To review » = ce qu'une personne n'a pas encore regardé ; une réponse envoyée a été regardée.
+- 25/11 · Review · états sauvegardés d'avant : réponses auto et spam caché par Nova comptent comme revus par Nova (`withTeam`) · bump de version d'état · un bump efface la session du testeur.
+- 25/11 · Escalades · mots-clés par règle intégrée (blessure, presse, juridique, budget, prix), seuils pour créateur (> 50k) et remboursement (> €150), mots longs du libellé pour une règle ajoutée par Sam · vrai classifieur · prototype mocké ; une règle ajoutée a quand même un effet visible.
+- 25/11 · Escalades · vérifiées à l'arrivée (événements Nova) seulement, pas sur les conversations du seed · re-scanner le seed · le seed est déjà trié à la main ; re-trier changerait le Desk validé.
+- 25/11 · Inbox rules · nouvelle action `nova-rules` (risque safe, Act par défaut) ; Suggest = proposition sur la conversation, Draft = propositions regroupées « Apply all » dans le panneau, Act = appliquée + journal + Undo · une seule action pour les 5 effets · un réglage par effet serait illisible dans le profil.
+- 25/11 · Inbox rules · panneau (Sheet) ouvert depuis l'en-tête de l'Inbox, URL `?rules=1` · page Settings › Inbox · pas de Settings Inbox dans Protopulse ; Agorapulse a aussi un raccourci dans la barre de l'Inbox.
+- 25/11 · Inbox rules · conditions = mots + réseau + type ; pas de « compte < 30 jours » ni de « contient un lien » · données absentes du seed.
+- 25/11 · Inbox rules · une carte Nova qui arrive devient une conversation stockée (`land`) pour que les règles s'y appliquent · garder la conversation virtuelle · une étiquette posée sur une conversation virtuelle serait perdue.
+- 25/11 · Règle apprise · déclenchée par 3 étiquetages à la main du même label non couverts par une règle ; mots = ceux que partagent au moins 2 des 3 messages · apprendre aussi l'assignation · le pitch parlait des labels ; l'assignation suit le même chemin si besoin.
+- 25/11 · Règle apprise · carte Desk dans Needs you (comme les règles de Playbook proposées) · Worth a look · cohérence avec « 2 Playbook rules proposed ».
+- 25/11 · pitch Saved replies · **Go** · — · tel que pitché.
+- 25/11 · pitch Response time (SLA) · **Go** · — · tel que pitché.
+- 25/11 · pitch Team and assignment · **Go** · — · tel que pitché.
+- 25/11 · pitch CRM contacts · **Later** · — · reste au backlog.
+- 25/11 · Saved replies · une bibliothèque d'équipe (pas par profil social) · par profil comme Agorapulse · une seule marque ; le choix par profil n'apporte rien au test.
+- 25/11 · Saved replies · « Save as reply » ouvre le panneau prérempli (prénom → `{name}`) · formulaire dans la bulle · un seul endroit pour nommer et relire.

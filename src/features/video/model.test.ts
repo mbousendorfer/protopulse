@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest'
 import { T } from '../../app/time'
 import {
-  applyAsk, captionAt, captionLines, clipPosts, duration, extend, fillers, findMoments, keptSegments, playableAt, removeFillers, rescore,
+  applyAsk, captionAt, captionLines, clipPosts, coverFrames, duration, extend, fillers, findMoments, keptSegments, playableAt, removeFillers, rescore,
   silences, toClipTime, toSourceTime, toSRT, type Clip, type Transcript, type Word,
 } from './model'
+import { SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed } from '../../data/video'
 
 /** A small transcript: each word lasts 0.3 s with 0.1 s between words; `pause` is the silence before a sentence. */
 function make(spec: { text: string; pause?: number; filler?: number[]; fr?: string }[]): Transcript {
@@ -116,4 +117,16 @@ test('a clip becomes one scheduled post per network at a future slot, pointing b
   const posts = clipPosts(clip(), [], now, (() => { let n = 0; return () => `p${n++}` })())
   expect(posts.map(p => p.network)).toEqual(['tiktok', 'instagram'])
   expect(posts.every(p => p.at > now && p.media === 'clip:c1' && p.status === 'scheduled')).toBe(true)
+})
+
+test('cover: 3 frames inside the clip, best first, never on someone without a release; “pick a better cover” moves to the next', () => {
+  const t = TRANSCRIPT.gr20
+  const c = { ...clipFromSeed(SEEDS.gr20[0], { ...SOURCE_DEFS.gr20, status: 'ready' }, 0), cover: undefined }
+  const frames = coverFrames(c, t, [{ s: 0, e: 6 }])
+  expect(frames.length).toBeGreaterThan(0)
+  expect(frames.length).toBeLessThanOrEqual(3)
+  expect(frames.every(f => f.at >= c.start && f.at <= c.end && !(f.at < 6))).toBe(true)
+  const first = applyAsk({ ...c, cover: { at: frames[0].at, text: 'x', by: 'juno' } }, t, 'Pick a better cover', [{ s: 0, e: 6 }])
+  expect(first.changed).toBe(true)
+  expect(first.clip.cover?.at).toBe(frames[1]?.at ?? frames[0].at)
 })

@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, ExternalLink, Pencil, Plus, Trash2, X } from 'l
 import type { Network } from '../../app/types'
 import { useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
-import { EVENTS } from '../../data/listening'
+import { competitorReady, eventsOf } from './model'
 import { Btn, Mark, Menu, Modal, Net, Switch } from '../../ui'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import type { Watched } from './slice'
@@ -32,22 +32,22 @@ export default function ManageCompetitors() {
         </div>
         <ul className="rows">
           {s.listening.watch.map(w => {
-            const events = EVENTS.filter(e => e.competitor === w.id).length
+            const events = eventsOf(s).filter(e => e.competitor === w.id).length
             return (
               <li key={w.id} className={`ls-watch ${w.tracking ? '' : 'ls-paused'}`}>
                 <SocialAvatar name={w.name} org size={40} />
                 <div className="ls-watch-main">
-                  <div className="row tight"><b>{w.name}</b><a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight" onClick={e => e.preventDefault()}>{w.website}<ExternalLink size={11} /></a></div>
+                  <div className="row tight"><b>{w.name}</b>{w.website && <a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight">{w.website}<ExternalLink size={11} /></a>}</div>
                   <div className="row tight">
                     {w.accounts.map(acc => <span key={acc.network + acc.handle} className="chip"><Net n={acc.network} size={14} />{acc.handle}</span>)}
                   </div>
                   <span className="faint ls-watch-meta">
                     {w.tracking ? 'Watching' : 'Paused'} since {new Date(w.since).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    {' · '}{events ? `${events} events raised` : 'Echo is collecting the first week of data'}
+                    {' · '}{events ? `${events} event${events > 1 ? 's' : ''} raised` : competitorReady(s, w) ? 'Benchmark ready · first event within the hour' : 'Echo is reading their last 30 days'}
                   </span>
                 </div>
                 <Switch checked={w.tracking} onChange={() => d({ type: 'listening/watchToggle', id: w.id })} label={`Watch ${w.name}`} hideLabel />
-                {!w.custom && <Link to={`/listening/competitors/profile/${w.id}`} className="btn sm ghost">Profile</Link>}
+                {competitorReady(s, w) && <Link to={`/listening/competitors/profile/${w.id}`} className="btn sm ghost">Profile</Link>}
                 <Btn size="sm" variant="ghost" icon aria-label={`Edit ${w.name}`} onClick={() => setEdit(structuredClone(w))}><Pencil size={14} /></Btn>
                 <Btn size="sm" variant="ghost" icon aria-label={`Remove ${w.name}`} onClick={() => setRemoving(w)}><Trash2 size={14} /></Btn>
               </li>
@@ -73,7 +73,7 @@ function EditCompetitor({ w, isNew, onClose, onSave }: { w: Watched; isNew: bool
   const valid = draft.name.trim() && draft.accounts.some(a => a.handle.trim())
   return (
     <Modal open onOpenChange={o => !o && onClose()} title={isNew ? 'Add a competitor' : `Edit ${w.name}`}
-      footer={<><span className="faint t-xs">Echo starts within the hour. The benchmark fills after 7 days.</span><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      footer={<><span className="faint t-xs">Echo reads their last 30 days: benchmark in about 10 minutes, first event within the hour.</span><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn>
         <Btn variant="primary" disabled={!valid} onClick={() => onSave({ ...draft, name: draft.name.trim(), accounts: draft.accounts.filter(a => a.handle.trim()) })}>{isNew ? 'Start watching' : 'Save'}</Btn></>}>
       <div className="stack">
         <div className="field"><label htmlFor="cw-name">Name</label><input id="cw-name" className="input" autoFocus value={draft.name} onChange={e => set({ name: e.target.value })} placeholder="Peakline" /></div>
