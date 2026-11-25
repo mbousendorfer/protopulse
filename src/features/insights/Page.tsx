@@ -7,12 +7,13 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  ANOMALIES, DAILY_REACH, HEAT, HEAT_COLS, HEAT_ROWS, KPIS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, dayLabels,
+  ANOMALIES, DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, TIKTOK_VIEWS, dayLabels,
   type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
 import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
+import { bestTime, heat, kpis as kpisOf } from './metrics'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -111,7 +112,7 @@ function ReportView() {
             <h2>{sec.heading}</h2>
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
             {sec.chart === 'reach' && <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>}
-            {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
+            {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
           </section>
         ))}
         <p className="faint hint-cite">Point at an underlined number to see where it comes from.</p>
@@ -164,19 +165,14 @@ function Explore() {
   const [net, setNet] = useState<NetFilter>('all')
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'reach', desc: true })
 
-  const kpis = KPIS[period].map(k => {
-    if (net === 'all') return k
-    const f = NET_SHARE[net]
-    if (k.key === 'er') return { ...k, value: f.er, prev: f.er * 0.93 }
-    if (['reach', 'followers', 'clicks', 'replies'].includes(k.key)) return { ...k, value: k.value * f.share, prev: k.prev * f.share }
-    return k
-  })
+  const kpis = kpisOf(period, net)
   const share = net === 'all' ? 1 : NET_SHARE[net].share
   const cur = DAILY_REACH.slice(-period).map(v => +(v * share).toFixed(1))
   const prev = period < 90 ? DAILY_REACH.slice(-period * 2, -period).map(v => +(v * share * 0.93).toFixed(1)) : []
   const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= now - period * DAY)
     .sort((a, b) => (sort.desc ? -1 : 1) * ((a[sort.key] as number) - (b[sort.key] as number))), [net, period, sort, now])
-  const best: [number, number] = [4, 6]
+  const best = bestTime(net)
+  const ig = bestTime('instagram')
 
   const th = (key: SortKey, label: string) => (
     <th className={key === 'date' ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
@@ -216,8 +212,8 @@ function Explore() {
       <div className="grid-2">
         <section className="card pad">
           <div className="section-title">Best times to post <span className="faint">· reach by day and hour, 30 days</span></div>
-          <Heatmap values={HEAT} rows={HEAT_ROWS} cols={HEAT_COLS} label="Reach by day and hour" best={best} />
-          <p className="muted heat-note">Best window: <b>Friday 18:00 – 20:00</b>, 2.1× the median reach. Atlas schedules Instagram at 18:30, inside it. Weekend mornings are second.</p>
+          <Heatmap values={heat(net)} rows={HEAT_ROWS} cols={HEAT_COLS} label={`Reach by day and hour, ${net === 'all' ? 'all networks' : NETWORK_LABEL[net]}`} best={[best.day, best.col]} />
+          <p className="muted heat-note">Best window{net === 'all' ? '' : ` on ${NETWORK_LABEL[net]}`}: <b>{best.dayName} {best.window}</b>, {best.lift}× the median reach. {net === 'all' ? `Instagram brings most of your reach; Atlas posts there at ${ig.time}.` : `Atlas posts at ${best.time}, inside it.`}</p>
         </section>
         <section className="card pad">
           <div className="section-title">By pillar <span className="faint">· engagement rate, 30 days</span></div>

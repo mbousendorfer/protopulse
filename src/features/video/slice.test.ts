@@ -89,10 +89,27 @@ test('find clips about a topic adds new clips; dismissing one can be undone', ()
   const found = s.video.clips.filter(c => c.id.startsWith('clip-live-find'))
   expect(found.length).toBeGreaterThan(0)
   expect(found[0].why).toMatch(/second-hand/)
+  expect(found[0].evidence[0]).toMatchObject({ from: 'This video', to: '/video/sources/live' })
+  expect(found[0].evidence[0].label).toMatch(/^Camille says “Can I send a bag/)
   s = run(s, { type: 'video/dismiss', id: found[0].id, reason: 'Off-brand' })
   expect(s.video.clips.find(c => c.id === found[0].id)?.status).toBe('dismissed')
   s = run(s, { type: 'core/undo', id: s.log[0].id })
   expect(s.video.clips.find(c => c.id === found[0].id)?.status).toBe('ready')
+})
+
+test('a clip found on request cites the moment, the matching Listening trend and the pillar’s best published clip', () => {
+  const s = run(initialState(), { type: 'video/find', source: 'repair', query: 'repair', len: 20, count: 1 })
+  const c = s.video.clips.find(x => x.id.startsWith('clip-repair-find'))!
+  expect(c.evidence.map(e => e.from)).toEqual(['This video', 'Listening', 'Video'])
+  expect(c.evidence[1].label).toMatch(/Repair over replace/)
+  expect(c.evidence[2]).toMatchObject({ value: '48.2k', to: '/video/clips/clip-repair-brands' })
+  expect(c.base.trend).toBeGreaterThanOrEqual(70)
+})
+
+test('a pasted link says it plays a sample video', () => {
+  const s = run(initialState(), { type: 'video/addLink', url: 'https://vimeo.com/123' })
+  expect(s.video.sources[0]).toMatchObject({ kind: 'link', sampleTranscript: true })
+  expect(s.notice?.text).toMatch(/sample video/)
 })
 
 test('every seed clip finds its phrases in the real narration and lands between 8 and 65 seconds', () => {

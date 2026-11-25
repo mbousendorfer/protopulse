@@ -3,6 +3,7 @@ import type { AgentId, Decision, Network } from '../../app/types'
 import { addRule, now, pushLog, pushHandoff, uid } from '../../app/core'
 import { T } from '../../app/time'
 import { respond, routeText } from './respond'
+import { TIKTOK_VIEWS } from '../../data/insights'
 
 /** Rich, serialisable cards an agent can put in a conversation. */
 export type Card =
@@ -26,7 +27,7 @@ const SEED: Chat[] = [
     id: 'chat-tiktok', title: 'Why is TikTok down?', created: T(17, 2, -1), updated: T(17, 6, -1), unread: 0, followUps: [],
     messages: [
       { id: 'm1', from: 'you', at: T(17, 2, -1), text: 'Why are TikTok views dropping since Thursday?' },
-      { id: 'm2', from: 'iris', at: T(17, 3, -1), text: 'Four videos in a row under 2,000 views, against 9,000 usually. They all open on the product, not on a person, and the hook lasts 4 to 6 seconds.', card: { type: 'chart', label: 'TikTok views per video', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], sources: ['TikTok analytics · last 11 videos', 'Hook length measured by Iris'] } },
+      { id: 'm2', from: 'iris', at: T(17, 3, -1), text: 'Four videos in a row under 2,200 views, against about 3,000 usually. They all open on the product, not on a person, and the hook lasts 4 to 6 seconds.', card: { type: 'chart', label: 'TikTok views per video', value: '1,840', delta: '−38%', down: true, series: TIKTOK_VIEWS, sources: ['TikTok analytics · last 11 videos', 'Hook length measured by Iris'] } },
       { id: 'm3', from: 'atlas', at: T(17, 4, -1), text: 'I can test 3-second hooks with a person on screen. First one ready for Thursday 18:00:', card: { type: 'post', network: 'tiktok', slot: 'Thu 27, 18:00', text: 'POV: you packed for 3 days and it all fits. Ridge 28L.', status: 'draft' } },
     ],
   },

@@ -7,7 +7,7 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BROLL, MUSIC, type Source } from '../../data/video'
+import { BROLL, MUSIC, speakerName, type Source } from '../../data/video'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
@@ -132,7 +132,7 @@ function TranscriptPanel({ clip, pb, sel, setSel, selected, onCut, edit }: {
   const activeWord = words.find(w => pb.src >= w.s && pb.src < w.e + 0.1)?.i
   const allCut = selected.length > 0 && selected.every(i => cut.has(i))
   const speaker = (i: number) => tr.sentences[tr.words[i].sent]?.speaker
-  const who = (sp?: string) => (sp === 'host' ? 'Camille' : sp === 'guest' ? 'Léo' : 'Léa')
+  const who = speakerName
   const pick = (i: number, shift: boolean) => {
     setMode('none')
     setSel(shift && sel ? [sel[0], i] : [i, i])

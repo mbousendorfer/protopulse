@@ -4,6 +4,8 @@ import { useStore } from '../../app/store'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Heatmap, HBars, LineChart } from '../../ui/charts'
+import { BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
+import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
 import { AlertsTable } from './alerts'
 import { onResolveInsights } from './slice'
 import { SCRIPT } from './script'
@@ -11,76 +13,101 @@ import { SCRIPT } from './script'
 declare module '../../data/command' {
   interface IntentTypes {
     tiktok: object
-    besttime: { network: 'instagram' | 'linkedin' | 'tiktok' }
+    besttime: { network: SocialNet }
     compare: object
     performance: object
   }
 }
+
+const SHORT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 const besttime = defineIntent({
   kind: 'besttime', owner: 'iris', order: 110,
   parse: t => {
     if (!/best (time|slot|hour|day)|when should (i|we) post/.test(t)) return
     const n = net(t)
-    return { kind: 'besttime', network: n === 'linkedin' || n === 'tiktok' ? n : 'instagram' }
+    return { kind: 'besttime', network: n && n in BEST_CELL ? n as SocialNet : 'instagram' }
   },
   bar: (i, { go }) => {
-    const best = { instagram: ['Friday 18:30', 4, 5], linkedin: ['Tuesday 08:30', 1, 1], tiktok: ['Thursday 18:00', 3, 5] }[i.network] as [string, number, number]
-    const values = Array.from({ length: 7 }, (_, r) => Array.from({ length: 6 }, (_, c) => Math.max(0.08, 0.65 - Math.abs(r - best[1]) * 0.12 - Math.abs(c - best[2]) * 0.1 + ((r * 7 + c * 3) % 5) * 0.03)))
-    values[best[1]][best[2]] = 1
+    const b = bestTime(i.network)
     return {
-      text: `Best slot on ${i.network === 'linkedin' ? 'LinkedIn' : i.network === 'tiktok' ? 'TikTok' : 'Instagram'}: ${best[0]}. Posts in that slot got 2.1× the median reach over the last 90 days. Atlas already uses it for the plan.`,
-      visual: <Heatmap label="Reach by day and hour" rows={['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']} cols={['08', '10', '12', '14', '16', '18']} values={values} best={[best[1], best[2]]} />,
-      sources: ['Native analytics, last 90 days', '312 posts'],
-      ctas: [{ label: 'Open Insights', run: () => go('/insights') }],
+      text: `Best slot on ${NETWORK_LABEL[i.network]}: ${b.dayName} ${b.window}. Posts in that window got ${b.lift}× the median reach over the last 30 days. Atlas posts at ${b.time}, inside it.`,
+      visual: <Heatmap label="Reach by day and hour" rows={HEAT_ROWS} cols={HEAT_COLS} values={heat(i.network)} best={[b.day, b.col]} />,
+      sources: [`${NETWORK_LABEL[i.network]} analytics, last 30 days`],
+      ctas: [{ label: 'Open Explore', run: () => go('/insights/explore') }],
     }
   },
   chat: i => {
-    const slot = { instagram: 'Friday 18:30', linkedin: 'Tuesday 08:30', tiktok: 'Thursday 18:00' }[i.network]
-    return { replies: [{ from: 'iris', text: `Your best ${NETWORK_LABEL[i.network]} slot over the last 90 days is ${slot}: 2.1× the average reach. Second best is Sunday 11:00.`, card: { type: 'chart', label: `${NETWORK_LABEL[i.network]} reach by weekday (k)`, value: slot, delta: '2.1× average', series: [21, 24, 22, 27, 44, 19, 31], labels: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], sources: [`${NETWORK_LABEL[i.network]} analytics · 90 days`] } }], effects: [] }
+    const b = bestTime(i.network)
+    const byDay = heat(i.network).map(row => Math.round(Math.max(...row) * 100))
+    return { replies: [{ from: 'iris', text: `Your best ${NETWORK_LABEL[i.network]} slot over the last 30 days is ${b.dayName} ${b.window}: ${b.lift}× the median reach. Atlas posts at ${b.time}, inside it.`, card: { type: 'chart', label: `${NETWORK_LABEL[i.network]} best slot per weekday (index)`, value: `${b.dayName.slice(0, 3)} ${b.time}`, delta: `${b.lift}× median`, series: byDay, labels: SHORT_DAYS, sources: [`${NETWORK_LABEL[i.network]} analytics · 30 days`] } }], effects: [] }
   },
 })
 
 const tiktok = defineIntent({
   kind: 'tiktok', owner: 'iris', order: 120,
   parse: t => (/tiktok/.test(t) && /how|did|perform|doing|last week|views|reach/.test(t) ? { kind: 'tiktok' } : undefined),
-  bar: (_i, { d, go }) => ({
-    text: 'TikTok had a weak week: 1,840 views per video on average, down 38% from 2,970 the week before. All 4 videos since Thursday open on the product for 4 to 6 seconds before anything happens. Trailkind’s best reels hook in 2. I’d test 3-second hooks this week.',
-    visual: <LineChart label="TikTok views per video, last 10 days" labels={['15', '16', '17', '18', '19', '20', '21', '22', '23', '24']} series={[{ name: 'Views per video', data: [8200, 9100, 10400, 8800, 9600, 7900, 2100, 1900, 1700, 1800] }]} h={150} />,
-    sources: ['TikTok analytics, 15–24 Nov', '4 videos since Thu 20 Nov'],
-    ctas: [{ label: 'Ask Atlas to test hooks', primary: true, run: () => d({ type: 'playbook/briefAtlas', title: 'TikTok: test 3-second hooks', network: 'tiktok', slot: 'Thu 27, 18:00', text: 'Bag vs. downpour, 3 seconds in. Spoiler: the laptop stays dry.', brief: 'Test 3-second hooks on TikTok' }) }, { label: 'Open Insights', run: () => go('/insights') }],
-  }),
-  chat: () => ({
-    replies: [
-      { from: 'iris', text: 'TikTok views per video are down 38% since Thursday: four videos in a row under 2,000, against 9,000 usually. The hooks got longer, 4 to 6 seconds.', card: { type: 'chart', label: 'TikTok views per video (k)', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], sources: ['TikTok analytics · last 11 videos'] } },
-      { from: 'atlas', text: 'Want me to test 3-second hooks? Here’s the first one.', card: { type: 'post', network: 'tiktok', slot: 'Thu 27, 18:00', text: 'POV: you packed for 3 days and it all fits. Ridge 28L.', status: 'draft' } },
-    ], effects: [],
-  }),
+  bar: (_i, { d, go }) => {
+    const v = tiktokViews()
+    return {
+      text: `TikTok had a weak week: ${fmt.int(v.now)} views per video on the last 4 videos, ${fmt.signed(v.delta)} from ${fmt.int(v.before)} before. All 4 videos since Thursday open on the product for 4 to 6 seconds before anything happens. Trailkind’s best videos hook in 2. I’d test 3-second hooks this week.`,
+      visual: <LineChart label="TikTok views per video, last 11 videos" labels={v.series.map((_, i) => `#${i + 1}`)} series={[{ name: 'Views per video (k)', data: v.series }]} h={150} format={x => `${x.toFixed(1)}k`} />,
+      sources: ['TikTok analytics, last 11 videos', '4 videos since Thu 20 Nov'],
+      ctas: [{ label: 'Ask Atlas to test hooks', primary: true, run: () => d({ type: 'playbook/briefAtlas', title: 'TikTok: test 3-second hooks', network: 'tiktok', slot: 'Thu 27, 18:30', text: 'Bag vs. downpour, 3 seconds in. Spoiler: the laptop stays dry.', brief: 'Test 3-second hooks on TikTok' }) }, { label: 'Open Insights', run: () => go('/insights') }],
+    }
+  },
+  chat: () => {
+    const v = tiktokViews()
+    return {
+      replies: [
+        { from: 'iris', text: `TikTok views per video are ${fmt.signed(v.delta)} since Thursday: four videos in a row at ${fmt.int(v.now)}, against ${fmt.int(v.before)} before. The hooks got longer, 4 to 6 seconds.`, card: { type: 'chart', label: 'TikTok views per video (k)', value: fmt.int(v.now), delta: fmt.signed(v.delta), down: v.delta < 0, series: v.series, sources: ['TikTok analytics · last 11 videos'] } },
+        { from: 'atlas', text: 'Want me to test 3-second hooks? Here’s the first one.', card: { type: 'post', network: 'tiktok', slot: 'Thu 27, 18:30', text: 'POV: you packed for 3 days and it all fits. Ridge 28L.', status: 'draft' } },
+      ], effects: [],
+    }
+  },
 })
 
 const compare = defineIntent({
   kind: 'compare', owner: 'iris', order: 130,
   parse: t => (/reels? (vs|versus|or|against) carousels?|carousels? (vs|versus|or|against) reels?|compare/.test(t) ? { kind: 'compare' } : undefined),
-  bar: (_i, { go }) => ({
-    text: 'Carousels win on saves, reels win on reach. Over 30 days, carousels averaged a 4.2% engagement rate against 2.9% for reels, but reels reached 2.4× more people. For sales posts, carousels convert better: 1.8% link clicks against 0.9%.',
-    visual: <HBars items={[{ label: 'Carousels · engagement', value: 4.2 }, { label: 'Reels · engagement', value: 2.9 }, { label: 'Carousels · clicks', value: 1.8 }, { label: 'Reels · clicks', value: 0.9 }]} format={v => `${v}%`} />,
-    sources: ['Instagram analytics, 26 Oct – 24 Nov', '18 carousels, 22 reels'],
-    ctas: [{ label: 'Open Insights', run: () => go('/insights') }],
-  }),
-  chat: () => ({ replies: [{ from: 'iris', text: 'Over 30 days, reels reach 2.4× more people, carousels get 1.8× more saves. Reels to be found, carousels to be kept.', card: { type: 'chart', label: 'Saves per post', value: '1.8×', delta: 'carousels vs reels', series: [42, 51, 38, 77, 92, 88], labels: ['R', 'R', 'R', 'C', 'C', 'C'], sources: ['Instagram analytics · 30 days, 24 posts'] } }], effects: [] }),
+  bar: (_i, { go }) => {
+    const f = formats()
+    return {
+      text: `Carousels win on saves, reels win on reach. Over 30 days, carousels averaged a ${fmt.pct(f.carousel.er)} engagement rate against ${fmt.pct(f.reel.er)} for reels, but reels reached ${f.reachX}× more people. Carousels get ${f.savesX}× the saves, and convert better: ${fmt.pct(f.carousel.clicks)} link clicks against ${fmt.pct(f.reel.clicks)}.`,
+      visual: <HBars items={[{ label: 'Carousels · engagement', value: f.carousel.er }, { label: 'Reels · engagement', value: f.reel.er }, { label: 'Carousels · saves', value: f.carousel.saves }, { label: 'Reels · saves', value: f.reel.saves }, { label: 'Carousels · clicks', value: f.carousel.clicks }, { label: 'Reels · clicks', value: f.reel.clicks }]} format={v => `${v}%`} />,
+      sources: ['Instagram analytics, last 30 days', `${f.carousel.posts} carousels, ${f.reel.posts} reels`],
+      ctas: [{ label: 'Open Insights', run: () => go('/insights') }],
+    }
+  },
+  chat: () => {
+    const f = formats()
+    return { replies: [{ from: 'iris', text: `Over 30 days, reels reach ${f.reachX}× more people, carousels get ${f.savesX}× the saves (${fmt.pct(f.carousel.saves)} against ${fmt.pct(f.reel.saves)}). Reels to be found, carousels to be kept.`, card: { type: 'chart', label: 'Saves rate (%)', value: `${f.savesX}×`, delta: 'carousels vs reels', series: [f.reel.saves, f.carousel.saves], labels: ['Reels', 'Carousels'], sources: [`Instagram analytics · 30 days, ${f.carousel.posts + f.reel.posts} posts`] } }], effects: [] }
+  },
 })
+
+/** Last 7 days, as Explore shows them. */
+function weekLine() {
+  const reach = kpi('reach'), er = kpi('er'), replies = kpi('replies'), reply = kpi('reply'), v = tiktokViews()
+  return { reach, er, replies, reply, v, text: `reach ${fmt.k(reach.value)} (${fmt.signed(change(reach))}), engagement rate ${fmt.pct(er.value)} (${fmt.signed(change(er), ' pt')}), ${fmt.int(replies.value)} replies handled with a median reply time of ${reply.value} minutes` }
+}
 
 const performance = defineIntent({
   kind: 'performance', owner: 'iris', order: 150,
   parse: t => (/reach|engagement|how are we doing|how('?s| is) it going|performance|numbers|followers/.test(t) ? { kind: 'performance' } : undefined),
-  bar: (_i, { go }) => ({
-    text: 'Last 7 days: reach 412k, up 8% on the week before. Engagement rate 3.1%, up 0.4 points. 1,204 replies handled, 91% by Nova, with a median reply time of 4 minutes. The one dip is TikTok views per video, down 38%.',
-    visual: <LineChart label="Reach per day, last 2 weeks" labels={['11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24']} h={140}
-      series={[{ name: 'This week', data: [52, 55, 58, 61, 57, 60, 63, 58, 61, 59, 64, 62, 60, 66].map(x => x * 1000) }, { name: 'Previous', dashed: true, tone: 'faint', data: [49, 51, 53, 55, 52, 54, 56, 53, 55, 54, 57, 55, 54, 58].map(x => x * 1000) }]} />,
-    sources: ['Native analytics, 18–24 Nov vs 11–17 Nov'],
-    ctas: [{ label: 'Read the weekly report', run: () => go('/insights') }],
-  }),
-  chat: () => ({ replies: [{ from: 'iris', text: 'Last 7 days: reach 412k (+8%), engagement rate 3.1% (+0.4 pt), 1,204 replies handled, 91% of them by Nova. TikTok is the one weak spot.', card: { type: 'chart', label: 'Weekly reach (k)', value: '412k', delta: '+8%', series: [300, 340, 330, 380, 410, 390, 440, 412], sources: ['All networks · weekly report w47'] } }], effects: [] }),
+  bar: (_i, { go }) => {
+    const w = weekLine()
+    return {
+      text: `Last 7 days: ${w.text}. The one dip is TikTok views per video, ${fmt.signed(w.v.delta)}.`,
+      visual: <LineChart label="Daily reach, last 7 days against the 7 before" labels={dayLabels(7)} h={140} format={v => `${Math.round(v)}k`}
+        series={[{ name: 'Last 7 days', data: DAILY_REACH.slice(-7) }, { name: 'Previous 7 days', dashed: true, tone: 'faint', data: DAILY_REACH.slice(-14, -7) }]} />,
+      sources: ['Native analytics, last 7 days vs the 7 before'],
+      ctas: [{ label: 'Open Explore', run: () => go('/insights/explore') }],
+    }
+  },
+  chat: () => {
+    const w = weekLine()
+    return { replies: [{ from: 'iris', text: `Last 7 days: ${w.text}. TikTok is the one weak spot.`, card: { type: 'chart', label: 'Daily reach, last 7 days (k)', value: fmt.k(w.reach.value), delta: fmt.signed(change(w.reach)), series: DAILY_REACH.slice(-7), labels: dayLabels(7), sources: ['All networks · Insights › Explore'] } }], effects: [] }
+  },
 })
 
 /** Iris's alert rules: when she raises something on the Desk, and to whom. */
