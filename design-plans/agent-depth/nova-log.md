@@ -21,3 +21,5 @@
 - 25/11 · Inbox rules · panneau (Sheet) ouvert depuis l'en-tête de l'Inbox, URL `?rules=1` · page Settings › Inbox · pas de Settings Inbox dans Protopulse ; Agorapulse a aussi un raccourci dans la barre de l'Inbox.
 - 25/11 · Inbox rules · conditions = mots + réseau + type ; pas de « compte < 30 jours » ni de « contient un lien » · données absentes du seed.
 - 25/11 · Inbox rules · une carte Nova qui arrive devient une conversation stockée (`land`) pour que les règles s'y appliquent · garder la conversation virtuelle · une étiquette posée sur une conversation virtuelle serait perdue.
+- 25/11 · Règle apprise · déclenchée par 3 étiquetages à la main du même label non couverts par une règle ; mots = ceux que partagent au moins 2 des 3 messages · apprendre aussi l'assignation · le pitch parlait des labels ; l'assignation suit le même chemin si besoin.
+- 25/11 · Règle apprise · carte Desk dans Needs you (comme les règles de Playbook proposées) · Worth a look · cohérence avec « 2 Playbook rules proposed ».

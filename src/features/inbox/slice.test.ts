@@ -178,3 +178,24 @@ describe('Inbox rules', () => {
     expect(s.inbox.rules.some(r => r.id === added.inboxRule)).toBe(false)
   })
 })
+
+describe('rules learned from Sam’s labels', () => {
+  it('the third hand label no rule covers makes Nova propose a rule; approving it adds the rule, Undo takes it back', () => {
+    let s = initialState()
+    s = reducer(s, { type: 'inbox/bulk', ids: ['c-lea'], op: 'label', value: 'Gear failure' })
+    s = reducer(s, { type: 'inbox/bulk', ids: ['c-pierre', 'c-ana'], op: 'label', value: 'Gear failure' })
+    const h = s.handoffs.find(x => x.inboxRule)!
+    expect(h.inboxRule).toEqual({ words: ['snapped'], then: { op: 'label', value: 'Gear failure' } })
+    expect(s.inbox.taught?.['Gear failure']).toEqual([])
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.inbox.rules[0]).toMatchObject({ words: ['snapped'], origin: 'Learned from your labels' })
+    const line = s.log.find(l => l.restore?.some(x => x.id === h.id))!
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.inbox.rules.some(r => r.origin === 'Learned from your labels')).toBe(false)
+  })
+
+  it('labels a rule already covers don’t count', () => {
+    const s = reducer(initialState(), { type: 'inbox/bulk', ids: ['c-sophie', 'c-thomas', 'c-ines'], op: 'label', value: 'Refund' })
+    expect(s.handoffs.some(x => x.inboxRule)).toBe(false)
+  })
+})
