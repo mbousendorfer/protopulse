@@ -19,6 +19,10 @@ declare module '../../app/types' {
     boost?: string
     /** A report Iris wrote or edited on request: undoing the line puts back `before` (or removes the report). */
     report?: { id: string; before?: Report }
+    /** A report Iris sent on her own: undoing the line takes it back from Claire. */
+    unshare?: string
+    /** A schedule set up from this line: undoing it removes the schedule. */
+    schedule?: string
   }
 }
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
@@ -40,7 +44,12 @@ export type InsightsState = {
   briefDay: string
   /** Report recipes Sam saved, to ask for again by name. */
   templates: Template[]
+  /** Reports Iris writes and sends on a schedule. */
+  schedules: Schedule[]
 }
+
+/** A report Iris writes every week (Monday) or month (the 1st) at 08:00, for Sam or for Claire. */
+export type Schedule = { id: string; name: string; recipe: Recipe; every: 'week' | 'month'; to: 'claire' | 'sam'; paused?: boolean; lastRun?: string }
 
 export type Template = { id: string; name: string; recipe: Recipe }
 
@@ -65,6 +74,7 @@ export const initialInsights = (): InsightsState => ({
   reports: [],
   briefDay: dayKey(T(7, 0)),
   templates: [],
+  schedules: [],
 })
 
 export type InsightsAction =
@@ -81,6 +91,9 @@ export type InsightsAction =
   | { type: 'insights/studioEdit'; id: string; ops: StudioOp[]; said: string }
   | { type: 'insights/template'; id: string; name: string }
   | { type: 'insights/templateDelete'; id: string }
+  | { type: 'insights/schedule'; name: string; recipe: Recipe; every: 'week' | 'month'; to: 'claire' | 'sam'; via: string }
+  | { type: 'insights/schedulePause'; id: string }
+  | { type: 'insights/scheduleDelete'; id: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
@@ -258,6 +271,16 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     }
     case 'insights/templateDelete':
       return patch(s, { templates: s.insights.templates.filter(t => t.id !== a.id) })
+    case 'insights/schedule': {
+      const sc: Schedule = { id: uid('sc'), name: a.name, recipe: a.recipe, every: a.every, to: a.to }
+      // Already written today: the first run is the next one.
+      const next = patch(s, { schedules: [...s.insights.schedules.filter(x => !(x.name === a.name && x.to === a.to)), sc] })
+      return pushLog(next, { agent: 'iris', text: `Scheduled “${a.name}” every ${a.every === 'week' ? 'Monday' : 'month'} for ${a.to === 'claire' ? 'Claire' : 'you'}`, status: 'done', reason: a.via, undoMinutes: 30, link: '/insights', schedule: sc.id })
+    }
+    case 'insights/schedulePause':
+      return patch(s, { schedules: s.insights.schedules.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
+    case 'insights/scheduleDelete':
+      return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== a.id) })
   }
 }
 
@@ -319,6 +342,11 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
+  if (entry.schedule) return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== entry.schedule) })
+  if (entry.unshare) {
+    const { [entry.unshare]: _gone, ...shared } = s.insights.shared
+    return patch({ ...s, handoffs: s.handoffs.filter(h => h.id !== `h-share-${entry.unshare}`) }, { shared })
+  }
   if (entry.report) {
     const { id, before } = entry.report
     return patch(s, { reports: before ? s.insights.reports.map(x => (x.id === id ? before : x)) : s.insights.reports.filter(x => x.id !== id) })
