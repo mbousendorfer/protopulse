@@ -4,8 +4,9 @@ import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/cor
 import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment, MOMENTS, MOMENT_LEAD, type Moment } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
-import { arriveIdeas } from '../publishing/slice'
+import { arriveIdeas, receivePosts, withdrawPosts } from '../publishing/slice'
 import { reduceInbox } from '../inbox/slice'
+import { writeCampaignReport } from '../insights/slice'
 import type { IdeaSeed } from '../../data/ideas'
 import { T } from '../../app/time'
 import { DAY, dayLabel } from '../../app/time'
@@ -65,18 +66,9 @@ export const cardOf = (h: Handoff): SageCard | undefined => h.sage ?? SEED_CARDS
 
 /* ---------- Atlas's calendar ---------- */
 
-// ponytail: Sage writes Atlas's posts inline until Atlas exports its entry point
-// (requests/atlas-from-sage-campaign-posts.md); swap these two for receivePosts / withdrawPosts then.
-function toAtlas(s: State, posts: Post[]): State {
-  const ids = new Set(posts.map(p => p.id))
-  const keep = s.publishing.posts.filter(p => !ids.has(p.id) || p.status === 'published')
-  const kept = new Set(keep.map(p => p.id))
-  return { ...s, publishing: { ...s.publishing, posts: [...keep, ...posts.filter(p => !kept.has(p.id))] } }
-}
-function fromAtlas(s: State, ids: string[]): State {
-  const drop = new Set(ids)
-  return { ...s, publishing: { ...s.publishing, posts: s.publishing.posts.filter(p => !drop.has(p.id) || p.status === 'published') } }
-}
+// Atlas's entry point for campaign posts (requests/atlas-from-sage-campaign-posts-done.md).
+const toAtlas = (s: State, posts: Post[]) => receivePosts(s, posts, 'sage')
+const fromAtlas = (s: State, ids: string[]) => withdrawPosts(s, ids)
 
 /** When a campaign post goes out: its day, at Atlas's best slot for the network. */
 export function slotOf(c: Campaign, p: CPost): number {
@@ -318,6 +310,8 @@ export function endCampaign(s: State, id: string): State {
   const { recap, lesson } = recapOf(s, c)
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
   let next = updateCampaign(s, id, () => ({ ...c!, status: 'done', recap: c!.recap ?? recap, recapBy: c!.recap ? c!.recapBy : 'sage' }))
+  // Iris writes the full report (Report Studio), which “Full recap” opens.
+  if (!c.reportId) next = updateCampaign(writeCampaignReport(next, campaign(next, id)!), id, x => ({ ...x, reportId: `campaign-${id}` }))
   if (lesson) next = patch(next, { proposals: [lesson, ...next.strategy.proposals] })
   next = pushHandoff(next, {
     agent: 'sage', kind: 'news', group: pct >= 100 ? 'good' : 'look', urgency: 'week', topic: 'Campaign recap', ref: id, chain: ['iris', 'sage'],
