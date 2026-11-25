@@ -40,3 +40,4 @@
 - 25/11/2026 · Pitch « UTM de campagne » · **Later**.
 - 25/11/2026 · Clôture · Atlas a livré `receivePosts` / `withdrawPosts` (#84) : Sage n'écrit plus ses posts en ligne ; Nova a livré `/inbox?label=` et des conversations Trail Week (#108) ; Iris a livré `writeCampaignReport` (#106), appelé à la fin d'une campagne (« Full recap »). Restent ouvertes chez Atlas : bandeau des temps forts, type `Pillar` ouvert.
 - 25/11/2026 · Captures du rapport · Chrome headless sur deux serveurs (avant = 73a7ba2, après = main) ; pas de captures à 375 (largeur minimale du headless), 375 vérifié par mesure du débordement en émulation mobile.
+- 25/11/2026 · Déclencheurs du modérateur (« Hard to see », PR #91) · ajout de `ev-campaign-end` (→ Trail Week, pour voir le bilan sans attendre 12 jours) et `ev-moment` (→ Desk, carte du temps fort) à `ev-trajectory` déjà posé ; pas de déclencheur pour les comportements d'horloge (résultats, fin de campagne réelle), couverts par « +1 week ».

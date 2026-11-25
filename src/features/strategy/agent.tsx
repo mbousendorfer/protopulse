@@ -119,6 +119,6 @@ const sage: AgentModule = {
   tick: closeCampaigns,
   intents: [campaign, campaignStatusIntent, pillars, pillarChange],
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-trajectory', to: '/strategy/campaigns/trail-week' }],
+  triggers: [{ event: 'ev-trajectory', to: '/strategy/campaigns/trail-week' }, { event: 'ev-campaign-end', to: '/strategy/campaigns/trail-week' }, { event: 'ev-moment', to: '/' }],
 }
 export default sage
