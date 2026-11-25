@@ -375,23 +375,31 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
       </section>
       <div className="row">
         <Filters label="Sentiment" value={sent} onChange={setSent} items={[{ value: 'all', label: 'All' }, { value: 'positive', label: 'Positive', count: count('positive') }, { value: 'neutral', label: 'Neutral', count: count('neutral') }, { value: 'negative', label: 'Negative', count: count('negative') }]} />
-        <Filters label="Product" value={product} onChange={setProduct} items={[{ value: 'all', label: 'All products' }, ...products.map(p => ({ value: p, label: p }))]} />
+        {products.length > 0 && <Menu align="start" trigger={<Btn size="sm">{product === 'all' ? 'All products' : product}<ChevronDown size={14} /></Btn>}
+          items={[{ label: 'All products', onSelect: () => setProduct('all') }, ...products.map(p => ({ label: p, hint: product === p ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setProduct(p) }))]} />}
         <Menu align="start" trigger={<Btn size="sm"><Tag size={14} />{tag === 'all' ? 'All tags' : tag}<ChevronDown size={14} /></Btn>}
-          items={[{ label: 'All tags', onSelect: () => setTag('all') }, ...TAGS.map(t => ({ label: t, onSelect: () => setTag(t) })), { label: 'Manage tags…', onSelect: () => setManaging(true) }]} />
+          items={[{ label: 'All tags', onSelect: () => setTag('all') }, ...TAGS.map(t => ({ label: t, onSelect: () => setTag(t) })), 'sep', { label: 'Manage tags…', onSelect: () => setManaging(true) }]} />
         <span className="spacer" />
         <Switch checked={risk} onChange={setRisk} label="At risk only" />
         <Switch checked={hidden} onChange={setHidden} label="Hidden" />
-        <Btn size="sm" onClick={exportCSV} disabled={!list.length}><Download size={14} />Export CSV</Btn>
-        {unseen.length > 0 && <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/seen', ids: unseen.map(m => m.id) })}><Check size={14} />Mark {unseen.length} as seen</Btn>}
       </div>
       <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
         { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
         hidden ? { label: 'Unhide', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
         { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
-      ]} />
+      ]}>
+        <Menu align="center" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Tag<ChevronDown size={12} /></Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
+        <Menu align="center" trigger={<Btn size="sm" variant="ghost">Sentiment<ChevronDown size={12} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: `Mark ${SENT_LABEL[x].toLowerCase()}`, onSelect: () => run('sentiment', { sentiment: x }) }))} />
+      </BulkBar>
       {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can unhide them.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
         <section className="card">
-          <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}</h2></span></div>
+          <div className="card-head">
+            <span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}{unseen.length > 0 && <span className="faint"> · {unseen.length} new</span>}</h2></span>
+            <span className="row tight">
+              {unseen.length > 0 && <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/seen', ids: unseen.map(m => m.id) })}><Check size={14} />Mark {unseen.length} as seen</Btn>}
+              <Btn size="sm" onClick={exportCSV}><Download size={14} />Export CSV</Btn>
+            </span>
+          </div>
           <ul className="ls-mentions">
             {list.map(m => {
               const st = s.listening.mentions[m.id]
@@ -420,12 +428,6 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
             })}
           </ul>
         </section>
-      )}
-      {sel.count > 0 && (
-        <div className="row ls-bulk-more">
-          <Menu align="center" trigger={<Btn size="sm"><Tag size={14} />Tag<ChevronDown size={14} /></Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
-          <Menu align="center" trigger={<Btn size="sm">Correct sentiment<ChevronDown size={14} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: SENT_LABEL[x], onSelect: () => run('sentiment', { sentiment: x }) }))} />
-        </div>
       )}
 
       {managing && <ManageTags onClose={() => setManaging(false)} />}
@@ -484,7 +486,8 @@ function Trends() {
                 {st === 'handed' ? <Pill tone="signal"><Check size={12} />With Atlas · draft on your Desk</Pill>
                   : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
                     <>
-                      <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
+                      {/* Orange only where Echo recommends it: a grid of eight orange buttons says nothing. */}
+                      <Btn size="sm" variant={t.fit === 'High' ? 'primary' : undefined} onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
                       <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Dismiss</Btn>
                     </>
                   )}
@@ -627,13 +630,14 @@ function Creators() {
                   <SocialAvatar name={c.handle} network={MENTION_NET[c.network]} size={32} />
                   <span className="ls-creator-text">
                     <span className="row tight"><b>{c.handle}</b><span className="faint">{c.name}</span></span>
-                    <span className="faint t-sm">{c.followers.toLocaleString('en-GB')} people · {c.mentions.length} mention{c.mentions.length > 1 ? 's' : ''} · <span className={`ls-mood ${c.mood}`}>{SENT_LABEL[c.mood]}</span>{c.also.length ? ` · also mentions ${c.also.map(a => a.competitor).join(', ')}` : ''}</span>
+                    <span className="faint t-sm">{c.followers.toLocaleString('en-GB')} followers · {c.mentions.length} mention{c.mentions.length > 1 ? 's' : ''} · <span className={`ls-mood ${c.mood}`}>{SENT_LABEL[c.mood]}</span>{c.also.length ? ` · also mentions ${c.also.map(a => a.competitor).join(', ')}` : ''}</span>
                     <span className="t-sm">{c.fitWhy}</span>
                   </span>
                 </button>
-                <div className="row nowrap">
-                  {st ? <Pill tone={st === 'contacted' ? 'ok' : 'signal'}>{CREATOR_STATUS[st]}</Pill> : !c.signed && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
+                {/* The status or Shortlist always ends the row, so they line up from one creator to the next. */}
+                <div className="row nowrap ls-creator-acts">
                   {c.fit && st !== 'proposed' && st !== 'contacted' && <Btn size="xs" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'propose' })}><Mark agent="nova" />Propose a collab</Btn>}
+                  {st ? <Pill tone={st === 'contacted' ? 'ok' : 'signal'}>{CREATOR_STATUS[st]}</Pill> : !c.signed && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
                 </div>
               </li>
             )
@@ -649,7 +653,7 @@ function Creators() {
         {open && (
           <div className="stack">
             <dl className="ls-facts">
-              <div><dt>Audience</dt><dd className="num">{open.followers.toLocaleString('en-GB')} people on {open.network}</dd></div>
+              <div><dt>Audience</dt><dd className="num">{open.followers.toLocaleString('en-GB')} followers on {open.network}</dd></div>
               <div><dt>Sentiment</dt><dd><span className={`ls-mood ${open.mood}`}>{SENT_LABEL[open.mood]}</span></dd></div>
               <div><dt>Also mentions</dt><dd>{open.also.length ? open.also.map(a => `${a.competitor} (${a.n})`).join(', ') : 'No competitor'}</dd></div>
               <div><dt>Echo’s call</dt><dd>{open.fitWhy}</dd></div>

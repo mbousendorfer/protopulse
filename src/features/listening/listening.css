@@ -70,7 +70,6 @@
 .ls-mood.positive { background: var(--ok-tint); color: var(--ok-strong); }
 .ls-mood.neutral { color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ls-tag { background: var(--a-echo-wash); color: var(--a-echo-ink); }
-.ls-bulk-more { justify-content: center; position: sticky; bottom: 76px; z-index: 19; }
 .ls-quote { margin: 0; padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); font-size: var(--t-lg); line-height: 1.5; }
 .ls-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin: 0; }
 .ls-facts dt { font-size: var(--t-sm); color: var(--ink-3); }
@@ -83,7 +82,12 @@
 .ls-watch-main b { font-weight: 600; font-size: var(--t-lg); }
 .ls-watch-main .chip { gap: 6px; }
 .ls-watch-meta { font-size: var(--t-sm); }
-@media (max-width: 820px) { .ls-watch { grid-template-columns: 40px minmax(0, 1fr) auto; } .ls-watch > :nth-child(n+4) { display: none; } }
+/* Narrow: the watch switch and the actions drop under the competitor, none of them hidden. */
+@media (max-width: 820px) {
+  .ls-watch { display: flex; flex-wrap: wrap; row-gap: var(--s2); }
+  .ls-watch-main { flex: 1 1 calc(100% - 56px); }
+  .ls-watch > :nth-child(3) { margin-left: 52px; }
+}
 
 .ls-creator { display: flex; gap: var(--s3); align-items: center; padding: 12px var(--s4); }
 .ls-creator-main { flex: 1; min-width: 0; display: flex; gap: var(--s3); align-items: flex-start; text-align: left; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; }
@@ -95,3 +99,14 @@
 .ls-tagdefs .input:first-child { flex: 0 0 200px; }
 .ls-tag-used { min-width: 96px; text-align: right; }
 .ls-unseen .mention-main b { font-weight: 700; }
+
+/* Card heads wrap on a narrow screen instead of squeezing their title into a column. */
+.listening .card-head { flex-wrap: wrap; }
+.ls-creator-acts { justify-content: flex-end; }
+/* Narrow mentions: the reply and hide actions go under the text, which keeps the full width. */
+@media (max-width: 720px) {
+  .ls-mentions > li { grid-template-columns: 32px minmax(0, 1fr); }
+  .ls-mentions > li > .row { grid-column: 2; flex-wrap: wrap; }
+}
+/* Tinted tags need no dot between them. */
+.chip + .chip.ls-tag::before { content: none; }
