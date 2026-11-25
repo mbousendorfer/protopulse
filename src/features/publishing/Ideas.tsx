@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, BookOpen, CalendarDays, ChartLine, Check, ChevronDown, ChevronRight, Flame, Layers, Lightbulb, MessageCircle, Radar, Sparkles, TriangleAlert, X } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm } from '../../app/time'
+import { T, ago, hhmm } from '../../app/time'
 import { NETWORK_LABEL, agentName } from '../../data/agents'
 import { MEDIA } from '../../data/publishing'
 import { BANNED } from '../../data/playbook'
@@ -78,7 +78,7 @@ function IdeaRow({ i, current, sel, now, settled }: { i: Idea; current: boolean;
   const P = proof ? iconOf(proof) : Lightbulb
   const f = freshness(i, now)
   const thumb = d0?.media ? <Photo name={d0.media} /> : i.kind === 'series' ? <Layers size={16} aria-hidden /> : <P size={16} aria-hidden />
-  const when = d0 ? slot(d0.at) : i.steps ? `${day(new Date(2026, 11, 1 + i.steps[0].day).getTime())} to ${day(new Date(2026, 11, 1 + i.steps.at(-1)!.day).getTime())}` : undefined
+  const when = d0 ? slot(d0.at) : i.steps ? `${day(T(0, 0, 6 + i.steps[0].day))} to ${day(T(0, 0, 6 + i.steps.at(-1)!.day))}` : undefined
   const ready = i.status === 'ready' && i.kind === 'post'
   return (
     <article className={`idea-row ${current ? 'current' : ''} ${now - i.at < 120_000 ? 'arrive' : ''} ${sel.has(i.id) ? 'picked' : ''}`}

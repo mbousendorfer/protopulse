@@ -83,16 +83,16 @@ type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'alerts' | 'record' | 'act
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
-    { at: Date.UTC(2026, 10, 12), text: 'Shipping refunds up to €15 moved to Act (trial week, then kept)', kind: 'up' },
-    { at: Date.UTC(2026, 10, 5), text: 'Asked to answer reviews alone. You said not yet.', kind: 'declined' },
-    { at: Date.UTC(2026, 9, 29), text: 'Product and shipping questions moved to Act', kind: 'up' },
+    { at: Date.UTC(2025, 10, 12), text: 'Shipping refunds up to €15 moved to Act (trial week, then kept)', kind: 'up' },
+    { at: Date.UTC(2025, 10, 5), text: 'Asked to answer reviews alone. You said not yet.', kind: 'declined' },
+    { at: Date.UTC(2025, 9, 29), text: 'Product and shipping questions moved to Act', kind: 'up' },
   ],
   atlas: [
-    { at: Date.UTC(2026, 10, 14), text: 'Slot moves moved to Act', kind: 'up' },
-    { at: Date.UTC(2026, 10, 7), text: 'Recycling went back to Draft after a post you undid', kind: 'down' },
+    { at: Date.UTC(2025, 10, 14), text: 'Slot moves moved to Act', kind: 'up' },
+    { at: Date.UTC(2025, 10, 7), text: 'Recycling went back to Draft after a post you undid', kind: 'down' },
   ],
-  iris: [{ at: Date.UTC(2026, 9, 30), text: 'Anomaly alerts moved to Act', kind: 'up' }],
-  echo: [{ at: Date.UTC(2026, 10, 3), text: 'Mention filing moved to Act', kind: 'up' }],
+  iris: [{ at: Date.UTC(2025, 9, 30), text: 'Anomaly alerts moved to Act', kind: 'up' }],
+  echo: [{ at: Date.UTC(2025, 10, 3), text: 'Mention filing moved to Act', kind: 'up' }],
   sage: [],
 }
 

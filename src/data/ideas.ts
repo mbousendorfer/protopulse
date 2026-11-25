@@ -203,7 +203,7 @@ const SEEDS: IdeaSeed[] = [
   {
     key: 'zip-flaw', kind: 'post', topic: 'zip', title: 'The zip we got wrong, and how we redesigned it',
     why: lesson('ls4').text + '.', sources: [srcLesson('ls4', 'Admitting a flaw')], confidence: 71, pillar: 'Repair & care', networks: ['linkedin', 'instagram'], action: 'atlas-plan',
-    copy: { linkedin: 'In 2025 we redesigned the Ridge zip after reading our own repair tickets. Here’s what we changed, and what 1,200 repairs taught us.', instagram: 'The zip we got wrong. The zip we fixed. Swipe for the difference.' },
+    copy: { linkedin: 'In 2024 we redesigned the Ridge zip after reading our own repair tickets. Here’s what we changed, and what 1,200 repairs taught us.', instagram: 'The zip we got wrong. The zip we fixed. Swipe for the difference.' },
     media: 'workshop', day: 9,
   },
   {

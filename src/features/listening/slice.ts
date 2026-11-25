@@ -9,10 +9,10 @@ import { briefSage } from '../strategy/slice'
 export type Watched = { id: string; name: string; website: string; accounts: { network: Network; handle: string }[]; tracking: boolean; since: number; custom?: boolean }
 
 const WATCH: Watched[] = [
-  { id: 'peakline', name: 'Peakline', website: 'peakline.eu', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'instagram', handle: '@peakline' }, { network: 'tiktok', handle: '@peakline' }, { network: 'facebook', handle: 'Peakline' }, { network: 'youtube', handle: '@peaklineoutdoor' }] },
-  { id: 'norro', name: 'Norrø', website: 'norro.no', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'instagram', handle: '@norro_official' }, { network: 'linkedin', handle: 'Norrø AS' }, { network: 'youtube', handle: '@norrofilms' }] },
-  { id: 'trailkind', name: 'Trailkind', website: 'trailkind.com', tracking: true, since: Date.UTC(2026, 6, 14), accounts: [{ network: 'tiktok', handle: '@trailkind' }, { network: 'instagram', handle: '@trailkind' }, { network: 'x', handle: '@trailkind' }] },
-  { id: 'basecamp', name: 'Basecamp Co.', website: 'basecamp-co.fr', tracking: true, since: Date.UTC(2026, 3, 2), accounts: [{ network: 'facebook', handle: 'Basecamp Co.' }, { network: 'instagram', handle: '@basecampco' }, { network: 'x', handle: '@basecampco' }] },
+  { id: 'peakline', name: 'Peakline', website: 'peakline.eu', tracking: true, since: Date.UTC(2025, 3, 2), accounts: [{ network: 'instagram', handle: '@peakline' }, { network: 'tiktok', handle: '@peakline' }, { network: 'facebook', handle: 'Peakline' }, { network: 'youtube', handle: '@peaklineoutdoor' }] },
+  { id: 'norro', name: 'Norrø', website: 'norro.no', tracking: true, since: Date.UTC(2025, 3, 2), accounts: [{ network: 'instagram', handle: '@norro_official' }, { network: 'linkedin', handle: 'Norrø AS' }, { network: 'youtube', handle: '@norrofilms' }] },
+  { id: 'trailkind', name: 'Trailkind', website: 'trailkind.com', tracking: true, since: Date.UTC(2025, 6, 14), accounts: [{ network: 'tiktok', handle: '@trailkind' }, { network: 'instagram', handle: '@trailkind' }, { network: 'x', handle: '@trailkind' }] },
+  { id: 'basecamp', name: 'Basecamp Co.', website: 'basecamp-co.fr', tracking: true, since: Date.UTC(2025, 3, 2), accounts: [{ network: 'facebook', handle: 'Basecamp Co.' }, { network: 'instagram', handle: '@basecampco' }, { network: 'x', handle: '@basecampco' }] },
 ]
 
 export type EventState = { status: 'handed' | 'done' | 'dismissed'; move: string; result: string; at: number }

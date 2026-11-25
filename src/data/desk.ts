@@ -19,7 +19,7 @@ export const HANDOFFS: Handoff[] = [
   },
   {
     id: 'h-press', agent: 'nova', kind: 'decision', urgency: 'urgent', topic: 'Press', action: 'nova-sensitive', ref: 'c-marc',
-    sources: [{ label: 'Storm Jacket 2024 DWR: supplier sheet not in the Playbook', from: 'Playbook facts' }, { label: 'Press always goes to a person', from: 'Escalation rules' }],
+    sources: [{ label: 'Storm Jacket 2023 DWR: supplier sheet not in the Playbook', from: 'Playbook facts' }, { label: 'Press always goes to a person', from: 'Escalation rules' }],
     title: 'Journalist asking about PFAS in the Storm Jacket',
     context: 'LinkedIn DM from Marc Delorme, Outdoor Weekly. His deadline is today at 17:00.',
     why: 'Press and safety topics are locked: Nova never answers them herself.',
@@ -27,7 +27,7 @@ export const HANDOFFS: Handoff[] = [
     options: [{ label: 'Forward to Claire with a holding reply', recommended: true }, { label: 'Send the holding reply only' }, { label: 'I’ll handle it myself' }],
     preview: {
       type: 'reply', network: 'linkedin', author: 'Marc Delorme · Outdoor Weekly',
-      text: 'Hi, I’m writing a piece on PFAS in rainwear. Can you confirm whether the 2024 Storm Jacket uses a PFC-free DWR? Deadline today 5pm.',
+      text: 'Hi, I’m writing a piece on PFAS in rainwear. Can you confirm whether the 2023 Storm Jacket uses a PFC-free DWR? Deadline today 5pm.',
       draft: ['Hi Marc, thanks for reaching out. Our Head of Brand will get back to you before your deadline today.'],
     },
   },

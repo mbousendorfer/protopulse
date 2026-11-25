@@ -26,7 +26,7 @@ const ALERTS: Alert[] = [
 
 export const initialInsights = (): InsightsState => ({
   alerts: structuredClone(ALERTS),
-  shared: { w46: { at: Date.UTC(2026, 10, 17, 9, 12) }, w45: { at: Date.UTC(2026, 10, 10, 9, 3) } },
+  shared: { w46: { at: Date.UTC(2025, 10, 17, 9, 12) }, w45: { at: Date.UTC(2025, 10, 10, 9, 3) } },
   anomalies: {},
   boosts: [],
   followUps: [],

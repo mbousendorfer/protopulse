@@ -31,7 +31,7 @@ export const namesCompetitor = (text: string) => COMPETITORS.test(text)
 
 /* ---------- Calendar gaps (was recommend() in Page.tsx) ---------- */
 
-/** The calendar's week starts on demo day −1 ("Monday" in the app's story), so gaps match what the calendar shows. */
+/** The calendar's week starts on Monday 24 November (demo day −1), so gaps match what the calendar shows. */
 const WEEK0 = T(0, 0, -1)
 const mondayOf = (t: number) => WEEK0 + Math.floor((startOfDay(t) - WEEK0) / (7 * DAY)) * 7 * DAY
 /** The pillar furthest below Sage's target share. */
@@ -203,7 +203,7 @@ function rewrite(idea: Idea, d: IdeaDraft, angle: Angle): { text: string; note: 
       const kept = CTA.test(s.at(-1) ?? '') ? s.slice(0, -1) : s
       const jacket = /jacket|fleece/.test(all)
       const add = jacket ? 'Re-proof it once a winter and it keeps doing that: the 3 steps are on the last slide.'
-        : /ridge|bag|pack/.test(all) ? 'And if it ever tears, your first repair is free: 1,200 bags fixed in 2026.' : 'Built to last, and we repair what breaks.'
+        : /ridge|bag|pack/.test(all) ? 'And if it ever tears, your first repair is free: 1,200 bags fixed in 2025.' : 'Built to last, and we repair what breaks.'
       const note = jacket ? 'Added the care tip from Sunday’s re-proofing post. I didn’t promise a free repair: the repair programme covers bags, not jackets.'
         : add.includes('1,200') ? 'Added the repair promise. 1,200 bags fixed comes from the Playbook facts.' : 'Added the repair line from the Playbook.'
       return { text: `${stop(kept.join(' '))} ${add}${end}`.trim(), note: CTA.test(s.at(-1) ?? '') ? `${note} I dropped “${s.at(-1)}”: one call to action per post.` : note }
@@ -282,8 +282,8 @@ export function applyInstruction(idea: Idea, input: string, ctx: Ctx): { idea: I
     did.push(`added the ${p.name} price from the catalog`)
   }
   if (/pfc|pfas/.test(t)) {
-    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} PFAS-free since 2024.${tail(d.text).end}` }))
-    did.push('added “PFAS-free since 2024”, from the Playbook facts')
+    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} PFAS-free since 2023.${tail(d.text).end}` }))
+    did.push('added “PFAS-free since 2023”, from the Playbook facts')
   }
   const day = WEEKDAYS.findIndex(w => t.includes(w))
   if (day >= 0 || /tomorrow/.test(t)) {
