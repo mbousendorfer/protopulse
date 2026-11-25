@@ -4,11 +4,16 @@ import { T } from '../app/time'
 /** A sentence part: plain text, or a number that points to its data source. */
 export type Cited = string | { n: string; source: string }
 
-export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' }
+/** What a Report Studio section is about; Iris rewrites it from this. */
+export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community' | 'campaign' | 'label' | 'roi'
+/** How Iris writes a report on request: its window, networks, reader and sections. Saved as a template, it can be asked for again. */
+export type Recipe = { days: number; networks: Network[]; audience: 'claire' | 'sam'; sections: SectionKind[]; /** Sage's campaign id. */ campaign?: string; /** A label on Atlas's posts. */ label?: string }
+
+export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' | 'campaign'; kind?: SectionKind; short?: boolean }
 
 export type Report = {
   id: string
-  kind: 'brief' | 'weekly' | 'campaign'
+  kind: 'brief' | 'weekly' | 'campaign' | 'custom'
   title: string
   period: string
   writtenAt: number
@@ -16,6 +21,8 @@ export type Report = {
   sections: ReportSection[]
   /** Written on Draft: waits for Sam on the Desk. */
   draft?: boolean
+  /** Asked for by Sam: Iris can rewrite each section. */
+  recipe?: Recipe
 }
 
 const c = (n: string, source: string) => ({ n, source })
@@ -292,4 +299,19 @@ export const SIGNALS: Signal[] = [
 export const SPIKES: Record<string, Partial<Signal>> = {
   'followers:linkedin': { value: 420, base: 80, series: [72, 80, 65, 90, 77, 84, 420], title: 'LinkedIn followers +420 in a day',
     cause: 'The repair programme post was shared by the Green Gear newsletter (38k readers).', confidence: 84, actions: ['Ask Atlas for a follow-up post', 'No action'] },
+}
+
+/**
+ * Google Analytics 4, as Iris reads it (mocked): what a link click becomes on fernway.co, per network.
+ * `land`: clicks that become sessions; `cr`: sessions that convert; `aov`: average order value (€).
+ */
+export const GA4: Record<Exclude<Network, 'google' | 'trustpilot'>, { land: number; cr: number; aov: number }> = {
+  instagram: { land: 0.82, cr: 0.021, aov: 92 }, tiktok: { land: 0.74, cr: 0.009, aov: 68 }, linkedin: { land: 0.88, cr: 0.016, aov: 140 },
+  facebook: { land: 0.85, cr: 0.032, aov: 88 }, youtube: { land: 0.8, cr: 0.014, aov: 95 }, x: { land: 0.7, cr: 0.006, aov: 80 },
+}
+
+/** Campaign results in GA4 (UTM campaign = Sage's campaign id). `spend`: boost spend before this month (this month's is in Iris's boosts). */
+export const GA4_CAMPAIGNS: Record<string, { sessions: number; conversions: number; revenue: number; goal: string; spend: number }> = {
+  'trail-week': { sessions: 1840, conversions: 61, revenue: 5600, goal: 'orders', spend: 0 },
+  'repair-friday': { sessions: 2410, conversions: 1180, revenue: 4900, goal: 'repair requests', spend: 500 },
 }

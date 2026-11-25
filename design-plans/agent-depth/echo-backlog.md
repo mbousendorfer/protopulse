@@ -23,15 +23,15 @@
 
 | # | Capacité Agorapulse | État actuel | Version agentique | Valeur | Taille | Statut |
 |---|---|---|---|---|---|---|
-| F1 | Flux par recherche (Search view) | Searches = table, pas de résultats par recherche | Page de recherche : ses mentions, volume, sentiment, auteurs uniques, 7 j ; Echo résume en tête | 3 | M | done (PR suivante) |
+| F1 | Flux par recherche (Search view) | Searches = table, pas de résultats par recherche | Page de recherche : ses mentions, volume, sentiment, auteurs uniques, 7 j ; Echo résume en tête | 3 | M | done (#65) |
 | F2 | Séries temporelles (Volume, Sentiment, Share of voice) | Aucune série ; Benchmark statique | Graphes 7 / 30 / 90 j par recherche, produit, concurrent, avec la lecture d'Echo | 3 | M | dropped — refusé au pitch (sans commentaire) |
-| F3 | Recherches booléennes (Advanced query, sources, langue, pays) | Mots-clés séparés par virgules | Requête AND / OR / NOT, sources (réseaux, News, Blog, Forum), langue, pays ; Echo propose d'affiner (« add NOT trail ? ») | 2 | M | todo |
+| F3 | Recherches booléennes (Advanced query, sources, langue, pays) | Mots-clés séparés par virgules | Requête AND / OR / NOT, sources (réseaux, News, Blog, Forum), langue, pays ; Echo propose d'affiner (« add NOT trail ? ») | 2 | M | later |
 | F4 | Par produit | Filtre produit seulement | Volume et sentiment par produit ; Echo signale un défaut qui monte (Storm Jacket seams) | 3 | S | dropped — refusé au pitch (sans commentaire) |
-| F5 | Créateurs et influenceurs | Une carte `h-creator`, liste inexistante | Liste des auteurs influents (audience, affinité, sentiment, historique), fiche, collaboration via Nova | 2 | M | todo (Go) |
-| F6 | Mention → Inbox | Une mention devient une carte Desk de Nova | Une mention à traiter devient une conversation chez Nova (contrat d'entrée de Nova) | 2 | S | todo |
-| F7 | Benchmark par réseau avec historique | Table 30 j statique | Par réseau, rang, nos top posts face aux leurs, lecture d'Echo | 2 | M | todo |
-| F8 | Tags de mentions | 5 tags fixes | Tags éditables, tagging auto par règles (produit, sujet, risque) | 1 | S | todo |
-| F9 | Export search (PDF) | CSV des mentions | Rapport Listening en Markdown téléchargé (Echo l'écrit) | 1 | S | todo |
+| F5 | Créateurs et influenceurs | Une carte `h-creator`, liste inexistante | Liste des auteurs influents (audience, affinité, sentiment, historique), fiche, collaboration via Nova | 2 | M | done (#74) |
+| F6 | Mention → Inbox | Une mention devient une carte Desk de Nova | Une mention à traiter devient une conversation chez Nova (contrat d'entrée de Nova) | 2 | S | skipped — déjà couvert : les cartes de réponse de Nova nées d’une mention apparaissent comme conversations dans l’Inbox (`virtualConvs`, inbox/slice.ts) |
+| F7 | Benchmark par réseau avec historique | Table 30 j statique | Par réseau, rang, nos top posts face aux leurs, lecture d'Echo | 2 | M | done (PR suivante) |
+| F8 | Tags de mentions | 5 tags fixes | Tags éditables, tagging auto par règles (produit, sujet, risque) | 1 | S | todo (Go) |
+| F9 | Export search (PDF) | CSV des mentions | Rapport Listening en Markdown téléchargé (Echo l'écrit) | 1 | S | later |
 | F10 | Mark as seen / unseen | Aucun | Non vus comptés « needs you » | 1 | S | todo |
-| F11 | Search Screening (Topic focus) | Aucun | Echo écarte le hors-sujet et le montre (« 30 % parlent d'un sentier ») — couvert par F3 | 1 | S | todo |
+| F11 | Search Screening (Topic focus) | Aucun | Echo écarte le hors-sujet et le montre (« 30 % parlent d'un sentier ») — couvert par F3 | 1 | S | later — fusionné dans le pitch de F3 |
 | F12 | Historical data | Aucun | Hors périmètre (pas de backend) ; les séries de F2 donnent 90 j | – | – | skipped — sans objet dans un mock, F2 le couvre |

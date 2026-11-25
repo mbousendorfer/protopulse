@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
-import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase } from '../../data/strategy'
+import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { lastWeekOf, launchBlock, mixOf, targetsOf } from './slice'
+import { labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -49,8 +49,10 @@ function Campaigns() {
   const { s } = useStore()
   const order: CampaignStatus[] = ['review', 'live', 'brief', 'done']
   const list = [...s.strategy.campaigns].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
-  if (!list.length) return <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} />
   return (
+    <div className="stack lg">
+    <Moments />
+    {!list.length ? <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} /> : (
     <div className="campaigns">
       {list.map(c => {
         const pct = Math.round((c.goal.current / c.goal.target) * 100)
@@ -74,6 +76,40 @@ function Campaigns() {
         )
       })}
     </div>
+    )}
+    </div>
+  )
+}
+
+/** Dates worth planning for. Sage raises each one 3 weeks before; added ones show in Atlas's calendar. */
+function Moments() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const list = s.strategy.moments.filter(m => m.end > now)
+  if (!list.length) return null
+  return (
+    <section className="card">
+      <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
+      <ul className="rows">
+        {list.map(m => (
+          <li key={m.id} className="moment">
+            <span className="mono faint moment-date">{fmtDate(m.start)}{fmtDate(m.end) !== fmtDate(m.start) ? ` – ${fmtDate(m.end)}` : ''}</span>
+            <div className="moment-body">
+              <b>{m.name}</b>
+              <p className="muted">{m.why} <span className="faint">{m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</span></p>
+            </div>
+            {m.status === 'added' ? <Pill tone="ok">In the calendar</Pill>
+              : m.status === 'skipped' ? <Reopen label="Not this year" onUndo={() => d({ type: 'strategy/reopen', id: m.id })} />
+              : (
+                <div className="row nowrap">
+                  <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add to the calendar</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
+                </div>
+              )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -355,7 +391,7 @@ function CampaignView() {
 
       {c.recap && (
         <section className="card pad recap">
-          <div className="section-title"><Mark agent="iris" />Recap by Iris</div>
+          <div className="section-title"><Mark agent={c.recapBy ?? 'iris'} />{c.recapBy === 'sage' ? 'Recap by Sage, with Iris’s numbers' : 'Recap by Iris'}</div>
           {c.recap.map(p => <p key={p}>{p}</p>)}
           {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
         </section>
@@ -402,6 +438,8 @@ function CampaignView() {
         </div>
       </section>
 
+      {c.status !== 'review' && <LabelCard c={c} />}
+
       <section className="card pad">
         <div className="section-title">Who does what <span className="faint">· drag a task to another agent, or use its menu</span></div>
         <DelegateBoard c={c} />
@@ -418,6 +456,23 @@ function CampaignView() {
         <p className="muted">The plan and its Desk card go away. Sage keeps the brief in the journal.</p>
       </Modal>
     </div>
+  )
+}
+
+/** The campaign's label, shared by Atlas's posts and Nova's conversations. */
+function LabelCard({ c }: { c: Campaign }) {
+  const { s, d } = useStore()
+  const st = labelStats(s, c)
+  return (
+    <section className="card pad stack">
+      <div className="section-title flush">Campaign label <span className="faint">· shared by Atlas and Nova</span></div>
+      <p className="row tight"><Pill>{c.name}</Pill><span>{st.posts} post{st.posts === 1 ? '' : 's'} in Atlas’s calendar ({st.published} published) · {st.convs} conversation{st.convs === 1 ? '' : 's'} in the Inbox</span></p>
+      {st.latest && <p className="muted">Latest: {st.latest.author}, “{st.latest.text}”</p>}
+      {st.rule
+        ? <p className="faint">Nova labels every new conversation that mentions {labelWords(c).map(w => `“${w}”`).join(', ')}.</p>
+        : <div className="row"><Btn size="sm" onClick={() => d({ type: 'strategy/label', id: c.id })}>Ask Nova to label conversations</Btn><span className="faint">Through an Inbox rule you can edit or undo.</span></div>}
+      <div className="row tight"><Link to="/publishing/calendar" className="btn sm ghost">Calendar</Link><Link to="/inbox" className="btn sm ghost">Inbox</Link></div>
+    </section>
   )
 }
 
@@ -475,8 +530,45 @@ function DelegateBoard({ c }: { c: Campaign }) {
 }
 
 /* ---------- Pillars and cadence ---------- */
+
+/** Sam edits the shares and descriptions; Sage checks the sum and says what it means in posts a week. */
+function PillarEditor({ draft, onChange, onDone }: { draft: Pillar[]; onChange: (p: Pillar[]) => void; onDone: () => void }) {
+  const { s, d } = useStore()
+  const check = pillarCheck(s, draft)
+  const set = (id: string, patch: Partial<Pillar>) => onChange(draft.map(p => (p.id === id ? { ...p, ...patch } : p)))
+  return (
+    <form className="pillar-edit" onSubmit={e => { e.preventDefault(); if (check.ok) { d({ type: 'strategy/pillars', pillars: draft }); onDone() } }}>
+      <table className="table">
+        <thead><tr><th>Pillar</th><th className="r">Target</th><th>Description</th></tr></thead>
+        <tbody>
+          {draft.map(p => (
+            <tr key={p.id}>
+              <td><b>{p.name}</b></td>
+              <td className="r">
+                <span className="row tight nowrap pct-input">
+                  <input className="input" type="number" min={0} max={100} step={5} aria-label={`${p.name} target share`} value={Number.isFinite(p.target) ? p.target : ''} onChange={e => set(p.id, { target: e.target.value === '' ? NaN : +e.target.value })} />%
+                </span>
+              </td>
+              <td><input className="input" aria-label={`${p.name} description`} value={p.desc} onChange={e => set(p.id, { desc: e.target.value })} /></td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot><tr><td>Total</td><td className={`r num ${check.total === 100 ? '' : 'warn'}`}>{check.total}%</td><td /></tr></tfoot>
+      </table>
+      <div className="sage-check" aria-live="polite">
+        <Mark agent="sage" />
+        <p>{check.issues[0] ?? (check.impact.length ? `${check.impact.join('. ')}. Atlas plans to it from next week.` : 'Change a share or a description and I’ll check it.')}</p>
+      </div>
+      <div className="row">
+        <Btn variant="primary" type="submit" disabled={!check.ok}>Apply</Btn>
+        <Btn variant="ghost" onClick={onDone}>Cancel</Btn>
+      </div>
+    </form>
+  )
+}
 function Pillars() {
   const { s, d } = useStore()
+  const [edit, setEdit] = useState<Pillar[] | null>(null)
   const now = useNow()
   const mix = mixOf(s, now)
   const week = lastWeekOf(s, now)
@@ -485,9 +577,15 @@ function Pillars() {
       <section className="card pad">
         <div className="row between">
           <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
-          <span className="row tight faint lock-note"><Lock size={13} />Locked: Sage suggests, you decide</span>
+          {edit ? null : (
+            <div className="row tight">
+              <span className="row tight faint lock-note"><Lock size={13} />Sage suggests, you decide</span>
+              <Btn size="sm" onClick={() => setEdit(structuredClone(s.strategy.pillars))}><Pencil size={14} />Edit pillars</Btn>
+            </div>
+          )}
         </div>
-        <div className="pillars">
+        {edit && <PillarEditor draft={edit} onChange={setEdit} onDone={() => setEdit(null)} />}
+        <div className="pillars" hidden={!!edit}>
           {s.strategy.pillars.map(p => {
             const actual = mix[p.name] ?? 0
             const off = actual - p.target

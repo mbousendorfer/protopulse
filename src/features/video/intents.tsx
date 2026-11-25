@@ -7,7 +7,7 @@ import { defineIntent } from '../../app/agent-module'
 import { NETWORK_LABEL } from '../../data/agents'
 import { PEOPLE, TRANSCRIPT } from '../../data/video'
 import { Mark } from '../../ui'
-import { clipLengthOf, fitsLength, keywords, lengthSpec, type Clip } from './model'
+import { clipLengthOf, fitsLength, keywords, lengthSpec, versionFor as netVersion, type Clip } from './model'
 import { holdReason, reduceVideo, unreleased } from './slice'
 
 declare module '../../data/command' {
@@ -48,7 +48,8 @@ function versionFor(s: State, c: Clip, n: Network): { patch?: Partial<Clip>; tex
   if (!open(c)) return { text: `“${c.title}” already went to Atlas, so I can’t change where it goes. Undo the send first.` }
   if (!fitsLength(n, dur)) return { text: `“${c.title}” runs ${Math.round(dur)} s, outside ${name}’s ${lengthSpec(n).min}–${lengthSpec(n).max} s. Shorten it in the editor first.` }
   const text = c.post.text[c.post.networks[0]] ?? c.hook
-  return { patch: { post: { networks: [...c.post.networks, n], text: { ...c.post.text, [n]: text } } }, text: `Added a ${name} version of “${c.title}”: ${Math.round(dur)} s fits, and it starts from the ${NETWORK_LABEL[c.post.networks[0]]} caption. You can change it in the editor, or undo with ⌘Z there.` }
+  const v = netVersion(c, n)
+  return { patch: { post: { networks: [...c.post.networks, n], text: { ...c.post.text, [n]: text } }, ...(c.versions ? { versions: { ...c.versions, [n]: v } } : {}) }, text: `Added a ${name} version of “${c.title}”: ${c.versions ? `${v.aspect}, captions above the app’s buttons, ` : ''}${Math.round(dur)} s fits, and it starts from the ${NETWORK_LABEL[c.post.networks[0]]} caption. You can change it in the editor, or undo with ⌘Z there.` }
 }
 
 export const clipWhy = defineIntent({

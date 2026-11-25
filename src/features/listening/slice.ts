@@ -3,7 +3,7 @@ import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
 import { DEMO_START, hhmm, MIN } from '../../app/time'
 import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
-import { competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
+import { netLabel, theirTop, creatorOf, competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -43,6 +43,8 @@ export type ListeningState = {
   checkedAt?: number
   /** Events Echo raised on competitors you added. */
   customEvents: CompEvent[]
+  /** Creators you (or Echo, on Act) shortlisted, and the ones Nova contacted. */
+  creators: Record<string, 'listed' | 'proposed' | 'contacted'>
 }
 
 const ALERTS: Alert[] = [
@@ -53,7 +55,7 @@ const ALERTS: Alert[] = [
 
 export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
   // The press mention on “PFAS rainwear” came in overnight: Echo already raised it (Nova's PFAS card).
-  fired: { la3: DEMO_START }, hits: {}, customEvents: [] })
+  fired: { la3: DEMO_START }, hits: {}, customEvents: [], creators: {} })
 
 export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
@@ -75,6 +77,8 @@ export type ListeningAction =
   | { type: 'listening/alertSave'; alert: Alert }
   | { type: 'listening/alertToggle'; id: string }
   | { type: 'listening/alertDelete'; id: string }
+  | { type: 'listening/creator'; handle: string; op: 'list' | 'unlist' | 'propose' }
+  | { type: 'listening/testFormat'; network: Network; competitor: string }
 
 const patch = (s: State, p: Partial<ListeningState>): State => ({ ...s, listening: { ...s.listening, ...p } })
 const setEvent = (s: State, id: string, e: Omit<EventState, 'at'>): State => patch(s, { events: { ...s.listening.events, [id]: { ...e, at: now(s) } } })
@@ -216,6 +220,9 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return patch(s, { alerts: s.listening.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
     case 'listening/alertDelete':
       return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
+    case 'listening/testFormat': return testFormat(s, a.network, a.competitor)
+    case 'listening/creator':
+      return a.op === 'propose' ? proposeCollab(s, a.handle, 'You asked from Listening › Creators.') : setCreator(s, a.handle, a.op === 'list' ? 'listed' : undefined)
   }
 }
 
@@ -329,7 +336,13 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
   if (h.id === 'h-trend' && d.kind === 'approve') return patch(s, { trends: { ...s.listening.trends, t1: 'handed' } })
   if (h.id === 'h-creator' && d.kind === 'option') {
     return d.index === 0 ? pushLog(s, { agent: 'nova', text: 'Sent a thank-you DM to @camille.outdoors', status: 'approved', reason: 'Your call on Echo’s creator alert', undoMinutes: 10 })
-      : d.index === 1 ? pushLog(s, { agent: 'echo', text: 'Added @camille.outdoors to the creator list', status: 'approved' }) : s
+      : d.index === 1 ? setCreator(s, '@camille.outdoors', 'listed') : s
+  }
+  if (h.ref === CREATOR_EVENT && d.kind === 'option') return d.index === 0 ? proposeCollab(s, CREATOR_FIT, 'You picked it on Echo’s creator card.') : d.index === 1 ? setCreator(s, CREATOR_FIT, 'listed') : s
+  if (h.ref?.startsWith('collab:')) {
+    const handle = h.ref.slice('collab:'.length)
+    if (d.kind === 'approve') return pushLog(setCreator(s, handle, 'contacted'), { agent: 'nova', text: `Sent a collab DM to ${handle}`, status: 'approved', reason: 'Echo’s creator shortlist', link: '/listening/creators' })
+    if (d.kind === 'reject') return setCreator(s, handle, 'listed')
   }
   return s
 }
@@ -387,8 +400,7 @@ function spikeMove(s: State, h: Handoff, index: number): State {
     if (agentOf(s, 'atlas').status === 'on') {
       next = { ...next, agents: next.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'paused' as const, pausedUntil: 'Claire’s statement is out' } : a)) }
       next = patch(next, { pausedAtlas: h.id })
-      const today = s.publishing.posts.filter(p => p.status === 'scheduled' && new Date(p.at).toDateString() === new Date(now(s)).toDateString()).length
-      next = pushLog(next, { agent: 'atlas', text: `Paused for the Storm Jacket spike. No new drafts or ideas until Claire’s statement is out${today ? `; ${today} post${today > 1 ? 's' : ''} already scheduled today ${today > 1 ? 'stay' : 'stays'} in the calendar` : ''}`, status: 'done', reason: 'Echo’s negative spike', link: '/publishing/calendar' })
+      next = pushLog(next, { agent: 'atlas', text: 'Paused for the Storm Jacket spike. No new drafts or ideas until Claire’s statement is out; Atlas pauses the next 24 hours of posts', status: 'done', reason: 'Echo’s negative spike', link: '/publishing/calendar' })
     }
     const t = now(next)
     return pushHandoff(next, {
@@ -425,6 +437,7 @@ function markSpikeReplied(s: State, on: boolean): State {
 /** Undo puts the spike back as it was: Atlas back on, the statement and the replies withdrawn. */
 export function onUndoListening(s: State, entry: LogEntry): State {
   let next = s
+  if (entry.creator) next = setCreator(next, entry.creator, undefined)
   for (const h of entry.restore ?? []) {
     if (h.ref === SPIKE_REF) {
       if (next.listening.pausedAtlas === h.id) next = resumeAtlas(next, 'You undid the spike decision')
@@ -432,6 +445,8 @@ export function onUndoListening(s: State, entry: LogEntry): State {
       if (next.listening.watchSpike?.card === h.id) next = patch(next, { watchSpike: undefined })
     }
     if (h.ref === SPIKE_REPLIES) next = markSpikeReplied(next, false)
+    if (h.ref?.startsWith('collab:') && next.listening.creators[h.ref.slice(7)] === 'contacted') next = setCreator(next, h.ref.slice(7), 'proposed')
+    if (h.ref === CREATOR_EVENT) next = setCreator(next, CREATOR_FIT, undefined)
     if (h.ref?.startsWith('statement:') && agentOf(next, 'atlas').status === 'on' && !next.listening.pausedAtlas) {
       const spike = h.ref.slice('statement:'.length)
       next = patch({ ...next, agents: next.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'paused' as const, pausedUntil: 'Claire’s statement is out' } : a)) }, { pausedAtlas: spike })
@@ -545,4 +560,72 @@ function syncGuardrails(s: State): State {
   return { ...s, agents: s.agents.map(ag => ag.id !== 'echo' ? ag : { ...ag, guardrails: ag.guardrails
     .map(value('g2', cap => `${watchedCount(s)}${cap ? ` of ${cap}` : ''}: ${names || 'none'}`))
     .map(value('g3', cap => `${activeSearches(s)}${cap ? ` of ${cap}` : ''}`)) }) }
+}
+
+/* ---------- Creators ---------- */
+
+declare module '../../app/types' {
+  interface LogEntry {
+    /** A creator Echo shortlisted on her own: Undo takes them off the list. */
+    creator?: string
+  }
+}
+
+const CREATOR_EVENT = 'ev-creator-fit'
+const CREATOR_FIT = '@jeanne.paris'
+
+function setCreator(s: State, handle: string, st: ListeningState['creators'][string] | undefined): State {
+  const creators = { ...s.listening.creators }
+  if (st) creators[handle] = st; else delete creators[handle]
+  return patch(s, { creators })
+}
+
+/** Nova drafts the collab DM; it waits on your Desk. Contacting a creator is always your call. */
+function proposeCollab(s: State, handle: string, why: string): State {
+  const c = creatorOf(s, handle)
+  if (!c || s.handoffs.some(h => h.ref === `collab:${handle}`)) return s
+  const first = c.name.split(' ')[0]
+  const product = c.mentions.find(m => m.product)?.product ?? 'Ridge 28L'
+  const next = pushHandoff(s, {
+    agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Creator collab', chain: ['echo', 'nova'], ref: `collab:${handle}`,
+    title: `Collab DM to ${handle}`, context: `${c.followers.toLocaleString('en-GB')} people on ${c.network} · ${c.history[0] ?? `${c.mentions.length} mention${c.mentions.length > 1 ? 's' : ''} of Fernway`}`,
+    why: `${why} ${c.fitWhy}`, confidence: 74, link: `/listening/creators?c=${encodeURIComponent(handle)}`,
+    preview: { type: 'reply', network: MENTION_NET[c.network] ?? 'instagram', author: handle, text: c.mentions[0].text, draft: [`Hi ${first}, it’s the Fernway team. We’ve loved seeing the ${product} on your trips. Would you like to try our winter range and tell your audience what you really think? No script, no obligation. Happy to talk if it sounds fun.`] },
+  })
+  return setCreator(next, handle, 'proposed')
+}
+
+/** Script event: a creator who fits. Suggest notes it, Draft asks, Act shortlists her (contacting stays Sam's call). */
+export function creatorEvent(s: State, manual: boolean): State {
+  if (!manual && agentOf(s, 'echo').status !== 'on') return s
+  const c = creatorOf(s, CREATOR_FIT)
+  if (!c || s.listening.creators[c.handle] || s.handoffs.some(h => h.ref === CREATOR_EVENT)) return s
+  const level = actionOf(s, 'echo', 'echo-creators')?.autonomy ?? 'draft'
+  const title = `${c.handle} keeps wearing the Storm Jacket: ${Math.round(c.followers / 1000)}k people`
+  if (level === 'suggest') return pushLog(s, { agent: 'echo', text: `Spotted a creator: ${title}`, status: 'done', reason: 'Creators, set to Suggest', link: '/listening/creators' })
+  if (level === 'act') return pushLog(setCreator(s, c.handle, 'listed'), { agent: 'echo', text: `Shortlisted ${c.handle} for a collab`, status: 'done', reason: 'Creators, set to Act', link: '/listening/creators', undoMinutes: 30, creator: c.handle })
+  return pushHandoff(s, {
+    agent: 'echo', kind: 'decision', urgency: 'week', topic: 'Creator', action: 'echo-creators', ref: CREATOR_EVENT,
+    title, context: c.history.join(' · '), why: c.fitWhy, confidence: 72, link: `/listening/creators?c=${encodeURIComponent(c.handle)}`,
+    options: [{ label: 'Nova drafts a collab DM', recommended: true }, { label: 'Shortlist only' }, { label: 'Not a fit' }],
+  })
+}
+
+/* ---------- Benchmark per network ---------- */
+
+/** Atlas drafts a post in the rival's best format on that network. Answering a competitor stays locked to Suggest: you publish. */
+function testFormat(s: State, n: Network, id: string): State {
+  const ref = `format:${n}:${id}`
+  if (s.handoffs.some(h => h.ref === ref)) return s
+  const top = theirTop(n, id)
+  const name = competitorName(s, id)
+  const format = top?.format.toLowerCase() ?? 'format'
+  const next = pushHandoff(s, {
+    agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-competitor', chain: ['echo', 'atlas'], ref,
+    title: `Test ${name}’s ${format} on ${netLabel(n)}`, context: top ? `Their best on ${netLabel(n)}: “${top.title}”, ${top.views} views. ${top.takeaway}` : `What works for ${name} on ${netLabel(n)}.`,
+    why: 'You asked from Listening › Benchmark. Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 64, link: `/listening/competitors/benchmark?net=${n}`,
+    rules: ['Never name a competitor in a post'],
+    preview: { type: 'post', network: n, slot: 'This week', text: [top ? `Our take on “${top.title.toLowerCase()}”, with the Ridge 28L and a real customer. Draft v1.` : `Our version of what works on ${netLabel(n)} right now. Draft v1.`] },
+  })
+  return notify(next, 'listening', `Atlas is drafting a ${format} for ${netLabel(n)}. It’s on your Desk.`, { link: { to: '/', label: 'Review on Desk' } })
 }
