@@ -123,7 +123,7 @@ function addPlan(s: State, c: Campaign, opts: { brief: string; source?: string; 
 
 /** Sage turns a brief into a plan to review, and puts a card on the Desk. Used by Listening's “Brief Sage” and Atlas's Ideas. */
 export function briefSage(s: State, brief: string, source: string, from: AgentId = 'echo'): State {
-  return addPlan(s, generatePlan(uid('cmp'), brief, now(s), { source }), { brief, source, from })
+  return addPlan(s, generatePlan(uid('cmp'), brief, now(s), { source, cadence: targetsOf(s).cadence }), { brief, source, from })
 }
 
 /**
@@ -189,7 +189,7 @@ export function closeCampaigns(s: State, t: number): State {
 export function reduceStrategy(s: State, a: StrategyAction): State {
   switch (a.type) {
     case 'strategy/create':
-      return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { budget: a.budget }), { brief: a.brief })
+      return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { budget: a.budget, cadence: targetsOf(s).cadence }), { brief: a.brief })
     case 'strategy/approve':
       return approveCampaign(s, a.id)
     case 'strategy/changes': {
