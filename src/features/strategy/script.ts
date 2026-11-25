@@ -1,7 +1,8 @@
 import type { ScriptEvent } from '../../data/script'
 import type { Handoff } from '../../app/types'
 import { actionOf, pushHandoff } from '../../app/core'
-import { onResolveStrategy } from './slice'
+import { endCampaign, onResolveStrategy, trackCampaigns } from './slice'
+import { now } from '../../app/core'
 
 /** Community under target: Sage proposes 2 more Instagram posts a week and 1 fewer on Facebook. At Act, it changes the cadence itself. */
 const PILLAR_CARD: Omit<Handoff, 'id' | 'at'> = {
@@ -21,6 +22,24 @@ export const SCRIPT: ScriptEvent[] = [
       why: 'Goal changes are your call.', confidence: 79, link: '/strategy/campaigns/trail-week',
       options: [{ label: 'Raise the goal from 300 to 360 sign-ups', recommended: true }, { label: 'Keep 300 and save the budget' }],
       sage: { campaign: 'trail-week', goal: 360 } },
+  },
+  {
+    // Results come in under the plan: Sage proposes moving posts (Desk card on Draft, applied on Act).
+    id: 'ev-trajectory', order: 205, label: 'Sage · Campaign below its trajectory', history: true,
+    // Moderator only: in the live feed, results come with time (see trackCampaigns).
+    run: (s, manual) => {
+      const c = manual && s.strategy.campaigns.find(x => x.status === 'live' && x.actual.length < 9)
+      return c ? trackCampaigns(s, now(s), { id: c.id, ratio: 0.78 }) : s
+    },
+  },
+  {
+    // A live campaign reaches its end now: the rest of its results come in, Sage writes the recap and proposes the lesson.
+    id: 'ev-campaign-end', order: 275, label: 'Sage · A campaign ends (recap)', history: true,
+    // Moderator only: in the live feed, a campaign ends on its end date.
+    run: (s, manual) => {
+      const c = manual && s.strategy.campaigns.find(x => x.status === 'live')
+      return c ? endCampaign(s, c.id) : s
+    },
   },
   {
     id: 'ev-pillar', order: 260, label: 'Sage · Community pillar under target', handoff: PILLAR_CARD,

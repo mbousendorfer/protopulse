@@ -139,7 +139,7 @@ export function Heatmap({ values, rows, cols, label, best }: { values: number[][
 }
 
 /** One bar split into parts (share of voice, sentiment…). */
-export function StackBar({ parts, h = 8 }: { parts: { label: string; value: number; color: string }[]; h?: number }) {
+export function StackBar({ parts, h = 8, format }: { parts: { label: string; value: number; color: string }[]; h?: number; format?: (value: number, total: number) => string }) {
   const total = parts.reduce((a, p) => a + p.value, 0) || 1
   return (
     <div>
@@ -147,7 +147,7 @@ export function StackBar({ parts, h = 8 }: { parts: { label: string; value: numb
         {parts.map(p => <i key={p.label} style={{ width: `${(p.value / total) * 100}%`, background: p.color }} />)}
       </div>
       <div className="legend">
-        {parts.map(p => <span key={p.label}><i style={{ background: p.color, height: 8, width: 8, borderRadius: 2 }} />{p.label} <b className="num">{Math.round((p.value / total) * 100)}%</b></span>)}
+        {parts.map(p => <span key={p.label}><i style={{ background: p.color, height: 8, width: 8, borderRadius: 2 }} />{p.label} <b className="num">{format ? format(p.value, total) : `${Math.round((p.value / total) * 100)}%`}</b></span>)}
       </div>
     </div>
   )

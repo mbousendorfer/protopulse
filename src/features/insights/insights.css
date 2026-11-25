@@ -77,3 +77,21 @@
 .in-post-stats div { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
 .in-post-stats dt { color: var(--ink-2); font-size: var(--t-sm); }
 .in-post-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
+/* Report Studio: ask Iris for a report, then change it section by section. */
+.in-studio-ask .input { min-width: 0; }
+.in-templates { flex-wrap: wrap; }
+.in-sec-head { align-items: baseline; }
+.in-sec-tools { flex-shrink: 0; }
+.in-studio-edit { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
+/* Scheduled reports. */
+.in-schedules { list-style: none; margin: 0; padding: 0; }
+.in-schedules li { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5); border-top: 1px solid var(--line); }
+.in-schedules li p { margin: 2px 0 0; }
+.in-schedules li.off b { color: var(--ink-2); }
+
+/* Download PDF prints the report alone. */
+@media print {
+  .rail, .top, .page-head, .tabs, .report-side, .in-studio-edit, .in-sec-tools, .report > .btn, .hint-cite { display: none !important; }
+  .report-layout { display: block; }
+  .report { box-shadow: none; border: 0; }
+}

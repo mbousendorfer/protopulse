@@ -4,11 +4,16 @@ import { T } from '../app/time'
 /** A sentence part: plain text, or a number that points to its data source. */
 export type Cited = string | { n: string; source: string }
 
-export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' }
+/** What a Report Studio section is about; Iris rewrites it from this. */
+export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community'
+/** How Iris writes a report on request: its window, networks, reader and sections. Saved as a template, it can be asked for again. */
+export type Recipe = { days: number; networks: Network[]; audience: 'claire' | 'sam'; sections: SectionKind[] }
+
+export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars'; kind?: SectionKind; short?: boolean }
 
 export type Report = {
   id: string
-  kind: 'brief' | 'weekly' | 'campaign'
+  kind: 'brief' | 'weekly' | 'campaign' | 'custom'
   title: string
   period: string
   writtenAt: number
@@ -16,6 +21,8 @@ export type Report = {
   sections: ReportSection[]
   /** Written on Draft: waits for Sam on the Desk. */
   draft?: boolean
+  /** Asked for by Sam: Iris can rewrite each section. */
+  recipe?: Recipe
 }
 
 const c = (n: string, source: string) => ({ n, source })
