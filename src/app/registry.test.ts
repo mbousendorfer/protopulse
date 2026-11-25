@@ -25,13 +25,14 @@ function spyOn<K extends 'onResolve' | 'onUndo' | 'tick'>(hook: K) {
 afterEach(() => { restore.splice(0).forEach(f => f()) })
 
 describe('agent registry', () => {
-  it('plays the script in the same order as before the split', () => {
-    expect(scriptEvents().map(e => e.id)).toEqual(BEFORE)
+  it('plays the script in the same order as before the split (new events slot in by `order`)', () => {
+    expect(scriptEvents().map(e => e.id).filter(id => BEFORE.includes(id))).toEqual(BEFORE)
   })
 
   it('every agent has a module, and event ids are unique', () => {
     expect(registry().map(m => m.id)).toEqual(['nova', 'atlas', 'iris', 'echo', 'sage', 'juno'])
-    expect(new Set(BEFORE).size).toBe(scriptEvents().length)
+    const ids = scriptEvents().map(e => e.id)
+    expect(new Set(ids).size).toBe(ids.length)
   })
 
   it('calls every onResolve when a card is settled, and every onUndo when it is undone', () => {
