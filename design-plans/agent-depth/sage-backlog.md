@@ -22,7 +22,7 @@ ROI) et les **Playbooks** d'Archie. Le reste vient de Sprout et Later (campagnes
 | 4 | **Tâches qui avancent** | `Page.tsx:324-354` statuts figés | Une tâche passe « done » quand l'agent livre (post publié, rapport partagé) ; réallocation en Act quand un agent est en pause | 2 | M | go — en cours |
 | 5 | **Piliers éditables** | `Page.tsx:357-385` lecture seule | Ajouter, renommer, repondérer par proposition verrouillée (Suggest) que Sam valide | 2 | M | go — en cours |
 | 6 | **Validation par Claire** | absent | Campagne au-dessus d'un budget (règle Playbook) : passe par Claire avant lancement | 2 | S | go — en cours |
-| 7 | **Bilan de campagne** | `data/strategy.ts:116-120` recap seed seulement | À la fin d'une campagne, Sage la passe « Done » et rédige le bilan avec Iris, lien vers le rapport | 2 | M | go — en cours |
+| 7 | **Bilan de campagne** | `data/strategy.ts:116-120` recap seed seulement | À la fin d'une campagne, Sage la passe « Done » et rédige le bilan avec Iris, lien vers le rapport | 2 | M | done (rapport d'Iris : `requests/iris-from-sage-campaign-report.md`) |
 | 8 | **Thèmes de calendrier** (≈ Calendar notes) | absent | Temps forts (Repair Friday, première neige, Black Friday) proposés par Sage, visibles au calendrier d'Atlas | 2 | M | go — en cours |
 | 9 | **Revue mensuelle du 1er** | absent (annoncée `data/agents.ts:122`) | Sage livre sa revue (piliers, cadence, campagnes, propositions) ; déclenchable au modérateur | 2 | M | go — en cours |
 | 10 | **Budget** | `Page.tsx:248` budget seul | Dépensé, engagé, rythme ; boosts d'Iris imputés à la campagne | 1 | M | go — en cours |

@@ -4,6 +4,7 @@ import { initialState, type State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY } from '../../app/time'
 import { campaignPosts, launchBlock } from './slice'
+import { scriptEvents } from '../../app/agents-registry'
 
 const BRIEF = 'Launch the Summit Bottle in March, goal 500 orders.'
 const create = (s: State, id = 'cmp-a', brief = BRIEF) => reducer(s, { type: 'strategy/create', id, brief })
@@ -231,4 +232,29 @@ test('Sam edits the pillars; Sage checks the sum and the impact; Apply is undoab
   s = reducer(s, { type: 'core/undo', id: s.log[0].id })
   expect(targetsOf(s).pillars.find(p => p.name === 'Community')!.target).toBe(20)
   expect(reducer(s, { type: 'strategy/pillars', pillars: draft })).toBe(s)
+})
+
+test('a campaign that ends gets Sage’s recap, a Desk card and the lesson as a proposal', () => {
+  let s = reducer(initialState(), { type: 'strategy/adjust', id: 'trail-week', adj: 'adj1', accept: true })
+  // pr2 already proposes a TikTok post: decline it so the lesson isn't a duplicate.
+  s = reducer(s, { type: 'strategy/proposal', id: 'pr2', accept: false })
+  s = reducer(s, { type: 'core/fire', eventId: 'ev-campaign-end' })
+  const tw = cmp(s, 'trail-week')
+  expect(tw.status).toBe('done')
+  expect(tw.actual).toHaveLength(9)
+  expect(tw.recapBy).toBe('sage')
+  expect(tw.recap![0]).toMatch(new RegExp(`^${tw.goal.current} challenge sign-ups, \\d+% of the 300 goal\\.$`))
+  expect(tw.recap!.join(' ')).toMatch(/You applied 1 adjustment: Move 2 Instagram posts to TikTok/)
+  expect(s.handoffs.find(h => h.topic === 'Campaign recap' && h.ref === 'trail-week')?.cta?.label).toBe('Read the recap')
+  expect(s.strategy.proposals[0]).toMatchObject({ text: 'Add 1 TikTok post a week', status: 'proposed', change: { add: { tiktok: 1 } } })
+})
+
+test('the live feed never ends a campaign or brings results early: only the moderator does', () => {
+  const s = initialState()
+  const fed = reducer({ ...s, engine: { ...s.engine, cursor: 0 } }, { type: 'core/fire' })
+  for (const id of ['ev-campaign-end', 'ev-trajectory']) {
+    const ev = scriptEvents().find(e => e.id === id)!
+    expect(ev.run!(s, false)).toBe(s)
+  }
+  expect(fed.strategy.campaigns.find(c => c.id === 'trail-week')!.status).toBe('live')
 })
