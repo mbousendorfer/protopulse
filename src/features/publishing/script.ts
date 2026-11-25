@@ -1,5 +1,7 @@
 import type { ScriptEvent } from '../../data/script'
-import { ideaScript } from './slice'
+import { agentOf } from '../../app/core'
+import { actOn, ideaScript } from './slice'
+import { PLAIN_LINK, failXPost, retriesAlone } from './failures'
 
 /** Atlas's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
@@ -21,11 +23,14 @@ export const SCRIPT: ScriptEvent[] = [
   },
   { id: 'ev-idea-gap', order: 160, label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', ...ideaScript({ origin: 'gap', agent: 'atlas' }) },
   {
-    id: 'ev-x-fail', order: 200, label: 'Atlas · X rejected a post', always: true,
-    handoff: { agent: 'atlas', kind: 'alert', urgency: 'today', topic: 'Publishing failed', action: 'atlas-slot',
-      title: 'X rejected today’s 12:00 post', context: 'The link to fernway.co/trail-week was flagged as a possible redirect.',
-      why: 'Publishing failures always reach you.', confidence: 97, link: '/publishing/calendar',
-      options: [{ label: 'Retry with a plain link', recommended: true }, { label: 'Publish without the link' }, { label: 'Skip X today' }] },
+    // X refuses a post: it turns Failed with the cause. On Act, Atlas retries with the plain link and says so; otherwise a card asks.
+    id: 'ev-x-fail', order: 200, label: 'Atlas · X rejected a post', always: true, agent: 'atlas', tag: 'failed post',
+    run: (s, manual) => {
+      if (!manual && agentOf(s, 'atlas').status !== 'on') return s
+      const r = failXPost(s)
+      const h = r.card && retriesAlone(r.s) ? r.s.handoffs.find(x => x.id === r.card) : undefined
+      return h ? actOn(r.s, h, `X refused the ${h.title.match(/\d\d:\d\d/)?.[0] ?? ''} post; retried with ${PLAIN_LINK} and it’s live`, 'Undo takes it down from X and puts it back as Failed.') : r.s
+    },
   },
   { id: 'ev-idea-weekly', order: 240, label: 'Atlas · Thursday: ideas for next week', agent: 'atlas', ...ideaScript({ origin: 'weekly', agent: 'atlas', seeds: ['fleece-city', 'bottle-bifl', 'zip-flaw', 'staff-picks', 'hook-test', 'support-sunday'] }) },
   {

@@ -7,6 +7,7 @@ import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import type { Campaign, CampaignStatus, Phase } from '../../data/strategy'
+import { launchBlock } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -88,7 +89,7 @@ function NewBrief() {
 
   // Leaving the page while Sage is thinking cancels the plan: no campaign appears behind your back.
   const timers = useRef<number[]>([])
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current = []; started.current = false }, [])
   const run = (text = brief) => {
     if (!text.trim() || started.current) return
     started.current = true
@@ -163,6 +164,7 @@ function CampaignView() {
   const days = Math.ceil((c.end - c.start) / DAY)
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
   const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
+  const block = c.status === 'review' ? launchBlock(s, c) : undefined
 
   return (
     <div className="stack lg">
@@ -175,12 +177,14 @@ function CampaignView() {
         </div>
         {c.status === 'review' && (
           <div className="row">
-            <Btn variant="primary" onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve campaign</Btn>
+            <Btn variant="primary" disabled={!!block} aria-describedby={block ? 'launch-block' : undefined} onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve campaign</Btn>
             <Btn onClick={() => setChanges(o => !o)}>Request changes</Btn>
             <Btn variant="ghost" onClick={() => setDiscard(true)}><Trash2 size={14} />Discard</Btn>
           </div>
         )}
       </header>
+
+      {block && <p id="launch-block" className="launch-block"><Lock size={14} aria-hidden />{block}</p>}
 
       {changes && c.status === 'review' && (
         <form className="card pad stack" onSubmit={e => { e.preventDefault(); if (note.trim()) { d({ type: 'strategy/changes', id: c.id, feedback: note.trim() }); setNote(''); setChanges(false) } }}>
@@ -261,7 +265,7 @@ function CampaignView() {
       </section>
 
       <section className="card pad">
-        <div className="section-title">Posts by phase <span className="faint">· {c.posts.length} posts</span></div>
+        <div className="section-title">Posts by phase <span className="faint">· {c.posts.length} posts</span>{c.status === 'live' && <Link to="/publishing/calendar" className="section-link">See them in Atlas’s calendar</Link>}</div>
         <div className="phase-cols">
           {(['Teasing', 'Launch', 'Follow-up'] as Phase['name'][]).map(ph => (
             <div key={ph} className="phase-col">

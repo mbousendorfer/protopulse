@@ -7,7 +7,7 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  ANOMALIES, DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, TIKTOK_VIEWS, dayLabels,
+  DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, TIKTOK_VIEWS, dayLabels,
   type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
@@ -15,6 +15,7 @@ import { InlineConfirm } from '../../ui/Feedback'
 import { Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, kpis as kpisOf } from './metrics'
 import { targetsOf } from '../strategy/slice'
+import { anomalyList, boostBudget } from './slice'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -25,7 +26,7 @@ export default function InsightsPage() {
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
   const tab: Tab = seg === 'explore' ? 'explore' : seg === 'anomalies' ? 'anomalies' : 'reports'
-  const openAnomalies = ANOMALIES.filter(a => (s.insights.anomalies[a.id]?.open ?? a.open)).length
+  const openAnomalies = anomalyList(s).filter(a => a.open).length
 
   return (
     <div className="page insights">
@@ -277,7 +278,8 @@ function Anomalies() {
   const now = useNow()
   const [view, setView] = useState<'open' | 'closed'>('open')
   const [confirm, setConfirm] = useState<{ id: string; action: string } | null>(null)
-  const list = ANOMALIES.map(a => ({ ...a, ...(s.insights.anomalies[a.id] ?? {}) }))
+  const list = anomalyList(s)
+  const budget = boostBudget(s)
   const shown = list.filter(a => (view === 'open') === a.open)
   const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, view)
@@ -312,13 +314,14 @@ function Anomalies() {
             </div>
           </div>
           <div className="anomaly-cause"><Mark agent="iris" /><p><span className="faint">Likely cause:</span> {a.cause}</p></div>
+          {a.rule && <p className="faint">Raised by your alert rule “{a.rule}”. <Link to="/agents/iris?tab=alerts">Edit</Link></p>}
           <div className="row"><Confidence v={a.confidence} /></div>
           {a.open ? (
             <div className="row">
               {confirm?.id === a.id ? (
                 // Paid spend never goes out on one click.
                 <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
-                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account.
+                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
                 </InlineConfirm>
               ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
               {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}

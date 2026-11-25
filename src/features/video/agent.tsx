@@ -3,7 +3,8 @@ import type { State } from '../../app/state'
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { Mark } from '../../ui'
 import { ClipPreview } from './parts'
-import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, unsendClips, validUrl, videoDue, videoEvent } from './slice'
+import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent } from './slice'
+import type { Lang } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../app/types' {
@@ -11,6 +12,14 @@ declare module '../../app/types' {
   interface LogEntry {
     /** Clips sent to Atlas: Undo takes their posts back out and returns them to Video. */
     clips?: string[]
+    /** Caption fixes Juno made alone (clip id → word indexes): Undo takes them off. */
+    captionFixes?: Record<string, number[]>
+    /** Language versions Juno made alone (clip id → languages): Undo takes them off. */
+    dubs?: Record<string, Lang[]>
+  }
+  interface Handoff {
+    /** A captions card: the fixes approving it makes (clip id → word indexes). */
+    fixes?: Record<string, number[]>
   }
 }
 declare module '../../data/command' {
@@ -55,6 +64,7 @@ const juno: AgentModule = {
   onUndo: (s, l) => {
     let next = s
     for (const h of l.restore ?? []) next = undoDeskClips(next, h)
+    next = undoVideoWork(next, l.captionFixes, l.dubs)
     return l.clips ? unsendClips(next, l.clips) : next
   },
   // Videos being processed move on; snoozed clips come back.
@@ -69,6 +79,7 @@ const juno: AgentModule = {
     ['Clips sent as is', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'as-is').length],
     ['Clips sent modified', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'modified').length],
     ['Clips dismissed', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'dismissed').length],
+    ['Dubs approved', ev.filter(e => e.kind === 'video/dub-approved').length],
   ],
 }
 export default juno
