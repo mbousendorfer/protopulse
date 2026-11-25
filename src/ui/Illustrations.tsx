@@ -138,6 +138,30 @@ export function OnboardingScene({ step }: { step: number }) {
   )
 }
 
+/** Sign-up: the five agents on the trail to the summit, the flag waiting at the top. */
+export function TrailScene() {
+  const stops: [AgentId, number, number][] = [['nova', 46, 168], ['atlas', 96, 140], ['iris', 140, 116], ['echo', 186, 96], ['sage', 226, 74]]
+  return (
+    <Scene viewBox="0 0 320 220" label="Five agents walking up a mountain trail at sunrise" className="trail-scene">
+      <rect width="320" height="220" rx="20" fill={mix(WATER, 11)} />
+      <circle cx="74" cy="44" r="24" fill={mix(SUN, 22)} /><circle cx="74" cy="44" r="15" fill={SUN} />
+      <path d="M0 150 L70 84 L118 120 L178 52 L262 128 L320 92 L320 220 L0 220Z" fill={mix(HUE.iris, 28)} />
+      <path d="M178 52 L194 68 L184 72 L172 64 L162 70Z" fill="var(--panel)" />
+      <path d="M0 176 L58 140 L112 166 L170 128 L232 158 L280 136 L320 152 L320 220 L0 220Z" fill={mix(HUE.sage, 48)} />
+      {[[24, 182], [38, 176], [286, 160], [300, 166]].map(([x, y]) => <path key={x} d={`M${x} ${y} l7 -16 l7 16z`} fill={mix(HUE.sage, 85)} />)}
+      <path d="M30 206 C 70 190, 60 170, 96 154 S 150 132, 150 118 S 200 104, 196 92 S 236 82, 262 52" stroke="var(--panel)" strokeWidth="3" strokeDasharray="2 7" strokeLinecap="round" fill="none" opacity=".9" />
+      <rect x="261" y="30" width="2.5" height="24" rx="1" fill="var(--ink-2)" />
+      <path d="M263.5 31 L282 37 L263.5 43Z" fill={SUN} />
+      {stops.map(([a, x, y], i) => (
+        <g key={a} className="trail-stop" style={{ animationDelay: `${120 + i * 90}ms` }}>
+          <ellipse cx={x} cy={y + 15} rx="11" ry="3" fill="var(--ink)" opacity=".12" />
+          <svg x={x - 15} y={y - 15} width="30" height="30" viewBox="0 0 40 40" overflow="visible"><AgentAvatar agent={a} size={40} /></svg>
+        </g>
+      ))}
+    </Scene>
+  )
+}
+
 /** The agent's avatar in its setting, for profiles and onboarding. */
 export function AgentScene({ agent }: { agent: AgentId }) {
   const c = HUE[agent]

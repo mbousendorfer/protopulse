@@ -35,6 +35,10 @@ export default function PlanReview() {
     setTimeout(() => { d({ type: 'publishing/planRequest', text: note.trim() }); setThinking(false); setAsking(false); setNote('') }, 1400)
   }
 
+  if (plan.status === 'upcoming') return (
+    <Empty scene="calendar" title="Atlas proposes your first weekly plan on Thursday" body="It starts from your best posts and the cadence you approve with Sage. Until then, Atlas brings ideas one at a time."
+      action={<Link to="/publishing" className="btn">See Atlas’s ideas</Link>} />
+  )
   if (plan.status === 'approved') return (
     <Empty icon={<Check size={18} />} title="Next week’s plan is approved" body={`${included.length} posts are scheduled for the week of 1 December. Atlas will tell you if a slot needs changing.`}
       action={<Link to="/publishing/calendar" className="btn">Open the calendar</Link>} />
