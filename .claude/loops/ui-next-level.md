@@ -9,7 +9,7 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
   (première passe = dernière PR mergée).
 - Liste `git log --first-parent --format='%H %s' <base>..origin/main`. Retire les commits dont le sujet commence par
   `UI next level:` ou `Merge pull request … from …/claude/ui-next-level-`.
-- Rien qui reste → écris `origin/main` dans STATE, `ScheduleWakeup` 1200 s, fin du tick.
+- Rien qui reste → écris `origin/main` dans STATE, `ScheduleWakeup` 300 s, fin du tick.
 - Calcule les fichiers touchés par les commits restants. Aucun fichier sous `src/features`, `src/ui`, `src/styles`,
   `src/app/Shell*` → avance STATE, wakeup, fin.
 - Déduis les surfaces (routes) concernées à partir de `src/features/<module>` et du router.
@@ -50,7 +50,7 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
   commits relus, findings (règle / preuve / fix), ce qui a été écarté et pourquoi, captures avant/après.
 - `gh pr merge --squash --delete-branch`. Puis `git switch --detach origin/main` après fetch.
 - Écris dans STATE le SHA de `origin/main` **d'avant** ton merge (ton propre commit est ignoré au tick suivant).
-- `ScheduleWakeup` 1200 s.
+- `ScheduleWakeup` 300 s.
 
 ## Garde-fous
 - Une seule PR par tick. Jamais de force-push, jamais de modification de `main` hors PR.
