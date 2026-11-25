@@ -258,7 +258,7 @@ export default function InboxPage() {
               <b className="num ib-sel-count">{sel.count} selected</b>
               <Btn size="sm" variant="primary" disabled={!drafts} onClick={() => run({ op: 'approve' })}
                 title={drafts < sel.count ? `${sel.count - drafts} of them have no draft to send` : undefined}>
-                <Send size={14} />{drafts === sel.count ? `Approve ${drafts}` : `Approve ${drafts} of ${sel.count}`}
+                <Send size={14} />{drafts === sel.count ? `Send ${drafts}` : `Send ${drafts} of ${sel.count}`}
               </Btn>
               <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Mark not reviewed' : 'Mark reviewed'}</Btn>
               <Menu align="start" trigger={<Btn size="sm" variant="ghost"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
@@ -456,11 +456,11 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
         {(need === 'claire' || need === 'team') && <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>}
         {need === 'call' && <>
           <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
-            { label: 'I’ll reply myself', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
+            { label: 'Take over', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
             { label: 'Ask Claire', icon: <UserRound size={14} />, onSelect: () => d({ type: 'inbox/claire', id: c.id }) },
           ]} />
           {c.draft ? <Btn size="sm" onClick={stop(send)}><Send size={14} />Send holding reply</Btn>
-            : <Btn size="sm" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />I’ll reply</Btn>}
+            : <Btn size="sm" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />Take over</Btn>}
         </>}
       </div>
     </li>
