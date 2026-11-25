@@ -100,11 +100,7 @@ export function applyMove(s: State, ev: CompEvent, move: Move): State {
         : `Response campaign to ${ev.title}: talk durability, not price. Goal 300 orders of the Ridge 28L.`
       return setEvent(briefSage(s, brief, `Echo · ${ev.title}`), ev.id, { status: 'handed', move: move.label, result: 'Sage built a campaign plan. It’s on your Desk.' })
     }
-    case 'sales': {
-      // An email can't be unsent: no undo offered.
-      const next = pushLog(s, { agent: 'echo', text: `Emailed the sales team: ${ev.title}`, status: 'approved', reason: 'You asked from Listening' })
-      return setEvent(next, ev.id, { status: 'done', move: move.label, result: `Sales team informed by email: “${ev.title}”.` })
-    }
+    case 'sales': return tellSales(s, ev, move)
     case 'nova':
       return setEvent(pushLog(s, { agent: 'nova', text: `Counter-move: ${move.label}`, status: 'approved', reason: `Echo’s counter-move to: ${ev.title}` }), ev.id, { status: 'done', move: move.label, result: 'Nova is on it.' })
     case 'lesson':
@@ -147,9 +143,8 @@ export function reduceListening(s: State, a: ListeningAction): State {
       const ev = EVENTS.find(e => e.id === a.event)
       const move = ev?.moves[a.index]
       if (!ev || !move) return s
-      // Settle the Desk card for the same event, if any.
-      const deskId = ev.id === 'e-peak-price' ? 'h-peakline' : undefined
-      const next = deskId ? { ...s, handoffs: s.handoffs.filter(h => h.id !== deskId) } : s
+      // The event is settled here: every Desk card about it goes too.
+      const next = { ...s, handoffs: s.handoffs.filter(h => !(h.topic === 'Competitor' && EVENT_OF(h)?.id === ev.id)) }
       return applyMove(next, ev, move)
     }
     case 'listening/lesson': {
@@ -280,6 +275,13 @@ const EVENT_OF = (h: Handoff): CompEvent | undefined => {
 }
 
 export function onResolveListening(s: State, h: Handoff, d: Decision): State {
+  if (h.ref?.startsWith('sales:')) {
+    const ev = EVENTS.find(e => e.id === h.ref!.slice('sales:'.length))
+    if (!ev) return s
+    if (d.kind === 'approve') return sendSales(s, ev, d.edited ?? salesEmail(ev), 'You approved the email from the Desk')
+    if (d.kind === 'reject') return patch(s, { events: Object.fromEntries(Object.entries(s.listening.events).filter(([k]) => k !== ev.id)) })
+    return s
+  }
   if (h.agent === 'echo' && h.ref === SPIKE_REF && d.kind === 'option') return spikeMove(s, h, d.index)
   if (h.ref?.startsWith('statement:') && d.kind === 'approve') return resumeAtlas(s, 'Claire’s statement is out')
   if (h.ref === SPIKE_REPLIES && d.kind === 'approve') return markSpikeReplied(s, true)
@@ -422,4 +424,31 @@ export function tickListening(s: State, t: number): State {
   return pushHandoff(next, since >= USUAL_NEGATIVE_PER_HOUR * SPIKE_FACTOR
     ? { agent: 'echo', kind: 'alert', urgency: 'urgent', topic: 'Negative spike', title: `Storm Jacket seams: ${since} more negative mentions in 2 hours`, context: 'The thread is still growing.', why: 'You asked me to monitor for 2 hours.', confidence: 75, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' }
     : { agent: 'echo', kind: 'news', urgency: 'week', topic: 'Negative spike', title: `Storm Jacket seams calmed down: ${since} new negative mention${since === 1 ? '' : 's'} in 2 hours`, context: `Back under my usual ${USUAL_NEGATIVE_PER_HOUR} an hour. No move needed.`, why: 'You asked me to monitor for 2 hours.', confidence: 80, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket', cta: { label: 'See the mentions', to: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' } })
+}
+
+/* ---------- Telling the sales team ---------- */
+
+const SALES_TO = 'sales@fernway.co'
+export const salesEmail = (ev: CompEvent) => `Hi team, heads-up from Listening: ${ev.title}. ${ev.impactWhy} ${ev.read} Proof: ${ev.proof.metric}. Echo`
+
+function sendSales(s: State, ev: CompEvent, body: string, reason: string): State {
+  // An email can't be unsent: no Undo, and the Draft card says so before.
+  const next = pushLog(s, { agent: 'echo', text: `Emailed the sales team (${SALES_TO}): ${ev.title}`, status: 'approved', reason, detail: { after: body } })
+  return setEvent(next, ev.id, { status: 'done', move: 'Tell the sales team', result: `Sales team informed by email: “${ev.title}”.` })
+}
+
+/** Suggest: Echo says what sales should know. Draft: the email waits on your Desk. Act: Echo sends it. */
+function tellSales(s: State, ev: CompEvent, move: Move): State {
+  const level = actionOf(s, 'echo', 'echo-sales')?.autonomy ?? 'draft'
+  if (level === 'act') return notify(sendSales(s, ev, salesEmail(ev), 'Sales digest, set to Act'), 'listening', `Echo emailed the sales team about ${ev.title}. Emails can’t be unsent.`)
+  if (level === 'suggest') {
+    return setEvent(s, ev.id, { status: 'done', move: move.label, result: `Echo suggests telling sales: ${ev.impactWhy} She doesn’t email at this level.` })
+  }
+  const next = pushHandoff(s, {
+    agent: 'echo', kind: 'approval', urgency: 'today', topic: 'Sales digest', action: 'echo-sales', ref: `sales:${ev.id}`,
+    title: `Email the sales team: ${ev.title}`, context: `To ${SALES_TO}. Once sent, it can’t be unsent.`,
+    why: 'Emails to sales are set to Draft: you read it first.', confidence: 84, link: `/listening/competitors/${ev.id}`,
+    preview: { type: 'text', label: `To ${SALES_TO}`, body: salesEmail(ev) },
+  })
+  return setEvent(next, ev.id, { status: 'handed', move: move.label, result: 'Echo drafted the email to sales. It’s on your Desk.' })
 }
