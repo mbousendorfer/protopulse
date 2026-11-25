@@ -240,7 +240,7 @@ function CampaignView() {
         <section className="card pad recap">
           <div className="section-title"><Mark agent="iris" />Recap by Iris</div>
           {c.recap.map(p => <p key={p}>{p}</p>)}
-          <Link to="/insights/reports/repair-friday" className="btn sm">Full recap</Link>
+          {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
         </section>
       )}
 
