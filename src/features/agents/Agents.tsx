@@ -5,8 +5,8 @@ import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
 import { ago, DAY } from '../../app/time'
-import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
-import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
+import { AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
+import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
 import { Notice, UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
@@ -51,15 +51,15 @@ export function Team() {
               <div>
                 <div className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</div>
                 <StackBar h={6} parts={[
-                  { label: 'Acts alone', value: lv('act'), color: `var(--a-${a.id})` },
-                  { label: 'Drafts', value: lv('draft'), color: `color-mix(in srgb, var(--a-${a.id}) 40%, transparent)` },
-                  { label: 'Suggests', value: lv('suggest'), color: 'var(--lift-2)' },
+                  { label: 'Suggest', value: lv('suggest'), color: 'var(--lift-2)' },
+                  { label: 'Draft', value: lv('draft'), color: `color-mix(in srgb, var(--a-${a.id}) 40%, transparent)` },
+                  { label: 'Act', value: lv('act'), color: `var(--a-${a.id})` },
                 ]} />
               </div>
               <dl className="agent-stats">
                 <div><dt>Handled alone · 30 days</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
                 <div><dt>Raised to you</dt><dd className="num">{a.record.escalated}</dd></div>
-                <div><dt>Approved without changes</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
+                <div><dt>Approved unchanged</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
                 <div><dt>Undone by you</dt><dd className="num">{a.record.undone}</dd></div>
               </dl>
               <div className="row">
@@ -182,8 +182,8 @@ function AutonomyBoard({ agent }: { agent: Agent }) {
   return (
     <div className="aboard" ref={ref}>
       {AUTONOMY.map(level => (
-        <section key={level} className="acol" aria-label={AUTONOMY_COLUMN[level]}>
-          <h3>{AUTONOMY_COLUMN[level]} <span className="faint num">{agent.actions.filter(x => x.autonomy === level).length}</span></h3>
+        <section key={level} className="acol" aria-label={AUTONOMY_LABEL[level]}>
+          <h3>{AUTONOMY_LABEL[level]} <span className="faint num">{agent.actions.filter(x => x.autonomy === level).length}</span></h3>
           <p className="faint acol-sub">{level === 'act' ? 'Runs on its own. You can undo.' : level === 'draft' ? 'Prepares it, waits for your approval.' : 'Points it out. You do it.'}</p>
           {agent.actions.filter(x => x.autonomy === level).map(x => (
             <article key={x.id} data-flip={x.id} className="aitem">
@@ -274,57 +274,25 @@ function Guardrails({ agent }: { agent: Agent }) {
   )
 }
 
-/** Ready-made escalation conditions. "N" is replaced by the number the user types. */
-const CONDITIONS: { id: string; label: string; n?: string; agents: AgentId[] }[] = [
-  { id: 'injury', label: 'Injury, safety or product recall', agents: ['nova', 'echo'] },
-  { id: 'press', label: 'Journalists and press', agents: ['nova', 'echo'] },
-  { id: 'legal', label: 'Lawyers and legal threats', agents: ['nova'] },
-  { id: 'creator', label: 'Creators above N followers', n: '50k', agents: ['nova', 'echo'] },
-  { id: 'refund', label: 'Refunds above €N', n: '150', agents: ['nova'] },
-  { id: 'spike', label: 'More than N negative mentions in an hour', n: '20', agents: ['echo'] },
-  { id: 'competitor', label: 'Anything that names a competitor', agents: ['atlas', 'echo'] },
-  { id: 'budget', label: 'Spending above €N', n: '100', agents: ['iris', 'sage'] },
-  { id: 'drop', label: 'A metric dropping more than N% in a week', n: '30', agents: ['iris'] },
-]
-
+/** Read-only here: escalation is edited in the Playbook, one place for every agent. */
 function Escalation({ agent }: { agent: Agent }) {
-  const { s, d } = useStore()
+  const { s } = useStore()
   const rules = s.playbook.escalate.filter(e => e.agents.includes(agent.id))
-  const [cond, setCond] = useState(CONDITIONS.find(c => c.agents.includes(agent.id)) ?? CONDITIONS[0])
-  const [n, setN] = useState(cond.n ?? '')
-  const [to, setTo] = useState<'sam' | 'claire'>('sam')
-  const label = cond.n ? cond.label.replace('N', n || cond.n) : cond.label
-  const [removedRule, setRemovedRule] = useState<(typeof rules)[number] | null>(null)
-  const exists = rules.some(r => r.label === label)
   return (
     <section className="card">
-      <div className="card-head"><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy. Shared with the Playbook.</span></div>
+      <div className="card-head">
+        <div><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy.</span></div>
+        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
+      </div>
       <ul className="rows">
         {rules.map(e => (
           <li key={e.id} className="guard">
-            <Switch checked={e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, on })} label={e.label} hideLabel />
-            <span className={e.on ? '' : 'faint'} style={{ flex: 1 }}>{e.label}</span>
-            <Seg name={`esc-${agent.id}-${e.id}`} label={`Who decides: ${e.label}`} size="sm" value={e.to} onChange={v => d({ type: 'playbook/escalate', id: e.id, to: v })}
-              options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-            <Btn size="xs" variant="ghost" aria-label={`Delete ${e.label}`} onClick={() => { setRemovedRule(e); d({ type: 'playbook/escalateDelete', id: e.id }) }}><Trash2 size={12} /></Btn>
+            <span className="grow">{e.label}</span>
+            <span className="faint">{!e.on ? 'Off' : e.to === 'claire' ? 'Goes to Claire' : 'Goes to you'}</span>
           </li>
         ))}
         {!rules.length && <li className="guard faint">No escalation rule yet. {agent.name} decides within its autonomy and guardrails.</li>}
       </ul>
-      <div className="card-body">
-        {removedRule && (
-          <UndoBar className="mb-3" onUndo={() => { d({ type: 'playbook/escalateAdd', rule: removedRule }); setRemovedRule(null) }} onDismiss={() => setRemovedRule(null)}>Deleted “{removedRule.label}”</UndoBar>
-        )}
-        <div className="section-title">Add a rule</div>
-        <div className="row">
-          <Menu align="start" trigger={<Btn size="sm">{cond.label.replace('N', '…')}<ChevronDown size={14} /></Btn>}
-            items={CONDITIONS.map(c => ({ label: c.label.replace('N', '…'), hint: c.agents.includes(agent.id) ? 'Suggested' : undefined, onSelect: () => { setCond(c); setN(c.n ?? '') } }))} />
-          {cond.n && <input className="input" inputMode="numeric" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" style={{ width: 90 }} />}
-          <span className="faint">goes to</span>
-          <Seg name={`new-esc-${agent.id}`} label="Who decides" size="sm" value={to} onChange={setTo} options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-          <Btn size="sm" variant="primary" disabled={exists} title={exists ? 'This rule already exists' : undefined} onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: [agent.id] } })}><Plus size={14} />Add “{label}”</Btn>
-        </div>
-      </div>
     </section>
   )
 }
@@ -355,7 +323,7 @@ function Record({ agent }: { agent: Agent }) {
       <dl className="grid-4 record-kpis">
         <div className="card pad stat"><dd><b className="num">{agent.record.handled.toLocaleString('en-GB')}</b></dd><dt className="label">Handled alone · 30 days</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.escalated}</b></dd><dt className="label">Raised to you</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.approvedUnchanged}%</b></dd><dt className="label">Approved without changes</dt></div>
+        <div className="card pad stat"><dd><b className="num">{agent.record.approvedUnchanged}%</b></dd><dt className="label">Approved unchanged</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.undone}</b></dd><dt className="label">Undone by you</dt></div>
       </dl>
       <section className="card pad">

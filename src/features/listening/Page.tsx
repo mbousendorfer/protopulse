@@ -158,7 +158,7 @@ function EventView() {
           <div className={`move-done ${st.status}`}>
             <Check size={16} />
             <div><b>{st.move}</b><p>{st.result}</p>
-              {st.status === 'handed' && <Link to="/" className="btn sm">Open your Desk</Link>}
+              {st.status === 'handed' && <Link to="/" className="btn sm">Review on Desk</Link>}
               {s.listening.events[e.id]?.status === 'dismissed' && <button type="button" className="link-btn t-sm" onClick={() => d({ type: 'listening/reopen', kind: 'events', id: e.id })}>Undo</button>}
             </div>
           </div>
@@ -457,7 +457,7 @@ function Trends() {
                   : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
                     <>
                       <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Not for us</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Dismiss</Btn>
                     </>
                   )}
               </div>

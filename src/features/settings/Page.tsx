@@ -141,19 +141,19 @@ function Profile() {
 }
 
 function Approver() {
-  const { s, d } = useStore()
+  const { s } = useStore()
   return (
     <section className="card">
       <div className="card-head">
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
-        <Link to="/playbook?tab=escalation" className="btn sm ghost">All escalation rules</Link>
+        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
       </div>
       <p className="card-body muted" style={{ paddingBottom: 0 }}>Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
       <ul className="rows">
         {s.playbook.escalate.map(e => (
           <li key={e.id} className="set-row">
-            <span>{e.label}{!e.on && <span className="faint"> · rule off in the Playbook</span>}</span>
-            <Switch checked={e.to === 'claire' && e.on} disabled={!e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, to: on ? 'claire' : 'sam', on: e.on })} label={`${e.label} goes to Claire`} hideLabel />
+            <span>{e.label}</span>
+            <span className="faint">{!e.on ? 'Off' : e.to === 'claire' ? 'Goes to Claire' : 'Goes to you'}</span>
           </li>
         ))}
       </ul>

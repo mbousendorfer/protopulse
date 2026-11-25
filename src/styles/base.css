@@ -241,7 +241,8 @@ a.card:hover, .card.hoverable:hover { border-color: var(--signal); }
 }
 .pop { padding: var(--s3); min-width: 260px; }
 .menu-item { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: var(--r-sm); font-size: var(--t-md); color: var(--ink); cursor: pointer; outline: none; user-select: none; }
-.menu-item[data-highlighted] { background: var(--lift-2); }
+.menu-item[data-highlighted], button.menu-item:hover { background: var(--lift-2); }
+button.menu-item { width: 100%; border: 0; background: none; text-align: left; }
 .menu-item[data-disabled] { color: var(--ink-off); cursor: default; }
 .menu-item .hint { margin-left: auto; color: var(--ink-3); font-size: var(--t-sm); }
 .menu-label { padding: 6px 8px 4px; font-size: var(--t-sm); color: var(--ink-3); }

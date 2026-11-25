@@ -21,7 +21,7 @@ export type Batch = {
   items: Handoff[]
   ready: Handoff[]
   urgency: Urgency
-  verb: { one: string; many: (n: number) => string; done: (n: number) => string }
+  verb: { many: (n: number) => string; done: (n: number) => string }
 }
 
 const flagged = (h: Handoff) => {
@@ -39,19 +39,19 @@ export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] 
       id: 'nova', agent: 'nova', match: h => h.agent === 'nova' && h.kind === 'approval' && h.preview?.type === 'reply' && !h.proposal,
       ready: h => h.confidence >= 80 && !flagged(h),
       title: n => `${n} replies Nova drafted`, meta: (xs, r) => [xs.filter(isLead).length ? `${xs.filter(isLead).length} want to buy` : '', `${r} ready to send`].filter(Boolean).join(' · '),
-      verb: { one: 'Send', many: n => `Send ${n} ready`, done: n => `Sent ${n} replies Nova drafted` },
+      verb: { many: n => `Send ${n} selected`, done: n => `Sent ${n} replies Nova drafted` },
     },
     {
       id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal,
       ready: h => h.confidence >= 75 && !flagged(h),
       title: n => `${n} posts to approve`, meta: (_xs, r) => `${r} ready to schedule`,
-      verb: { one: 'Schedule', many: n => `Schedule ${n} ready`, done: n => `Scheduled ${n} posts Atlas drafted` },
+      verb: { many: n => `Schedule ${n} selected`, done: n => `Scheduled ${n} posts Atlas drafted` },
     },
     {
       id: 'rules', agent: 'nova', match: h => !!h.proposal,
       ready: () => true,
       title: n => `${n} Playbook rules proposed`, meta: xs => `Learned from your edits · ${[...new Set(xs.map(h => h.agent))].map(a => a[0].toUpperCase() + a.slice(1)).join(', ')}`,
-      verb: { one: 'Add', many: n => `Add ${n} rules`, done: n => `Added ${n} rules to the Playbook` },
+      verb: { many: n => `Add ${n} to Playbook`, done: n => `Added ${n} rules to the Playbook` },
     },
   ]
   let rest = open
@@ -166,7 +166,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
         <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.one} {chosen.length} selected</Btn>}
+        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>}
       </footer>
 
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>

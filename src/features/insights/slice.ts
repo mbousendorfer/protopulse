@@ -53,7 +53,7 @@ function setAnomaly(s: State, id: string, resolution: string): State {
 export function answer(q: string): string {
   const t = q.toLowerCase()
   if (/tiktok/.test(t)) return 'TikTok views per video fell from a median of 9,000 to 1,840 since Thursday 20 Nov (4 videos). Watch time dropped from 9.1 s to 3.4 s: viewers leave before the product shows up. Atlas can test 3-second hooks on the next 3 videos.'
-  if (/best time|when .*post|slot/.test(t)) return 'Over the last 30 days, Friday 18:00 is your best slot on Instagram (2.1× the median reach), weekday 08:30 on LinkedIn, and 18:30 on TikTok. See the heatmap in Explore.'
+  if (/best time|when .*post|slot/.test(t)) return 'Over the last 30 days, Friday 18:00 – 20:00 is your best window on Instagram (2.1× the median reach), and Atlas schedules at 18:30 inside it. Weekday 08:30 on LinkedIn, 18:30 on TikTok. See the heatmap in Explore.'
   if (/reel|carousel|format/.test(t)) return 'Carousels get 2× the saves of reels (3.4% vs 1.7%), reels get 1.6× the reach. For cold-weather products, carousels convert better: the Storm Jacket carousel drove 920 link clicks.'
   if (/linkedin/.test(t)) return 'LinkedIn engagement is 3.9% over 7 days, the highest of your networks. Repair content does 1.9× better than product posts there.'
   if (/compet|peakline|trailkind|norr/.test(t)) return 'Your share of voice is 31% vs Peakline 27%. Peakline’s price cut drove 3× their usual comments, mostly about price, not quality. Details in Listening › Competitors.'

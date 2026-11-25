@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Pencil, Sunrise } from 'lucide-react'
 import type { AgentId, Autonomy, Network, RuleKind } from '../../app/types'
 import { useStore } from '../../app/store'
-import { AGENTS, AUTONOMY_COLUMN } from '../../data/agents'
+import { AGENTS, AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
 import { Btn, Mark, Net, Pill, Seg, Thinking } from '../../ui'
 import './onboarding.css'
 import { AgentScene, OnboardingScene } from '../../ui/Illustrations'
@@ -234,9 +234,9 @@ function Autonomy({ presets, setPresets }: { presets: Record<AgentId, Preset>; s
                   options={[{ value: 'cautious', label: 'Cautious · recommended' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }]} />
               </div>
               <div className="onb-levels">
-                {(['act', 'draft', 'suggest'] as Autonomy[]).map(l => (
+                {AUTONOMY.map(l => (
                   <div key={l}>
-                    <span className="faint">{AUTONOMY_COLUMN[l]} · {by(l).length}</span>
+                    <span className="faint">{AUTONOMY_LABEL[l]} · {by(l).length}</span>
                     <ul>{by(l).map(x => <li key={x.id}>{x.label}{x.locked ? ' (locked)' : ''}</li>)}{!by(l).length && <li className="faint">Nothing</li>}</ul>
                   </div>
                 ))}

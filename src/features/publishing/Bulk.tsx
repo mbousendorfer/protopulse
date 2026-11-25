@@ -95,7 +95,7 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
         { label: `Approve${approvable && approvable < sel.count ? ` ${approvable}` : ''}`, icon: <Check size={14} />, primary: true, disabled: !approvable, note: approvable < sel.count ? `${approvable} of ${sel.count} can be approved, the rest are already scheduled or published` : undefined, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'approve' }); sel.clear() } },
         { label: 'Reschedule', icon: <CalendarClock size={14} />, onRun: () => setDialog({ kind: 'reschedule', ids }) },
         { label: 'Duplicate', icon: <Copy size={14} />, onRun: () => setDialog({ kind: 'duplicate', ids }) },
-        { label: 'Send to Claire', icon: <UserRound size={14} />, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'claire' }); sel.clear() } },
+        { label: 'Ask Claire', icon: <UserRound size={14} />, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'claire' }); sel.clear() } },
         { label: 'Delete', icon: <Trash2 size={14} />, onRun: () => setDialog({ kind: 'delete', ids }) },
       ]} />
       {!sel.count && undo && (

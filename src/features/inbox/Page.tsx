@@ -9,7 +9,7 @@ import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
-import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Switch, Tabs, type MenuItem } from '../../ui'
+import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
@@ -158,7 +158,7 @@ export default function InboxPage() {
               </Btn>
               <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Not reviewed' : 'Mark reviewed'}</Btn>
               <Menu align="start" trigger={<Btn size="sm" variant="ghost"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
-              <Menu align="start" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} items={labelItems(labels, l => run({ op: 'label', value: l }))} />
+              <LabelMenu trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} labels={labels} onPick={l => run({ op: 'label', value: l })} />
               <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="More actions">More<ChevronDown size={12} /></Btn>} items={[
                 { heading: 'Sentiment' }, ...(Object.keys(SENT) as Sentiment[]).map(x => ({ label: `Mark ${SENT[x].toLowerCase()}`, onSelect: () => run({ op: 'sentiment', value: x }) })), 'sep',
                 { label: allHidden ? 'Unhide' : 'Hide', icon: allHidden ? <Eye size={14} /> : <EyeOff size={14} />, onSelect: () => run({ op: allHidden ? 'unhide' : 'hide' }) },
@@ -311,11 +311,22 @@ const assignItems = (go: (v?: Assignee) => void): MenuItem[] => [
   'sep',
   { label: 'Nobody', onSelect: () => go(undefined) },
 ]
-const labelItems = (labels: string[], go: (l: string) => void): MenuItem[] => [
-  ...labels.map(l => ({ label: l, icon: <Tag size={14} />, onSelect: () => go(l) })),
-  'sep',
-  { label: 'New label…', icon: <Plus size={14} />, onSelect: () => { const l = window.prompt('Name of the new label')?.trim(); if (l) go(l) } },
-]
+/** Existing labels, then a field to name a new one: no browser prompt. A popover, since a menu can't hold a text field. */
+function LabelMenu({ trigger, labels, onPick }: { trigger: ReactNode; labels: string[]; onPick: (l: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const pick = (l: string) => { onPick(l); setOpen(false); setName('') }
+  return (
+    <Pop align="start" open={open} onOpenChange={setOpen} trigger={trigger}>
+      {labels.map(l => <button key={l} type="button" className="menu-item" onClick={() => pick(l)}><Tag size={14} />{l}</button>)}
+      {labels.length > 0 && <div className="menu-sep" />}
+      <form className="row tight nowrap" onSubmit={e => { e.preventDefault(); if (name.trim()) pick(name.trim()) }}>
+        <input className="input grow" value={name} onChange={e => setName(e.target.value)} placeholder="New label" aria-label="New label" autoFocus={!labels.length} />
+        <Btn size="sm" type="submit" disabled={!name.trim()}>Add</Btn>
+      </form>
+    </Pop>
+  )
+}
 
 type PanelTab = 'conversation' | 'contact'
 
@@ -367,7 +378,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
         {(c.labels ?? []).map(l => (
           <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={11} /></button></span>
         ))}
-        <Menu align="start" trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} items={labelItems(labels.filter(l => !c.labels?.includes(l)), l => one({ op: 'label', value: l }))} />
+        <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
       </div>
 
       <Tabs value={tab} onChange={setTab} items={[
@@ -414,7 +425,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
             <div className="ib-draft">
               <div className="row tight ib-draft-by">
                 <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
-                {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Also on your Desk</Link>}
+                {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
               {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
