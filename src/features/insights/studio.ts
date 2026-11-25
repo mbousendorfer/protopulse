@@ -8,11 +8,12 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { NETWORKS_SOCIAL, POSTS, type Cited, type Recipe, type Report, type ReportSection, type SectionKind } from '../../data/insights'
 import { bestTime, fmt, postPerf, rangeKpis } from './metrics'
 import { roiByNetwork, roiTotals } from './roi'
+import { audienceOf } from './audience'
 import { anomalyList } from './slice'
 
 export const SECTION_LABEL: Record<SectionKind, string> = {
   summary: 'Results', top: 'Top 3 posts', dips: 'What didn’t work', besttime: 'Best times to post', pillars: 'By pillar', community: 'Community',
-  campaign: 'Campaign vs goal', label: 'Labelled posts', roi: 'Website results',
+  campaign: 'Campaign vs goal', label: 'Labelled posts', roi: 'Website results', audience: 'Audience',
 }
 
 /**
@@ -125,6 +126,10 @@ export function writeSection(s: State, r: Recipe, kind: SectionKind, short = fal
       paras = [[c(`${perf.length} posts`, `Atlas · label “${r.label}”`), ' reached ', c(fmt.k(reach), `Label “${r.label}” · reach`), ' at ', c(fmt.pct(er), `Label “${r.label}” · average engagement`), `. Best: “${best.p.text.slice(0, 60)}” on ${NETWORK_LABEL[best.p.network]}.`]]
     }
   }
+  if (kind === 'audience') {
+    const a = audienceOf(r.networks.length === 1 ? r.networks[0] : 'all')
+    paras = [[c(`${fmt.int(a.followers)} followers`, `${netNames(r)} · native analytics · today`), `, ${a.under25}% under 25, mostly ${a.peak}. `, c(`${a.countries[0][0]} ${a.countries[0][1]}%`, `${netNames(r)} · followers by country`), `, then ${a.countries.slice(1, 3).map(([x, p]) => `${x} ${p}%`).join(', ')}. Top cities: ${a.cities.slice(0, 3).join(', ')}.`]]
+  }
   if (kind === 'roi') {
     const rows = roiByNetwork(r.days, nets), t = roiTotals(rows)
     const top = rows[0]
@@ -171,7 +176,7 @@ export function applyOp(s: State, r: Report, o: StudioOp): Report {
 }
 
 const KIND_WORDS: [RegExp, SectionKind][] = [
-  [/best time|timing|when to post|slot/, 'besttime'], [/\broi\b|revenue|sales|website|ga4/, 'roi'], [/result|summary|reach|overview/, 'summary'], [/top \d|top three|top posts|best posts|\bposts\b/, 'top'],
+  [/best time|timing|when to post|slot/, 'besttime'], [/\broi\b|revenue|sales|website|ga4/, 'roi'], [/audience|demograph|who follows|followers/, 'audience'], [/result|summary|reach|overview/, 'summary'], [/top \d|top three|top posts|best posts|\bposts\b/, 'top'],
   [/didn|dip|anomal|problem|\bbad\b/, 'dips'], [/pillar|theme/, 'pillars'], [/community|inbox|repl/, 'community'], [/campaign|goal/, 'campaign'], [/label/, 'label'],
 ]
 const kindIn = (t: string) => KIND_WORDS.find(([re]) => re.test(t))?.[1]

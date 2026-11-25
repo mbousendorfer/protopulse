@@ -6,6 +6,7 @@ import type { Campaign } from '../../data/strategy'
 import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../../data/insights'
 import { applyOp, writeStudio, type StudioOp } from './studio'
 import { bestReturn } from './roi'
+import { audienceTips } from './audience'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
@@ -27,6 +28,8 @@ declare module '../../app/types' {
     schedule?: string
     /** A Playbook fact Iris gave Sage from this line: undoing it removes the fact. */
     fact?: string
+    /** The network of an audience brief Iris gave Atlas from this line: undoing it takes the brief back. */
+    audience?: string
   }
 }
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
@@ -50,6 +53,8 @@ export type InsightsState = {
   templates: Template[]
   /** Reports Iris writes and sends on a schedule. */
   schedules: Schedule[]
+  /** Audience recommendations, by network: spotted, briefed to Atlas, or set aside. */
+  tips: Record<string, 'open' | 'briefed' | 'dismissed'>
 }
 
 /** A report Iris writes every week (Monday) or month (the 1st) at 08:00, for Sam or for Claire. */
@@ -79,6 +84,7 @@ export const initialInsights = (): InsightsState => ({
   briefDay: dayKey(T(7, 0)),
   templates: [],
   schedules: [],
+  tips: {},
 })
 
 export type InsightsAction =
@@ -99,6 +105,7 @@ export type InsightsAction =
   | { type: 'insights/schedulePause'; id: string }
   | { type: 'insights/scheduleDelete'; id: string }
   | { type: 'insights/tellSage'; via: string }
+  | { type: 'insights/audienceBrief'; network: Network; via: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
@@ -302,6 +309,11 @@ export function reduceInsights(s: State, a: InsightsAction): State {
       const next = addRule(s, { kind: 'fact', text: b.fact, agents: ['sage'], origin: 'From Iris’s ROI numbers' })
       return pushLog(next, { agent: 'iris', text: `Told Sage: ${b.fact}`, status: 'done', reason: a.via, undoMinutes: 30, link: '/insights/roi', fact: b.fact })
     }
+    case 'insights/audienceBrief': {
+      if (s.insights.tips[a.network] === 'briefed') return s
+      const next = briefAudience({ ...s, handoffs: s.handoffs.filter(h => h.ref !== `aud:${a.network}`) }, a.network)
+      return pushLog(next, { agent: 'iris', text: `Briefed Atlas for the ${a.network === 'x' ? 'X' : a.network[0].toUpperCase() + a.network.slice(1)} audience`, status: 'done', reason: a.via, undoMinutes: 30, link: '/insights/audience', audience: a.network })
+    }
     case 'insights/scheduleDelete':
       return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== a.id) })
   }
@@ -332,6 +344,19 @@ function followUpPost(s: State, a: Anomaly): State {
   })
 }
 
+/** Iris turns an audience finding into a brief: a draft post on Atlas's Desk, in the network's best slot. */
+export function briefAudience(s: State, network: Network): State {
+  const tip = audienceTips().find(t => t.network === network)
+  if (!tip) return s
+  const b = bestTime(network)
+  const next = pushHandoff(s, {
+    agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Draft from Iris’s brief', action: 'atlas-fill', chain: ['iris', 'atlas'], ref: `audience:${network}`,
+    title: `${tip.brief.split(':')[0]}: first post`, context: `Iris’s brief: “${tip.brief}”`, why: tip.finding + '.', confidence: 72, link: '/publishing/calendar',
+    preview: { type: 'post', network, slot: `${b.dayName.slice(0, 3)}, ${b.time}`, media: tip.media, text: [tip.text] },
+  })
+  return patch(next, { tips: { ...next.insights.tips, [network]: 'briefed' } })
+}
+
 /** The anomaly a Desk card is about: its `ref`, or the seeded card it points to. */
 const anomalyOf = (s: State, h: Handoff) => (h.agent === 'iris' ? anomalyList(s).find(a => a.id === h.ref || a.handoff === h.id) : undefined)
 
@@ -355,6 +380,10 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
     if (reply || h.lane === 'claire' || h.id.startsWith('h-share-')) return patch(s, { shared: { ...s.insights.shared, [report.id]: { at: s.insights.shared[report.id]?.at ?? now(s), reply } } })
     return shareWithClaire(s, report, d.act ? 'Sharing the weekly report is set to Act.' : 'You approved it on the Desk.')
   }
+  if (h.agent === 'iris' && h.topic === 'Audience' && h.ref?.startsWith('aud:')) {
+    const net = h.ref.slice(4) as Network
+    return d.kind === 'option' && d.index === 0 ? briefAudience(s, net) : patch(s, { tips: { ...s.insights.tips, [net]: 'dismissed' } })
+  }
   const an = h.topic === 'Anomaly' ? anomalyOf(s, h) : undefined
   if (an?.open) {
     if (d.kind === 'option') return actOnAnomaly(s, an.id, d.option, h.id).s
@@ -365,6 +394,8 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
+  const aud = entry.audience ?? entry.restore?.find(h => h.topic === 'Audience' && h.ref?.startsWith('aud:'))?.ref?.slice(4)
+  if (aud) return patch({ ...s, handoffs: s.handoffs.filter(h => h.ref !== `audience:${aud}`) }, { tips: { ...s.insights.tips, [aud]: 'open' } })
   if (entry.fact) return { ...s, playbook: { ...s.playbook, rules: s.playbook.rules.filter(r => r.text !== entry.fact) } }
   if (entry.schedule) return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== entry.schedule) })
   if (entry.unshare) {
