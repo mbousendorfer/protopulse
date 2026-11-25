@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protopulse UI Quality</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ux-audit.html: one reading column, measures first, then patterns, captures, checklist, open items. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.list li { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.list li:first-child { border-top: 0; }
+.list li p { color: var(--ink-2); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>UI quality pass</h1>
+    <p class="lede">25 November 2026. Branch <code>claude/ui-quality-pass-20a491</code>, one commit per pass. The inventory is in <code>design-plans/consistency-matrix.md</code>, the screen-by-screen review in <code>design-plans/surface-review.md</code>, and the three pattern changes you approved in <code>design-plans/pattern-proposals.html</code>.</p>
+  </header>
+
+  <section>
+    <h2>Before and after</h2>
+    <div class="tiles">
+      <div class="tile"><b>35 → 0</b><span>toast call sites</span></div>
+      <div class="tile"><b>4 → 1</b><span>undo bar variants</span></div>
+      <div class="tile"><b>155 → 41</b><span>inline styles (only dynamic values left)</span></div>
+      <div class="tile"><b>0</b><span>contrast failures, 32 routes × 1440 / 375 × light / dark</span></div>
+    </div>
+    <div class="table-wrap"><table>
+      <tr><th>Measure</th><th>Before</th><th>After</th><th>Note</th></tr>
+      <tr><td>Toast call sites</td><td class="num">35</td><td class="num">0</td><td><code>Toasts</code>, <code>pushToast</code>, <code>core/toast</code> and the <code>Toast</code> type are deleted.</td></tr>
+      <tr><td>Undo bar variants</td><td class="num">4</td><td class="num">1</td><td><code>UndoBar</code>, also used by the store's scoped <code>Notice</code>.</td></tr>
+      <tr><td>Inline confirm variants</td><td class="num">2</td><td class="num">1</td><td><code>InlineConfirm</code> for paid boosts.</td></tr>
+      <tr><td>Counter looks</td><td class="num">5</td><td class="num">1</td><td><code>CountBadge</code>, tinted only when it means "needs you".</td></tr>
+      <tr><td><code>style={{</code></td><td class="num">155</td><td class="num">41</td><td>The 41 left all carry runtime values: agent colour, chart geometry, progress, avatar size.</td></tr>
+      <tr><td>Hex outside <code>tokens.css</code></td><td class="num">0 in UI</td><td class="num">0 in UI</td><td>The 63 in placeholder photos, illustrations, avatars and mock data stay as a written exception.</td></tr>
+      <tr><td>Off-scale px font sizes</td><td class="num">52</td><td class="num">0</td><td>Exceptions: chart axis labels at 10 px (SVG charts, heatmap, bars), and network previews, which mimic each network.</td></tr>
+      <tr><td>Border radius literals off the scale</td><td class="num">128</td><td class="num">0</td><td>What's left is 1–4 px on bars and dots, and 999 px pills.</td></tr>
+      <tr><td>Autonomy vocabularies on one screen</td><td class="num">2</td><td class="num">1</td><td>Suggest · Draft · Act, in that order everywhere.</td></tr>
+      <tr><td>Orange buttons on a batch card</td><td class="num">up to 3</td><td class="num">1</td><td>Footer only; lanes keep one Review.</td></tr>
+      <tr><td>Contrast failures (AA)</td><td class="num">6 kinds</td><td class="num">0</td><td>Excludes the orange primary at 2.91:1, an ADS choice.</td></tr>
+      <tr><td>Phone overflow at 375 px</td><td class="num">3 screens</td><td class="num">0</td><td>Desk, Inbox group actions, agent profile. Phase 2 missed the Desk one; see "Found on the way".</td></tr>
+      <tr><td>Tests</td><td class="num">28</td><td class="num">30</td><td>The Desk notice and its undo, plus reopening a dismissal or a decline. <code>left()</code> got its test in pass 1.</td></tr>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>What changed, pattern by pattern</h2>
+    <ul class="list">
+      <li><h3>Feedback: no toast</h3><p>Every confirmation of your own action now appears as one line (<code>UndoBar</code>) at the top of the list it acted on. On the Desk it sits under the Your day tabs; in Publishing above the calendar; in Listening under the tabs; in Agents above the autonomy board. With an undo, it lasts as long as the journal entry can be undone ("Undo · 9 min left"); otherwise 10 s. Cards, threads and buttons that already show their new state lost their toast. Background work (Claire's verdict, trial over, a new urgent card) arrives silently, and a trial ending now writes a journal line. A duplicate Playbook rule is flagged under the field before you submit it.</p></li>
+      <li><h3>Dismissals can be undone</h3><p>A trend, a lesson or a counter-move shows "Dismissed · Undo". A Sage adjustment or a pillar proposal shows "Declined · Undo". The trend button now says "Dismiss" instead of "Not for us".</p></li>
+      <li><h3>Buttons</h3><p>One orange button per area: the batch card keeps only its footer button ("Send 4 selected" / "Add 3 to Playbook"). Bulk delete uses the red delete button. "Add a guardrail" no longer spans the card. Cancel sits 16 px from the action. Filters, segmented controls and select triggers now give slightly when pressed, like buttons.</p></li>
+      <li><h3>Links and colour</h3><p>Text links use action-ink (blue 150, AA). The blue chips that held plain numbers are now neutral, and the green Good news count is neutral too. Clickable calendar posts, month cells and plan items get a blue border on hover. The Inbox draft box now sits on white, so its links pass AA.</p></li>
+      <li><h3>Vocabulary</h3><p>Autonomy is Suggest · Draft · Act on the board, the team card bar and in onboarding (which used to list Act → Suggest). Other wording now matches the word list: Ask Claire, Review on Desk, Approved unchanged, Add N to Playbook. Report titles no longer repeat their type; the type shows in the meta and comes back in the journal, the share line and the downloaded file. Iris and Atlas now agree on timing: Friday 18:00 – 20:00 is the best window, and Atlas schedules at 18:30 inside it.</p></li>
+      <li><h3>Escalation lives in the Playbook</h3><p>Adding, deleting (with Undo), switching on/off and routing a rule now happen only in the Playbook. The agent profile and Settings › Approver show the rules read-only, with "Edit in the Playbook".</p></li>
+      <li><h3>Fields and menus</h3><p>"New label" is a field inside the label popover instead of the browser prompt. Every dropdown trigger uses one style (<code>.select-btn</code>).</p></li>
+      <li><h3>Type, spacing, radius</h3><p>Headings follow one scale: an object page title is 24 px, a list item title 16, a group label 13. Every radius uses a token (6 / 10 / 16 / 20). Inline font sizes, margins and flex values moved to classes with the same values.</p></li>
+      <li><h3>Motion</h3><p>Every movement takes under 250 ms and uses only transform and opacity. That covers card arrival, the detail panel's rise (stagger capped at 60 ms), chat bubbles, the all-clear pop, and pages and tab content, which settle in by 4 px. Progress bars now grow by scaling instead of changing width, and the side rail no longer animates its width. The "live" dot pulses with a transform ring. Thinking keeps its spinner but drops the gradient text sweep. Reduced-motion still cuts all of it.</p></li>
+      <li><h3>Empty states</h3><p>Chats now uses the illustrated empty state like every other screen. Small empty cells inside columns ("No action here", "Drop a task here") stay as text, now in ink-2.</p></li>
+      <li><h3>Phones and dark</h3><p>The Desk list no longer stretches to its longest title. Batch lanes sit two by two. In the Inbox, views and labels share one row that scrolls sideways like the tab bars, so the first conversation moves up from 610 px to 420 px. Segmented controls that are too wide scroll, sheet footers wrap but keep their actions on the right, long anomaly actions wrap inside their button, and the track-record table scrolls. Dark mode had no failures before and none after.</p></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>The three screens that changed most</h2>
+    <h3>Desk: one orange button, quiet counts</h3>
+    <div class="pair">
+      <figure><img src="ui-quality/desk-before.jpg" alt="Desk before: batch with an orange Send 4 ready in the Ready lane and blue count chips"><figcaption><b>Before</b> · "Send 4 ready" in a lane and a second orange button in the footer for the same items; counts in blue chips.</figcaption></figure>
+      <figure><img src="ui-quality/desk-after.jpg" alt="Desk after: lanes with Review only, one Send 4 selected in the footer, neutral counts"><figcaption><b>After</b> · lanes only open a review, the footer holds the one primary button, counts are neutral and the Needs you count is tinted.</figcaption></figure>
+    </div>
+    <h3>Autonomy board: one vocabulary</h3>
+    <div class="pair">
+      <figure><img src="ui-quality/autonomy-before.jpg" alt="Autonomy board before with columns Suggests, Drafts for you, Acts alone"><figcaption><b>Before</b> · column titles "Suggests · Drafts for you · Acts alone" above controls that say "Suggest · Draft · Act".</figcaption></figure>
+      <figure><img src="ui-quality/autonomy-after.jpg" alt="Autonomy board after with columns Suggest, Draft, Act"><figcaption><b>After</b> · "Suggest · Draft · Act" everywhere, in that order.</figcaption></figure>
+    </div>
+    <h3>Inbox and composer on a phone</h3>
+    <div class="pair phone">
+      <figure><img src="ui-quality/inbox-375-before.jpg" alt="Inbox at 375 px before: six rows of views and labels above the list"><figcaption><b>Before</b> · six rows of views and labels; the list starts low on the screen.</figcaption></figure>
+      <figure><img src="ui-quality/inbox-375-after.jpg" alt="Inbox at 375 px after: one scrolling row of views, three conversations visible"><figcaption><b>After</b> · one row that scrolls sideways; three conversations on the first screen.</figcaption></figure>
+      <figure><img src="ui-quality/composer-375-before.jpg" alt="Composer at 375 px before: footer actions cut off"><figcaption><b>Before</b> · footer runs off the screen; "Send to Claire" is cut.</figcaption></figure>
+      <figure><img src="ui-quality/composer-375-after.jpg" alt="Composer at 375 px after: footer wraps onto two rows, right-aligned"><figcaption><b>After</b> · actions wrap onto two rows on the right; "Ask Claire".</figcaption></figure>
+    </div>
+  </section>
+
+  <section>
+    <h2>Definition of done</h2>
+    <ul class="check">
+      <li><span class="tag ok">Done</span><div><b>Each pattern has one variant or a written exception</b><p>Matrix sections 1–11. Exceptions: ghost Cancel is blue (PROMPT §10), orange primary at 2.91:1, chart axis labels at 10 px, network previews, colour in illustrations and mock data, ambient loops (live dot, spinner).</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Zero toast calls, one undo bar, one inline confirm</b><p>0 / <code>UndoBar</code> / <code>InlineConfirm</code>.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Inline styles only for dynamic values</b><p>41 left, all computed at runtime.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Zero hex outside tokens and illustrations; zero off-scale px fonts</b><p>Exceptions as listed above.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Word list applied</b><p>Matrix §11, including autonomy levels and report titles.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Every screen at 1440 and 375, light and dark, visible focus, AA</b><p>Scripted sweep of 32 routes in all four combinations, with animations frozen so nothing is measured mid-fade. Keyboard focus was checked in phase 2, and the two missing rings were fixed in pass 1. Hover states were read from the CSS, not hovered one by one.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b><code>tsc</code>, <code>vitest</code> and build pass</b><p>30 tests, before every commit.</p></div></li>
+      <li><span class="tag open">Open</span><div><b>Deployed and live URL checked</b><p><code>main</code> deploys to GitHub Pages and the merge is yours. The live check happens after the merge.</p></div></li>
+      <li><span class="tag ok">Done</span><div><b>Consistency items from the UX audit's "Still open"</b><p>Toasts, autonomy wording, duplicated batch buttons, escalation in three places, the native "New label" prompt, report titles repeating their type, and Iris vs Atlas on the best slot.</p></div></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Found on the way</h2>
+    <ul class="list">
+      <li><h3>The 375 px sweep in phase 2 under-reported overflow</h3><p>Mobile emulation widens the layout viewport to fit what overflows, so "page wider than the viewport" was always false. The sweep now measures against the device width. That revealed the Desk list stretching to 545 px, the real cause of D5 (Filter and the Good news count cut off). Fixed in pass 6.</p></li>
+      <li><h3>A helper class collided with the top bar</h3><p>Pass 1 added <code>.row.top</code> for top alignment, but <code>.top</code> is already the top bar's class. That made three rows sticky, with the top bar's background, on the autonomy board and the plan header. The helper is now <code>.items-start</code>; fixed in the final commit.</p></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Still open, and why</h2>
+    <ul class="list">
+      <li><h3>Proposal: the Desk's first screen</h3><p>At 1440 px the morning brief and the three highlights fill the first screen, and Your day, where the decisions are, starts below it. Proposal: Your day comes first, and the brief shrinks to one line ("Iris wrote your brief · 228 things handled · Read") that opens it. This changes the journey, not consistency, so it is not built.</p></li>
+      <li><h3>Proposal: one place to talk to an agent</h3><p>Today you talk to agents in four places: Chats, the chat drawer, a card's Discuss thread and ⌘K. Proposal: every conversation is a Chats thread. Discuss opens that card's thread in the drawer, and ⌘K starts or continues a thread. Not built: it changes the journey.</p></li>
+      <li><h3>Onboarding drops two edits</h3><p>The voice edit and the press escalation edit are offered and then not applied (UX audit, "Still open"). This is behaviour, not consistency, so it was left out of this pass.</p></li>
+      <li><h3>Insights › Explore network filter</h3><p>The filter changes the KPIs but not the heatmap or the charts (UX audit). This is data wiring, outside this pass.</p></li>
+      <li><h3>A 520 ms stamp</h3><p>When you settle a Desk card, its stamp holds for 70% of 520 ms, then slides out in about 160 ms. The movement is under the limit; the hold is how long it reads. Left as is.</p></li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

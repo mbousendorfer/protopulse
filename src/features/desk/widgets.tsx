@@ -6,7 +6,7 @@ import { groupOf } from '../../app/reducer'
 import { Spark } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm, MIN, DEMO_START } from '../../app/time'
+import { ago, hhmm, left, MIN, DEMO_START } from '../../app/time'
 import { agentName } from '../../data/agents'
 import { Btn, Kbd, Mark, TopicIcon } from '../../ui'
 import { BriefScene } from '../../ui/Illustrations'
@@ -128,10 +128,10 @@ export function ShiftBoard() {
   return (
     <section className="shift card" aria-label="Shift board, last 24 hours">
       <div className="card-head">
-        <h2>Shift board <span className="faint" style={{ fontWeight: 400 }}>· last 24 h</span></h2>
-        <span className="legend" style={{ margin: 0 }}>
+        <h2>Shift board <span className="faint">· last 24 h</span></h2>
+        <span className="legend m-0">
           <span><i style={{ height: 10, width: 3, borderRadius: 2, background: 'var(--a-nova)' }} />Acted alone, in each agent’s colour</span>
-          <span><i style={{ height: 8, width: 8, borderRadius: 4, background: 'var(--alert)' }} />Raised to you</span>
+          <span><i className="legend-dot" />Raised to you</span>
         </span>
       </div>
       <div className="card-body">
@@ -144,8 +144,8 @@ export function ShiftBoard() {
                 <text x={padL - 10} y={y + 4} fontSize="10" fill="var(--ink-3)" fontFamily="var(--mono)" textAnchor="end">{counts[a.id]}</text>
                 <line x1={padL} x2={W - 16} y1={y} y2={y} stroke="var(--line)" />
                 {s.log.filter(l => l.agent === a.id && l.at >= from && l.at <= now).map(l => (
-                  <line key={l.id} x1={x(l.at)} x2={x(l.at)} y1={y - 6} y2={y + 6} stroke={hover === l.id ? 'var(--ink)' : l.status === 'undone' ? 'var(--ink-off)' : `var(--a-${a.id})`} strokeWidth={3} strokeLinecap="round"
-                    style={{ cursor: 'pointer' }} onMouseEnter={() => setHover(l.id)} onMouseLeave={() => setHover(null)} onClick={() => nav('/activity')}>
+                  <line className="pointer" key={l.id} x1={x(l.at)} x2={x(l.at)} y1={y - 6} y2={y + 6} stroke={hover === l.id ? 'var(--ink)' : l.status === 'undone' ? 'var(--ink-off)' : `var(--a-${a.id})`} strokeWidth={3} strokeLinecap="round"
+                    onMouseEnter={() => setHover(l.id)} onMouseLeave={() => setHover(null)} onClick={() => nav('/activity')}>
                     <title>{`${hhmm(l.at)} · ${l.text}`}</title>
                   </line>
                 ))}
@@ -182,7 +182,7 @@ export function LiveFeed() {
               <Mark agent={l.agent} />
               <div>
                 <p>{l.text}</p>
-                <span className="mono faint">{ago(l.at, now)}{l.status === 'undone' ? ' · undone' : canUndo ? ` · undo ${Math.ceil((l.undoUntil! - now) / MIN)} min left` : ''}</span>
+                <span className="mono faint">{ago(l.at, now)}{l.status === 'undone' ? ' · undone' : canUndo ? ` · undo · ${left(l.undoUntil!, now)}` : ''}</span>
               </div>
               {canUndo && <Btn size="xs" variant="ghost" icon aria-label={`Undo: ${l.text}`} onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={13} /></Btn>}
             </li>

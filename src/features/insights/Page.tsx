@@ -11,6 +11,7 @@ import {
   type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import './insights.css'
 
@@ -52,10 +53,14 @@ export function CitedText({ parts }: { parts: Cited[] }) {
 }
 
 /* ---------- Reports ---------- */
+const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap' }
+/** The title says what's in it; the type sits in the meta. Out of context (journal, file name) it gets its type back. */
+const reportMeta = (r: Report) => (r.kind === 'weekly' ? KIND_LABEL.weekly : `${KIND_LABEL[r.kind]} · ${r.period}`)
+const fullTitle = (r: Report) => (r.kind === 'brief' ? r.title : `${KIND_LABEL[r.kind]} · ${r.title}`)
+
 function Reports() {
   const { s } = useStore()
   const now = useNow()
-  const kindLabel: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap' }
   return (
     <div className="reports">
       {REPORTS.map(r => {
@@ -64,7 +69,7 @@ function Reports() {
           <Link key={r.id} to={`/insights/reports/${r.id}`} className="card report-row">
             <span className="report-icon" aria-hidden><FileText size={16} /></span>
             <div className="report-main">
-              <div className="row tight"><span className="faint">{kindLabel[r.kind]}</span><span className="faint">· {r.period}</span></div>
+              <span className="faint">{reportMeta(r)}</span>
               <h2>{r.title}</h2>
               <p className="muted">{r.summary}</p>
             </div>
@@ -98,7 +103,7 @@ function ReportView() {
     <div className="report-layout">
       <article className="card report">
         <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>
-        <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">Written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)} · {r.period}</span></div>
+        <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">{reportMeta(r)} · written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)}</span></div>
         <h1>{r.title}</h1>
         <p className="lede">{r.summary}</p>
         {r.sections.map(sec => (
@@ -124,10 +129,10 @@ function ReportView() {
           ) : (
             <>
               <p className="muted">Claire hasn’t seen this one.</p>
-              <Btn variant="primary" onClick={() => d({ type: 'insights/share', id: r.id, title: r.title })}><Send size={14} />Share with Claire</Btn>
+              <Btn variant="primary" onClick={() => d({ type: 'insights/share', id: r.id, title: fullTitle(r) })}><Send size={14} />Share with Claire</Btn>
             </>
           )}
-          <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${r.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: r.title }) }}><Download size={14} />Download (.md)</Btn>
+          <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${fullTitle(r).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: fullTitle(r) }) }}><Download size={14} />Download (.md)</Btn>
         </section>
         <section className="card pad stack">
           <h2 className="side-title">Ask Iris a follow-up</h2>
@@ -137,7 +142,7 @@ function ReportView() {
               <div className="a"><Mark agent="iris" /><p>{f.a}</p></div>
             </div>
           ))}
-          <form onSubmit={e => { e.preventDefault(); ask(q) }} className="stack" style={{ gap: 8 }}>
+          <form onSubmit={e => { e.preventDefault(); ask(q) }} className="stack gap-2">
             <label htmlFor="ask-iris" className="sr-only">Question for Iris</label>
             <input id="ask-iris" className="input" placeholder="Why did TikTok drop?" value={q} onChange={e => setQ(e.target.value)} />
             <div className="row tight">{ASK_SUGGEST.map(x => <button key={x} type="button" className="filter" onClick={() => ask(x)}>{x}</button>)}</div>
@@ -212,7 +217,7 @@ function Explore() {
         <section className="card pad">
           <div className="section-title">Best times to post <span className="faint">· reach by day and hour, 30 days</span></div>
           <Heatmap values={HEAT} rows={HEAT_ROWS} cols={HEAT_COLS} label="Reach by day and hour" best={best} />
-          <p className="muted heat-note">Best slot: <b>Friday 18:00</b>, 2.1× the median reach. Weekend mornings are second.</p>
+          <p className="muted heat-note">Best window: <b>Friday 18:00 – 20:00</b>, 2.1× the median reach. Atlas schedules Instagram at 18:30, inside it. Weekend mornings are second.</p>
         </section>
         <section className="card pad">
           <div className="section-title">By pillar <span className="faint">· engagement rate, 30 days</span></div>
@@ -243,7 +248,7 @@ function Explore() {
 function PostTr({ p, now }: { p: PostRow; now: number }) {
   return (
     <tr>
-      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis" style={{ maxWidth: 320 }}>{p.title}</span></span></td>
+      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis mw-320">{p.title}</span></span></td>
       <td className="mono faint">{dayLabel(p.date, now)}</td>
       <td className="muted">{p.pillar}</td>
       <td className="muted">{p.author}</td>
@@ -300,13 +305,11 @@ function Anomalies() {
             <div className="row">
               {confirm?.id === a.id ? (
                 // Paid spend never goes out on one click.
-                <div className="pb-undo" role="alertdialog" aria-label="Confirm the boost">
-                  <span>{confirm.action}? This is paid ad spend, billed to Fernway’s ad account.</span>
-                  <Btn size="xs" variant="ghost" onClick={() => setConfirm(null)}>Cancel</Btn>
-                  <Btn size="xs" variant="primary" onClick={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>Confirm boost</Btn>
-                </div>
+                <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
+                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account.
+                </InlineConfirm>
               ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
-              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Also on your Desk</Link>}
+              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}
             </div>
           ) : (
             <div className="resolution row nowrap"><Check size={14} className="ok" /><span>{a.resolution}</span><span className="spacer" /><Btn size="xs" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn></div>
@@ -323,7 +326,7 @@ const plainCited = (parts: Cited[]) => parts.map(x => (typeof x === 'string' ? x
 
 /** The report as Markdown, for a real download. */
 function reportMarkdown(r: Report) {
-  return [`# ${r.title}`, '', `_${r.period} · written by Iris_`, '', r.summary, '', ...r.sections.flatMap(sec => [`## ${sec.heading}`, '', ...sec.paras.map(plainCited), ''])].join('\n')
+  return [`# ${fullTitle(r)}`, '', `_${r.period} · written by Iris_`, '', r.summary, '', ...r.sections.flatMap(sec => [`## ${sec.heading}`, '', ...sec.paras.map(plainCited), ''])].join('\n')
 }
 
 /** A small icon per metric, in Iris’s colour. The label stays in text next to it. */

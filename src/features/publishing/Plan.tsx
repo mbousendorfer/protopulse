@@ -47,7 +47,7 @@ export default function PlanReview() {
   return (
     <div className="plan">
       <section className="card pad-lg plan-head">
-        <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="row between items-start">
           <div>
             <div className="row tight"><Mark agent="atlas" /><span className="mono faint">Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
@@ -121,7 +121,7 @@ export default function PlanReview() {
       <div className="plan-foot card">
         {asking ? (
           thinking ? <Thinking label="Atlas is reworking the plan" /> : (
-            <form className="row nowrap" style={{ flex: 1 }} onSubmit={e => { e.preventDefault(); request() }}>
+            <form className="row nowrap grow" onSubmit={e => { e.preventDefault(); request() }}>
               <label htmlFor="plan-note" className="sr-only">What should Atlas change?</label>
               <input id="plan-note" className="input" autoFocus placeholder="Shorter TikTok hooks, and swap the recycled posts I unchecked" value={note} onChange={e => setNote(e.target.value)} />
               <Btn type="submit" variant="primary" disabled={!note.trim()}>Send to Atlas</Btn>

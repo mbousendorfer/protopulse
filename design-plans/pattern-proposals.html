@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pattern proposals</title>
+<style>
+  :root { --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --bg: #F9F9FA; --card: #fff; --blue: #0E72D6; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 ui-sans-serif, system-ui, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 26px; margin: 0 0 6px; } h2 { font-size: 19px; margin: 40px 0 8px; } p { margin: 0 0 12px; max-width: 72ch; color: var(--ink-2); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  figure img { width: 100%; border-radius: 10px; display: block; }
+  figcaption { font-size: 13px; color: var(--ink-2); margin-top: 8px; } figcaption b { color: var(--ink); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; } th { font-weight: 600; } tr:last-child td { border-bottom: 0; }
+  .q { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 12px 16px; margin-top: 12px; }
+  @media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Three pattern changes to validate</h1>
+  <p>UI quality pass, before pass 3. Passes 1 and 2 (tokens, primitives, screens on the canonical variants) are done on the branch. These three change what you see, not just how clean it is, so they wait for your OK. The "after" renders are the real app with the change mocked in the page.</p>
+
+  <h2>1. No more toasts: one undo line where the action happened</h2>
+  <p>Today 35 actions confirm in a toast bottom right (4 to 6 s); the Desk group actions keep their only Undo there. Proposal: the shared <b>UndoBar</b> (already used by the 7 existing undo bars since pass 2) appears at the top of the list you acted on, with the time left, and stays until it expires or you dismiss it.</p>
+  <div class="pair">
+    <figure><img src="proposals/desk-toast-before.jpg" alt="Desk with a toast bottom right"><figcaption><b>Before</b> · Snooze 2 items: toast bottom right, gone in 6 s.</figcaption></figure>
+    <figure><img src="proposals/desk-inline-after.jpg" alt="Desk with an undo line at the top of Your day"><figcaption><b>After</b> · the line sits under the Your day tabs, "Undo · 9 min left" (the journal's own undo window).</figcaption></figure>
+  </div>
+  <p style="margin-top:12px">Where each of the 35 goes:</p>
+  <table>
+    <tr><th>Action</th><th>Inline home</th></tr>
+    <tr><td>Desk group actions (approve, snooze, Ask Claire, reject)</td><td>UndoBar at the top of Your day</td></tr>
+    <tr><td>Publishing: post saved / scheduled from the composer, post deleted, slot found for a handed-over post</td><td>UndoBar above the calendar (same place as the bulk undo)</td></tr>
+    <tr><td>Listening: competitor added, replies or posts drafted from mentions</td><td>UndoBar at the top of the tab, with "Review on Desk"</td></tr>
+    <tr><td>Autonomy moved to Act (cards leave the Desk)</td><td>UndoBar above the autonomy board</td></tr>
+    <tr><td>Report shared with Claire</td><td>The button becomes "Shared with Claire · 10:12"</td></tr>
+    <tr><td>Desk decisions (autonomy approved, rule added), reply sent, sent to Claire, undo of an auto-reply</td><td>Already stamped on the card / shown in the thread: toast just removed</td></tr>
+    <tr><td>Rule already in the Playbook</td><td>Hint under the "Add a rule" field</td></tr>
+    <tr><td>Background work (Claire's verdict, trial week over, plan v2 ready, new card on the Desk)</td><td>Arrives silently in the list and the journal (PROMPT §5)</td></tr>
+  </table>
+  <p style="margin-top:12px">Then <code>Toasts</code>, <code>pushToast</code>, <code>core/toast</code> and the Settings line about toasts are deleted.</p>
+
+  <h2>2. Batch card: one primary, one Review per lane</h2>
+  <p>A batch shows "Send 4 ready" in the Ready lane <i>and</i> "Send 4 selected" in the footer (same items: ready ones start selected), plus "Review" per lane <i>and</i> "Review one by one". Proposal from the UX audit: keep the footer primary and the lane "Review" only.</p>
+  <div class="pair">
+    <figure><img src="proposals/batch-before.jpg" alt="Batch with two orange buttons"><figcaption><b>Before</b> · two orange buttons for the same 4 replies.</figcaption></figure>
+    <figure><img src="proposals/desk-inline-after.jpg" alt="Batch with one orange button in the footer"><figcaption><b>After</b> · lanes keep "Review"; the footer says "Send 4 selected".</figcaption></figure>
+  </div>
+
+  <h2>3. A one-click dismissal can be taken back</h2>
+  <p>Dismissing a trend ("Not for us"), a lesson or a counter-move, or declining a Sage adjustment, replaces the buttons with a pill for good. Proposal: one wording, "Dismissed" (or "Declined" for Sage), followed by an Undo link that restores the buttons.</p>
+  <div class="pair">
+    <figure><img src="proposals/dismiss-before.png" alt="Trend card with a Not for us pill"><figcaption><b>Before</b> · "Not for us" pill, no way back.</figcaption></figure>
+    <figure><img src="proposals/dismiss-after.png" alt="Trend card with Dismissed · Undo"><figcaption><b>After</b> · "Dismissed · Undo".</figcaption></figure>
+  </div>
+
+  <div class="q"><b>What I need:</b> OK / not OK for each of 1, 2, 3 (or a change). Everything else in passes 3–6 (vocabulary, finish, responsive, dark) follows the matrix and goes ahead without asking.</div>
+</main>
+</body>
+</html>

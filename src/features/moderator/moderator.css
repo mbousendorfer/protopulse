@@ -1,18 +1,18 @@
 .mod h3 { font-size: var(--t-md); font-weight: 600; display: flex; gap: 8px; align-items: baseline; }
 .mod-presets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
-.mod-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: var(--panel); text-align: left; color: var(--ink); }
+.mod-preset { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 10px 12px; border-radius: var(--r-ctl); border: 1px solid var(--line-strong); background: var(--panel); text-align: left; color: var(--ink); }
 .mod-preset:hover { border-color: var(--signal); }
 .mod-preset b { font-weight: 600; }
 .mod-preset span { font-size: var(--t-sm); }
-.mod-events { border: 1px solid var(--line); border-radius: 12px; max-height: 300px; overflow-y: auto; }
+.mod-events { border: 1px solid var(--line); border-radius: var(--r-ctl); max-height: 300px; overflow-y: auto; }
 .mod-events li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-top: 1px solid var(--line); font-size: var(--t-md); }
 .mod-events li:first-child { border-top: 0; }
 .mod-events .ellipsis { flex: 1; }
 .mod-tag { font-size: var(--t-xs); white-space: nowrap; }
 .mod-counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); margin: 0; }
-.mod-counters div { display: flex; flex-direction: column-reverse; padding: 8px 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.mod-counters div { display: flex; flex-direction: column-reverse; padding: 8px 10px; border-radius: var(--r-ctl); background: var(--panel); border: 1px solid var(--line); }
 .mod-counters dt { font-size: var(--t-xs); color: var(--ink-3); }
 .mod-counters dd { margin: 0; font-size: var(--t-xl); font-weight: 600; }
-.mod-log { border: 1px solid var(--line); border-radius: 12px; padding: 6px 10px; max-height: 220px; overflow-y: auto; }
+.mod-log { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: 6px 10px; max-height: 220px; overflow-y: auto; }
 .mod-log li { display: grid; grid-template-columns: 44px 140px minmax(0, 1fr); gap: 8px; padding: 3px 0; font-size: var(--t-xs); }
-@media (max-width: 600px) { .mod-counters { grid-template-columns: repeat(2, 1fr); } .mod-presets { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .mod-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mod-presets { grid-template-columns: minmax(0, 1fr); } }

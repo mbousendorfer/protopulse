@@ -33,7 +33,10 @@ export const ago = (t: number, now: number) => {
   return dayLabel(t, now)
 }
 
+/** Time an Undo still has: "8 s left" under a minute, then minutes, then hours. */
 export const left = (until: number, now: number) => {
-  const m = Math.max(0, Math.ceil((until - now) / MIN))
+  const ms = Math.max(0, until - now)
+  if (ms < MIN) return `${Math.max(1, Math.ceil(ms / 1000))} s left`
+  const m = Math.ceil(ms / MIN)
   return m >= 60 ? `${Math.round(m / 60)} h left` : `${m} min left`
 }

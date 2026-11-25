@@ -8,6 +8,7 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import type { Campaign, CampaignStatus, Phase } from '../../data/strategy'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
+import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
 import './strategy.css'
 
@@ -52,7 +53,7 @@ function Campaigns() {
         const pct = Math.round((c.goal.current / c.goal.target) * 100)
         return (
           <Link key={c.id} to={`/strategy/campaigns/${c.id}`} className="card campaign-row">
-            <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div className="row between">
               <h2>{c.name}</h2>
               <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}{c.status === 'review' && c.version > 1 ? ` · v${c.version}` : ''}</Pill>
             </div>
@@ -114,7 +115,7 @@ function NewBrief() {
               <label htmlFor="brief">Brief</label>
               <textarea id="brief" className="textarea" rows={4} autoFocus value={brief} onChange={e => setBrief(e.target.value)} placeholder="Launch the new Storm Jacket on March 15, goal 300 pre-orders." />
             </div>
-            <div className="field" style={{ maxWidth: 220 }}>
+            <div className="field mw-220">
               <label htmlFor="budget">Boost budget (optional)</label>
               <input id="budget" className="input" inputMode="numeric" placeholder="€600" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
             </div>
@@ -165,7 +166,7 @@ function CampaignView() {
 
   return (
     <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/strategy')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />Campaigns</Btn>
+      <Btn variant="ghost" size="sm" onClick={() => nav('/strategy')} className="self-start"><ArrowLeft size={14} />Campaigns</Btn>
       <header className="campaign-head">
         <div>
           <div className="row tight"><Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill><span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}{c.version > 1 ? ` · version ${c.version}` : ''}</span></div>
@@ -224,7 +225,7 @@ function CampaignView() {
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
                   </div>
-                ) : <Pill tone={a.status === 'accepted' ? 'ok' : undefined}>{a.status === 'accepted' ? 'Applied' : 'Declined'}</Pill>}
+                ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
               </li>
             ))}
           </ul>
@@ -249,7 +250,7 @@ function CampaignView() {
         <section className="card pad">
           <div className="section-title">Key messages</div>
           <ul className="bullets">{c.messages.map(m => <li key={m}>{m}</li>)}</ul>
-          <div className="section-title" style={{ marginTop: 16 }}>Audience</div>
+          <div className="section-title mt-4">Audience</div>
           <p className="muted">{c.audience}</p>
         </section>
       </div>
@@ -358,8 +359,8 @@ function Pillars() {
   return (
     <div className="stack lg">
       <section className="card pad">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="section-title" style={{ margin: 0 }}>Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
+        <div className="row between">
+          <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
           <span className="row tight faint lock-note"><Lock size={13} />Locked: Sage suggests, you decide</span>
         </div>
         <div className="pillars">
@@ -367,7 +368,7 @@ function Pillars() {
             const off = p.actual - p.target
             return (
               <div key={p.id} className="pillar">
-                <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div className="row between">
                   <b>{p.name}</b>
                   <span className="num">{p.actual}% <span className="faint">of posts · target {p.target}%</span></span>
                 </div>
@@ -420,7 +421,7 @@ function Pillars() {
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
                   </div>
-                ) : <Pill tone={p.status === 'accepted' ? 'ok' : undefined}>{p.status === 'accepted' ? 'Applied' : 'Declined'}</Pill>}
+                ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
               </li>
             ))}
           </ul>

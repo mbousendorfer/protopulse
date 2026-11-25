@@ -21,7 +21,7 @@ export type Batch = {
   items: Handoff[]
   ready: Handoff[]
   urgency: Urgency
-  verb: { one: string; many: (n: number) => string; done: (n: number) => string }
+  verb: { many: (n: number) => string; done: (n: number) => string }
 }
 
 const flagged = (h: Handoff) => {
@@ -39,19 +39,19 @@ export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] 
       id: 'nova', agent: 'nova', match: h => h.agent === 'nova' && h.kind === 'approval' && h.preview?.type === 'reply' && !h.proposal,
       ready: h => h.confidence >= 80 && !flagged(h),
       title: n => `${n} replies Nova drafted`, meta: (xs, r) => [xs.filter(isLead).length ? `${xs.filter(isLead).length} want to buy` : '', `${r} ready to send`].filter(Boolean).join(' · '),
-      verb: { one: 'Send', many: n => `Send ${n} ready`, done: n => `Sent ${n} replies Nova drafted` },
+      verb: { many: n => `Send ${n} selected`, done: n => `Sent ${n} replies Nova drafted` },
     },
     {
       id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal,
       ready: h => h.confidence >= 75 && !flagged(h),
       title: n => `${n} posts to approve`, meta: (_xs, r) => `${r} ready to schedule`,
-      verb: { one: 'Schedule', many: n => `Schedule ${n} ready`, done: n => `Scheduled ${n} posts Atlas drafted` },
+      verb: { many: n => `Schedule ${n} selected`, done: n => `Scheduled ${n} posts Atlas drafted` },
     },
     {
       id: 'rules', agent: 'nova', match: h => !!h.proposal,
       ready: () => true,
       title: n => `${n} Playbook rules proposed`, meta: xs => `Learned from your edits · ${[...new Set(xs.map(h => h.agent))].map(a => a[0].toUpperCase() + a.slice(1)).join(', ')}`,
-      verb: { one: 'Add', many: n => `Add ${n} rules`, done: n => `Added ${n} rules to the Playbook` },
+      verb: { many: n => `Add ${n} to Playbook`, done: n => `Added ${n} rules to the Playbook` },
     },
   ]
   let rest = open
@@ -87,16 +87,17 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
     onBulk()
   }
 
-  const lanes: { id: Lane; label: string; count: number; note: string; action?: { label: string; run: () => void } }[] =
+  // One primary per batch: the footer acts on the selection (ready items start selected); lanes only open a review.
+  const lanes: { id: Lane; label: string; count: number; note: string }[] =
     b.id === 'nova' ? [
-      { id: 'leads', label: 'Leads', count: leads.length, note: leads.length ? 'People asking before they buy' : 'No buying questions right now', action: leads.filter(h => b.ready.includes(h)).length ? { label: `Send ${leads.filter(h => b.ready.includes(h)).length}`, run: () => bulk(leads.filter(h => b.ready.includes(h)), `Sent ${leads.filter(h => b.ready.includes(h)).length} lead replies`) } : undefined },
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Sure of the facts and the tone', action: b.ready.length ? { label: b.verb.many(b.ready.length), run: () => bulk(b.ready, b.verb.done(b.ready.length)) } : undefined },
+      { id: 'leads', label: 'Leads', count: leads.length, note: leads.length ? 'People asking before they buy' : 'No buying questions right now' },
+      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Sure of the facts and the tone' },
       { id: 'decide', label: 'To decide', count: decide.length, note: 'Nova marked a passage she’s unsure about' },
     ] : b.id === 'atlas' ? [
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Checked against the Playbook', action: b.ready.length ? { label: b.verb.many(b.ready.length), run: () => bulk(b.ready, b.verb.done(b.ready.length)) } : undefined },
+      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Checked against the Playbook' },
       { id: 'decide', label: 'To decide', count: decide.length, note: 'Atlas marked a passage to check' },
     ] : [
-      { id: 'all', label: 'Proposed', count: b.items.length, note: 'Each rule comes from edits you repeated', action: { label: b.verb.many(b.items.length), run: () => bulk(b.items, b.verb.done(b.items.length)) } },
+      { id: 'all', label: 'Proposed', count: b.items.length, note: 'Each rule comes from edits you repeated' },
     ]
 
   const shown = review === 'leads' ? leads : review === 'ready' ? b.ready : review === 'decide' ? decide : b.items
@@ -117,7 +118,6 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
             <b className="num">{l.count}</b>
             <p className="faint">{l.note}</p>
             <div className="row">
-              {l.action && <Btn size="sm" variant="primary" onClick={l.action.run}>{l.action.label}</Btn>}
               {l.count > 0 && <Btn size="sm" onClick={() => setReview(l.id)}>Review</Btn>}
             </div>
           </section>
@@ -165,9 +165,8 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
       <footer className="detail-foot">
         <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
-        <Btn size="sm" variant="ghost" onClick={() => setReview('all')}>Review one by one</Btn>
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.one} {chosen.length} selected</Btn>}
+        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>}
       </footer>
 
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>

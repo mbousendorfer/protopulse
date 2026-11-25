@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   Activity, BookOpen, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
-  Radar, Search, Send, Settings, Target, Undo2, X, Bell, MessageCircle, Sun, Moon,
+  Radar, Search, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
@@ -83,7 +83,6 @@ export default function Shell() {
   if (seg === 'focus' || seg === 'onboarding') return (
     <>
       <Boundary resetKey={loc.pathname}><Outlet /></Boundary>
-      <Toasts />
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
     </>
@@ -122,11 +121,11 @@ export default function Shell() {
 
         <div className="rail-foot">
           <RailLink to="/settings" icon={<Settings size={16} />} label="Settings" />
-          <div className="rail-link" style={{ cursor: 'default' }}>
+          <div className="rail-link cursor-default">
             <SocialAvatar name="Sam Rivera" size={24} />
             <span className="hide-collapsed">Sam Rivera</span>
           </div>
-          <button className="rail-link" onClick={() => setCollapsed(c => !c)} style={{ background: 'none', border: 0 }} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+          <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
           </button>
         </div>
@@ -141,7 +140,7 @@ export default function Shell() {
             {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
-              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis" style={{ maxWidth: 200 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
+              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
           </div>
           <div className="spacer" />
@@ -158,7 +157,6 @@ export default function Shell() {
         </main>
       </div>
 
-      <Toasts />
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
       <ShortcutHelp open={help} onOpenChange={setHelp} />
@@ -187,10 +185,10 @@ function ClaireStatus() {
         <span className="hide-sm">{waiting ? `${waiting} with Claire` : 'Claire'}</span>
       </button>
     }>
-      <div className="stack" style={{ width: 280 }}>
-        <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted" style={{ fontSize: 12 }}>Head of Brand · approves what you send her</div></div></div>
+      <div className="stack w-280">
+        <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted t-xs">Head of Brand · approves what you send her</div></div></div>
         <div className="muted">Usually replies in about a minute.</div>
-        <div className="faint" style={{ fontSize: 12 }}>{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
+        <div className="faint t-xs">{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
       </div>
     </Pop>
   )
@@ -203,13 +201,13 @@ function Notifications() {
   const items = s.log.slice(0, 12)
   return (
     <Pop trigger={<Btn variant="ghost" icon size="sm" aria-label="Recent agent activity"><Bell size={16} /></Btn>}>
-      <div style={{ width: 360 }}>
+      <div className="w-360">
         <div className="section-title">Recent activity</div>
-        <ul className="rows" style={{ maxHeight: 360, overflowY: 'auto' }}>
+        <ul className="rows scroll-360">
           {items.map(l => (
-            <li key={l.id} className="row nowrap" style={{ padding: '8px 0', alignItems: 'flex-start' }}>
+            <li key={l.id} className="row nowrap py-2 items-start">
               <Mark agent={l.agent} />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="grow">
                 <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
                 <div className="faint mono">{ago(l.at, now)}</div>
               </div>
@@ -220,31 +218,6 @@ function Notifications() {
         <Btn size="sm" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn>
       </div>
     </Pop>
-  )
-}
-
-function Toasts() {
-  const { s, d } = useStore()
-  const nav = useNavigate()
-  useEffect(() => {
-    if (!s.toasts.length) return
-    const t = setTimeout(() => d({ type: 'core/dropToast', id: s.toasts[0].id }), s.toasts[0].undo ? 6000 : 4000)
-    return () => clearTimeout(t)
-  }, [s.toasts, d])
-  const announce = useMemo(() => s.toasts[s.toasts.length - 1]?.text ?? '', [s.toasts])
-  return (
-    <div className="toasts" aria-live="polite">
-      <span className="sr-only">{announce}</span>
-      {s.toasts.map(t => (
-        <div key={t.id} className="toast">
-          {t.agent && <Mark agent={t.agent} />}
-          <p>{t.text}</p>
-          {t.undo && <Btn size="xs" onClick={() => { d({ type: 'core/undo', id: t.undo! }); d({ type: 'core/dropToast', id: t.id }) }}>Undo</Btn>}
-          {t.link && <Btn size="xs" variant="ghost" onClick={() => { nav(t.link!); d({ type: 'core/dropToast', id: t.id }) }}>Open</Btn>}
-          <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'core/dropToast', id: t.id })}><X size={12} /></Btn>
-        </div>
-      ))}
-    </div>
   )
 }
 
@@ -262,7 +235,7 @@ function ShortcutHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
     <Modal open={open} onOpenChange={onOpenChange} title="Keyboard shortcuts">
       <ul className="rows">
         {SHORTCUTS.map(([k, v]) => (
-          <li key={k} className="row" style={{ justifyContent: 'space-between', padding: '8px 0' }}><span className="muted">{v}</span><Kbd>{k}</Kbd></li>
+          <li key={k} className="row between py-2"><span className="muted">{v}</span><Kbd>{k}</Kbd></li>
         ))}
       </ul>
     </Modal>

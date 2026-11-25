@@ -1,9 +1,9 @@
 import type { State, Preset } from './state'
 import { initialState } from './state'
-import type { AgentId, Autonomy, Decision, Flagged, Handoff, ThreadMsg, Toast } from './types'
+import type { AgentId, Autonomy, Decision, Flagged, Handoff, ThreadMsg } from './types'
 import { DAY, MIN, startClock } from './time'
 import {
-  actionOf, addRule, agentOf, now, pronoun, pushHandoff, pushLog, pushToast, removeHandoff, setAutonomy, track, uid, updateHandoff,
+  actionOf, addRule, agentOf, now, pronoun, notify, pushHandoff, pushLog, removeHandoff, setAutonomy, track, uid, updateHandoff,
 } from './core'
 import { SCRIPT, CLAIRE } from '../data/script'
 import { onResolveInbox, reduceInbox, type InboxAction } from '../features/inbox/slice'
@@ -37,8 +37,7 @@ export type CoreAction =
   | { type: 'core/skipDay' }
   | { type: 'core/reset'; preset?: Preset; onboarding?: boolean }
   | { type: 'core/onboarded' }
-  | { type: 'core/toast'; toast: Omit<Toast, 'id'> }
-  | { type: 'core/dropToast'; id: string }
+  | { type: 'core/dropNotice' }
   | { type: 'core/briefRead'; read: boolean }
   | { type: 'core/unfresh' }
   | { type: 'core/track'; kind: string; detail?: Record<string, unknown> }
@@ -48,7 +47,7 @@ export type CoreAction =
 
 export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction
 
-const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropToast', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
+const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropNotice', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
 
 export function reducer(s: State, a: Action): State {
   const next = reduceAll(s, a)
@@ -104,13 +103,11 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     if (d.kind === 'approve' || d.kind === 'trial') {
       next = setAutonomy(next, h.agent, action, to, `You moved “${label}” to ${to}`)
       if (d.kind === 'trial') next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === action ? { ...x, trialUntil: now(s) + 7 * DAY, trialFrom: from } : x) }) }
-      next = pushToast(next, { agent: h.agent, text: d.kind === 'trial' ? `${agentOf(s, h.agent).name} is on ${to} for “${label}” for a week.` : `${agentOf(s, h.agent).name} is now on ${to} for “${label}”.` })
     }
   }
 
   if (h.proposal && d.kind === 'approve') {
     next = addRule(next, { kind: 'dont', text: h.proposal.text, agents: h.proposal.agents, origin: `Learned from your edits · ${agentOf(s, h.agent).name}` })
-    next = pushToast(next, { agent: h.agent, text: `Rule added to the Playbook: “${h.proposal.text}”`, link: '/playbook' })
   }
 
   next = onResolveInbox(next, h, d)
@@ -173,8 +170,8 @@ function fire(s: State, eventId?: string): State {
     if (next.log.some(l => l.text === ev.auto!.text)) return next
     return pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
-  // New cards land in Your day quietly; only urgent ones interrupt with a toast.
-  return pushHandoff(next, { ...structuredClone(ev.handoff), ref: ev.handoff.ref ?? ev.id, proposal: ev.rule }, ev.handoff.urgency === 'urgent' ? `Urgent: ${ev.handoff.title}` : undefined)
+  // New cards land in Your day quietly, urgent ones included (PROMPT §5): the Desk ranks them.
+  return pushHandoff(next, { ...structuredClone(ev.handoff), ref: ev.handoff.ref ?? ev.id, proposal: ev.rule })
 }
 
 const AGENT_REPLY = (h: Handoff, text: string): ThreadMsg => ({ id: uid('m'), from: 'agent', text, at: h.at })
@@ -233,7 +230,7 @@ function applyPreset(s: State, p: Preset): State {
   let next: State = { ...s, handoffs: s.handoffs.filter(h => TRAIL_SCRIPT_PRESETS[p].includes(h.id)) }
   const extra: Record<Preset, string[]> = { calm: [], busy: [], competitor: ['ev-trailkind', 'ev-norro', 'ev-basecamp'], trust: ['ev-promo-exchange', 'ev-demote', 'ev-rule-emoji'] }
   for (const id of extra[p]) next = fire(next, id)
-  return { ...next, handoffs: next.handoffs.map(h => ({ ...h, fresh: false })), toasts: [] }
+  return { ...next, handoffs: next.handoffs.map(h => ({ ...h, fresh: false })), notice: undefined }
 }
 
 function reduceCore(s: State, a: CoreAction): State {
@@ -251,7 +248,7 @@ function reduceCore(s: State, a: CoreAction): State {
         else if (a.decision) next = resolve(next, h.id, a.decision, { quiet: true })
       }
       next = pushLog(next, { agent: a.agent, text: a.summary, status: 'approved', reason: 'Your call from the Desk, in one go', undoMinutes: 10, restore: cards })
-      return pushToast(next, { agent: a.agent, text: a.summary, undo: next.log[0].id })
+      return notify(next, 'desk', a.summary, { undo: next.log[0].id })
     }
 
     case 'core/snooze': {
@@ -266,7 +263,7 @@ function reduceCore(s: State, a: CoreAction): State {
       const t = now(s)
       const wait = (30 + Math.round(Math.random() * 30)) * 1000
       const msg: ThreadMsg = { id: uid('m'), from: 'you', text: a.note ? `@Claire ${a.note}` : '@Claire can you take a look?', at: t }
-      return pushToast(updateHandoff(s, a.id, { lane: 'claire', claire: { askedAt: t, dueAt: t + wait }, thread: [...(h.thread ?? []), msg] }), { agent: 'claire', text: `Sent to Claire: ${h.title}` })
+      return updateHandoff(s, a.id, { lane: 'claire', claire: { askedAt: t, dueAt: t + wait }, thread: [...(h.thread ?? []), msg] })
     }
 
     case 'core/thread': {
@@ -285,7 +282,7 @@ function reduceCore(s: State, a: CoreAction): State {
       if (!h || !m?.rule) return s
       let next = addRule(s, { kind: 'dont', text: m.rule, agents: [h.agent], origin: `From your conversation with ${agentOf(s, h.agent).name}` })
       next = updateHandoff(next, h.id, { thread: h.thread!.map(x => x.id === m.id ? { ...x, ruleAdded: true } : x).concat({ id: uid('m'), from: 'agent', at: now(s), text: `Added. All agents will follow “${m.rule}”. You can pause or delete it in the Playbook.` }) })
-      return pushToast(next, { agent: h.agent, text: `Rule added to the Playbook: “${m.rule}”`, link: '/playbook' })
+      return next
     }
 
     case 'core/editDraft': {
@@ -305,7 +302,7 @@ function reduceCore(s: State, a: CoreAction): State {
         next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true, lane: undefined })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
         for (const h of l.restore) next = reverseDecision(next, h)
       }
-      return pushToast(next, { agent: l.agent, text: `Undone: ${l.text}` })
+      return next.notice?.undo === a.id ? { ...next, notice: undefined } : next
     }
 
     case 'core/redo': {
@@ -314,8 +311,11 @@ function reduceCore(s: State, a: CoreAction): State {
       return { ...s, log: s.log.map(x => (x.id === a.id ? { ...x, status: 'redone' as const } : x)) }
     }
 
-    case 'core/autonomy':
-      return setAutonomy(s, a.agent, a.action, a.level)
+    case 'core/autonomy': {
+      const next = setAutonomy(s, a.agent, a.action, a.level)
+      const n = s.handoffs.length - next.handoffs.length
+      return n ? notify(next, 'agents', `${n} card${n > 1 ? 's' : ''} left your Desk. ${agentOf(s, a.agent).name} handles ${n > 1 ? 'them' : 'it'} now.`, { link: { to: '/activity', label: 'See in Activity' } }) : next
+    }
 
     case 'core/preset': {
       // Cautious: everything suggests or drafts. Balanced: safe acts, risky drafts. Autonomous: everything not locked acts.
@@ -362,7 +362,6 @@ function reduceCore(s: State, a: CoreAction): State {
           } else {
             next = updateHandoff(next, h.id, { lane: undefined, urgency: r.verdict === 'changes' ? 'urgent' : h.urgency, claire: { ...h.claire, reply: r.text, verdict: r.verdict }, thread: [...(h.thread ?? []), msg], fresh: true })
           }
-          next = pushToast(next, { agent: 'claire', text: `Claire ${r.verdict === 'approve' ? 'approved' : r.verdict === 'changes' ? 'asked for changes on' : 'declined'}: ${h.title}`, link: '/' })
         }
         if (h.lane === 'snoozed' && h.snoozedUntil && h.snoozedUntil <= t) next = updateHandoff(next, h.id, { lane: undefined, snoozedUntil: undefined, fresh: true })
       }
@@ -370,7 +369,7 @@ function reduceCore(s: State, a: CoreAction): State {
       for (const ag of next.agents) for (const x of ag.actions) {
         if (x.trialUntil && x.trialUntil <= t && x.trialFrom) {
           next = setAutonomy(next, ag.id, x.id, x.trialFrom)
-          next = pushToast(next, { agent: ag.id, text: `${ag.name}’s trial week on “${x.label}” is over. Back to ${x.trialFrom}.` })
+          next = pushLog(next, { agent: ag.id, text: `Trial week on “${x.label}” is over. Back to ${x.trialFrom}.`, status: 'done', reason: 'The trial you started ended' })
         }
       }
       // Agents coming back in a conversation.
@@ -396,7 +395,7 @@ function reduceCore(s: State, a: CoreAction): State {
       next = pushLog(next, { agent: 'iris', at: tomorrow8 - 60 * MIN, text: 'Wrote this morning’s brief', status: 'done' })
       next = pushLog(next, { agent: 'nova', at: tomorrow8 - 5 * 60 * MIN, text: 'Answered 14 questions overnight', reason: 'Product questions, set to Act', status: 'done' })
       for (let i = 0; i < 4; i++) next = { ...fire(next), engine: { ...next.engine, cursor: next.engine.cursor + 1 } }
-      return { ...next, engine: { ...next.engine, nextAt: tomorrow8 + next.engine.cadence * 1000 }, toasts: [] }
+      return { ...next, engine: { ...next.engine, nextAt: tomorrow8 + next.engine.cadence * 1000 }, notice: undefined }
     }
 
     case 'core/reset': {
@@ -409,11 +408,8 @@ function reduceCore(s: State, a: CoreAction): State {
       return { ...initialState(), onboarded: true, tester: s.tester }
     }
 
-    case 'core/toast':
-      return pushToast(s, a.toast)
-
-    case 'core/dropToast':
-      return { ...s, toasts: s.toasts.filter(t => t.id !== a.id) }
+    case 'core/dropNotice':
+      return { ...s, notice: undefined }
 
     case 'core/briefRead':
       return { ...s, brief: { ...s.brief, read: a.read } }

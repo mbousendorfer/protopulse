@@ -57,7 +57,7 @@ export default function Focus() {
         <Btn variant="ghost" onClick={() => nav('/')} kbd="Esc"><ArrowLeft size={14} />Desk</Btn>
         <div className="focus-progress" aria-live="polite">
           <span className="num">{h ? `${Math.min(handled + 1, total.current)} of ${total.current}` : `${handled} done`}</span>
-          <span className="bar" aria-hidden><i style={{ width: `${(handled / Math.max(1, total.current)) * 100}%` }} /></span>
+          <span className="bar" aria-hidden><i style={{ transform: `scaleX(${handled / Math.max(1, total.current)})` }} /></span>
         </div>
         <Btn variant="ghost" onClick={undo} disabled={handled <= 0} kbd="Z"><Undo2 size={14} />Undo</Btn>
       </header>

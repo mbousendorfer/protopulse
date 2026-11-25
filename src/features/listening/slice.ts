@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, Network } from '../../app/types'
-import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
+import { now, pushHandoff, notify, pushLog, uid } from '../../app/core'
 import { EVENTS, LESSONS, MENTIONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
@@ -49,6 +49,7 @@ export type ListeningAction =
   | { type: 'listening/watchDelete'; id: string }
   | { type: 'listening/lesson'; id: string; test: boolean }
   | { type: 'listening/trend'; id: string; hand: boolean }
+  | { type: 'listening/reopen'; kind: 'trends' | 'lessons' | 'events'; id: string }
   | { type: 'listening/mention'; id: string; action: 'replied' | 'hidden' }
   | { type: 'listening/searchSave'; search: Search }
   | { type: 'listening/searchToggle'; id: string }
@@ -82,7 +83,7 @@ export function applyMove(s: State, ev: CompEvent, move: Move): State {
         why: 'Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 71, link: `/listening/competitors/${ev.id}`,
         rules: ['Never name a competitor in a post'],
         preview: { type: 'post', network: c.network, slot: 'Today, 18:00', text: [c.text] },
-      }, '')
+      })
       return setEvent(next, ev.id, { status: 'handed', move: move.label, result: 'Atlas drafted it. The post is on your Desk.' })
     }
     case 'sage': {
@@ -113,7 +114,7 @@ function handTrend(s: State, id: string): State {
     title: `Trend post: ${t.name}`, context: `${t.networks} · ${t.growth}. ${t.fitWhy}`,
     why: 'You handed this trend to Atlas from Listening.', confidence: 70, link: '/publishing',
     preview: { type: 'post', network: /tiktok/i.test(t.networks) ? 'tiktok' : /linkedin/i.test(t.networks) ? 'linkedin' : 'instagram', slot: 'Tomorrow, 18:00', text: [`Our take on ${t.name.toLowerCase()}, the Fernway way. Draft v1: edit before approving.`] },
-  }, 'Atlas is on it. The draft is on your Desk.')
+  })
   return patch(next, { trends: { ...next.listening.trends, [id]: 'handed' } })
 }
 
@@ -123,7 +124,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
       const exists = s.listening.watch.some(w => w.id === a.w.id)
       const watch = exists ? s.listening.watch.map(w => (w.id === a.w.id ? a.w : w)) : [...s.listening.watch, a.w]
       const next = { ...s, listening: { ...s.listening, watch } }
-      return exists ? next : pushToast(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), { agent: 'echo', text: `Echo is watching ${a.w.name}. First events within the hour, benchmark after 7 days.` })
+      return exists ? next : notify(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), 'listening', `Echo is watching ${a.w.name}. First events within the hour, benchmark after 7 days.`)
     }
     case 'listening/watchToggle': {
       const w = s.listening.watch.find(x => x.id === a.id)!
@@ -151,8 +152,13 @@ export function reduceListening(s: State, a: ListeningAction): State {
         agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-fill', chain: ['echo', 'atlas'],
         title: `Test: ${l.text}`, context: l.evidence, why: 'You asked Atlas to test one of Echo’s lessons.', confidence: 66, link: '/publishing',
         preview: { type: 'post', network: /tiktok/i.test(l.text) ? 'tiktok' : /linkedin/i.test(l.text) ? 'linkedin' : 'instagram', slot: 'This week', text: [l.idea] },
-      }, 'Atlas drafted a test post. It’s on your Desk.')
+      })
       return next
+    }
+    case 'listening/reopen': {
+      const rest = { ...s.listening[a.kind] }
+      delete rest[a.id]
+      return patch(s, { [a.kind]: rest })
     }
     case 'listening/trend':
       return a.hand ? handTrend(s, a.id) : patch(s, { trends: { ...s.listening.trends, [a.id]: 'dismissed' } })
@@ -161,7 +167,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
       if (!m) return s
       const next = patch(s, { mentions: { ...s.listening.mentions, [a.id]: a.action } })
       return a.action === 'replied'
-        ? pushToast(pushLog(next, { agent: 'nova', text: `Drafted a reply to ${m.author} on ${m.network}`, status: 'done', reason: 'You asked from Listening' }), { agent: 'nova', text: `Nova is replying to ${m.author}` })
+        ? notify(pushLog(next, { agent: 'nova', text: `Drafted a reply to ${m.author} on ${m.network}`, status: 'done', reason: 'You asked from Listening' }), 'listening', `Nova is drafting a reply to ${m.author}.`, { link: { to: '/', label: 'Review on Desk' } })
         : pushLog(next, { agent: 'echo', text: `Hid ${m.author}’s mention from the feed`, status: 'done', reason: 'You hid it' })
     }
     case 'listening/searchSave': {
@@ -178,7 +184,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
     case 'listening/alertSave': {
       const exists = s.listening.alerts.some(x => x.id === a.alert.id)
       const alerts = exists ? s.listening.alerts.map(x => (x.id === a.alert.id ? a.alert : x)) : [...s.listening.alerts, { ...a.alert, id: uid('la') }]
-      return pushToast(patch(s, { alerts }), { agent: 'echo', text: exists ? 'Alert updated' : 'Echo will raise this alert on your Desk' })
+      return patch(s, { alerts })
     }
     case 'listening/alertToggle':
       return patch(s, { alerts: s.listening.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
@@ -223,7 +229,7 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
       }
       const made = n - skipped.length
       next = pushLog(next, { agent: 'nova', text: `Drafted ${made} repl${made === 1 ? 'y' : 'ies'} to mentions, waiting on your Desk`, status: 'done', reason: 'You asked from Listening' })
-      return pushToast(next, { agent: 'nova', text: `${made} draft${made === 1 ? '' : 's'} on your Desk${skipped.length ? `. ${skipped.length} on ${[...new Set(skipped)].join(' and ')} can’t be answered from here.` : '.'}`, link: '/' })
+      return notify(next, 'listening', `Nova drafted ${made} repl${made === 1 ? 'y' : 'ies'}${skipped.length ? `. ${skipped.length} on ${[...new Set(skipped)].join(' and ')} can’t be answered from here.` : '.'}`, { link: { to: '/', label: 'Review on Desk' } })
     }
     case 'hide':
     case 'unhide': {
@@ -254,7 +260,7 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
         })
         next = patch(next, { mentions: { ...next.listening.mentions, [m.id]: next.listening.mentions[m.id] ?? 'handed' } })
       }
-      return pushToast(next, { agent: 'atlas', text: `Atlas drafted ${n} post${n > 1 ? 's' : ''} from these mentions. They’re on your Desk.`, link: '/' })
+      return notify(next, 'listening', `Atlas drafted ${n} post${n > 1 ? 's' : ''} from these mentions.`, { link: { to: '/', label: 'Review on Desk' } })
     }
   }
 }

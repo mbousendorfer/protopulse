@@ -6,10 +6,11 @@ import {
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm } from '../../app/time'
+import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
-import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Switch, Tabs, type MenuItem } from '../../ui'
+import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
+import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
@@ -127,18 +128,20 @@ export default function InboxPage() {
       <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you." />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
+          <div className="ib-views">
           {VIEWS.filter(x => !x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Saved views</span>
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Labels</span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
+          </div>
           <div className="ib-filters">
             <span className="ib-side-title">Filters</span>
-            <Menu align="start" trigger={<button className="ib-select">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
               items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...(Object.keys(NETWORK_LABEL) as Network[]).map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
-            <Menu align="start" trigger={<button className="ib-select">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
               items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
-            <Menu align="start" trigger={<button className="ib-select">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
               items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
             <Switch checked={intent} onChange={setIntent} label="Buying intent" />
             {filtersOn && <button className="link-btn" onClick={clear}>Clear filters</button>}
@@ -157,7 +160,7 @@ export default function InboxPage() {
               </Btn>
               <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Not reviewed' : 'Mark reviewed'}</Btn>
               <Menu align="start" trigger={<Btn size="sm" variant="ghost"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
-              <Menu align="start" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} items={labelItems(labels, l => run({ op: 'label', value: l }))} />
+              <LabelMenu trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} labels={labels} onPick={l => run({ op: 'label', value: l })} />
               <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="More actions">More<ChevronDown size={12} /></Btn>} items={[
                 { heading: 'Sentiment' }, ...(Object.keys(SENT) as Sentiment[]).map(x => ({ label: `Mark ${SENT[x].toLowerCase()}`, onSelect: () => run({ op: 'sentiment', value: x }) })), 'sep',
                 { label: allHidden ? 'Unhide' : 'Hide', icon: allHidden ? <Eye size={14} /> : <EyeOff size={14} />, onSelect: () => run({ op: allHidden ? 'unhide' : 'hide' }) },
@@ -175,11 +178,7 @@ export default function InboxPage() {
             </div>
           )}
           {!sel.count && undo && (
-            <div className="ib-undo-strip" role="status">
-              <span>{undo.label}</span>
-              <Btn size="xs" onClick={() => d({ type: 'inbox/undo' })}><Undo2 size={13} />Undo</Btn>
-              <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => d({ type: 'inbox/dismissUndo' })}><X size={13} /></Btn>
-            </div>
+            <UndoBar className="m-2" until={undo.at + 10_000} onUndo={() => d({ type: 'inbox/undo' })} onDismiss={() => d({ type: 'inbox/dismissUndo' })}>{undo.label}</UndoBar>
           )}
 
           {!list.length ? (
@@ -248,7 +247,7 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
             <header className="ib-need-head">
               <span className="ib-need-icon" aria-hidden><I size={14} /></span>
               <h3>{g.title}</h3>
-              <span className="ib-need-n num">{rows.length}</span>
+              <CountBadge n={rows.length} />
               <span className="faint">{g.hint}</span>
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
@@ -314,11 +313,22 @@ const assignItems = (go: (v?: Assignee) => void): MenuItem[] => [
   'sep',
   { label: 'Nobody', onSelect: () => go(undefined) },
 ]
-const labelItems = (labels: string[], go: (l: string) => void): MenuItem[] => [
-  ...labels.map(l => ({ label: l, icon: <Tag size={14} />, onSelect: () => go(l) })),
-  'sep',
-  { label: 'New label…', icon: <Plus size={14} />, onSelect: () => { const l = window.prompt('Name of the new label')?.trim(); if (l) go(l) } },
-]
+/** Existing labels, then a field to name a new one: no browser prompt. A popover, since a menu can't hold a text field. */
+function LabelMenu({ trigger, labels, onPick }: { trigger: ReactNode; labels: string[]; onPick: (l: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const pick = (l: string) => { onPick(l); setOpen(false); setName('') }
+  return (
+    <Pop align="start" open={open} onOpenChange={setOpen} trigger={trigger}>
+      {labels.map(l => <button key={l} type="button" className="menu-item" onClick={() => pick(l)}><Tag size={14} />{l}</button>)}
+      {labels.length > 0 && <div className="menu-sep" />}
+      <form className="row tight nowrap" onSubmit={e => { e.preventDefault(); if (name.trim()) pick(name.trim()) }}>
+        <input className="input grow" value={name} onChange={e => setName(e.target.value)} placeholder="New label" aria-label="New label" autoFocus={!labels.length} />
+        <Btn size="sm" type="submit" disabled={!name.trim()}>Add</Btn>
+      </form>
+    </Pop>
+  )
+}
 
 type PanelTab = 'conversation' | 'contact'
 
@@ -370,7 +380,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
         {(c.labels ?? []).map(l => (
           <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={11} /></button></span>
         ))}
-        <Menu align="start" trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} items={labelItems(labels.filter(l => !c.labels?.includes(l)), l => one({ op: 'label', value: l }))} />
+        <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
       </div>
 
       <Tabs value={tab} onChange={setTab} items={[
@@ -402,7 +412,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   <p>{x.m.text}</p>
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
                   {x.m.auto && x.m.undoUntil && x.m.undoUntil > now && !x.m.undone && (
-                    <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {Math.ceil((x.m.undoUntil - now) / 60000)} min left</Btn>
+                    <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {left(x.m.undoUntil, now)}</Btn>
                   )}
                 </div>
               </div>
@@ -417,7 +427,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
             <div className="ib-draft">
               <div className="row tight ib-draft-by">
                 <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
-                {card && <Link to={`/?card=${card.id}`} className="link-btn" style={{ marginLeft: 'auto', fontSize: 12 }}>Also on your Desk</Link>}
+                {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
               {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
@@ -432,7 +442,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   ))}
                 </ul>
               )}
-              {!!c.rules?.length && <div className="row tight"><span className="faint" style={{ fontSize: 12 }}>Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
+              {!!c.rules?.length && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
               <div className="row">
                 {editing ? (
                   <>
@@ -453,7 +463,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
           )}
 
           {c.status === 'hidden' && (
-            <div className="ib-draft row"><span className="muted" style={{ flex: 1 }}>Hidden from your public page. Nobody else sees it.</span><Btn onClick={() => d({ type: 'inbox/hide', id: c.id, hidden: false })}>Unhide</Btn></div>
+            <div className="ib-draft row"><span className="muted grow">Hidden from your public page. Nobody else sees it.</span><Btn onClick={() => d({ type: 'inbox/hide', id: c.id, hidden: false })}>Unhide</Btn></div>
           )}
           {c.status === 'claire' && !card?.claire?.reply && <div className="ib-draft"><span className="muted">Waiting on Claire. She usually replies in about a minute.</span></div>}
 
@@ -468,7 +478,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
               value={reply} onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!canReply) setMode('note'); submit() } }} />
             <div className="row">
-              <span className="faint" style={{ fontSize: 12 }}>{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
+              <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
               <Btn variant="primary" size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
                 {mode === 'note' || !canReply ? <><StickyNote size={14} />Add note</> : <><Send size={14} />Send</>}
@@ -507,7 +517,7 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
             {contact.orders.map(o => (
               <li key={o.id}>
                 <div className="row nowrap"><b className="mono">{o.id}</b><span className="faint">{o.date}</span><span className="spacer" /><b className="num">€{o.total}</b></div>
-                <div className="row nowrap"><span className="muted ellipsis" style={{ flex: 1 }}>{o.items}</span><Pill tone={o.status === 'Late' ? 'alert' : o.status === 'Returned' || o.status === 'Processing' ? 'caution' : o.status === 'Delivered' ? 'ok' : undefined}>{o.status}</Pill></div>
+                <div className="row nowrap"><span className="muted ellipsis grow">{o.items}</span><Pill tone={o.status === 'Late' ? 'alert' : o.status === 'Returned' || o.status === 'Processing' ? 'caution' : o.status === 'Delivered' ? 'ok' : undefined}>{o.status}</Pill></div>
               </li>
             ))}
           </ul>
@@ -517,7 +527,7 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
       {!!others.length && (
         <div>
           <div className="section-title">Other conversations</div>
-          <ul className="rows">{others.map(o => <li key={o.id} style={{ padding: '6px 0' }}><Link to={`/inbox/${o.id}`} className="row nowrap tight"><Net n={o.network} /><span className="ellipsis">{o.messages[0]?.text}</span></Link></li>)}</ul>
+          <ul className="rows">{others.map(o => <li className="py-6" key={o.id}><Link to={`/inbox/${o.id}`} className="row nowrap tight"><Net n={o.network} /><span className="ellipsis">{o.messages[0]?.text}</span></Link></li>)}</ul>
         </div>
       )}
     </div>

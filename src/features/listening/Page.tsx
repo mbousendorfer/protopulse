@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -13,6 +13,7 @@ import { MENTION_NET, MENTION_TAGS, sentimentOf, type EventState, type MentionOp
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
+import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -38,6 +39,7 @@ export default function ListeningPage() {
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
       ]} />
+      <Notice scope="listening" className="mb-3" />
       <Routes>
         <Route index element={<Competitors view="events" />} />
         <Route path="competitors" element={<Competitors view="events" />} />
@@ -69,7 +71,7 @@ function Competitors({ view }: { view: 'events' | 'benchmark' }) {
   const { s } = useStore()
   return (
     <div className="stack lg">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
+      <div className="row between">
         <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
           items={[{ value: 'events', label: 'Events' }, { value: 'benchmark', label: 'Benchmark' }]} />
         <Link to="/listening/competitors/manage" className="btn sm"><Settings2 size={14} />Manage competitors<span className="faint num">{s.listening.watch.filter(w => w.tracking).length}</span></Link>
@@ -133,7 +135,7 @@ function EventView() {
   return (
     <div className="event-layout">
       <div className="stack">
-        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />All events</Btn>
+        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} className="self-start"><ArrowLeft size={14} />All events</Btn>
         <div className="row tight"><Link to={`/listening/competitors/profile/${c.id}`}><b>{c.name}</b></Link><span className="chip">{e.type}</span><span className="mono faint">{dayLabel(e.at, now)} · {ago(e.at, now)}</span></div>
         <h1 className="event-title">{e.title}</h1>
         <section className="card pad proof">
@@ -147,7 +149,7 @@ function EventView() {
         </section>
         <section className="card pad echo-read">
           <Mark agent="echo" />
-          <div><div className="section-title" style={{ marginBottom: 4 }}>Echo’s read</div><p>{e.read}</p></div>
+          <div><div className="section-title mb-1">Echo’s read</div><p>{e.read}</p></div>
         </section>
       </div>
       <aside className="card pad stack moves">
@@ -156,7 +158,8 @@ function EventView() {
           <div className={`move-done ${st.status}`}>
             <Check size={16} />
             <div><b>{st.move}</b><p>{st.result}</p>
-              {st.status === 'handed' && <Link to="/" className="btn sm">Open your Desk</Link>}
+              {st.status === 'handed' && <Link to="/" className="btn sm">Review on Desk</Link>}
+              {s.listening.events[e.id]?.status === 'dismissed' && <button type="button" className="link-btn t-sm" onClick={() => d({ type: 'listening/reopen', kind: 'events', id: e.id })}>Undo</button>}
             </div>
           </div>
         ) : (
@@ -173,7 +176,7 @@ function EventView() {
             ))}
           </ol>
         )}
-        <p className="faint" style={{ fontSize: 12 }}>Anything that answers a competitor in public stays locked to Suggest: you publish it yourself.</p>
+        <p className="faint t-xs">Anything that answers a competitor in public stays locked to Suggest: you publish it yourself.</p>
       </aside>
     </div>
   )
@@ -190,7 +193,7 @@ function Benchmark() {
   return (
     <div className="stack lg">
       <section className="card">
-        <div className="card-head"><h2>Side by side <span className="faint" style={{ fontWeight: 400 }}>· last 30 days</span></h2></div>
+        <div className="card-head"><h2>Side by side <span className="faint">· last 30 days</span></h2></div>
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Brand</th><th className="r">Followers</th><th className="r">Growth per month</th><th className="r">Posts per week</th><th className="r">Engagement rate</th><th>Main formats</th><th className="r">Share of voice</th></tr></thead>
@@ -210,7 +213,7 @@ function Benchmark() {
           </table>
         </div>
         <div className="card-body">
-          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Share of voice · mentions in the last 30 days</div>
+          <div className="faint caption">Share of voice · mentions in the last 30 days</div>
           <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
         </div>
       </section>
@@ -227,7 +230,7 @@ function Benchmark() {
                   <p className="muted">{l.evidence}</p>
                   <p className="faint">Idea: {l.idea}</p>
                 </div>
-                {st ? <Pill tone={st === 'tested' ? 'signal' : undefined}>{st === 'tested' ? 'Test on your Desk' : 'Dismissed'}</Pill> : (
+                {st === 'tested' ? <Pill tone="signal">Test on your Desk</Pill> : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'lessons', id: l.id })} /> : (
                   <div className="row nowrap">
                     <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/lesson', id: l.id, test: true })}>Test it</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/lesson', id: l.id, test: false })}>Dismiss</Btn>
@@ -241,7 +244,7 @@ function Benchmark() {
 
       <section className="card">
         <div className="card-head">
-          <h2>Their top posts <span className="faint" style={{ fontWeight: 400 }}>· 30 days</span></h2>
+          <h2>Their top posts <span className="faint">· 30 days</span></h2>
           <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...tracked.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
         </div>
         <ul className="top-posts">
@@ -269,10 +272,10 @@ function Profile() {
   const events = EVENTS.filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
   return (
     <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />Benchmark</Btn>
+      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} className="self-start"><ArrowLeft size={14} />Benchmark</Btn>
       <header>
-        <h1 className="event-title">{c.name} <span className="faint mono" style={{ fontSize: 14 }}>{c.handle}</span></h1>
-        <p className="muted" style={{ maxWidth: '70ch' }}>{c.positioning}</p>
+        <h1 className="event-title">{c.name} <span className="faint mono t-md">{c.handle}</span></h1>
+        <p className="muted mw-70ch">{c.positioning}</p>
       </header>
       <dl className="grid-4 comp-stats">
         <div className="card pad stat"><dd><b className="num">{(c.followers / 1000).toFixed(0)}k</b></dd><dt className="label">Followers · you have {(FERNWAY_ROW.followers / 1000).toFixed(0)}k</dt></div>
@@ -340,7 +343,7 @@ function Mentions() {
   return (
     <div className="stack">
       <section className="card pad">
-        <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Sentiment of the last {all.length} mentions</div>
+        <div className="faint caption">Sentiment of the last {all.length} mentions</div>
         <StackBar h={10} parts={[
           { label: 'Positive', value: count('positive'), color: 'var(--ok)' },
           { label: 'Neutral', value: count('neutral'), color: 'var(--ink-3)' },
@@ -442,7 +445,7 @@ function Trends() {
           const st = s.listening.trends[t.id]
           return (
             <article key={t.id} className="card pad trend">
-              <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div className="row between">
                 <h3>{t.name}</h3>
                 <Pill tone={t.fit === 'High' ? 'ok' : t.fit === 'Medium' ? 'caution' : undefined}>{t.fit} fit</Pill>
               </div>
@@ -451,10 +454,10 @@ function Trends() {
               <ul className="examples">{t.examples.map(x => <li key={x} className="faint">{x}</li>)}</ul>
               <div className="row">
                 {st === 'handed' ? <Pill tone="signal"><Check size={11} />With Atlas · draft on your Desk</Pill>
-                  : st === 'dismissed' ? <Pill>Not for us</Pill> : (
+                  : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
                     <>
                       <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Not for us</Btn>
+                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Dismiss</Btn>
                     </>
                   )}
               </div>
@@ -474,7 +477,7 @@ function Searches() {
   const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
+      <div className="row between">
         <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</p>
         <Btn variant="primary" onClick={() => setEdit(blank)}><Plus size={14} />New search</Btn>
       </div>
@@ -491,7 +494,7 @@ function Searches() {
                   <td className="r">{x.volume ? x.volume.toLocaleString('en-GB') : 'Collecting'}</td>
                   <td>{x.paused ? <Pill>Paused</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
                   <td>
-                    <span className="row nowrap tight" style={{ justifyContent: 'flex-end' }}>
+                    <span className="row nowrap tight end">
                       <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
                       <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
                       <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => { setRemoved(x); d({ type: 'listening/searchDelete', id: x.id }) }}><Trash2 size={12} /></Btn>
@@ -503,15 +506,11 @@ function Searches() {
           </table>
         </div>
         {removed && (
-          <div className="pb-undo" role="status" style={{ margin: 12 }}>
-            <span>Deleted “{removed.name}”. Echo stopped tracking it.</span>
-            <Btn size="xs" onClick={() => { d({ type: 'listening/searchSave', search: removed }); setRemoved(null) }}>Undo</Btn>
-            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
-          </div>
+          <UndoBar className="m-3" onUndo={() => { d({ type: 'listening/searchSave', search: removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.name}”. Echo stopped tracking it.</UndoBar>
         )}
         {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
       </section>
-      <p className="faint" style={{ fontSize: 13 }}>Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
+      <p className="faint t-sm">Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
       {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
     </div>
   )

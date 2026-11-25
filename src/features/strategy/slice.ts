@@ -18,6 +18,7 @@ export type StrategyAction =
   | { type: 'strategy/reassign'; id: string; task: string; agent: AgentId }
   | { type: 'strategy/adjust'; id: string; adj: string; accept: boolean }
   | { type: 'strategy/proposal'; id: string; accept: boolean }
+  | { type: 'strategy/reopen'; id: string; adj?: string }
   | { type: 'strategy/cadence'; network: Network; target: number }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
@@ -35,7 +36,7 @@ export function briefSage(s: State, brief: string, source: string): State {
     title: `Campaign plan ready: ${c.name}`, context: `${c.posts.length} posts in 3 phases, goal ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}. Brief: “${brief}”`,
     why: 'Campaign plans are set to Draft.', confidence: 72, link: `/strategy/campaigns/${id}`,
     preview: { type: 'plan', title: c.name, lines: [`Goal: ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, `${c.posts.length} posts · boost budget €${c.budget}`, `Starts ${dayLabel(c.start, now(s))}`] },
-  }, '')
+  })
   return pushLog(next, { agent: 'sage', text: `Built a campaign plan from Echo’s brief: ${c.name}`, status: 'done', reason: source, link: `/strategy/campaigns/${id}` })
 }
 
@@ -51,7 +52,7 @@ function approveCampaign(s: State, id: string): State {
       title: `First ${c.name} post: ${first.title}`, context: `Sage handed ${c.posts.length} posts to Atlas. This is the first; the rest follow the plan.`,
       why: 'Campaign posts go through you until the campaign is running.', confidence: 76, link: '/publishing',
       preview: { type: 'post', network: first.network, slot: `${dayLabel(c.base + first.day * 86_400_000, now(s))}, 18:00`, text: [`${first.title}. ${c.messages[0] ?? ''}`.trim()] },
-    }, '')
+    })
   }
   const byAgent = c.tasks.reduce<Record<string, number>>((m, t) => ({ ...m, [t.agent]: (m[t.agent] ?? 0) + 1 }), {})
   next = pushLog(next, { agent: 'sage', text: `Launched ${c.name}: ${c.posts.length} posts to Atlas, ${Object.entries(byAgent).filter(([a]) => a !== 'atlas').map(([a, n]) => `${n} task${n > 1 ? 's' : ''} to ${a[0].toUpperCase() + a.slice(1)}`).join(', ')}`, status: 'approved', reason: 'You approved the campaign', link: `/strategy/campaigns/${id}` })
@@ -87,6 +88,11 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
     }
     case 'strategy/adjust':
       return applyAdjust(s, a.id, a.adj, a.accept)
+    case 'strategy/reopen':
+      // Only a decline can be taken back: an applied change already moved posts.
+      return a.adj
+        ? updateCampaign(s, a.id, x => ({ ...x, adjustments: x.adjustments.map(y => (y.id === a.adj && y.status === 'declined' ? { ...y, status: 'proposed' } : y)) }))
+        : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
     case 'strategy/proposal': {
       const p = s.strategy.proposals.find(x => x.id === a.id)
       if (!p) return s

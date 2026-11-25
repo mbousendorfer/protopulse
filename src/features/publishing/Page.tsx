@@ -122,7 +122,7 @@ function Calendar() {
           <h2 className="cal-title">{label}</h2>
         </div>
         <div className="row">
-          <Menu trigger={<button className="ib-select cmp-select">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
+          <Menu trigger={<button className="select-btn">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
             items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...PUBLISH_NETWORKS.map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
           {view !== 'month' && <span className="row tight faint pub-selall"><SelectAll sel={sel} label="Select every post shown" />Select all</span>}
           <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'list', label: 'List' }]} />
@@ -209,7 +209,7 @@ function PostTable({ posts, sel, onOpen }: { posts: Post[]; sel: ReturnType<type
   return (
     <div className="card pub-table-wrap">
       <table className="table pub-table">
-        <thead><tr><th style={{ width: 40 }}><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
+        <thead><tr><th className="w-40"><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
         <tbody>
           {rows.map(p => (
             <tr key={p.id} className={sel.has(p.id) ? 'pub-picked' : ''} onClick={e => (e.shiftKey ? sel.toggle(p.id, true) : onOpen(p.id))}>
@@ -247,7 +247,7 @@ function Drafts() {
           <ul className="rows">{onDesk.map(h => h.preview?.type === 'post' && (
             <li key={h.id} className="draft-row">
               <span className="draft-thumb">{h.preview.media ? <Photo name={h.preview.media} /> : <FileText size={16} />}</span>
-              <div style={{ flex: 1, minWidth: 0 }}><div className="row tight"><Net n={h.preview.network} /><span className="mono faint">{h.preview.slot}</span>{h.lane === 'claire' && <Pill tone="signal">With Claire</Pill>}</div><p className="ellipsis">{h.title}</p></div>
+              <div className="grow"><div className="row tight"><Net n={h.preview.network} /><span className="mono faint">{h.preview.slot}</span>{h.lane === 'claire' && <Pill tone="signal">With Claire</Pill>}</div><p className="ellipsis">{h.title}</p></div>
               <Link to={`/?card=${h.id}`} className="btn sm">Review on Desk</Link>
             </li>
           ))}</ul>
@@ -263,10 +263,10 @@ function Drafts() {
               <SelectBox checked={sel.has(p.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} label={`Select: ${p.text}`} />
               <button className="pub-draft-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(p.id, e.shiftKey) : open(p.id))}>
                 <span className="draft-thumb">{p.media ? <Photo name={p.media} /> : <FileText size={16} />}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>
+                <span className="grow">
                   <span className="row tight"><Net n={p.network} /><span className="mono faint">{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })} · {hhmm(p.at)}</span><span className="faint">· {p.pillar}</span></span>
                   <span className="ellipsis pub-draft-text">{p.text}</span>
-                  {p.note && <span className="faint" style={{ fontSize: 12 }}>{p.note}</span>}
+                  {p.note && <span className="faint t-xs">{p.note}</span>}
                 </span>
               </button>
               {p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={24} />}
@@ -296,7 +296,7 @@ function MediaLibrary() {
       {missing && (
         <section className="media-missing card pad">
           <ImageOff size={18} />
-          <div style={{ flex: 1 }}>
+          <div className="grow">
             <b>Atlas needs a visual for Wednesday’s LinkedIn post</b>
             <p className="muted">“Our repair programme in numbers.” No photo shows a repair, and Atlas never uses stock photos.</p>
           </div>

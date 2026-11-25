@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { CalendarClock, Check, Copy, Pencil, Trash2, Undo2, UserRound } from 'lucide-react'
+import { CalendarClock, Check, Copy, Pencil, Trash2, UserRound } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, hhmm } from '../../app/time'
@@ -8,6 +8,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { PUBLISH_NETWORKS, type Post } from '../../data/publishing'
 import { Btn, Mark, Modal, Net, Pill, Seg, Sheet } from '../../ui'
 import { BulkBar, type Selection } from '../../ui/Selection'
+import { Notice, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
@@ -40,7 +41,7 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
 
   if (dialog.kind === 'delete') return (
     <Modal open onOpenChange={o => !o && onClose()} title={`Delete ${noun}?`}
-      footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={() => run('delete')}><Trash2 size={14} />Delete {noun}</Btn></>}>
+      footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={() => run('delete')}><Trash2 size={14} />Delete {noun}</Btn></>}>
       <p className="muted">They leave the calendar now. You can undo for 10 seconds.</p>
       <ul className="pub-dlg-list">{posts.slice(0, 5).map(p => <li key={p.id}><Net n={p.network} /><span className="ellipsis">{p.text}</span></li>)}{n > 5 && <li className="faint">and {n - 5} more</li>}</ul>
     </Modal>
@@ -63,13 +64,13 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
         {mode === 'shift' ? (
           <div className="field">
             <label htmlFor="pub-shift">Days (negative = earlier)</label>
-            <input id="pub-shift" type="number" className="input" style={{ width: 120 }} value={days} min={-14} max={30} onChange={e => setDays(+e.target.value || 0)} />
+            <input id="pub-shift" type="number" className="input w-120" value={days} min={-14} max={30} onChange={e => setDays(+e.target.value || 0)} />
             <span className="hint">Each post keeps its time of day. Published posts don’t move.</span>
           </div>
         ) : (
           <div className="field">
             <label htmlFor="pub-dt">New date and time</label>
-            <input id="pub-dt" type="datetime-local" className="input" style={{ width: 240 }} value={dt} onChange={e => setDt(e.target.value)} />
+            <input id="pub-dt" type="datetime-local" className="input w-240" value={dt} onChange={e => setDt(e.target.value)} />
             {dt && new Date(dt).getTime() < now ? <span className="hint" role="alert">That slot is in the past. Pick today or later.</span>
               : n > 1 && <span className="hint">All {n} posts go to this exact slot.</span>}
           </div>
@@ -94,16 +95,13 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
         { label: `Approve${approvable && approvable < sel.count ? ` ${approvable}` : ''}`, icon: <Check size={14} />, primary: true, disabled: !approvable, note: approvable < sel.count ? `${approvable} of ${sel.count} can be approved, the rest are already scheduled or published` : undefined, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'approve' }); sel.clear() } },
         { label: 'Reschedule', icon: <CalendarClock size={14} />, onRun: () => setDialog({ kind: 'reschedule', ids }) },
         { label: 'Duplicate', icon: <Copy size={14} />, onRun: () => setDialog({ kind: 'duplicate', ids }) },
-        { label: 'Send to Claire', icon: <UserRound size={14} />, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'claire' }); sel.clear() } },
+        { label: 'Ask Claire', icon: <UserRound size={14} />, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'claire' }); sel.clear() } },
         { label: 'Delete', icon: <Trash2 size={14} />, onRun: () => setDialog({ kind: 'delete', ids }) },
       ]} />
       {!sel.count && undo && (
-        <div className="bulk-bar pub-undo" role="status">
-          <span>{undo.label}</span>
-          <Btn size="sm" onClick={() => d({ type: 'publishing/restore' })}><Undo2 size={14} />Undo</Btn>
-          <span className="faint num">{Math.ceil((undo.until - now) / 1000)} s</span>
-        </div>
+        <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })}>{undo.label}</UndoBar>
       )}
+      {!sel.count && <Notice scope="publishing" className="mb-3" />}
       <Dialogs dialog={dialog} onClose={() => setDialog(null)} onDone={sel.clear} />
     </>
   )

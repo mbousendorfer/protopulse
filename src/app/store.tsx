@@ -16,7 +16,7 @@ function load(): State {
     if (raw) {
       const s = JSON.parse(raw) as State
       if (s.v === STATE_VERSION) {
-        const merged = { ...fresh, ...s, toasts: [] } as State
+        const merged = { ...fresh, ...s, notice: undefined } as State
         for (const k of SLICES) (merged as Record<string, unknown>)[k] = { ...fresh[k], ...(s[k] ?? {}) }
         return merged
       }

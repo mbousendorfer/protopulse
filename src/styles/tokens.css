@@ -83,7 +83,7 @@
   /* Status */
   --alert: #E81313;   --alert-wash: #FDE7E7;
   --caution: #A66200; --caution-wash: #FFF8E6; --caution-edge: #FDE199;
-  --ok: #0F821D;      --ok-wash: #ECF7ED;      --ok-pulse: rgba(69, 184, 84, 0.45);
+  --ok: #0F821D;      --ok-wash: #ECF7ED;
 
   /* Agents: ADS data colours, a soft wash for tiles, an ink dark enough for text on the wash */
   --a-nova: #CC2878;  --a-nova-wash: color-mix(in srgb, #CC2878 10%, #fff);  --a-nova-ink: color-mix(in srgb, #CC2878 80%, #000);
@@ -156,7 +156,7 @@
 
   --alert: #F17171;   --alert-wash: rgba(232, 19, 19, 0.16);
   --caution: #FCC026; --caution-wash: rgba(251, 181, 0, 0.14); --caution-edge: rgba(251, 181, 0, 0.45);
-  --ok: #61C26D;      --ok-wash: rgba(69, 184, 84, 0.14);      --ok-pulse: rgba(97, 194, 109, 0.5);
+  --ok: #61C26D;      --ok-wash: rgba(69, 184, 84, 0.14);
 
   --a-nova: #e0559a;  --a-nova-wash: rgba(204, 40, 120, 0.2);  --a-nova-ink: #f29cc6;
   --a-atlas: #ec8c5c; --a-atlas-wash: rgba(220, 106, 48, 0.2); --a-atlas-ink: #f6b896;

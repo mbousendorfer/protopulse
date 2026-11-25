@@ -20,7 +20,7 @@ export default function ManageCompetitors() {
 
   return (
     <div className="stack lg">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
+      <div className="row between">
         <Link to="/listening/competitors" className="btn sm ghost"><ArrowLeft size={14} />Competitor events</Link>
         <Btn variant="primary" onClick={() => setEdit(blank())}><Plus size={14} />Add a competitor</Btn>
       </div>
@@ -73,7 +73,7 @@ function EditCompetitor({ w, isNew, onClose, onSave }: { w: Watched; isNew: bool
   const valid = draft.name.trim() && draft.accounts.some(a => a.handle.trim())
   return (
     <Modal open onOpenChange={o => !o && onClose()} title={isNew ? 'Add a competitor' : `Edit ${w.name}`}
-      footer={<><span className="faint" style={{ fontSize: 12 }}>Echo starts within the hour. The benchmark fills after 7 days.</span><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn>
+      footer={<><span className="faint t-xs">Echo starts within the hour. The benchmark fills after 7 days.</span><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn>
         <Btn variant="primary" disabled={!valid} onClick={() => onSave({ ...draft, name: draft.name.trim(), accounts: draft.accounts.filter(a => a.handle.trim()) })}>{isNew ? 'Start watching' : 'Save'}</Btn></>}>
       <div className="stack">
         <div className="field"><label htmlFor="cw-name">Name</label><input id="cw-name" className="input" autoFocus value={draft.name} onChange={e => set({ name: e.target.value })} placeholder="Peakline" /></div>
@@ -88,7 +88,7 @@ function EditCompetitor({ w, isNew, onClose, onSave }: { w: Watched; isNew: bool
               <Btn size="sm" variant="ghost" icon aria-label="Remove this account" onClick={() => set({ accounts: draft.accounts.filter((_, j) => j !== i) })} disabled={draft.accounts.length === 1}><X size={14} /></Btn>
             </div>
           ))}
-          <Btn size="sm" variant="ghost" onClick={() => set({ accounts: [...draft.accounts, { network: NETWORKS.find(n => !draft.accounts.some(a => a.network === n)) ?? 'instagram', handle: '' }] })} style={{ alignSelf: 'flex-start' }}><Plus size={14} />Add an account</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => set({ accounts: [...draft.accounts, { network: NETWORKS.find(n => !draft.accounts.some(a => a.network === n)) ?? 'instagram', handle: '' }] })} className="self-start"><Plus size={14} />Add an account</Btn>
         </div>
       </div>
     </Modal>

@@ -11,7 +11,7 @@
 .cmdk-list { overflow-y: auto; padding: var(--s2); max-height: calc(72vh - 54px); }
 .cmdk-list [cmdk-group-heading] { padding: 10px 8px 4px; font-size: var(--t-sm); color: var(--ink-3); }
 .cmdk-list [cmdk-empty] { padding: var(--s6); text-align: center; color: var(--ink-3); }
-.cmdk-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: 10px; color: var(--ink-2); cursor: pointer; font-size: var(--t-md); user-select: none; }
+.cmdk-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border-radius: var(--r-ctl); color: var(--ink-2); cursor: pointer; font-size: var(--t-md); user-select: none; }
 .cmdk-item svg { color: var(--ink-3); flex: none; }
 .cmdk-item[data-selected='true'] { background: var(--lift-2); color: var(--ink); }
 .cmdk-item .hint { margin-left: auto; font-size: var(--t-sm); color: var(--ink-3); flex: none; }
@@ -20,9 +20,9 @@
 .cmdk-answer { padding: var(--s4) var(--s5) var(--s5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s3); }
 .cmdk-q { display: flex; gap: 10px; align-items: flex-start; color: var(--ink-2); }
 .cmdk-route { display: flex; align-items: center; gap: 8px; }
-.route-btn { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 3px; border-radius: 10px; border: 1px solid var(--line-strong); background: var(--sunk); color: var(--ink); font: 500 var(--t-sm) var(--mono); }
+.route-btn { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 3px; border-radius: var(--r-ctl); border: 1px solid var(--line-strong); background: var(--sunk); color: var(--ink); font: 500 var(--t-sm) var(--mono); }
 .route-btn:hover { border-color: var(--line-loud); }
-.route-btn .mark { width: 18px; height: 18px; font-size: 10px; border-radius: 5px; }
+.route-btn .mark { width: 18px; height: 18px; }
 .cmdk-reply { display: flex; flex-direction: column; gap: var(--s3); }
 .cmdk-reply > p { font-size: var(--t-lg); line-height: 1.6; color: var(--ink); }
 .caret { display: inline-block; width: 7px; height: 15px; margin-left: 2px; vertical-align: -2px; background: var(--ink-2); animation: blink 1s steps(2) infinite; }
@@ -30,7 +30,7 @@
 .cmdk-visual { animation: fade-in var(--base) var(--ease); }
 .cmdk-sources { font-size: var(--t-sm); }
 .cmdk-post p { margin-top: 4px; }
-.cmdk-list-mini { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; }
+.cmdk-list-mini { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-ctl); }
 .cmdk-list-mini li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-top: 1px solid var(--line); font-size: var(--t-md); }
 .cmdk-list-mini li:first-child { border-top: 0; }
 .cmdk-list-mini .ellipsis { flex: 1; }

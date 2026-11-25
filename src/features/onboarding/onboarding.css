@@ -1,12 +1,12 @@
 .onb { min-height: 100vh; display: flex; flex-direction: column; background: var(--void); }
 .onb-top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 var(--s5); border-bottom: 1px solid var(--line); background: var(--deck); }
-.onb-top .logo { width: 24px; height: 24px; border-radius: 6px; background: var(--ink); display: grid; place-items: center; }
+.onb-top .logo { width: 24px; height: 24px; border-radius: var(--r-sm); background: var(--ink); display: grid; place-items: center; }
 .onb-top b { font-weight: 600; }
 .onb-body { flex: 1; display: grid; grid-template-columns: 240px minmax(0, 760px); gap: var(--s8); justify-content: center; padding: var(--s8) var(--s5) var(--s10); }
 .onb-steps { position: sticky; top: var(--s8); align-self: start; display: flex; flex-direction: column; gap: var(--s4); }
 .onb-progress { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
 .bar { flex: 1; height: 4px; border-radius: 2px; background: var(--lift-2); overflow: hidden; display: block; }
-.bar i { display: block; height: 100%; background: var(--ink); transition: width var(--slow) var(--ease); }
+.bar i { display: block; height: 100%; background: var(--ink); transform-origin: left; transition: transform var(--slow) var(--ease); }
 .onb-steps ol { display: flex; flex-direction: column; gap: 2px; }
 .onb-steps li { display: flex; align-items: center; gap: 10px; height: 34px; color: var(--ink-3); font-weight: 500; }
 .onb-steps li.current { color: var(--ink); }
@@ -18,7 +18,7 @@
 .onb-step { display: flex; flex-direction: column; gap: var(--s4); animation: fade-in var(--base) var(--ease); }
 .onb-step h1 { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.025em; }
 .onb-step .lede { color: var(--ink-2); font-size: var(--t-lg); max-width: 60ch; }
-.onb-group h2 { font-size: var(--t-md); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
+.onb-group h2 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); margin-bottom: var(--s2); }
 .onb-int { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4); min-height: 52px; }
 .onb-int b { font-weight: 600; }
 .onb-reading { display: flex; align-items: center; gap: var(--s4); }
@@ -27,7 +27,6 @@
 .onb-prop-text { font-size: var(--t-xl); font-weight: 600; line-height: 1.35; }
 .onb-summary { display: flex; align-items: center; gap: var(--s3); }
 .onb-summary span { flex: 1; }
-.ok { color: var(--ok); }
 .onb-team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
 .onb-agent { display: flex; flex-direction: column; gap: var(--s2); }
 .onb-agent h2 { font-size: var(--t-lg); font-weight: 600; }
@@ -41,9 +40,9 @@
 .onb-recap dd { margin: 0; font-weight: 600; }
 .onb-foot { display: flex; align-items: center; gap: var(--s3); padding-top: var(--s4); border-top: 1px solid var(--line); }
 @media (max-width: 900px) {
-  .onb-body { grid-template-columns: 1fr; gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
+  .onb-body { grid-template-columns: minmax(0, 1fr); gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
   .onb-steps { position: static; }
   .onb-steps ol { display: none; }
-  .onb-team, .onb-levels, .onb-recap { grid-template-columns: 1fr; }
+  .onb-team, .onb-levels, .onb-recap { grid-template-columns: minmax(0, 1fr); }
   .onb-step h1 { font-size: var(--t-2xl); }
 }

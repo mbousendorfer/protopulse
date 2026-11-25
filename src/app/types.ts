@@ -128,7 +128,10 @@ export type LogEntry = {
 /** A Desk card the user settled this session. */
 export type DoneItem = { id: string; title: string; text: string; at: number; ms?: number; h: Handoff }
 
-export type Toast = { id: string; agent?: AgentId | 'claire'; text: string; undo?: string; link?: string }
+/** Where your own action's confirmation shows: the top of the list it acted on. */
+export type NoticeScope = 'desk' | 'publishing' | 'listening' | 'agents'
+/** The one confirmation of your last action. `undo` is a journal entry id; it lasts while that entry can be undone. */
+export type Notice = { scope: NoticeScope; text: string; undo?: string; link?: { to: string; label: string }; until: number }
 
 export type TesterEvent = { t: number; app: number; kind: string; detail?: Record<string, unknown> }
 

@@ -1,4 +1,4 @@
-import type { Agent, DoneItem, Handoff, LogEntry, TesterEvent, Toast } from './types'
+import type { Agent, DoneItem, Handoff, LogEntry, TesterEvent, Notice } from './types'
 import { startClock, type Clock, DEMO_START, MIN } from './time'
 import { AGENTS } from '../data/agents'
 import { HANDOFFS } from '../data/desk'
@@ -19,7 +19,7 @@ export type State = {
   agents: Agent[]
   handoffs: Handoff[]
   log: LogEntry[]
-  toasts: Toast[]
+  notice?: Notice
   engine: Engine
   brief: { read: boolean; since: number }
   desk: { done: DoneItem[] }
@@ -46,7 +46,6 @@ export function initialState(): State {
     agents: structuredClone(AGENTS),
     handoffs: structuredClone(HANDOFFS),
     log: structuredClone(LOG),
-    toasts: [],
     engine: { live: true, cadence: 30, nextAt: DEMO_START + MIN / 2, cursor: 0 },
     brief: { read: false, since: DEMO_START - 13 * 60 * MIN - 32 * MIN },
     desk: { done: [] },

@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff } from '../../app/types'
-import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
+import { now, pushHandoff, pushLog, uid } from '../../app/core'
 import type { Alert } from './alerts'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
@@ -53,7 +53,7 @@ function setAnomaly(s: State, id: string, resolution: string): State {
 export function answer(q: string): string {
   const t = q.toLowerCase()
   if (/tiktok/.test(t)) return 'TikTok views per video fell from a median of 9,000 to 1,840 since Thursday 20 Nov (4 videos). Watch time dropped from 9.1 s to 3.4 s: viewers leave before the product shows up. Atlas can test 3-second hooks on the next 3 videos.'
-  if (/best time|when .*post|slot/.test(t)) return 'Over the last 30 days, Friday 18:00 is your best slot on Instagram (2.1× the median reach), weekday 08:30 on LinkedIn, and 18:30 on TikTok. See the heatmap in Explore.'
+  if (/best time|when .*post|slot/.test(t)) return 'Over the last 30 days, Friday 18:00 – 20:00 is your best window on Instagram (2.1× the median reach), and Atlas schedules at 18:30 inside it. Weekday 08:30 on LinkedIn, 18:30 on TikTok. See the heatmap in Explore.'
   if (/reel|carousel|format/.test(t)) return 'Carousels get 2× the saves of reels (3.4% vs 1.7%), reels get 1.6× the reach. For cold-weather products, carousels convert better: the Storm Jacket carousel drove 920 link clicks.'
   if (/linkedin/.test(t)) return 'LinkedIn engagement is 3.9% over 7 days, the highest of your networks. Repair content does 1.9× better than product posts there.'
   if (/compet|peakline|trailkind|norr/.test(t)) return 'Your share of voice is 31% vs Peakline 27%. Peakline’s price cut drove 3× their usual comments, mostly about price, not quality. Details in Listening › Competitors.'
@@ -65,7 +65,7 @@ export function reduceInsights(s: State, a: InsightsAction): State {
   switch (a.type) {
     case 'insights/share': {
       const next = patch(s, { shared: { ...s.insights.shared, [a.id]: { at: now(s) } } })
-      return pushToast(pushLog(next, { agent: 'iris', text: `Shared “${a.title}” with Claire`, status: 'approved', reason: 'You shared it from Insights' }), { agent: 'iris', text: `Shared with Claire: ${a.title}` })
+      return pushLog(next, { agent: 'iris', text: `Shared “${a.title}” with Claire`, status: 'approved', reason: 'You shared it from Insights' })
     }
     case 'insights/anomaly': {
       let next = setAnomaly(s, a.id, a.action)
@@ -93,7 +93,7 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     case 'insights/alertSave': {
       const exists = s.insights.alerts.some(x => x.id === a.alert.id)
       const alerts = exists ? s.insights.alerts.map(x => (x.id === a.alert.id ? a.alert : x)) : [...s.insights.alerts, { ...a.alert, id: uid('ia') }]
-      return pushToast(patch(s, { alerts }), { agent: 'iris', text: exists ? 'Alert updated' : 'Iris will raise this alert on your Desk' })
+      return patch(s, { alerts })
     }
     case 'insights/alertToggle':
       return patch(s, { alerts: s.insights.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
@@ -113,7 +113,7 @@ function followUpPost(s: State, about: string): State {
     preview: tiktok
       ? { type: 'post', network: 'tiktok', slot: 'Today, 18:30', media: 'pack', text: ['3 days. 28 litres. Watch it all go in. #packingmybag'] }
       : { type: 'post', network: 'linkedin', slot: 'Thu 27, 08:30', text: ['1,200 bags repaired this year. Here’s what our workshop learned about what breaks first, and how we design around it.'] },
-  }, '')
+  })
 }
 
 export function onResolveInsights(s: State, h: Handoff, d: Decision): State {

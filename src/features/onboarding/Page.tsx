@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Pencil, Sunrise } from 'lucide-react'
 import type { AgentId, Autonomy, Network, RuleKind } from '../../app/types'
 import { useStore } from '../../app/store'
-import { AGENTS, AUTONOMY_COLUMN } from '../../data/agents'
+import { AGENTS, AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
 import { Btn, Mark, Net, Pill, Seg, Thinking } from '../../ui'
 import './onboarding.css'
 import { AgentScene, OnboardingScene } from '../../ui/Illustrations'
@@ -77,7 +77,7 @@ export default function OnboardingPage() {
 
       <div className="onb-body">
         <nav className="onb-steps" aria-label="Setup steps">
-          <div className="onb-progress"><span className="num">{step + 1} of {STEPS.length}</span><span className="bar"><i style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></span></div>
+          <div className="onb-progress"><span className="num">{step + 1} of {STEPS.length}</span><span className="bar"><i style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }} /></span></div>
           <ol>
             {STEPS.map((label, i) => (
               <li key={label} className={i === step ? 'current' : i < step ? 'done' : ''}>
@@ -130,7 +130,7 @@ function Connect({ connected, setConnected }: { connected: string[]; setConnecte
             {INTEGRATIONS.filter(i => i.group === g).map(i => (
               <li key={i.id} className="onb-int">
                 {i.net ? <Net n={i.net} /> : <span className="net">SH</span>}
-                <div style={{ flex: 1 }}><b>{i.name}</b>{connected.includes(i.id) && <div className="faint" style={{ fontSize: 12 }}>{i.handle}</div>}</div>
+                <div className="grow"><b>{i.name}</b>{connected.includes(i.id) && <div className="faint t-xs">{i.handle}</div>}</div>
                 {busy.includes(i.id) ? <Thinking label="Connecting…" /> : connected.includes(i.id) ? <Pill tone="ok" dot>Connected</Pill> : <Btn size="sm" onClick={() => connect(i.id)}>Connect</Btn>}
               </li>
             ))}
@@ -161,11 +161,11 @@ function Playbook({ kept, setKept }: { kept: Record<string, { keep: boolean; tex
     <section className="onb-step">
       <h1>Build your Playbook</h1>
       <p className="lede">Protopulse reads how you already write, then proposes the voice, rules and facts every agent will follow. You keep what’s right.</p>
-      {phase === 'idle' && <Btn variant="primary" onClick={() => setPhase('reading')} style={{ alignSelf: 'flex-start' }}>Read my last 200 posts and replies</Btn>}
+      {phase === 'idle' && <Btn variant="primary" onClick={() => setPhase('reading')} className="self-start">Read my last 200 posts and replies</Btn>}
       {phase === 'reading' && (
         <div className="card pad onb-reading" role="status">
           <Thinking label={READ_PHASES[Math.min(READ_PHASES.length - 1, Math.floor(pct / 20))]} />
-          <span className="bar"><i style={{ width: `${pct}%` }} /></span>
+          <span className="bar"><i style={{ transform: `scaleX(${pct / 100})` }} /></span>
           <span className="faint num">{Math.round(pct * 2)} of 200 posts</span>
         </div>
       )}
@@ -228,15 +228,15 @@ function Autonomy({ presets, setPresets }: { presets: Record<AgentId, Preset>; s
           const by = (l: Autonomy) => a.actions.filter(x => (x.locked ? 'suggest' : levelFor(x.risk, p)) === l)
           return (
             <article key={a.id} className="card pad onb-auto">
-              <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div className="row between">
                 <div className="row nowrap"><Mark agent={a.id} size="md" /><b>{a.name}</b><span className="faint">{a.dept}</span></div>
                 <Seg name={`onb-${a.id}`} label={`${a.name} autonomy`} value={p} onChange={v => setPresets(x => ({ ...x, [a.id]: v }))}
                   options={[{ value: 'cautious', label: 'Cautious · recommended' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }]} />
               </div>
               <div className="onb-levels">
-                {(['act', 'draft', 'suggest'] as Autonomy[]).map(l => (
+                {AUTONOMY.map(l => (
                   <div key={l}>
-                    <span className="faint">{AUTONOMY_COLUMN[l]} · {by(l).length}</span>
+                    <span className="faint">{AUTONOMY_LABEL[l]} · {by(l).length}</span>
                     <ul>{by(l).map(x => <li key={x.id}>{x.label}{x.locked ? ' (locked)' : ''}</li>)}{!by(l).length && <li className="faint">Nothing</li>}</ul>
                   </div>
                 ))}

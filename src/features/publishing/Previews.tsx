@@ -32,7 +32,7 @@ export function NetworkPreview({ network, text, media, words }: { network: Netwo
     </>)
     case 'tiktok': case 'youtube': return frame(network === 'tiktok' ? 'pv-tt' : 'pv-yt', <>
       <div className="pv-vertical">
-        {media ? <Photo name={media} /> : <div className="pv-nomedia" style={{ height: '100%' }}>No video</div>}
+        {media ? <Photo name={media} /> : <div className="pv-nomedia h-full">No video</div>}
         <div className="pv-rail">{network === 'tiktok' ? <><span><Heart size={20} />12.4k</span><span><MessageCircle size={20} />312</span><span><Share2 size={20} />88</span></> : <><span><ThumbsUp size={20} />2.1k</span><span><MessageCircle size={20} />64</span><span><Share2 size={20} />Share</span></>}</div>
         <div className="pv-overlay">
           <b>@fernway{network === 'youtube' && <span className="pv-sub-btn">Subscribe</span>}</b>
@@ -56,7 +56,7 @@ export function NetworkPreview({ network, text, media, words }: { network: Netwo
     default: return frame('pv-x', <>
       <div className="pv-xrow">
         <Brand size={36} />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="grow">
           <div className="pv-xname"><b>Fernway</b><span>@fernway · now</span></div>
           <p className="pv-text pv-pre">{caption}</p>
           {media && <div className="pv-xmedia">{img('16 / 9')}</div>}

@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, Network, PlaybookRule, RuleKind } from '../../app/types'
-import { addRule, pushHandoff, pushToast } from '../../app/core'
+import { addRule, pushHandoff } from '../../app/core'
 import { BANNED, ESCALATIONS, FACTS, PREFERRED, RULES, VOICE, type Escalation, type Voice } from '../../data/playbook'
 
 export type PlaybookState = {
@@ -42,9 +42,9 @@ export function reducePlaybook(s: State, a: PlaybookAction): State {
     case 'playbook/voice':
       return set(s, { voice: { ...pb.voice, [a.key]: a.value } })
     case 'playbook/addRule': {
-      if (pb.rules.some(r => r.text.toLowerCase() === a.text.toLowerCase())) return a.quiet ? s : pushToast(s, { text: `Already in the Playbook: “${a.text}”` })
-      const next = addRule(s, { kind: a.kind, text: a.text, agents: a.agents, origin: a.origin })
-      return a.quiet ? next : pushToast(next, { agent: a.agents[0], text: `Rule added to the Playbook: “${a.text}”`, link: '/playbook' })
+      // The add form says so before you submit; a duplicate never lands twice.
+      if (pb.rules.some(r => r.text.toLowerCase() === a.text.toLowerCase())) return s
+      return addRule(s, { kind: a.kind, text: a.text, agents: a.agents, origin: a.origin })
     }
     case 'playbook/editRule':
       return set(s, { rules: pb.rules.map(r => (r.id === a.id ? { ...r, text: a.text, origin: 'Edited by you' } : r)) })
@@ -77,7 +77,7 @@ export function reducePlaybook(s: State, a: PlaybookAction): State {
         why: 'You asked for it from the command bar. Posts you brief always come back for approval.',
         confidence: 80, link: '/publishing', rules: ['One call to action per post', 'One emoji max'],
         preview: { type: 'post', network: a.network, slot: a.slot, text: [a.text] },
-      }, 'Atlas drafted your post. It’s on your Desk.')
+      })
   }
 }
 

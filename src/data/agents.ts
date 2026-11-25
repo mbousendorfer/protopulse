@@ -2,7 +2,6 @@ import type { Agent, AgentId, Autonomy, Network } from '../app/types'
 
 export const AUTONOMY: Autonomy[] = ['suggest', 'draft', 'act']
 export const AUTONOMY_LABEL: Record<Autonomy, string> = { suggest: 'Suggest', draft: 'Draft', act: 'Act' }
-export const AUTONOMY_COLUMN: Record<Autonomy, string> = { suggest: 'Suggests', draft: 'Drafts for you', act: 'Acts alone' }
 
 export const NETWORK_LABEL: Record<Network, string> = {
   instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook',

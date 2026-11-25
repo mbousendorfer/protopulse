@@ -121,7 +121,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
         <span className="spacer" />
         <Btn variant="ghost" onClick={() => submit('draft')}>Save draft</Btn>
         <Btn variant="ghost" onClick={() => submit('plan')}><CalendarPlus size={14} />Add to plan</Btn>
-        <Btn onClick={() => submit('claire')}><Send size={14} />Send to Claire</Btn>
+        <Btn onClick={() => submit('claire')}><Send size={14} />Ask Claire</Btn>
         <Btn variant="primary" onClick={() => submit('schedule')}>{editing && post?.status === 'scheduled' ? 'Save changes' : 'Schedule'}</Btn>
       </>}>
       <div className="cmp">
@@ -175,7 +175,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             </div>
             <div className="field">
               <span className="label">Pillar</span>
-              <Menu align="start" trigger={<button className="ib-select cmp-select">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
+              <Menu align="start" trigger={<button className="select-btn block">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
             </div>
           </div>
 
