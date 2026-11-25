@@ -46,7 +46,9 @@
 .pillar-table tr.best .track i { background: var(--a-iris); }
 .pillar-table tr.best td:first-child { color: var(--ink); font-weight: 600; }
 /* Narrow screens keep the numbers, drop the bar. */
-@media (max-width: 520px) { .pillar-er { min-width: 0; } .pillar-er .track { display: none; } .pillar-er b { width: auto; } .pillar-table th, .pillar-table td { white-space: normal; padding-left: var(--s2); padding-right: var(--s2); } .pillar-table td.num { white-space: nowrap; } }
+/* Narrow card (beside the heatmap below ~1200 px, or a phone): keep the numbers, drop the bar, let headers wrap. */
+.pillar-card { container-type: inline-size; }
+@container (max-width: 480px) { .pillar-er { min-width: 0; } .pillar-er .track { display: none; } .pillar-er b { width: auto; } .pillar-table th, .pillar-table td { white-space: normal; padding-left: var(--s2); padding-right: var(--s2); } .pillar-table td.num { white-space: nowrap; } }
 
 .anomaly { padding: var(--s4) var(--s5) var(--s4) var(--s2); display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s2); align-items: start; }
 .anomaly-body { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
