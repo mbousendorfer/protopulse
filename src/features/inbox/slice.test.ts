@@ -344,3 +344,36 @@ describe('Sage’s Trail Week label', () => {
     expect(s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === 'Trail Week')?.origin).toBe('Sage · Trail Week campaign')
   })
 })
+
+describe('filters and saved views', () => {
+  it('⌘K “show me negative Instagram DMs this week” sets the same filters the Inbox uses', async () => {
+    const { parse } = await import('../../data/command')
+    const { describe: say, matchFilters, toSearch, fromSearch } = await import('./filters')
+    const i = parse('show me negative instagram dms this week').intent as { kind: string; f: import('./filters').Filters }
+    expect(i).toMatchObject({ kind: 'inboxFilter', f: { type: 'dm', network: 'instagram', sentiment: 'negative', date: '7d' } })
+    expect(say(i.f)).toBe('negative Instagram messages from the last 7 days')
+    expect(fromSearch(new URLSearchParams(toSearch(i.f)))).toEqual(i.f)
+    const s = initialState()
+    expect(s.inbox.convs.filter(c => matchFilters(c, i.f, s.clock.base)).map(c => c.id)).toContain('c-ana')
+    expect(parse('show me mentions of the Ridge').intent.kind).not.toBe('inboxFilter')
+  })
+
+  it('a saved view is stored and can be deleted and restored', () => {
+    let s = reducer(initialState(), { type: 'inbox/viewAdd', view: { name: 'Negative IG', view: 'all', f: { network: 'instagram', sentiment: 'negative' } } })
+    const v = s.inbox.views[0]
+    s = reducer(s, { type: 'inbox/viewDelete', id: v.id })
+    expect(s.inbox.views).toEqual([])
+    s = reducer(s, { type: 'inbox/viewRestore', view: v, index: 0 })
+    expect(s.inbox.views[0].name).toBe('Negative IG')
+  })
+})
+
+describe('comments under their post', () => {
+  it('a post groups its comments, whatever details each comment line carries', async () => {
+    const { matchFilters, postKey } = await import('./filters')
+    const s = initialState()
+    expect(postKey(conv(s, 'c-lea'))).toBe('Reel · “The Ridge on the GR20”')
+    const on = s.inbox.convs.filter(c => matchFilters(c, { post: 'Reel · “The Ridge on the GR20”' }, s.clock.base)).map(c => c.id)
+    expect(on.sort()).toEqual(['c-gr20-ben', 'c-gr20-julie', 'c-gr20-marco', 'c-lea'])
+  })
+})

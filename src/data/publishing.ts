@@ -2,7 +2,16 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 import { bestTime } from '../features/insights/metrics'
 
-export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** The four pillars Fernway started with. Tables keyed by pillar use these; any other pillar falls back to its family (`pillarFamily`). */
+export type BasePillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** Pillars are Sage's and can be added or renamed (requests/atlas-from-sage-open-pillars.md). */
+export type Pillar = BasePillar | (string & {})
+const BASES: BasePillar[] = ['Gear that lasts', 'Trail stories', 'Repair & care', 'Community']
+/** The base pillar a new or renamed one belongs to, from its name, until Sage exposes `pillarBase`. */
+export function pillarFamily(p: Pillar): BasePillar {
+  if ((BASES as string[]).includes(p)) return p as BasePillar
+  return /repair|care|fix|workshop/i.test(p) ? 'Repair & care' : /gear|product|gift|kit|shop/i.test(p) ? 'Gear that lasts' : /community|people|customer|ugc|team/i.test(p) ? 'Community' : 'Trail stories'
+}
 export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused' | 'unapproved'
 
 export type Post = {
@@ -33,6 +42,8 @@ export type Post = {
   comments?: { from: 'atlas' | 'claire' | 'you'; text: string; at: number }[]
   /** Why the network refused it, while it is Failed. */
   failure?: { at: number; text: string }
+  /** The profile it goes out on; without it, the network's main Fernway account (see publishing/accounts.ts). */
+  account?: string
   /** The queue whose slot this post fills. */
   queue?: string
   /** Held for something Sam said they'd provide. */
@@ -70,9 +81,9 @@ export const POSTS: Post[] = [
   P('p-05', 'instagram', -6, 18, 30, 'Storm Jacket vs. a garden hose. Spoiler: you stay dry.', 'Gear that lasts', 'jacket', st(26100, 4.6)),
   P('p-06', 'youtube', -6, 17, 0, 'How to adjust the Ridge back system in 30 seconds.', 'Gear that lasts', 'pack', st(9800, 5.2)),
   P('p-07', 'tiktok', -5, 18, 30, 'Lac Blanc at 5am. Worth every step.', 'Trail stories', 'sunrise', st(41000, 5.9)),
-  P('p-08', 'instagram', -5, 12, 0, 'Inside the Annecy workshop: one zip, four minutes, one bag saved.', 'Repair & care', 'workshop', st(12800, 3.1)),
+  P('p-08', 'instagram', -5, 12, 0, 'Inside the Annecy workshop: one zip, four minutes, one bag saved.', 'Repair & care', 'workshop', { ...st(12800, 3.1), account: 'ig-repair' }),
   P('p-09', 'x', -4, 12, 0, 'We repair every Fernway bag for free, forever. Yes, even the old ones.', 'Repair & care', undefined, st(3100, 1.8)),
-  P('p-10', 'instagram', -3, 10, 0, 'Sunday reset: how to clean your jacket the right way.', 'Repair & care', 'rain', st(14900, 3.8)),
+  P('p-10', 'instagram', -3, 10, 0, 'Sunday reset: how to clean your jacket the right way.', 'Repair & care', 'rain', { ...st(14900, 3.8), account: 'ig-repair' }),
   P('p-11', 'tiktok', -3, 18, 30, 'Packing for a 2-day hut trip in 20 seconds.', 'Trail stories', 'pack', st(9200, 2.9)),
   P('p-12', 'facebook', -2, 19, 0, 'Meet Léa: 6 trips, one Ridge, zero regrets.', 'Community', 'trail', st(8800, 2.6)),
   // This week
@@ -94,7 +105,7 @@ export const POSTS: Post[] = [
   P('p-25', 'instagram', 4, 10, 0, 'Sunrise at Lac Blanc by @julien_trail.', 'Community', 'lake', { campaign: 'Trail Week' }),
   P('p-sale', 'facebook', 4, 16, 0, 'Weekend sale: 15% off bottles with code [code] until Sunday.', 'Gear that lasts', 'bottle', { status: 'needs', handoff: 'h-code', note: 'Atlas needs the promo code.' }),
   P('p-27', 'tiktok', 4, 18, 30, 'Bottle drop test, part 2: 5 metres.', 'Gear that lasts', 'bottle'),
-  P('p-28', 'instagram', 5, 11, 0, 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'Repair & care', 'jacket'),
+  P('p-28', 'instagram', 5, 11, 0, 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'Repair & care', 'jacket', { account: 'ig-repair' }),
   // Drafts
   P('p-d1', 'instagram', 3, 12, 0, 'Gift guide: one Fernway piece for every kind of hiker.', 'Gear that lasts', 'fleece', { status: 'draft' }),
   P('p-d2', 'linkedin', 6, 8, 30, 'Why we say no to Black Friday, again.', 'Repair & care', 'workshop', { status: 'draft', author: 'you' }),

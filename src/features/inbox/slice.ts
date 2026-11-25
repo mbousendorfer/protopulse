@@ -4,6 +4,7 @@ import { hhmm, MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
 import type { Escalation } from '../../data/playbook'
 import { actionOf } from '../../app/core'
+import type { SavedView } from './filters'
 import { fill, firstName, SAVED, type SavedReply } from './saved'
 import { didText, effect, matches, RULES, TEAM_DELAY, thenText, whenText, type InboxRule, type RuleOp } from './rules'
 
@@ -28,8 +29,8 @@ import { CONVERSATIONS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[]; rules?: InboxRule[]; banned?: string[] }
 /** `taught`: conversations Sam labelled by hand, per label, not covered by a rule yet (3 make Nova propose one). */
 /** `targets`: response target per type, in minutes. `warned`: conversations Nova already raised before their target. */
-export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[]; labels: string[]; banned?: string[] }
-export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED), targets: { ...TARGETS }, labels: [...LABELS, 'Order status', 'Trail Week'] })
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[]; labels: string[]; banned?: string[]; views: SavedView[] }
+export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED), targets: { ...TARGETS }, labels: [...LABELS, 'Order status', 'Trail Week'], views: [] })
 
 export type BulkOp =
   | { op: 'approve' } | { op: 'hide' } | { op: 'unhide' } | { op: 'reviewed'; value: boolean }
@@ -67,6 +68,9 @@ export type InboxAction =
   | { type: 'inbox/labelDelete'; name: string }
   | { type: 'inbox/moderate'; ids: string[]; op: ModOp }
   | { type: 'inbox/private'; id: string }
+  | { type: 'inbox/viewAdd'; view: Omit<SavedView, 'id'> }
+  | { type: 'inbox/viewDelete'; id: string }
+  | { type: 'inbox/viewRestore'; view: SavedView; index: number }
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
@@ -229,6 +233,9 @@ function undoBulk(s: State): State {
 export function reduceInbox(s0: State, a: InboxAction): State {
   if (isRule(a)) return reduceRules(s0, a)
   if (isSaved(a)) return reduceSaved(s0, a)
+  if (a.type === 'inbox/viewAdd') return a.view.name.trim() ? { ...s0, inbox: { ...s0.inbox, views: [...s0.inbox.views, { ...a.view, name: a.view.name.trim(), id: uid('v') }] } } : s0
+  if (a.type === 'inbox/viewDelete') return { ...s0, inbox: { ...s0.inbox, views: s0.inbox.views.filter(v => v.id !== a.id) } }
+  if (a.type === 'inbox/viewRestore') return s0.inbox.views.some(v => v.id === a.view.id) ? s0 : { ...s0, inbox: { ...s0.inbox, views: [...s0.inbox.views.slice(0, a.index), a.view, ...s0.inbox.views.slice(a.index)] } }
   if (a.type === 'inbox/moderate') return moderate(s0, a.ids, a.op, 'sam')
   if (a.type === 'inbox/private') return replyInPrivate(s0, a.id)
   if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)

@@ -294,3 +294,13 @@ export function networkRead(s: State, n: Network, rival?: string) {
 }
 const NET_LABEL: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
 export const netLabel = (n: Network) => NET_LABEL[n] ?? n
+
+/* ---------- Seen / unseen ---------- */
+
+/** What needs a human: negative, at risk or a question, and nobody answered it yet. Echo files the rest on her own. */
+export const needsYou = (s: State, m: Mention) =>
+  !s.listening.mentions[m.id] && (sentimentOf(s, m) === 'negative' || !!m.risk || m.text.includes('?'))
+/** Seen: you opened it or marked it, it came before your last brief, or Echo handled it alone. */
+export const seenOf = (s: State, m: Mention) => !!s.listening.seen[m.id] || m.at <= s.brief.since || !needsYou(s, m)
+/** The Mentions badge: unseen mentions that need you. */
+export const unseenNeeds = (s: State, ms = visibleMentions(s)) => ms.filter(m => !seenOf(s, m))

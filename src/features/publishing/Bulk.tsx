@@ -18,6 +18,12 @@ import { perfOf } from './perf'
 import { STATUS_LABEL, knownLabels } from './labels'
 import { actorOf, cardOfPost } from './approvals'
 import { captionOf, commentOf, query, shown as shownLink } from './links'
+import { accountLabel, accountOf } from './accounts'
+import { versionOf } from '../video/model'
+import type { State } from '../../app/state'
+
+/** A clip post shows the clip's version for its network (Juno's contract: requests/atlas-from-juno-clip-version). */
+const clipAspect = (s: State, p: Post) => { const c = s.video.clips.find(x => `clip:${x.id}` === p.media); return c ? versionOf(c, p.network).aspect : undefined }
 
 /** Open a post's preview: kept in the URL (?post=id) so it works from any tab. */
 export function useOpenPost() {
@@ -176,7 +182,7 @@ export function PostPreview() {
   const net = p ? NETWORK_LABEL[p.network] : ''
   return (
     <>
-      <Sheet wide open={!!id} onOpenChange={o => !o && close()} head={p && <Net n={p.network} />} title={p ? `${net} post` : 'Post not found'}>
+      <Sheet wide open={!!id} onOpenChange={o => !o && close()} head={p && <Net n={p.network} />} title={p ? `${accountLabel(accountOf(p))} post` : 'Post not found'}>
         {!p ? <p className="muted">This post no longer exists.</p> : (() => {
           const card = cardOfPost(s, p)
           const pending = card?.preview?.type === 'post' ? card.preview : undefined
@@ -324,7 +330,7 @@ export function PostPreview() {
 
               <div className="pd-grid">
                 <div className="pd-post">
-                  <NetworkPreview network={p.network} text={pending ? flat(pending.text) : captionOf(p)} media={pending?.media ?? p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={commentOf(p)} />
+                  <NetworkPreview network={p.network} who={accountOf(p)} aspect={clipAspect(s, p)} text={pending ? flat(pending.text) : captionOf(p)} media={pending?.media ?? p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={commentOf(p)} />
                   {pending && flat(pending.text) !== p.text && <p className="pd-note">You see the version on the Desk card: approving schedules this text.</p>}
                   {flags.map(f => <p key={f.text} className="pd-note"><TriangleAlert size={14} aria-hidden /><span>Atlas isn’t sure about “{f.text}”: {f.note}</span></p>)}
                 </div>
@@ -334,7 +340,7 @@ export function PostPreview() {
                     <h3 id="pd-facts-h" className="section-title">Details</h3>
                     <ul className="pd-facts">
                       <li><CalendarClock size={16} aria-hidden /><span>{longWhen(p.at)}</span></li>
-                      <li><Net n={p.network} size={16} /><span>{net}{p.format ? ` · ${FORMAT_LABEL[p.format]}` : ''}</span></li>
+                      <li><Net n={p.network} size={16} /><span>{accountOf(p).name} <span className="muted">{accountOf(p).handle}</span> · {net}{p.format ? ` · ${FORMAT_LABEL[p.format]}` : ''}</span></li>
                       <li><Who by={p.author === 'atlas' ? 'atlas' : 'you'} /><span>Written by {p.author === 'atlas' ? 'Atlas' : 'you'}</span></li>
                       <li><Target size={16} aria-hidden /><span>{p.pillar} pillar</span></li>
                       {queue && <li><ListOrdered size={16} aria-hidden /><Link to="/publishing/queues">{queue.name} queue</Link></li>}

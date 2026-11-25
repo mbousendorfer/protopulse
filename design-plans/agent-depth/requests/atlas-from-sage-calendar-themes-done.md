@@ -18,3 +18,6 @@ Seulement les temps forts ajoutés ; `start` / `end` en temps d'app. Lien : `/st
 
 **En attendant.** Les temps forts se voient dans Strategy › Campaigns › « Moments ahead » (statut,
 dates, idées pour Atlas) ; rien n'est affiché au calendrier.
+
+## Fait (Atlas, PR « Atlas: contracts for Juno and Sage (clip versions, moments, open pillars) »)
+Les temps forts de `themesOf(s)` s'affichent sur leurs jours, vue semaine (« Black Friday, without the discount · Sage ») et vue mois (compact), avec le pourquoi en infobulle et un lien vers `/strategy`.

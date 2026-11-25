@@ -19,3 +19,6 @@ Ideas et au Plan, avec une accroche par défaut.
 
 **En attendant.** Strategy permet de repondérer les 4 piliers et d'éditer leur description ; l'ajout
 et le renommage n'apparaissent pas dans l'UI tant que ce contrat n'est pas sur `main`.
+
+## Fait (Atlas, PR « Atlas: contracts for Juno and Sage (clip versions, moments, open pillars) »)
+`Pillar = BasePillar | (string & {})` dans `src/data/publishing.ts`. Les tables d'Atlas gardent leurs 4 clés et lisent `pillarFamily(p)` (famille déduite du nom : « Gift ideas » → Gear that lasts). Quand tu exposes `pillarBase(s, name)`, remplace le corps de `pillarFamily` ou appelle-la : un seul endroit.

@@ -26,6 +26,6 @@ avec « Retry now » ; pas de statut « Approved »). Trié par valeur, les corr
 | B10 | Médiathèque complète (dossiers, tags, droits) | Media : filtres par tag, lecture seule | Tags éditables, recherche, alerte droits expirés ; Atlas trie et tagge à l'arrivée | 2 | M | done (version simple ; dossiers : later) |
 | B11 | Fuseaux horaires | absent | Fuseau par profil, aperçu « 18:30 Paris · 17:30 London » | 1 | M | à pitcher |
 | B12 | Import CSV | absent | Import d'un CSV ; Atlas vérifie chaque ligne et propose un lot validable | 1 | M | later |
-| B13 | Multi-profils | un compte par réseau | Plusieurs comptes par réseau, groupes de profils | 1 | L | go |
+| B13 | Multi-profils | un compte par réseau | Plusieurs comptes par réseau, groupes de profils | 1 | L | done (côté Publishing ; Inbox, chiffres, cadence : demandes à Nova, Iris, Sage) |
 
 Demandes entrantes (`requests/atlas-from-*.md`) : 5 traitées (Echo ×2, Iris, Juno, Sage), voir `…-done.md`.

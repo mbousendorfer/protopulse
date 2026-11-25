@@ -15,6 +15,7 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { canModerate, deleteWarning, dur, NEEDS_YOU, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
+import { DATES, describe, fromSearch, isEmpty, matchFilters, postKey, toSearch, type Filters, type SavedView } from './filters'
 import { SavedSheet } from './SavedSheet'
 import { LabelsSheet } from './LabelsSheet'
 import { fill, toTemplate } from './saved'
@@ -98,6 +99,18 @@ export default function InboxPage() {
   const [sentiment, setSentiment] = useState<Sentiment | 'all'>('all')
   const [intent, setIntent] = useState(false)
   const [q, setQ] = useState('')
+  const [date, setDate] = useState<Filters['date']>()
+  const [post, setPost] = useState<string>()
+  const [who, setWho] = useState<Filters['who']>()
+  const [review, setReview] = useState<Filters['review']>()
+  const f: Filters = { network: network === 'all' ? undefined : network, type: type === 'all' ? undefined : type, sentiment: sentiment === 'all' ? undefined : sentiment, intent, date, who, review, label: label ?? undefined, q, post }
+  const apply = (x: Filters, to: View = 'all') => {
+    setNetwork(x.network ?? 'all'); setType(x.type ?? 'all'); setSentiment(x.sentiment ?? 'all'); setIntent(!!x.intent)
+    setDate(x.date); setWho(x.who); setReview(x.review); setPost(x.post); setLabel(x.label ?? null); setQ(x.q ?? ''); setView(to)
+  }
+  // ⌘K opens the Inbox with filters in the URL ("negative Instagram DMs this week").
+  const asking = params2.toString()
+  useEffect(() => { const x = fromSearch(params2); if (x) apply(x) }, [asking]) // eslint-disable-line react-hooks/exhaustive-deps
   const askedSort = SORTS.find(x => x.id === params2.get('sort'))?.id
   const [sort, setSort] = useState<Sort>(askedSort ?? 'newest')
   useEffect(() => { if (askedSort) setSort(askedSort) }, [askedSort])
@@ -105,13 +118,11 @@ export default function InboxPage() {
   const all = useMemo(() => [...virtualConvs(s), ...s.inbox.convs.map(withTeam)], [s])
   const v = VIEWS.find(x => x.id === view)!
   const list = useMemo(() => all
-    .filter(c => v.match(c, now) && (!label || c.labels?.includes(label)) && (network === 'all' || c.network === network) && (type === 'all' || c.type === type) &&
-      (sentiment === 'all' || c.sentiment === sentiment) && (!intent || (c.intent ?? 0) >= 0.6) &&
-      (!q || `${c.author} ${c.messages.map(m => m.text).join(' ')}`.toLowerCase().includes(q.toLowerCase())))
+    .filter(c => v.match(c, now) && matchFilters(c, f, now))
     .sort((a, b) => sort === 'waiting' ? Number(waitingOn(b)) - Number(waitingOn(a)) || (waitingOn(a) ? waitSince(a) - waitSince(b) : b.at - a.at) : sort === 'oldest' ? a.at - b.at : sort === 'urgent' ? URGENCY[a.status] - URGENCY[b.status] || b.at - a.at : sort === 'intent' ? (b.intent ?? 0) - (a.intent ?? 0) || b.at - a.at : b.at - a.at),
-  [all, v, now, label, network, type, sentiment, intent, q, sort])
+  [all, v, now, label, network, type, sentiment, intent, q, sort, date, who, review, post]) // eslint-disable-line react-hooks/exhaustive-deps
   const ids = useMemo(() => list.map(c => c.id), [list])
-  const sel = useSelection(ids, `${view}|${label}|${network}|${type}|${sentiment}|${intent}|${q}`)
+  const sel = useSelection(ids, `${view}|${toSearch(f)}`)
   const current = all.find(c => c.id === id)
 
   // Deep link to a conversation outside the current view: switch to All so it stays visible in the list.
@@ -141,8 +152,21 @@ export default function InboxPage() {
     return () => clearTimeout(t)
   }, [undo, d])
 
-  const filtersOn = network !== 'all' || type !== 'all' || sentiment !== 'all' || intent || q || label
-  const clear = () => { setNetwork('all'); setType('all'); setSentiment('all'); setIntent(false); setQ(''); setLabel(null) }
+  const filtersOn = !isEmpty(f)
+  // Posts with comments, the ones with comments waiting on the team first.
+  const posts = useMemo(() => {
+    const by = new Map<string, { key: string; network: Network; n: number; waiting: number; at: number }>()
+    for (const c of all) {
+      const k = postKey(c)
+      if (!k) continue
+      const p = by.get(k) ?? { key: k, network: c.network, n: 0, waiting: 0, at: 0 }
+      by.set(k, { ...p, n: p.n + 1, waiting: p.waiting + (waitingOn(c) ? 1 : 0), at: Math.max(p.at, c.at) })
+    }
+    return [...by.values()].sort((a, b) => b.waiting - a.waiting || b.n - a.n || b.at - a.at)
+  }, [all])
+  const clear = () => apply({}, view)
+  const [naming, setNaming] = useState<string | null>(null)
+  const [dropped, setDropped] = useState<{ view: SavedView; index: number } | null>(null)
   const labels = [...new Set([...s.inbox.labels, ...all.flatMap(c => c.labels ?? [])])]
   const labelsOpen = params2.get('labels') === '1'
   const rulesOpen = params2.get('rules') === '1'
@@ -182,7 +206,17 @@ export default function InboxPage() {
               label={<><AssigneeFace who={who} size={16} /><span className="ellipsis">{x.label}</span>{over > 0 && <span className="ib-over">{over} over</span>}</>} />
           })}
           <span className="ib-side-title">Saved views</span>
+          {s.inbox.views.map((x, i) => (
+            <div key={x.id} className="ib-saved-view">
+              <ViewBtn on={false} label={<span className="ellipsis">{x.name}</span>} n={all.filter(c => (VIEWS.find(y => y.id === x.view) ?? VIEWS[0]).match(c, now) && matchFilters(c, x.f, now)).length} onClick={() => apply(x.f, x.view as View)} />
+              <Btn size="xs" variant="ghost" icon aria-label={`Delete the view ${x.name}`} onClick={() => { setDropped({ view: x, index: i }); d({ type: 'inbox/viewDelete', id: x.id }) }}><X size={12} /></Btn>
+            </div>
+          ))}
+          {dropped && <UndoBar onUndo={() => { d({ type: 'inbox/viewRestore', ...dropped }); setDropped(null) }} onDismiss={() => setDropped(null)}>Deleted “{dropped.view.name}”</UndoBar>}
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
+          <span className="ib-side-title">By post</span>
+          {posts.slice(0, 4).map(p => <ViewBtn key={p.key} on={post === p.key} n={p.n} onClick={() => apply(post === p.key ? {} : { post: p.key })}
+            label={<><Net n={p.network} /><span className="ellipsis" title={p.key.replace(/^[^“]*“|”$/g, '')}>{p.key.replace(/^[^“]*“|”$/g, '')}</span>{p.waiting > 0 && <span className="ib-over">{p.waiting} waiting</span>}</>} />)}
           <span className="ib-side-title row between nowrap">Labels<button className="link-btn t-xs" onClick={() => nav({ search: '?labels=1' })}>Manage</button></span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
           </div>
@@ -194,8 +228,21 @@ export default function InboxPage() {
               items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
             <Menu align="start" trigger={<button className="select-btn block">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
               items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
+            <Menu align="start" trigger={<button className="select-btn block">{date ? DATES[date] : 'Any date'}<ChevronDown size={14} /></button>}
+              items={[{ label: 'Any date', onSelect: () => setDate(undefined) }, ...(Object.keys(DATES) as NonNullable<Filters['date']>[]).map(x => ({ label: DATES[x], onSelect: () => setDate(x) }))]} />
+            <Menu align="start" trigger={<button className="select-btn block">{who ? (who === 'none' ? 'Not assigned' : `Assigned to ${ROSTER[who].short}`) : 'Anyone'}<ChevronDown size={14} /></button>}
+              items={[{ label: 'Anyone', onSelect: () => setWho(undefined) }, { label: 'Not assigned', onSelect: () => setWho('none') }, 'sep', ...(Object.keys(ROSTER) as Assignee[]).map(k => ({ label: ROSTER[k].name, onSelect: () => setWho(k) }))]} />
+            <Menu align="start" trigger={<button className="select-btn block">{review === 'todo' ? 'To review' : review === 'done' ? 'Reviewed' : 'Any review status'}<ChevronDown size={14} /></button>}
+              items={[{ label: 'Any review status', onSelect: () => setReview(undefined) }, { label: 'To review', onSelect: () => setReview('todo') }, { label: 'Reviewed', onSelect: () => setReview('done') }]} />
             <Switch checked={intent} onChange={setIntent} label="Buying intent" />
-            {filtersOn && <button className="link-btn" onClick={clear}>Clear filters</button>}
+            {filtersOn && (naming === null ? (
+              <div className="row tight"><button className="link-btn" onClick={clear}>Clear filters</button><span className="faint">·</span><button className="link-btn" onClick={() => setNaming(cap(describe(f)))}>Save as view</button></div>
+            ) : (
+              <form className="stack" onSubmit={e => { e.preventDefault(); d({ type: 'inbox/viewAdd', view: { name: naming, view, f } }); setNaming(null) }}>
+                <input className="input" autoFocus value={naming} onChange={e => setNaming(e.target.value)} aria-label="Name of the view" maxLength={40} />
+                <div className="row tight"><Btn size="sm" type="submit" disabled={!naming.trim()}>Save view</Btn><Btn size="sm" variant="ghost" onClick={() => setNaming(null)}>Cancel</Btn></div>
+              </form>
+            ))}
           </div>
         </nav>
 
@@ -234,6 +281,7 @@ export default function InboxPage() {
                 items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
             </div>
           )}
+          {post && !sel.count && <PostHead post={post} compact={!!current} convs={all.filter(c => postKey(c) === post)} onAll={() => setPost(undefined)} />}
           {sel.count > 0 && confirmDelete && (
             <div className="m-2"><InlineConfirm danger confirm={`Delete ${deletable}`} onCancel={() => setConfirmDelete(false)} onConfirm={() => mod('delete')}>
               Deleting removes {deletable === 1 ? 'it' : `these ${deletable}`} from the networks for good. Nova keeps a copy here.{deletable < sel.count ? ` ${sel.count - deletable} reviews can’t be deleted.` : ''}
@@ -272,7 +320,7 @@ export default function InboxPage() {
 
         </section>
 
-        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} onSaveReply={t => { setSavedSeed(t); setSaved(true) }} /> : null}
+        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} onSaveReply={t => { setSavedSeed(t); setSaved(true) }} onPost={p => apply({ post: p })} /> : null}
       </div>
     </div>
   )
@@ -394,6 +442,23 @@ function WaitTag({ c, fallback }: { c: Conversation; fallback?: boolean }) {
   return <span className={`ib-wait ${w.over ? 'over' : ''}`} title={`Waiting since ${hhmm(w.since)} · ${dur(w.target)} target`}>Waiting {dur(w.waited)}{w.over ? ` · over ${dur(w.target)}` : ''}</span>
 }
 
+/** The post a filtered list is about, and what Nova did with its comments. */
+function PostHead({ post, convs, onAll, compact }: { post: string; convs: Conversation[]; onAll: () => void; compact?: boolean }) {
+  const alone = convs.filter(c => c.status === 'auto' || (c.status === 'hidden' && c.reviewedBy === 'nova')).length
+  const waiting = convs.filter(waitingOn)
+  const net = convs[0]?.network
+  return (
+    <div className="ib-post-head">
+      {net && <Net n={net} />}
+      <div className="grow">
+        <p className="ellipsis"><b>{compact ? post.replace(/^[^“]*“|”$/g, '') : post}</b><span className="faint"> · {convs.length} comment{convs.length === 1 ? '' : 's'}</span></p>
+        {!compact && <p className="muted">Nova answered or hid {alone} on her own{waiting.length ? `. ${waiting.length} ${waiting.length === 1 ? 'waits' : 'wait'} on the team: ${waiting.map(c => c.author).join(', ')}` : '. Nothing waits on you'}.</p>}
+      </div>
+      <Btn size="sm" variant="ghost" onClick={onAll}>{compact ? 'All' : 'All posts'}</Btn>
+    </div>
+  )
+}
+
 function ViewBtn({ on, label, n, onClick }: { on: boolean; label: ReactNode; n: number; onClick: () => void }) {
   return <button className={`ib-view ${on ? 'active' : ''}`} onClick={onClick} aria-pressed={on}><span className="row tight nowrap">{label}</span><span className="num">{n}</span></button>
 }
@@ -424,7 +489,7 @@ function LabelMenu({ trigger, labels, onPick }: { trigger: ReactNode; labels: st
 
 type PanelTab = 'conversation' | 'contact'
 
-function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversation; labels: string[]; onClose: () => void; onSaveReply: (text: string) => void }) {
+function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Conversation; labels: string[]; onClose: () => void; onSaveReply: (text: string) => void; onPost: (post: string) => void }) {
   const { s, d } = useStore()
   const now = useNow(10000)
   const [tab, setTab] = useState<PanelTab>('conversation')
@@ -509,7 +574,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
       {tab === 'contact' ? <ContactTab c={c} others={others} /> : (
         <div className="ib-panel-body">
           <div className="ib-thread">
-            {c.post && <div className="ib-post"><span className="faint">On</span> {c.post}</div>}
+            {c.post && <div className="ib-post"><span className="faint">On</span> <button className="link-btn" onClick={() => onPost(postKey(c)!)} title="See every comment on this post">{c.post}</button></div>}
             {c.stars && <div className="ib-stars" aria-label={`${c.stars} out of 5 stars`}>{'★'.repeat(c.stars)}<span>{'★'.repeat(5 - c.stars)}</span></div>}
             {thread.map(x => x.kind === 'note' ? (
               <div key={x.n.id} className="ib-msg ib-note-msg">

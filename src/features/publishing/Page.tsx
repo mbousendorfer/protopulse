@@ -16,12 +16,13 @@ import PlanReview from './Plan'
 import Ideas from './Ideas'
 import Queues from './QueuesTab'
 import { isOpen, recommendNetwork } from './ideasModel'
-import { targetsOf } from '../strategy/slice'
+import { targetsOf, themesOf } from '../strategy/slice'
 import { uid } from '../../app/core'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
+import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -154,6 +155,7 @@ function Calendar() {
               <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
+                <Themes day={day} />
                 <DayNotes day={day} past={past} />
                 {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
                 {(() => {
@@ -189,6 +191,7 @@ function Calendar() {
               <div key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''}`}>
                 <button className="pub-cell-day num" onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }}
                   aria-label={`Open the week of ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${items.length} posts`}>{new Date(day).getDate()}</button>
+                <Themes day={day} compact />
                 {items.slice(0, 3).map(p => <button key={p.id} className={`cal-mini ${p.status}`} onClick={() => open(p.id)} aria-label={`Preview: ${p.text}`}><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span></button>)}
                 {items.length > 3 && <span className="faint cal-more">+{items.length - 3} more</span>}
               </div>
@@ -200,6 +203,15 @@ function Calendar() {
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
     </div>
   )
+}
+
+/** Sage's moments on this day (Strategy › Moments ahead), read through her `themesOf`. */
+function Themes({ day, compact }: { day: number; compact?: boolean }) {
+  const { s } = useStore()
+  const on = themesOf(s).filter(m => m.start < day + DAY && m.end >= day)
+  return <>{on.map(m => (
+    <Link key={m.id} to="/strategy" className={`cal-theme ${compact ? 'compact' : ''}`} title={m.why}><Mark agent="sage" />{compact ? m.name : <>{m.name} <span className="faint">· Sage</span></>}</Link>
+  ))}</>
 }
 
 /** Notes on a day: what's on, and whether it's a quiet day Atlas keeps empty. */
@@ -240,6 +252,7 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
     { key: 'campaign', label: 'Campaign', options: campaigns.map(c => ({ value: c, label: c })) },
     { key: 'pillar', label: 'Pillar', options: s.strategy.pillars.map(p => ({ value: p.name, label: p.name })) },
     { key: 'author', label: 'Author', options: [{ value: 'atlas', label: 'Atlas' }, { value: 'you', label: 'You' }] },
+    { key: 'account', label: 'Profile', options: ACCOUNTS.map(a => ({ value: a.id, label: accountLabel(a) })) },
   ]
   const toggle = (k: Facet, v: string) => { const cur = value[k] ?? []; onChange({ ...value, [k]: cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v] }) }
   return (
@@ -267,7 +280,7 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
     <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
       <span className="pub-chip-check"><SelectBox checked={checked} visible={anySelected} onToggle={onToggle} label={`Select the ${NETWORK_LABEL[p.network]} post at ${hhmm(p.at)}`} /></span>
       <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
-        <div className="row nowrap tight"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
+        <div className="row nowrap tight"><Net n={p.network} />{p.account && <span className="faint t-xs">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}<span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
         {p.media && <span className="cal-photo"><Photo name={p.media} /></span>}
         <p>{p.text}</p>
         {p.stats && <span className="faint cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
