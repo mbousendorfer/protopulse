@@ -271,7 +271,7 @@ export function reduceVideo(s: State, a: VideoAction): State {
         const seed: ClipSeed = {
           key: uid('find'), from: tr.sentences.find(x => x.s === m.start)!.text, to: tr.sentences.find(x => x.e === m.end)!.text,
           title: short.replace(/[.?!]$/, ''), hooks: [said.text], base: { hook: Math.min(88, 70 + m.hits * 6), flow: 76, value: 74, trend: 60 },
-          why: `You asked for moments about “${a.query}”. ${said.speaker === 'guest' ? 'Léo' : said.speaker === 'host' ? 'Camille' : 'The narrator'} says it here: “${said.text}”`,
+          why: `You asked for moments about “${a.query}”. ${said.speaker === 'guest' ? 'Léo' : said.speaker === 'host' ? 'Camille' : 'Léa'} says it here: “${said.text}”`,
           evidence: [], networks: ['tiktok', 'instagram'], pillar: PILLAR[src.media] ?? 'Repair & care', text: said.text,
         }
         return clipFromSeed(seed, src, t, s.video.kit)

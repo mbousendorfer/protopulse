@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { initialState, type State } from '../../app/state'
 import { reducer, type Action } from '../../app/reducer'
 import { now } from '../../app/core'
-import { PHASES, PHASE_MS } from '../../data/video'
+import { PHASES, PHASE_MS, SEEDS, TRANSCRIPT } from '../../data/video'
 
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
@@ -93,4 +93,14 @@ test('find clips about a topic adds new clips; dismissing one can be undone', ()
   expect(s.video.clips.find(c => c.id === found[0].id)?.status).toBe('dismissed')
   s = run(s, { type: 'core/undo', id: s.log[0].id })
   expect(s.video.clips.find(c => c.id === found[0].id)?.status).toBe('ready')
+})
+
+test('every seed clip finds its phrases in the real narration and lands between 8 and 65 seconds', () => {
+  const found = Object.entries(SEEDS).flatMap(([id, seeds]) => seeds.map(sd => {
+    const t = TRANSCRIPT[id]
+    const a = t.sentences.find(x => x.text.toLowerCase().includes(sd.from.toLowerCase()))
+    const b = a && t.sentences.find(x => x.i >= a.i && x.text.toLowerCase().includes(sd.to.toLowerCase()))
+    return `${id}/${sd.key}: ${a ? '' : `missing “${sd.from}”`}${a && !b ? `missing “${sd.to}”` : ''}${a && b && (b.e - a.s < 8 || b.e - a.s > 65) ? `${Math.round(b.e - a.s)} s` : ''}`
+  }))
+  expect(found.filter(x => !x.endsWith(': '))).toEqual([])
 })

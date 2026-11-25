@@ -132,7 +132,7 @@ function TranscriptPanel({ clip, pb, sel, setSel, selected, onCut, edit }: {
   const activeWord = words.find(w => pb.src >= w.s && pb.src < w.e + 0.1)?.i
   const allCut = selected.length > 0 && selected.every(i => cut.has(i))
   const speaker = (i: number) => tr.sentences[tr.words[i].sent]?.speaker
-  const who = (sp?: string) => (sp === 'host' ? 'Camille' : sp === 'guest' ? 'Léo' : 'the narrator')
+  const who = (sp?: string) => (sp === 'host' ? 'Camille' : sp === 'guest' ? 'Léo' : 'Léa')
   const pick = (i: number, shift: boolean) => {
     setMode('none')
     setSel(shift && sel ? [sel[0], i] : [i, i])
