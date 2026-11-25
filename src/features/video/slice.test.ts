@@ -295,3 +295,25 @@ test('language versions go out as their own posts: approved ones on Draft, all o
   const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'de' }, { type: 'video/send', ids: [id] })
   expect(act.publishing.posts.some(p => p.media === `clip:${id}` && p.labels?.includes('German'))).toBe(true)
 })
+
+test('the moderator can replay the GR20 upload once the feed played it, as long as none of its clips went out', () => {
+  let s = done(run(initialState(), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  expect(s.video.clips.filter(c => c.source === 'gr20' && c.status === 'ready')).toHaveLength(3)
+  s = run(s, { type: 'core/fire', eventId: 'ev-video-gr20' })
+  expect(s.video.sources.find(x => x.id === 'gr20')?.status).toBe('processing')
+  expect(s.video.clips.some(c => c.source === 'gr20')).toBe(false)
+  expect(s.handoffs.some(h => h.ref === 'gr20')).toBe(false)
+  s = done(s)
+  expect(s.video.clips.filter(c => c.source === 'gr20')).toHaveLength(3)
+  // Once a clip went out, the upload is history.
+  s = run(s, { type: 'video/send', ids: ['clip-gr20-dry'] }, { type: 'core/fire', eventId: 'ev-video-gr20' })
+  expect(s.video.sources.find(x => x.id === 'gr20')?.status).toBe('ready')
+})
+
+test('“4 more moments” sets up the weekly quota: sending them all keeps 3 and says why', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-more' })
+  const ready = s.video.clips.filter(c => c.source === 'repair' && c.status === 'ready').map(c => c.id)
+  expect(ready.length).toBeGreaterThan(3)
+  s = run(s, { type: 'video/send', ids: ready })
+  expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
+})

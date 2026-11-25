@@ -349,10 +349,22 @@ function newSource(s: State, src: Source): State {
 /** A new upload or live on the watched channel (script event or moderator). */
 export function videoEvent(s: State, sourceId: string, moderator: boolean): State {
   const def = SOURCE_DEFS[sourceId]
-  if (!def || sourceOf(s, sourceId)) return s
+  if (!def) return s
+  if (sourceOf(s, sourceId)) {
+    // The feed may have played it already. From the moderator, replay it while none of its clips went out.
+    const mine = s.video.clips.filter(c => c.source === sourceId)
+    if (!moderator || mine.some(c => c.status === 'sent' || c.status === 'published')) return s
+    const ids = new Set(mine.map(c => c.id))
+    const cards = new Set([sourceOf(s, sourceId)!.handoff, ...s.handoffs.filter(h => h.ref === sourceId).map(h => h.id)])
+    s = { ...s, handoffs: s.handoffs.filter(h => !cards.has(h.id)) }
+    s = setVideo(s, { sources: s.video.sources.filter(x => x.id !== sourceId), clips: s.video.clips.filter(c => !ids.has(c.id)) })
+  }
   if (!moderator && (agentOf(s, 'juno').status !== 'on' || (def.kind === 'live' ? !s.video.kit.watchLives : !s.video.kit.watchUploads))) return s
   return newSource(s, { ...def, at: now(s), status: 'processing' })
 }
+
+/** Juno goes back to a video for more moments on a topic (moderator): enough clips to run into the weekly quota. */
+export const moreMomentsScript = { tag: 'video', run: (s: State) => reduceVideo(s, { type: 'video/find', source: 'repair', query: 'stitches webbing bin carbon', len: 20, count: 4 }) }
 
 /** A script event: a new video on a watched channel. Juno clips it in Video (and raises a Desk card on Draft). */
 export const videoScript = (source: string) => ({ tag: 'video', run: (s: State, manual: boolean) => videoEvent(s, source, manual) })
