@@ -3,6 +3,7 @@ import { initialState, STATE_VERSION, type State } from './state'
 import { reducer, type Action } from './reducer'
 import { appNow, DEMO_START } from './time'
 import { hasDueFollowUps } from '../features/chats/slice'
+import { ideasDue } from '../features/publishing/slice'
 
 const KEY = 'protopulse:state'
 
@@ -49,7 +50,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         (st.engine.live && t >= st.engine.nextAt) ||
         st.handoffs.some(h => (h.lane === 'claire' && h.claire && !h.claire.reply && h.claire.dueAt <= t) || (h.lane === 'snoozed' && (h.snoozedUntil ?? Infinity) <= t)) ||
         st.agents.some(a => a.actions.some(x => x.trialUntil && x.trialUntil <= t)) ||
-        hasDueFollowUps(st, t)
+        hasDueFollowUps(st, t) ||
+        ideasDue(st, t)
       if (due) d({ type: 'core/heartbeat' })
     }, 1000)
     return () => clearInterval(id)

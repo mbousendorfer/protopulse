@@ -112,7 +112,7 @@ function handTrend(s: State, id: string): State {
   const next = pushHandoff(s, {
     agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Trend post', action: 'atlas-trend', chain: ['echo', 'atlas'],
     title: `Trend post: ${t.name}`, context: `${t.networks} · ${t.growth}. ${t.fitWhy}`,
-    why: 'You handed this trend to Atlas from Listening.', confidence: 70, link: '/publishing',
+    why: 'You handed this trend to Atlas from Listening.', confidence: 70, link: '/publishing/calendar',
     preview: { type: 'post', network: /tiktok/i.test(t.networks) ? 'tiktok' : /linkedin/i.test(t.networks) ? 'linkedin' : 'instagram', slot: 'Tomorrow, 18:00', text: [`Our take on ${t.name.toLowerCase()}, the Fernway way. Draft v1: edit before approving.`] },
   })
   return patch(next, { trends: { ...next.listening.trends, [id]: 'handed' } })
@@ -150,7 +150,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
       let next = patch(s, { lessons: { ...s.listening.lessons, [a.id]: a.test ? 'tested' : 'dismissed' } })
       if (a.test) next = pushHandoff(next, {
         agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-fill', chain: ['echo', 'atlas'],
-        title: `Test: ${l.text}`, context: l.evidence, why: 'You asked Atlas to test one of Echo’s lessons.', confidence: 66, link: '/publishing',
+        title: `Test: ${l.text}`, context: l.evidence, why: 'You asked Atlas to test one of Echo’s lessons.', confidence: 66, link: '/publishing/calendar',
         preview: { type: 'post', network: /tiktok/i.test(l.text) ? 'tiktok' : /linkedin/i.test(l.text) ? 'linkedin' : 'instagram', slot: 'This week', text: [l.idea] },
       })
       return next
@@ -255,7 +255,7 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
       for (const m of ms.filter(m => !s.handoffs.some(h => h.ref === `mention-post:${m.id}`))) {
         next = pushHandoff(next, {
           agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Mention to post', action: 'atlas-fill', chain: ['echo', 'atlas'], ref: `mention-post:${m.id}`,
-          title: `Post from ${m.author}’s mention`, context: m.text, why: 'You handed this mention to Atlas from Listening.', confidence: 72, link: '/publishing',
+          title: `Post from ${m.author}’s mention`, context: m.text, why: 'You handed this mention to Atlas from Listening.', confidence: 72, link: '/publishing/calendar',
           preview: { type: 'post', network: MENTION_NET[m.network] ?? 'instagram', slot: 'Tomorrow, 18:00', text: [`“${m.text}” Thanks ${m.author}. ${m.product ? `The ${m.product}, ` : ''}seen by you.`] },
         })
         next = patch(next, { mentions: { ...next.listening.mentions, [m.id]: next.listening.mentions[m.id] ?? 'handed' } })

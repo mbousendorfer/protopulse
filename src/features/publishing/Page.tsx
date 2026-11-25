@@ -1,11 +1,11 @@
 import { useMemo, useState, type DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Plus, Sparkles } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, CADENCE, MEDIA, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
+import { BEST_SLOT, MEDIA, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs } from '../../ui'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -13,9 +13,12 @@ import { PostPreview, PostsBulk, useOpenPost } from './Bulk'
 import Photo from '../../ui/Photo'
 import Composer from './Composer'
 import PlanReview from './Plan'
+import Ideas from './Ideas'
+import { isOpen, recommendNetwork } from './ideasModel'
+import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
-type Tab = 'calendar' | 'plan' | 'drafts' | 'media'
+type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'media'
 const STATUS: Record<PostStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
   scheduled: { label: 'Scheduled' }, published: { label: 'Published', tone: 'ok' }, draft: { label: 'Draft' }, needs: { label: 'Needs you', tone: 'caution' }, failed: { label: 'Failed', tone: 'alert' },
 }
@@ -27,26 +30,31 @@ export default function PublishingPage() {
   const nav = useNavigate()
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
-  const tab: Tab = rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'media' ? rest[0] : 'calendar'
+  // /publishing lands on Ideas; the composer (new, post/:id) opens over the calendar.
+  const tab: Tab = !rest[0] ? 'ideas' : rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'media' ? rest[0] : 'calendar'
   const editId = rest[0] === 'post' ? rest[1] : undefined
   const creating = rest[0] === 'new'
   const query = new URLSearchParams(loc.search)
   const editPost = s.publishing.posts.find(p => p.id === editId)
-  const back = tab === 'calendar' ? '/publishing' : `/publishing/${tab}`
+  const back = `/publishing/${tab}`
   const planPending = s.publishing.plan.status === 'proposed'
   const drafts = s.publishing.posts.filter(p => p.status === 'draft').length
+  // The badge means "needs you": ideas ready to review, not every idea.
+  const readyIdeas = s.publishing.ideas.filter(i => isOpen(i) && i.status === 'ready').length
 
   return (
     <div className="page pub-page">
       <PageHead agent="atlas" title="Publishing" lede="Atlas plans the week, writes the posts and picks the slots. You approve the plan, not each post.">
         <Btn variant="primary" onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>
       </PageHead>
-      <Tabs value={tab} onChange={t => nav(t === 'calendar' ? '/publishing' : `/publishing/${t}`)} items={[
+      <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
+        { value: 'ideas', label: <>Ideas{readyIdeas > 0 && <CountBadge n={readyIdeas} needs label={`${readyIdeas} ready to review`} />}</> },
         { value: 'calendar', label: 'Calendar' },
         { value: 'plan', label: <>Plan review{planPending && <span className="dot" style={{ color: 'var(--caution)' }} aria-label="waiting for you" />}</> },
         { value: 'drafts', label: 'Drafts', count: drafts },
         { value: 'media', label: 'Media', count: MEDIA.length },
       ]} />
+      {tab === 'ideas' && <Ideas id={rest[1]} />}
       {tab === 'calendar' && <Calendar />}
       {tab === 'plan' && <PlanReview />}
       {tab === 'drafts' && <Drafts />}
@@ -55,9 +63,9 @@ export default function PublishingPage() {
 
       {(creating || editId) && (
         editId && !editPost ? (
-          <Sheet open onOpenChange={() => nav(back)} title="Post not found"><Empty title="This post no longer exists" body="It may have been deleted or merged." action={<Btn onClick={() => nav('/publishing')}>Back to the calendar</Btn>} /></Sheet>
+          <Sheet open onOpenChange={() => nav(back)} title="Post not found"><Empty title="This post no longer exists" body="It may have been deleted or merged." action={<Btn onClick={() => nav('/publishing/calendar')}>Back to the calendar</Btn>} /></Sheet>
         ) : (
-          <Composer key={editId ?? `new${loc.search}`} open post={editPost} onClose={() => nav(editId ? '/publishing' : back === '/publishing/plan' ? back : '/publishing')}
+          <Composer key={editId ?? `new${loc.search}`} open post={editPost} onClose={() => nav(editId || back !== '/publishing/plan' ? '/publishing/calendar' : back)}
             initial={{ media: query.get('media') ?? undefined, text: query.get('text') ?? undefined, network: (query.get('network') as Network) ?? undefined, at: query.get('at') ? +query.get('at')! : undefined }} />
         )
       )}
@@ -73,7 +81,6 @@ function Calendar() {
   const open = useOpenPost()
   const [anchor, setAnchor] = useState(MONDAY_THIS_WEEK)
   const [network, setNetwork] = useState<Network | 'all'>('all')
-  const [asked, setAsked] = useState<string[]>([])
   const [over, setOver] = useState<number | null>(null)
   const posts = s.publishing.posts.filter(p => network === 'all' || p.network === network).sort((a, b) => a.at - b.at)
   const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0)).getTime()
@@ -87,14 +94,9 @@ function Calendar() {
     : new Date(anchor).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
   const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
 
-  /** For a future day with few posts, the network furthest below Sage's weekly cadence. */
-  const recommend = (day: number): Network | null => {
-    if (day < todayStart || inDay(day).length >= 2 || view !== 'week') return null
-    const weekPosts = s.publishing.posts.filter(p => p.at >= start && p.at < start + 7 * DAY && p.status !== 'draft')
-    const gaps = (Object.keys(CADENCE) as Network[]).map(n => ({ n, gap: (CADENCE[n] ?? 0) - weekPosts.filter(p => p.network === n).length })).filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap)
-    const taken = new Set(inDay(day).map(p => p.network))
-    return gaps.find(g => !taken.has(g.n))?.n ?? null
-  }
+  /** For a future day with fewer than 2 posts: the network Atlas recommends (cadence first, then the pillar behind target). */
+  const recommend = (day: number): Network | null => (view !== 'week' ? null : recommendNetwork(s.publishing.posts, day, now))
+  const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
   const ids = useMemo(() => visible.map(p => p.id), [visible.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -135,19 +137,29 @@ function Calendar() {
           {cells.map(day => {
             const items = inDay(day)
             const rec = recommend(day)
-            const recKey = `${day}-${rec}`
             const past = day + DAY <= now
             return (
               <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
                 {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
-                {rec && !asked.includes(recKey) && !s.handoffs.some(h => h.topic === 'Empty slot' && h.preview?.type === 'post' && h.preview.network === rec) && (
-                  <button className="cal-rec" onClick={() => { d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec }); setAsked(a => [...a, recKey]) }}>
-                    <span className="row tight"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="faint">Recommended</span></span>
-                    <span className="row tight"><Sparkles size={12} />Ask Atlas to fill</span>
-                  </button>
-                )}
+                {(() => {
+                  const idea = view === 'week' ? gapIdea(day) : undefined
+                  if (idea) return (
+                    <Link className="cal-rec" to={`/publishing/ideas/${idea.id}`}>
+                      <span className="row tight"><Net n={idea.networks[0]} /><span className="mono">{idea.drafts ? hhmm(idea.drafts[0].at) : BEST_SLOT[idea.networks[0]].time}</span><span className="faint">Idea from Atlas</span></span>
+                      <span className="cal-rec-text">{idea.copy[idea.networks[0]]}</span>
+                      <span className="row tight"><Lightbulb size={12} />Review the idea</span>
+                    </Link>
+                  )
+                  if (!rec || s.handoffs.some(h => h.topic === 'Empty slot' && h.preview?.type === 'post' && h.preview.network === rec)) return null
+                  return (
+                    <button className="cal-rec" onClick={() => d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec })}>
+                      <span className="row tight"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="faint">Recommended</span></span>
+                      <span className="row tight"><Sparkles size={12} />Ask Atlas for an idea</span>
+                    </button>
+                  )
+                })()}
                 {!items.length && !rec && <div className="cal-empty">{past ? 'Nothing posted' : 'Nothing planned'}</div>}
               </section>
             )

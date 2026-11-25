@@ -75,7 +75,7 @@ export function reducePlaybook(s: State, a: PlaybookAction): State {
         agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Draft from your brief', action: 'atlas-fill',
         title: a.title, context: `Your brief: “${a.brief}”`,
         why: 'You asked for it from the command bar. Posts you brief always come back for approval.',
-        confidence: 80, link: '/publishing', rules: ['One call to action per post', 'One emoji max'],
+        confidence: 80, link: '/publishing/calendar', rules: ['One call to action per post', 'One emoji max'],
         preview: { type: 'post', network: a.network, slot: a.slot, text: [a.text] },
       })
   }

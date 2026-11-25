@@ -69,3 +69,62 @@ test('mentions: asking Nova to reply puts reply cards on the Desk, skipping netw
   expect(cards[0].preview).toMatchObject({ type: 'reply', network: 'instagram', author: ig.author })
   expect(after.listening.mentions[ig.id]).toBe('replied')
 })
+
+test('ideas: urgent idea reaches the Desk; settling it on the Desk schedules it and empties Ideas of it', async () => {
+  const { reducer } = await import('../../app/reducer')
+  let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-idea-urgent' })
+  const idea = s.publishing.ideas.find(i => i.key === 'first-snow')!
+  expect(idea.status).toBe('ready')
+  const card = s.handoffs.find(h => h.ref === idea.id)!
+  expect(card).toMatchObject({ topic: 'Idea', urgency: 'urgent', link: `/publishing/ideas/${idea.id}` })
+  // It stands alone on the Desk, never inside Atlas's batch of post approvals.
+  const { batchesOf } = await import('../desk/Batch')
+  expect(batchesOf(s.handoffs).batches.some(x => x.items.some(h => h.id === card.id))).toBe(false)
+  s = reducer(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(s.publishing.ideas.find(i => i.id === idea.id)!.status).toBe('scheduled')
+  expect(s.publishing.posts.filter(p => p.note?.startsWith('From Ideas')).length).toBe(2)
+  // And the other way round: dismissed in Ideas, the card leaves the Desk.
+  let t = reducer(initialState(), { type: 'core/fire', eventId: 'ev-idea-urgent' })
+  const id = t.publishing.ideas.find(i => i.key === 'first-snow')!.id
+  t = reducer(t, { type: 'publishing/ideaDismiss', id, reason: 'Not timely' })
+  expect(t.handoffs.some(h => h.ref === id)).toBe(false)
+})
+
+test('ideas: on Act, Atlas schedules alone and the journal Undo puts the idea back', async () => {
+  const { reducer } = await import('../../app/reducer')
+  let s = reducer(initialState(), { type: 'core/autonomy', agent: 'atlas', action: 'atlas-recycle', level: 'act' })
+  s = reducer(s, { type: 'core/fire', eventId: 'ev-idea-signal' })
+  const idea = s.publishing.ideas.find(i => i.key === 'knots-winter')!
+  expect(idea.status).toBe('scheduled')
+  const line = s.log.find(l => l.idea === idea.id)!
+  expect(line.undoUntil).toBeGreaterThan(0)
+  s = reducer(s, { type: 'core/undo', id: line.id })
+  expect(s.publishing.ideas.find(i => i.id === idea.id)!.status).toBe('ready')
+  expect(s.publishing.posts.some(p => idea.posts!.includes(p.id))).toBe(false)
+})
+
+test('ideas: schedule two ready ones, undo puts them back; a series goes to Sage as a campaign', () => {
+  let s = initialState()
+  const ready = s.publishing.ideas.filter(i => i.status === 'ready').map(i => i.id)
+  expect(ready).toHaveLength(2)
+  s = reducePublishing(s, { type: 'publishing/ideaSchedule', ids: ready })
+  expect(s.publishing.ideas.filter(i => i.status === 'scheduled')).toHaveLength(2)
+  s = reducePublishing(s, { type: 'publishing/restore' })
+  expect(s.publishing.ideas.filter(i => i.status === 'ready')).toHaveLength(2)
+  const series = s.publishing.ideas.find(i => i.kind === 'series')!
+  s = reducePublishing(s, { type: 'publishing/ideaToSage', id: series.id })
+  const after = s.publishing.ideas.find(i => i.id === series.id)!
+  expect(after.status).toBe('sent-to-sage')
+  expect(s.strategy.campaigns[0].id).toBe(after.campaign)
+  expect(s.handoffs.some(h => h.topic === 'Campaign plan' && h.ref === after.campaign)).toBe(true)
+})
+
+test('ideas: the same angle twice proposes a rule; accepting it adds it to the Playbook', () => {
+  let s = initialState()
+  const [a, b] = s.publishing.ideas.filter(i => i.status === 'ready')
+  s = reducePublishing(s, { type: 'publishing/ideaRedirect', id: a.id, mode: 'angle', angle: 'linkedin' })
+  s = reducePublishing(s, { type: 'publishing/ideaRedirect', id: b.id, mode: 'angle', angle: 'linkedin' })
+  expect(s.publishing.ideas.find(i => i.id === b.id)!.proposal?.key).toBe('angle:linkedin')
+  s = reducePublishing(s, { type: 'publishing/ideaRule', id: b.id, accept: true })
+  expect(s.playbook.rules[0].text).toBe('Add a LinkedIn version to every idea')
+})

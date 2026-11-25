@@ -7,7 +7,7 @@ import {
 } from './core'
 import { SCRIPT, CLAIRE } from '../data/script'
 import { onResolveInbox, reduceInbox, type InboxAction } from '../features/inbox/slice'
-import { onResolvePublishing, reducePublishing, type PublishingAction } from '../features/publishing/slice'
+import { ideaEvent, onResolvePublishing, reducePublishing, tickIdeas, unscheduleIdea, type PublishingAction } from '../features/publishing/slice'
 import { onResolveInsights, reduceInsights, type InsightsAction } from '../features/insights/slice'
 import { onResolveListening, reduceListening, type ListeningAction } from '../features/listening/slice'
 import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../features/strategy/slice'
@@ -155,23 +155,30 @@ function fire(s: State, eventId?: string): State {
   const ev = SCRIPT[idx]
   if (!ev) return s
   let next: State = eventId ? s : { ...s, engine: { ...s.engine, cursor: s.engine.cursor + 1 } }
+  if (ev.idea) {
+    // Ideas arrive in Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it.
+    if (!eventId && (agentOf(next, ev.idea.agent).status !== 'on' || agentOf(next, 'atlas').status !== 'on')) return next
+    return ideaEvent(next, ev.idea)
+  }
+  if (!ev.handoff) return next
   // Never raise the same thing twice: skip it if it's already on the Desk or was settled since the brief.
-  const seen = next.handoffs.some(h => h.ref === ev.id || h.title === ev.handoff.title) || next.desk.done.some(x => x.title === ev.handoff.title)
+  const handoff = ev.handoff
+  const seen = next.handoffs.some(h => h.ref === ev.id || h.title === handoff.title) || next.desk.done.some(x => x.title === handoff.title)
   if (seen && !eventId) {
     // Once the script has played, the feed keeps the day alive with quiet work done alone.
     if (!ev.auto) return next
-    return next.log.some(l => l.text === ev.auto!.text) ? next : pushLog(next, { agent: ev.handoff.agent, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
+    return next.log.some(l => l.text === ev.auto!.text) ? next : pushLog(next, { agent: handoff.agent, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
-  const agent = agentOf(next, ev.handoff.agent)
+  const agent = agentOf(next, handoff.agent)
   if (agent.status !== 'on' && !eventId) return next
-  const level = actionOf(next, agent.id, ev.handoff.action)?.autonomy
+  const level = actionOf(next, agent.id, handoff.action)?.autonomy
   if (!ev.always && level === 'act' && ev.auto) {
     // Work done alone shows up in the Live feed and the journal, without interrupting. Once is enough.
     if (next.log.some(l => l.text === ev.auto!.text)) return next
     return pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
   // New cards land in Your day quietly, urgent ones included (PROMPT §5): the Desk ranks them.
-  return pushHandoff(next, { ...structuredClone(ev.handoff), ref: ev.handoff.ref ?? ev.id, proposal: ev.rule })
+  return pushHandoff(next, { ...structuredClone(handoff), ref: handoff.ref ?? ev.id, proposal: ev.rule })
 }
 
 const AGENT_REPLY = (h: Handoff, text: string): ThreadMsg => ({ id: uid('m'), from: 'agent', text, at: h.at })
@@ -302,6 +309,7 @@ function reduceCore(s: State, a: CoreAction): State {
         next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true, lane: undefined })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
         for (const h of l.restore) next = reverseDecision(next, h)
       }
+      if (l.idea) next = unscheduleIdea(next, l.idea)
       return next.notice?.undo === a.id ? { ...next, notice: undefined } : next
     }
 
@@ -374,6 +382,8 @@ function reduceCore(s: State, a: CoreAction): State {
       }
       // Agents coming back in a conversation.
       next = deliverFollowUps(next, t)
+      // Ideas whose window closed leave; snoozed ones come back.
+      next = tickIdeas(next, t)
       // Proactive feed.
       if (next.engine.live && t >= next.engine.nextAt) {
         next = fire({ ...next, engine: { ...next.engine, nextAt: t + next.engine.cadence * 1000 } })

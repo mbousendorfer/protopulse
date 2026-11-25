@@ -37,7 +37,7 @@ export default function PlanReview() {
 
   if (plan.status === 'approved') return (
     <Empty icon={<Check size={18} />} title="Next week’s plan is approved" body={`${included.length} posts are scheduled for the week of 1 December. Atlas will tell you if a slot needs changing.`}
-      action={<Link to="/publishing" className="btn">Open the calendar</Link>} />
+      action={<Link to="/publishing/calendar" className="btn">Open the calendar</Link>} />
   )
   if (plan.status === 'rejected') return (
     <Empty icon={<AlertTriangle size={18} />} title="You rejected next week’s plan" body="Atlas will propose posts one by one on your Desk instead, or can start a new plan now."
