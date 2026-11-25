@@ -119,7 +119,7 @@ Planning : 24/7. Activité type : « Watching Peakline's launch comments ».
 Garde-fous : seuil de pic = 3× le volume négatif habituel en 1 h · 4 concurrents · 12 recherches actives.
 
 ### Sage — Strategy
-Planning : revue mensuelle le 1er, à la demande pour les campagnes.
+Planning : à la demande pour les campagnes ; suit les campagnes live au fil des jours, lève les temps forts 3 semaines avant. Source unique des piliers, de la cadence et des campagnes (`targetsOf(s)`, `mixOf(s)`, `lastWeekOf(s)`, `themesOf(s)`), lus par Atlas et Iris.
 
 | Action | Risque | Cran | Verrou |
 |---|---|---|---|
@@ -127,8 +127,15 @@ Planning : revue mensuelle le 1er, à la demande pour les campagnes.
 | Adjust cadence when a network underperforms | risky | Draft | |
 | Reallocate tasks between agents during a campaign | safe | Act | |
 | Change the editorial pillars | destructive | Suggest | 🔒 |
+| Plan for calendar moments | safe | Suggest | |
 
-Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes actives.
+- **Plans** : Suggest = carte d'info, on lance depuis Strategy ; Draft = carte « Campaign plan ready » ; Act = Sage lance seul (Undo 30 min). Une campagne lancée met tous ses posts à venir au calendrier d'Atlas (`campaignId`, pilier, label) et demande à Nova, par une règle d'Inbox à elle, d'étiqueter ses conversations ; l'Undo retire posts et règle.
+- **Cadence et trajectoire** (`sage-cadence`) : propositions de cibles, carte « Community pillar under target », et réajustement quand une campagne live sort de 85–120 % de sa trajectoire (déplacer des posts, relever ou baisser l'objectif) ; en Act, appliqués seuls avec Undo.
+- **Piliers** : verrouillés ; Sam repondère et décrit, Sage vérifie la somme et chiffre l'impact ; « Put more Community in the mix » devient une proposition.
+- **Temps forts** (`sage-moments`) : carte au Desk 3 semaines avant ; ajouté = idées pour Atlas par son `arriveIdeas`.
+- **Chat et ⌘K** : « How is Trail Week doing? », « Is Community behind? », « Put more Community in the mix », brief de campagne ; chiffres lus dans l'état.
+
+Garde-fous appliqués : un objectif chiffré par campagne · **Active campaigns: 2 max** (lu dans la valeur du garde-fou ; Approve désactivé avec la raison, carte renvoyée au Desk).
 
 ### Juno — Video
 Planning : 24/7, vérifie la chaîne YouTube toutes les 15 min. Activité type : « Captioning the Repair Friday live ». Couleur : emerald ADS `#12A87A`, avatar avec un clap.
@@ -286,15 +293,14 @@ Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veil
 
 ### 6.6 Strategy — Sage
 
-Onglets : **Campaigns** · **Pillars & cadence**.
+Onglets : **Campaigns** · **Pillars and cadence**.
 
-- **Campaigns** : liste avec statut (`Brief` · `Plan to review` · `Live` · `Done`), objectif, progression vs objectif, dates. Données : une campagne **Live** (« Trail Week », teasing dès le 20 novembre, du 24 au 30 novembre, relance jusqu'au 7 décembre), une **Done** avec bilan d'Iris (« Black Friday? No: Repair Friday »), une **Plan to review** créée pendant le test.
-- **Nouveau brief** : champ libre en 2-3 lignes (+ champs optionnels : dates, produit, budget, objectif). Exemple pré-rempli en placeholder : « Launch the new Storm Jacket on March 15, goal 300 pre-orders. »
-  - Sage « réfléchit » (pattern *thinking-loader* avec phases : « Reading last launches · Checking cadence · Splitting work between agents »), puis rend :
-  - **Plan de campagne** : objectif chiffré et KPI de suivi, messages clés, cible, phases (Teasing / Launch / Follow-up) sur une frise, posts par phase et par réseau, **répartition des tâches entre agents** (pattern *delegate-board* : qui fait quoi, réattribuable par glisser-déposer), risques identifiés, budget boost proposé ;
-  - validation : **Approve campaign** · **Request changes** (v2 avec diff) · **Discard**. Une fois approuvée, Atlas reçoit les posts dans son plan et les autres agents leurs tâches.
-- **Page Campagne Live** : objectif et progression (« 212 / 300 pre-orders · day 4 of 7 »), courbe vs trajectoire prévue (pattern *plan-vs-actual*), posts publiés et à venir, tâches des agents et leur état, ajustements proposés par Sage (« Instagram underperforms, move 2 posts to TikTok? »), bilan final rédigé par Iris quand la campagne est terminée.
-- **Pillars & cadence** : 4 piliers éditoriaux (Gear that lasts · Trail stories · Repair & care · Community) avec description, part cible et part réelle sur 30 jours ; cadence cible par réseau ; propositions d'ajustement de Sage (Draft). Les piliers sont verrouillés en Suggest.
+- **Campaigns** : en tête, **Moments ahead** (Black Friday sans remise, première neige, dernière date de commande, première rando de l'année : raison chiffrée, piliers, idées pour Atlas, *Add to the calendar* / *Not this year*), puis les campagnes avec statut (`Plan to review` · `Live` · `Done`), objectif, progression, dates. Données : **Trail Week** live (24 nov – 7 déc, ralentit après un départ à 128 %), **Repair Friday** terminée avec bilan d'Iris, **Gift guide that lasts** à valider.
+- **New campaign brief** : champ libre + *More details (optional)* (produit, date de lancement, objectif et unité, budget, audience, réseaux cochés depuis la cadence). Sage réfléchit (« Reading your last 3 launches · Checking pillars and cadence · Splitting the work between agents ») et, si l'objectif chiffré ou la date manquent, pose la question (trois réponses en un clic, saisie libre, *Let Sage decide*). Un brief venu d'un autre agent ne pose pas de question : la campagne affiche « Sage assumed ».
+  - **Plan** : gabarit selon l'objectif (pré-commandes, commandes, revenu, inscriptions, demandes, abonnés), angles du produit, accroche de la saison, réseaux tirés de la cadence, un pilier par post ; objectif et KPI, messages, audience, frise des phases, posts par phase, *Who does what*, risques, budget.
+  - **Approve campaign** (désactivé avec la raison au-delà de 2 campagnes live) · **Request changes** (v2 qui applique chaque demande de la note et la liste au diff) · **Discard**.
+- **Campagne live** : progression et « % of trajectory », courbe plan vs réel qui avance avec les jours, ajustements de Sage (Apply / Decline, Undo au journal), **Campaign label** (posts d'Atlas, conversations de Nova), lien vers le calendrier. À la fin, **Recap by Sage, with Iris’s numbers** (objectif, réseau qui a porté, ajustements, coût par résultat) et une leçon en proposition.
+- **Pillars and cadence** : parts réelles sur 30 jours calculées depuis les posts d'Atlas, cible, écart ; *Edit pillars* (parts et descriptions, contrôle de Sage) ; cadence par semaine (7 derniers jours calculés, cibles à steppers journalisées) ; propositions de Sage (Apply / Decline, Undo).
 
 ### 6.7 Agents
 
@@ -428,7 +434,7 @@ Un module de données par domaine, typé. Toutes les dates sont relatives au « 
 - 30 posts dans le calendrier de la semaine courante et passée, 14 dans le plan proposé, 30 médias ;
 - 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
 - 4 concurrents, 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions, 8 tendances, 12 recherches ;
-- 3 campagnes, 4 piliers ;
+- 3 campagnes (1 live, 1 terminée, 1 à valider), 4 piliers, 6 cibles de cadence, 3 propositions, 4 temps forts ;
 - 25 règles de Playbook, 3 règles proposées, 20 faits ;
 - 120 entrées de journal ;
 - 3 vidéos (2 traitées au départ, 1 qui arrive), 8 clips dont 6 à relire, 1 programmé, 1 publié ; 5 mots mal entendus par le speech-to-text ; 1 client à l'écran sans autorisation (Hugo, GR20) ; une version par réseau, une couverture et un « Track record » par clip.
