@@ -121,3 +121,66 @@ test('every seed clip finds its phrases in the real narration and lands between 
   }))
   expect(found.filter(x => !x.endsWith(': '))).toEqual([])
 })
+
+const level = (s: State, action: string, lv: 'suggest' | 'draft' | 'act') => run(s, { type: 'core/autonomy', agent: 'juno', action, level: lv })
+const clipOf = (s: State, id: string) => s.video.clips.find(c => c.id === id)!
+const fireCaptions = (s: State) => run(s, { type: 'core/fire', eventId: 'ev-video-captions' })
+
+test('caption fixes on Act: Juno fixes the misheard product names, Undo takes them off', () => {
+  let s = fireCaptions(initialState())
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBe('28L')
+  expect(s.log[0].captionFixes?.['clip-repair-strap']).toEqual([38])
+  expect(s.log[0].text).toMatch(/“28” → “28L”/)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+})
+
+test('caption fixes on Draft: one card, approving it fixes; moving to Act does it too', () => {
+  let s = fireCaptions(level(initialState(), 'juno-captions', 'draft'))
+  const card = s.handoffs.find(h => h.topic === 'Captions')!
+  expect(card.fixes?.['clip-repair-strap']).toEqual([38])
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+  const approved = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(approved, 'clip-repair-strap').fixes[38]).toBe('28L')
+  s = level(s, 'juno-captions', 'act')
+  expect(s.handoffs.some(h => h.topic === 'Captions')).toBe(false)
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBe('28L')
+})
+
+test('caption fixes on Suggest: no card, nothing fixed, the words stay flagged', () => {
+  const s = fireCaptions(level(initialState(), 'juno-captions', 'suggest'))
+  expect(s.handoffs.some(h => h.topic === 'Captions')).toBe(false)
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+})
+
+test('reframing follows its level on new clips: applied (Act), to check (Draft), suggested and not applied (Suggest)', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  expect(cut('act').every(c => c.frame === 'track' && !c.framing && c.brand.logo)).toBe(true)
+  expect(cut('draft').every(c => c.frame === 'track' && c.framing === 'check')).toBe(true)
+  expect(cut('suggest').every(c => c.frame === 'fit' && c.framing === 'suggested' && !c.brand.logo)).toBe(true)
+})
+
+test('dubbing follows its level: to review (Draft), made with Undo (Act), only suggested (Suggest)', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-dub', lv), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  const draft = cut('draft')
+  const c = draft.video.clips.find(x => x.source === 'gr20')!
+  expect(c.audio).toMatchObject({ dubs: ['fr', 'de'], review: ['fr', 'de'] })
+  const ok = run(draft, { type: 'video/approveDub', id: c.id, lang: 'fr' })
+  expect(clipOf(ok, c.id).audio.review).toEqual(['de'])
+
+  let act = cut('act')
+  const line = act.log.find(l => l.dubs)!
+  expect(act.video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 2 && !x.audio.review?.length)).toBe(true)
+  act = run(act, { type: 'core/undo', id: line.id })
+  expect(act.video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 0)).toBe(true)
+
+  expect(cut('suggest').video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 0)).toBe(true)
+})
+
+test('a dub you ask for waits for review on Draft, and is ready on Act', () => {
+  const id = 'clip-live-second'
+  const draft = run(initialState(), { type: 'video/dub', id, lang: 'it' })
+  expect(clipOf(draft, id).audio).toMatchObject({ lang: 'it', dubs: ['it'], review: ['it'] })
+  const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'it' })
+  expect(clipOf(act, id).audio.review ?? []).toEqual([])
+})
