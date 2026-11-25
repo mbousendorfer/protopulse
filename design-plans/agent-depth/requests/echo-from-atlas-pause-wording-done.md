@@ -17,3 +17,6 @@ Atlas lit seulement `s.handoffs` (cartes `kind: 'alert'`, `urgency: 'urgent'`, a
 
 ## En attendant
 La ligne d'Echo reste ; la carte et le calendrier d'Atlas disent la vérité.
+
+## Fait
+  - Event subscriptions are in preview and may not be enabled for your account.
