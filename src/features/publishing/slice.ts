@@ -9,6 +9,7 @@ import { DEMO_START } from '../../app/time'
 import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
 import { briefSage, targetsOf } from '../strategy/slice'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
+import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -65,6 +66,7 @@ export type PublishingAction =
   | { type: 'publishing/ideaToPlan'; id: string }
   | { type: 'publishing/ideaToSage'; id: string }
   | { type: 'publishing/upload'; media: Media; post?: string }
+  | { type: 'publishing/retry'; id: string; mode: Retry }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -220,6 +222,14 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       next = pushLog(next, { agent: 'atlas', text: `Scheduled “${p.text.slice(0, 48)}…” with your upload`, status: 'approved', reason: 'Your call from Media', link: '/publishing/calendar' })
       return notify(next, 'publishing', `Uploaded “${a.media.title}” and added it to the ${NET[p.network] ?? p.network} post for ${day(p.at)}. It’s scheduled.`)
     }
+    case 'publishing/retry': {
+      const p = s.publishing.posts.find(x => x.id === a.id)
+      if (!p || p.status !== 'failed') return s
+      const card = failureCardOf(s, p.id)
+      const next = patchPost(card ? removeHandoff(s, card.id) : s, p.id, retried(p, a.mode, now(s), 'you'))
+      const label = RETRY_OPTIONS.find(o => o.mode === a.mode)!.label
+      return pushLog(next, { agent: 'atlas', text: `${label}: “${p.text.slice(0, 48)}…”`, status: 'approved', reason: 'Your call from the calendar', link: `/publishing/calendar?post=${p.id}` })
+    }
     case 'publishing/restore': {
       const u = s.publishing.undo
       if (!u) return s
@@ -318,10 +328,16 @@ export function actVisuals(s: State): State {
     const h = visualCardOf(next, p)
     const m = h && !h.lane && pickVisual(p, libraryOf(next), now(next))
     if (!h || !m) continue
-    next = onResolvePublishing(removeHandoff(next, h.id), h, { kind: 'option', index: 0, option: h.options?.[0]?.label ?? 'Use a library photo' })
-    next = pushLog(next, { agent: 'atlas', text: `Picked “${m.title}” for the ${NET[p.network] ?? p.network} post on ${day(p.at)} and scheduled it`, status: 'done', reason: `${actionOf(next, 'atlas', h.action)?.label ?? 'Fill a slot'}, set to Act. Rights: ${m.rights}. Never a stock photo.`, link: '/publishing/media', undoMinutes: 30, restore: [h] })
+    next = actOn(next, h, `Picked “${m.title}” for the ${NET[p.network] ?? p.network} post on ${day(p.at)} and scheduled it`, `Rights: ${m.rights}. Never a stock photo.`)
   }
   return next
+}
+
+/** Atlas settles one of its cards alone, on Act: its recommended option, one journal line, an Undo that puts everything back. */
+export function actOn(s: State, h: Handoff, text: string, why: string): State {
+  const i = Math.max(0, h.options?.findIndex(o => o.recommended) ?? 0)
+  const next = onResolvePublishing(removeHandoff(s, h.id), h, h.options ? { kind: 'option', index: i, option: h.options[i].label, act: true } : { kind: 'approve', act: true })
+  return pushLog(next, { agent: 'atlas', text, status: 'done', reason: `${actionOf(s, 'atlas', h.action)?.label ?? 'This action'}, set to Act. ${why}`, link: h.link, undoMinutes: 30, restore: [h] })
 }
 export const visualsDue = (s: State) =>
   agentOf(s, 'atlas').status === 'on' && actionOf(s, 'atlas', 'atlas-fill')?.autonomy === 'act' && waitingForVisual(s).some(p => { const h = visualCardOf(s, p); return !!h && !h.lane && !!pickVisual(p, libraryOf(s), now(s)) })
@@ -361,6 +377,11 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     if (ok) return reduceIdeas(s, { type: 'publishing/ideaSchedule', ids: [idea.id] }, true)
     if (d.kind === 'reject') return reduceIdeas(s, { type: 'publishing/ideaDismiss', id: idea.id, reason: d.reason ?? 'Not timely' }, true)
     return s
+  }
+  if (h.topic === 'Publishing failed' && h.ref && d.kind === 'option') {
+    const p = s.publishing.posts.find(x => x.id === h.ref)
+    const mode = RETRY_OPTIONS[d.index]?.mode
+    return p && p.status === 'failed' && mode ? patchPost(s, p.id, retried(p, mode, now(s), d.act ? 'Atlas' : 'you')) : s
   }
   const linked = s.publishing.posts.find(p => p.handoff === h.id || p.id === h.ref)
   const preview = h.preview?.type === 'post' ? h.preview : undefined

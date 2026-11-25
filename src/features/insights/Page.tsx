@@ -14,7 +14,7 @@ import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, 
 import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, kpis as kpisOf } from './metrics'
-import { anomalyList } from './slice'
+import { anomalyList, boostBudget } from './slice'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -263,6 +263,7 @@ function Anomalies() {
   const [view, setView] = useState<'open' | 'closed'>('open')
   const [confirm, setConfirm] = useState<{ id: string; action: string } | null>(null)
   const list = anomalyList(s)
+  const budget = boostBudget(s)
   const shown = list.filter(a => (view === 'open') === a.open)
   const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, view)
@@ -304,7 +305,7 @@ function Anomalies() {
               {confirm?.id === a.id ? (
                 // Paid spend never goes out on one click.
                 <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
-                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account.
+                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
                 </InlineConfirm>
               ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
               {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}

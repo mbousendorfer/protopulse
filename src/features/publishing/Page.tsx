@@ -44,6 +44,7 @@ export default function PublishingPage() {
   const drafts = s.publishing.posts.filter(p => p.status === 'draft').length
   // The badge means "needs you": ideas ready to review, not every idea.
   const readyIdeas = s.publishing.ideas.filter(i => isOpen(i) && i.status === 'ready').length
+  const failed = s.publishing.posts.filter(p => p.status === 'failed').length
 
   return (
     <div className="page pub-page">
@@ -52,7 +53,7 @@ export default function PublishingPage() {
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
         { value: 'ideas', label: <>Ideas{readyIdeas > 0 && <CountBadge n={readyIdeas} needs label={`${readyIdeas} ready to review`} />}</> },
-        { value: 'calendar', label: 'Calendar' },
+        { value: 'calendar', label: <>Calendar{failed > 0 && <CountBadge n={failed} needs label={`${failed} failed post${failed > 1 ? 's' : ''}`} />}</> },
         { value: 'plan', label: <>Plan review{planPending && <span className="dot" style={{ color: 'var(--caution)' }} aria-label="waiting for you" />}</> },
         { value: 'drafts', label: 'Drafts', count: drafts },
         { value: 'media', label: 'Media', count: libraryOf(s).length },
