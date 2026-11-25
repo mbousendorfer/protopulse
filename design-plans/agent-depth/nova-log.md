@@ -60,3 +60,4 @@
 - 25/11 · Contrat Echo · action publique `inbox/ingest` idempotente (`c-in-<id>`), escalades puis règles à l'arrivée ; demande `requests/echo-from-nova-mentions-to-inbox.md` · lire l'état d'Echo depuis l'Inbox · Echo garde la décision de ce qui mérite une réponse.
 - 25/11 · Demande d'Atlas (Fernway Repair) · `account` sur la conversation, seed et filtre Profile · une vue par profil · le filtre suffit et se sauvegarde en vue.
 - 25/11 · Clôture · PROMPT.md §4 (Nova), §6.2 et §9 réécrits ; rapport `docs/agent-depth/nova.html` avec captures avant (73a7ba2) / après.
+- 25/11 · Triggers ⇧D (« Hard to see ») · 6 déclencheurs : SLA et règle apprise → Desk, escalade → Inbox, règle Refund → `?label=Refund`, bots → Hidden, allemand → Handled by Nova · garder /activity pour la règle · la page où l'effet se voit vaut mieux que le journal.

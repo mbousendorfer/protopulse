@@ -174,6 +174,14 @@ const nova: AgentModule = {
     trust: { keep: ['h-promo-nova', 'h-strap', 'h-review'], fire: ['ev-promo-exchange', 'ev-demote', 'ev-rule-emoji'] },
   },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-sla', to: '/inbox?sort=waiting' }, { event: 'ev-injury', to: '/inbox' }, { event: 'ev-refund-ask', to: '/activity' }, { event: 'ev-teach-rule', to: '/' }],
+  // What a tester won't stumble on: the event, and the page where it shows.
+  triggers: [
+    { event: 'ev-sla', to: '/', label: 'Nova · warning before a response target is missed (Desk)' },
+    { event: 'ev-injury', to: '/inbox', label: 'Nova · Playbook escalation, rule quoted (Your call)' },
+    { event: 'ev-refund-ask', to: '/inbox?label=Refund', label: 'Nova · Inbox rule labels a new message Refund' },
+    { event: 'ev-teach-rule', to: '/', label: 'Nova · proposes a rule learned from your labels (Desk)' },
+    { event: 'ev-bots', to: '/inbox?view=hidden', label: 'Nova · reports bot comments as spam (Hidden)' },
+    { event: 'ev-german', to: '/inbox?view=handled', label: 'Nova · answers in German, English shown (Handled by Nova)' },
+  ],
 }
 export default nova
