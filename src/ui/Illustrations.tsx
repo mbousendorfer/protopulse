@@ -10,7 +10,8 @@ const HUE: Record<AgentId, string> = {
   nova: 'var(--a-nova, #e8608a)', atlas: 'var(--a-atlas, #3d7bf2)', iris: 'var(--a-iris, #8b6cf0)',
   echo: 'var(--a-echo, #14a89a)', sage: 'var(--a-sage, #5aa83c)',
 }
-const SUN = 'var(--signal)'
+const SUN = 'var(--primary)'
+const WATER = 'var(--chart)'
 const mix = (c: string, n: number) => `color-mix(in srgb, ${c} ${n}%, transparent)`
 
 type Svg = { label?: string; viewBox: string; children: ReactNode; className?: string }
@@ -23,7 +24,7 @@ const Scene = ({ label, viewBox, children, className }: Svg) => (
 /** Mountains over a lake. The sky and the sun follow the time of day. */
 export function BriefScene({ hour }: { hour: number }) {
   const t = hour < 10 ? 'dawn' : hour < 17 ? 'day' : 'evening'
-  const sky = t === 'dawn' ? mix(HUE.nova, 16) : t === 'day' ? mix(HUE.atlas, 13) : mix(HUE.iris, 18)
+  const sky = t === 'dawn' ? mix(HUE.nova, 16) : t === 'day' ? mix(WATER, 13) : mix(HUE.iris, 18)
   const sun = t === 'dawn' ? { x: 70, y: 74 } : t === 'day' ? { x: 172, y: 36 } : { x: 196, y: 70 }
   return (
     <Scene viewBox="0 0 240 140" label={`Mountains at ${t === 'dawn' ? 'sunrise' : t === 'day' ? 'midday' : 'sunset'}`}>
@@ -35,8 +36,8 @@ export function BriefScene({ hour }: { hour: number }) {
       <path d="M52 44 L62 55 L52 58 L44 53Z" fill="var(--panel)" />
       <path d="M0 108 L40 80 L76 100 L110 72 L150 100 L188 82 L240 106 L240 140 L0 140Z" fill={mix(HUE.sage, 50)} />
       {[[22, 104], [34, 100], [178, 98], [192, 102]].map(([x, y]) => <path key={x} d={`M${x} ${y} l6 -14 l6 14z`} fill={mix(HUE.sage, 85)} />)}
-      <rect y="112" width="240" height="28" fill={mix(HUE.atlas, 26)} />
-      <path d="M0 140 L0 122 Q120 116 240 122 L240 140Z" fill={mix(HUE.atlas, 18)} />
+      <rect y="112" width="240" height="28" fill={mix(WATER, 26)} />
+      <path d="M0 140 L0 122 Q120 116 240 122 L240 140Z" fill={mix(WATER, 18)} />
       <rect x={sun.x - 14} y="118" width="28" height="2" rx="1" fill="var(--panel)" opacity=".7" />
       <rect x={sun.x - 8} y="124" width="16" height="2" rx="1" fill="var(--panel)" opacity=".5" />
     </Scene>
@@ -71,10 +72,10 @@ export function EmptyScene({ kind = 'quiet' }: { kind?: EmptyKind }) {
     <Scene viewBox="0 0 160 110" className="empty-scene">
       <ellipse cx="80" cy="58" rx="62" ry="46" fill="var(--lift-2)" />
       {kind === 'search' && <>
-        <rect x="70" y="44" width="20" height="10" rx="4" fill={mix(HUE.atlas, 70)} />
+        <rect x="70" y="44" width="20" height="10" rx="4" fill={mix(WATER, 70)} />
         <circle cx="58" cy="60" r="18" fill={HUE.atlas} /><circle cx="102" cy="60" r="18" fill={HUE.atlas} />
         <circle cx="58" cy="60" r="10" fill="var(--panel)" /><circle cx="102" cy="60" r="10" fill="var(--panel)" />
-        <circle cx="62" cy="56" r="3" fill={mix(HUE.atlas, 40)} /><circle cx="106" cy="56" r="3" fill={mix(HUE.atlas, 40)} />
+        <circle cx="62" cy="56" r="3" fill={mix(WATER, 40)} /><circle cx="106" cy="56" r="3" fill={mix(WATER, 40)} />
       </>}
       {kind === 'tray' && <>
         <path d="M40 62 L56 38 L104 38 L120 62 L120 82 Q120 86 116 86 L44 86 Q40 86 40 82Z" fill={HUE.nova} />

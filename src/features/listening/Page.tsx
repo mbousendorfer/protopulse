@@ -208,7 +208,7 @@ function Benchmark() {
         </div>
         <div className="card-body">
           <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Share of voice · mentions in the last 30 days</div>
-          <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--signal)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
+          <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
         </div>
       </section>
 

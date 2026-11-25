@@ -13,7 +13,7 @@ export function Spark({ data, w = 120, h = 32, tone = 'ink', fill = true, label,
   const { min, max } = ext(data)
   const pts = data.map((v, i) => [(i / (data.length - 1)) * w, h - 2 - ((v - min) / (max - min)) * (h - 4)])
   const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join('')
-  const color = tone === 'alert' ? 'var(--alert)' : tone === 'ok' ? 'var(--ok)' : custom ?? 'var(--signal)'
+  const color = tone === 'alert' ? 'var(--alert)' : tone === 'ok' ? 'var(--ok)' : custom ?? 'var(--chart)'
   return (
     <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label={label ?? 'Trend'} style={{ maxWidth: w, display: 'block' }}>
       {fill && <defs><linearGradient id={id} x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor={color} stopOpacity="0.18" /><stop offset="1" stopColor={color} stopOpacity="0" /></linearGradient></defs>}
@@ -39,7 +39,7 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
   const x = (i: number) => padL + (i / Math.max(1, n - 1)) * (W - padL - padR)
   const y = (v: number) => padT + (1 - v / top) * (H - padT - padB)
   const ticks = [0, top / 2, top]
-  const stroke = (s: Series) => s.color ?? (s.tone === 'faint' ? 'var(--ink-3)' : 'var(--signal)')
+  const stroke = (s: Series) => s.color ?? (s.tone === 'faint' ? 'var(--ink-3)' : 'var(--chart)')
   return (
     <figure style={{ position: 'relative' }}>
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={label} onMouseLeave={() => setHover(null)}
@@ -91,7 +91,7 @@ function niceMax(v: number) {
 }
 
 /** Horizontal bars, one row per item, value labelled in text. */
-export function HBars({ items, format = (v: number) => `${v}`, highlight, color = 'var(--signal)' }: { items: { label: string; value: number; sub?: string }[]; format?: (v: number) => string; highlight?: string; color?: string }) {
+export function HBars({ items, format = (v: number) => `${v}`, highlight, color = 'var(--chart)' }: { items: { label: string; value: number; sub?: string }[]; format?: (v: number) => string; highlight?: string; color?: string }) {
   const max = Math.max(...items.map(i => i.value), 1)
   return (
     <div className="hbars" style={{ ['--bar' as string]: color }}>
@@ -107,7 +107,7 @@ export function HBars({ items, format = (v: number) => `${v}`, highlight, color 
 }
 
 /** Vertical bars with labels. */
-export function Bars({ data, labels, h = 120, label, format = (v: number) => `${v}`, color = 'var(--signal)' }: { data: number[]; labels: string[]; h?: number; label: string; format?: (v: number) => string; color?: string }) {
+export function Bars({ data, labels, h = 120, label, format = (v: number) => `${v}`, color = 'var(--chart)' }: { data: number[]; labels: string[]; h?: number; label: string; format?: (v: number) => string; color?: string }) {
   const max = Math.max(...data, 1)
   return (
     <div className="vbars" role="img" aria-label={label} style={{ height: h, ['--bar' as string]: color }}>
@@ -131,7 +131,7 @@ export function Heatmap({ values, rows, cols, label, best }: { values: number[][
         <span key={r} className="mono faint hr">{r}</span>,
         ...values[ri].map((v, ci) => (
           <i key={`${r}${ci}`} title={`${r} ${cols[ci]}: ${Math.round(v * 100)}`} className={best && best[0] === ri && best[1] === ci ? 'best' : ''}
-            style={{ background: `color-mix(in srgb, var(--signal) ${Math.round((0.06 + v * 0.7) * 100)}%, transparent)` }} />
+            style={{ background: `color-mix(in srgb, var(--chart) ${Math.round((0.06 + v * 0.7) * 100)}%, transparent)` }} />
         )),
       ])}
     </div>

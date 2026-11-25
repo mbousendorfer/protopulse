@@ -1,5 +1,5 @@
-/* Warm and friendly. Cream surfaces, one brand coral for primary actions, one colour per agent.
-   Light is the default; dark is a warm night version of the same palette. Theme-independent tokens first. */
+/* Agorapulse palette (ADS --ref-color-*): grey ramp, orange for primary actions, electric blue for everything interactive,
+   data colours for agents and charts. Light is the default; dark is a navy night built from grey-150. Theme-independent tokens first. */
 :root {
   --font: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
   --mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', monospace;
@@ -39,144 +39,150 @@
   --topbar: 56px;
 }
 
-/* ---------- Light (default) ---------- */
+/* ---------- Light (default): ADS values ---------- */
 :root, [data-theme='light'] {
   color-scheme: light;
 
   /* Surfaces */
-  --void: #fbf8f3;   /* canvas, warm cream */
-  --deck: #fdfbf8;   /* rails, columns */
-  --panel: #ffffff;  /* cards */
-  --lift: #f4efe7;   /* menus, hover, secondary buttons */
-  --lift-2: #ece5da; /* pressed, selected rows */
-  --sunk: #f7f3ed;   /* inputs, wells */
+  --void: #F9F9FA;   /* grey-bg: canvas */
+  --deck: #FFFFFF;   /* rails, columns */
+  --panel: #FFFFFF;  /* cards */
+  --lift: #F5F5F7;   /* grey-05: menus, hover */
+  --lift-2: #EAECEF; /* grey-10: pressed, selected rows */
+  --sunk: #F5F5F7;   /* grey-05: inputs, wells */
 
-  --line: rgba(60, 45, 25, 0.08);
-  --line-strong: rgba(60, 45, 25, 0.14);
-  --line-loud: rgba(60, 45, 25, 0.24);
+  /* Every border, divider and hairline is grey-20 */
+  --line: #D6DAE0;
+  --line-strong: #D6DAE0;
+  --line-loud: #D6DAE0;
 
-  /* Ink */
-  --ink: #1f1d1a;
-  --ink-2: #57514a;
-  --ink-3: #6b655c;
-  --ink-off: #a39c91;
+  /* Ink between grey-80 and grey-100; grey-60 is disabled only */
+  --ink: #344563;
+  --ink-2: #5D6A82;
+  --ink-3: #5D6A82;
+  --ink-off: #858FA1;
 
-  /* Brand coral: primary actions, focus, selection */
-  --signal: #c7502a;
-  --signal-hover: #b0441f;
-  /* Text colour of tertiary actions and links: AA on white, cream and the brand wash */
-  --action-ink: #b8441f;
-  --signal-ink: #ffffff;
-  --signal-wash: rgba(212, 81, 42, 0.1);
-  --signal-edge: rgba(212, 81, 42, 0.35);
-  --brand-soft: #fff1eb;
+  /* Primary action: orange */
+  --primary: #FF6726;        /* orange-100 */
+  --primary-hover: #C83E07;  /* orange-150 */
+  --primary-ink: #FFFFFF;
+  --primary-soft: #FFEFE9;   /* orange-10 */
+
+  /* Interactive: electric blue (links, controls, selection, focus) */
+  --signal: #178DFE;         /* electric-blue-100 */
+  --signal-hover: #0E72D6;   /* electric-blue-150 */
+  --action-ink: #0E72D6;
+  --signal-ink: #FFFFFF;
+  --signal-wash: #E8F4FF;    /* electric-blue-10 */
+  --signal-edge: #A2D1FF;    /* electric-blue-40 */
+  --brand-soft: #F3F9FF;     /* electric-blue-05 */
+
+  /* Charts and static data: never the interactive blue */
+  --chart: #4A6ACC;          /* data-navy-100 */
 
   /* Status */
-  --alert: #c2412d;
-  --alert-wash: rgba(194, 65, 45, 0.1);
-  --caution: #a36500;
-  --caution-wash: rgba(214, 140, 20, 0.14);
-  --caution-edge: rgba(163, 101, 0, 0.45);
-  --ok: #1f8a56;
-  --ok-wash: rgba(31, 138, 86, 0.11);
-  --ok-pulse: rgba(31, 138, 86, 0.45);
+  --alert: #E81313;   --alert-wash: #FDE7E7;
+  --caution: #A66200; --caution-wash: #FFF8E6; --caution-edge: #FDE199;
+  --ok: #0F821D;      --ok-wash: #ECF7ED;      --ok-pulse: rgba(69, 184, 84, 0.45);
 
-  /* Agents: identity colour, a soft wash for tiles, an ink dark enough for text on the wash */
-  --a-nova: #e8608a;  --a-nova-wash: #fde7ee;  --a-nova-ink: #a8345e;
-  --a-atlas: #3d7bf2; --a-atlas-wash: #e4edfe; --a-atlas-ink: #2456bf;
-  --a-iris: #8b6cf0;  --a-iris-wash: #eee8fe;  --a-iris-ink: #5e41c2;
-  --a-echo: #14a89a;  --a-echo-wash: #ddf4f0;  --a-echo-ink: #0b7369;
-  --a-sage: #5aa83c;  --a-sage-wash: #e6f3dd;  --a-sage-ink: #3b7a22;
-  --a-claire: #9a8f80; --a-claire-wash: #f1ece4; --a-claire-ink: #5f564a;
+  /* Agents: ADS data colours, a soft wash for tiles, an ink dark enough for text on the wash */
+  --a-nova: #CC2878;  --a-nova-wash: color-mix(in srgb, #CC2878 10%, #fff);  --a-nova-ink: color-mix(in srgb, #CC2878 80%, #000);
+  --a-atlas: #DC6A30; --a-atlas-wash: color-mix(in srgb, #DC6A30 11%, #fff); --a-atlas-ink: color-mix(in srgb, #DC6A30 72%, #000);
+  --a-iris: #8A62CC;  --a-iris-wash: color-mix(in srgb, #8A62CC 11%, #fff);  --a-iris-ink: color-mix(in srgb, #8A62CC 78%, #000);
+  --a-echo: #12AABA;  --a-echo-wash: color-mix(in srgb, #12AABA 11%, #fff);  --a-echo-ink: color-mix(in srgb, #12AABA 62%, #000);
+  --a-sage: #42B85A;  --a-sage-wash: color-mix(in srgb, #42B85A 12%, #fff);  --a-sage-ink: color-mix(in srgb, #42B85A 62%, #000);
+  --a-claire: #5D6A82; --a-claire-wash: #EAECEF; --a-claire-ink: #344563;
 
-  /* Networks */
-  --n-instagram: #d6336c; --n-tiktok: #1f1d1a; --n-linkedin: #0a66c2; --n-facebook: #1877f2;
-  --n-youtube: #e62117; --n-x: #1f1d1a; --n-google: #1a73e8; --n-trustpilot: #00a36c;
+  /* Networks: ADS brand colours */
+  --n-instagram: #DD2A7B; --n-tiktok: #000000; --n-linkedin: #2668B2; --n-facebook: #0866FF;
+  --n-youtube: #FE0101; --n-x: #000000; --n-google: #2668B2; --n-trustpilot: #00a36c;
 
   /* Utility washes */
-  --scrim: rgba(45, 35, 20, 0.32);
-  --row-hover: rgba(60, 45, 25, 0.03);
+  --scrim: rgba(33, 46, 68, 0.4);
+  --row-hover: #F5F5F7;
   --row-us: var(--brand-soft);
-  --photo-edge: rgba(0, 0, 0, 0.08);
+  --photo-edge: rgba(33, 46, 68, 0.08);
   --kbd-on-signal: rgba(255, 255, 255, 0.45);
 
-  --card-shadow: 0 1px 2px rgba(60, 45, 25, 0.05), 0 8px 24px -14px rgba(60, 45, 25, 0.18);
-  /* Buttons: real surfaces, distinct from cards and text */
-  --btn-bg: #ffffff;
-  --btn-bg-hover: #faf6f0;
-  --btn-border: rgba(60, 45, 25, 0.2);
-  --btn-shadow: 0 1px 0 rgba(60, 45, 25, 0.06), 0 1px 3px rgba(60, 45, 25, 0.08);
-  --btn-primary-shadow: 0 1px 0 rgba(140, 45, 15, 0.25), 0 2px 6px -1px rgba(212, 81, 42, 0.35);
-  /* Status pills: tinted fill, dark text, matching edge */
-  --alert-tint: #fde3dc; --alert-strong: #9e2f1d; --alert-edge: rgba(194, 65, 45, 0.35);
-  --caution-tint: #fcecc9; --caution-strong: #7a4b00; --caution-edge: rgba(163, 101, 0, 0.35);
-  --ok-tint: #d9f2e3; --ok-strong: #136a40; --ok-edge: rgba(31, 138, 86, 0.35);
-  --card-border: transparent;
-  --float: 0 0 0 1px var(--line), 0 2px 6px rgba(60, 45, 25, 0.06), 0 18px 40px -12px rgba(60, 45, 25, 0.22);
+  /* Flat: cards are bounded by grey-20, not by shadow */
+  --card-shadow: none;
+  --card-border: #D6DAE0;
+  --btn-bg: #FFFFFF;
+  --btn-bg-hover: #F5F5F7;
+  --btn-border: #D6DAE0;
+  --btn-shadow: none;
+  --btn-primary-shadow: none;
+  /* Status pills: tinted fill, dark text */
+  --alert-tint: #FDE7E7;   --alert-strong: #D80505;   --alert-edge: #F6A1A1;
+  --caution-tint: #FFF8E6; --caution-strong: #A66200; --caution-edge: #FDE199;
+  --ok-tint: #ECF7ED;      --ok-strong: #0F821D;      --ok-edge: #B5E3BB;
+  --float: 0 0 0 1px #D6DAE0, 0 8px 24px -8px rgba(33, 46, 68, 0.18);
 }
 
-/* ---------- Dark: warm night ---------- */
+/* ---------- Dark: navy night from grey-150 (ADS has no dark theme; derived) ---------- */
 [data-theme='dark'] {
   color-scheme: dark;
 
-  --void: #16130f;
-  --deck: #1b1813;
-  --panel: #221e18;
-  --lift: #2b261f;
-  --lift-2: #353027;
-  --sunk: #1a1712;
+  --void: #121a28;
+  --deck: #161f2f;
+  --panel: #1b2538;
+  --lift: #232f45;
+  --lift-2: #2b3952;
+  --sunk: #172031;
 
-  --line: rgba(255, 240, 220, 0.07);
-  --line-strong: rgba(255, 240, 220, 0.12);
-  --line-loud: rgba(255, 240, 220, 0.2);
+  --line: rgba(214, 218, 224, 0.12);
+  --line-strong: rgba(214, 218, 224, 0.12);
+  --line-loud: rgba(214, 218, 224, 0.2);
 
-  --ink: #f3ede4;
-  --ink-2: #c9c0b3;
-  --ink-3: #a49a8c;
-  --ink-off: #6d655a;
+  --ink: #EAECEF;
+  --ink-2: #AEB5C1;
+  --ink-3: #AEB5C1;
+  --ink-off: #858FA1;
 
-  --signal: #ff8a62;
-  --signal-hover: #ffa07f;
-  --action-ink: #ff9a76;
-  --signal-ink: #1d1209;
-  --signal-wash: rgba(255, 138, 98, 0.13);
-  --signal-edge: rgba(255, 138, 98, 0.4);
-  --brand-soft: rgba(255, 138, 98, 0.1);
+  --primary: #FF7E46;
+  --primary-hover: #FFA47D;
+  --primary-ink: #1a0d06;
+  --primary-soft: rgba(255, 103, 38, 0.14);
 
-  --alert: #f0806c;
-  --alert-wash: rgba(240, 128, 108, 0.13);
-  --caution: #ebb554;
-  --caution-wash: rgba(235, 181, 84, 0.14);
-  --caution-edge: rgba(235, 181, 84, 0.45);
-  --ok: #62c793;
-  --ok-wash: rgba(98, 199, 147, 0.13);
-  --ok-pulse: rgba(98, 199, 147, 0.5);
+  --signal: #3A9EFE;
+  --signal-hover: #74BBFE;
+  --action-ink: #74BBFE;
+  --signal-ink: #0b1a2e;
+  --signal-wash: rgba(23, 141, 254, 0.16);
+  --signal-edge: rgba(116, 187, 254, 0.45);
+  --brand-soft: rgba(23, 141, 254, 0.12);
 
-  --a-nova: #f07ba0;  --a-nova-wash: rgba(240, 123, 160, 0.15);  --a-nova-ink: #f6a3bd;
-  --a-atlas: #6c9cff; --a-atlas-wash: rgba(108, 156, 255, 0.15); --a-atlas-ink: #9dbcff;
-  --a-iris: #a58bff;  --a-iris-wash: rgba(165, 139, 255, 0.16);  --a-iris-ink: #c3b2ff;
-  --a-echo: #34c4b4;  --a-echo-wash: rgba(52, 196, 180, 0.15);   --a-echo-ink: #7ddccf;
-  --a-sage: #7cc35d;  --a-sage-wash: rgba(124, 195, 93, 0.15);   --a-sage-ink: #a6d98d;
-  --a-claire: #b3a796; --a-claire-wash: rgba(179, 167, 150, 0.15); --a-claire-ink: #d6ccbd;
+  --chart: #7c95e0;
 
-  --n-instagram: #f06595; --n-tiktok: #f3ede4; --n-linkedin: #4d9be6; --n-facebook: #5b9df5;
-  --n-youtube: #ff5a4f; --n-x: #f3ede4; --n-google: #6aa6f5; --n-trustpilot: #3cc98f;
+  --alert: #F17171;   --alert-wash: rgba(232, 19, 19, 0.16);
+  --caution: #FCC026; --caution-wash: rgba(251, 181, 0, 0.14); --caution-edge: rgba(251, 181, 0, 0.45);
+  --ok: #61C26D;      --ok-wash: rgba(69, 184, 84, 0.14);      --ok-pulse: rgba(97, 194, 109, 0.5);
 
-  --scrim: rgba(8, 6, 4, 0.6);
-  --row-hover: rgba(255, 240, 220, 0.02);
+  --a-nova: #e0559a;  --a-nova-wash: rgba(204, 40, 120, 0.2);  --a-nova-ink: #f29cc6;
+  --a-atlas: #ec8c5c; --a-atlas-wash: rgba(220, 106, 48, 0.2); --a-atlas-ink: #f6b896;
+  --a-iris: #a585e0;  --a-iris-wash: rgba(138, 98, 204, 0.22); --a-iris-ink: #c9b3f0;
+  --a-echo: #2ec4d4;  --a-echo-wash: rgba(18, 170, 186, 0.2);  --a-echo-ink: #8fe0e8;
+  --a-sage: #61C26D;  --a-sage-wash: rgba(66, 184, 90, 0.2);   --a-sage-ink: #a8e0b0;
+  --a-claire: #AEB5C1; --a-claire-wash: rgba(174, 181, 193, 0.16); --a-claire-ink: #D6DAE0;
+
+  --n-instagram: #f0609f; --n-tiktok: #EAECEF; --n-linkedin: #5b95d6; --n-facebook: #4d8fff;
+  --n-youtube: #ff5a4f; --n-x: #EAECEF; --n-google: #5b95d6; --n-trustpilot: #3cc98f;
+
+  --scrim: rgba(5, 9, 16, 0.6);
+  --row-hover: rgba(214, 218, 224, 0.04);
   --row-us: var(--brand-soft);
   --photo-edge: rgba(255, 255, 255, 0.1);
-  --kbd-on-signal: rgba(29, 18, 9, 0.25);
+  --kbd-on-signal: rgba(26, 13, 6, 0.3);
 
   --card-shadow: none;
-  --btn-bg: #2e2921;
-  --btn-bg-hover: #373128;
-  --btn-border: rgba(255, 240, 220, 0.16);
-  --btn-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
-  --btn-primary-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
-  --alert-tint: rgba(240, 128, 108, 0.2); --alert-strong: #ffb3a4; --alert-edge: rgba(240, 128, 108, 0.45);
-  --caution-tint: rgba(235, 181, 84, 0.2); --caution-strong: #f6d08c; --caution-edge: rgba(235, 181, 84, 0.45);
-  --ok-tint: rgba(98, 199, 147, 0.2); --ok-strong: #9be3bd; --ok-edge: rgba(98, 199, 147, 0.45);
   --card-border: var(--line);
+  --btn-bg: #232f45;
+  --btn-bg-hover: #2b3952;
+  --btn-border: rgba(214, 218, 224, 0.16);
+  --btn-shadow: none;
+  --btn-primary-shadow: none;
+  --alert-tint: rgba(232, 19, 19, 0.2);   --alert-strong: #F6A1A1; --alert-edge: rgba(241, 113, 113, 0.45);
+  --caution-tint: rgba(251, 181, 0, 0.18); --caution-strong: #FDE199; --caution-edge: rgba(251, 181, 0, 0.45);
+  --ok-tint: rgba(69, 184, 84, 0.2);      --ok-strong: #B5E3BB;   --ok-edge: rgba(97, 194, 109, 0.45);
   --float: 0 0 0 1px var(--line-strong), 0 16px 40px rgba(0, 0, 0, 0.5);
 }

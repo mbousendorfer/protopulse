@@ -95,8 +95,8 @@ img { display: block; max-width: 100%; }
 }
 .btn:hover { background: var(--btn-bg-hover); border-color: var(--line-loud); }
 .btn:active { transform: scale(0.97); }
-.btn.primary { background: var(--signal); border-color: var(--signal); color: var(--signal-ink); box-shadow: var(--btn-primary-shadow); }
-.btn.primary:hover { background: var(--signal-hover); border-color: var(--signal-hover); }
+.btn.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-ink); box-shadow: var(--btn-primary-shadow); }
+.btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 /* Tertiary action: no surface, but always in the action colour so it never reads as plain text */
 .btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: var(--action-ink); font-weight: 600; }
 .btn.ghost:hover { background: var(--brand-soft); color: var(--action-ink); }
@@ -112,7 +112,7 @@ img { display: block; max-width: 100%; }
 /* Shortcuts stay out of the way: shown only while the button is hovered or focused from the keyboard. */
 .btn .kbd { display: none; margin-left: 2px; }
 .btn:hover .kbd, .btn:focus-visible .kbd { display: inline-flex; }
-.btn.primary .kbd { color: var(--signal-ink); border-color: var(--kbd-on-signal); background: transparent; }
+.btn.primary .kbd { color: var(--primary-ink); border-color: var(--kbd-on-signal); background: transparent; }
 .link-btn { background: none; border: 0; padding: 0; color: var(--action-ink); font-weight: 600; }
 .link-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
 
@@ -155,8 +155,8 @@ img { display: block; max-width: 100%; }
 .card-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); min-height: 48px; }
 .card-head h2, .card-head h3 { font-size: var(--t-md); font-weight: 600; }
 .card-body { padding: var(--s4); }
-a.card:hover, .card.hoverable:hover { border-color: var(--line-loud); }
-[data-theme='light'] a.card:hover, [data-theme='light'] .card.hoverable:hover, :root:not([data-theme='dark']) a.card:hover { box-shadow: var(--card-shadow), 0 0 0 1px var(--line-loud); }
+a.card:hover, .card.hoverable:hover { border-color: var(--signal); }
+
 .well { background: var(--sunk); border: 1px solid var(--line); border-radius: 12px; padding: var(--s3) var(--s4); }
 .section-title { font-size: var(--t-md); font-weight: 600; display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
 .section-title .faint { font-weight: 400; }
@@ -322,14 +322,14 @@ a.card:hover, .card.hoverable:hover { border-color: var(--line-loud); }
 .hbars { display: flex; flex-direction: column; gap: 8px; }
 .hbar { display: grid; grid-template-columns: minmax(80px, 140px) 1fr 52px; gap: 10px; align-items: center; font-size: var(--t-md); color: var(--ink-2); }
 .hbar .track { height: 8px; border-radius: 4px; background: var(--lift); overflow: hidden; }
-.hbar .track i { display: block; height: 100%; background: color-mix(in srgb, var(--bar, var(--signal)) 55%, transparent); border-radius: 4px; }
+.hbar .track i { display: block; height: 100%; background: color-mix(in srgb, var(--bar, var(--chart)) 55%, transparent); border-radius: 4px; }
 .hbar.hl { color: var(--ink); }
-.hbar.hl .track i { background: var(--bar, var(--signal)); }
+.hbar.hl .track i { background: var(--bar, var(--chart)); }
 .hbar b { text-align: right; color: var(--ink); font-weight: 500; }
 .vbars { display: flex; align-items: flex-end; gap: 6px; padding-bottom: 18px; }
 .vbar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
-.vbar i { width: 100%; max-width: 28px; background: color-mix(in srgb, var(--bar, var(--signal)) 70%, transparent); border-radius: 6px 6px 2px 2px; min-height: 2px; }
-.vbar:hover i { background: var(--bar, var(--signal)); }
+.vbar i { width: 100%; max-width: 28px; background: color-mix(in srgb, var(--bar, var(--chart)) 70%, transparent); border-radius: 6px 6px 2px 2px; min-height: 2px; }
+.vbar:hover i { background: var(--bar, var(--chart)); }
 .vbar span { position: absolute; bottom: -18px; font-size: 10px; color: var(--ink-3); }
 .heat { display: grid; gap: 3px; align-items: center; }
 .heat i { aspect-ratio: 1.6; border-radius: 5px; display: block; }

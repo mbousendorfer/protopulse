@@ -368,24 +368,24 @@ Visuels : scènes et photos produit **générées en SVG** dans le code (montagn
 
 ---
 
-## 10. Direction visuelle — « Chaleureux et frais »
+## 10. Direction visuelle — « Friendly, aux couleurs d'Agorapulse »
 
 Un outil où l'on retrouve une équipe sympathique, pas un cockpit. Clair par défaut, un thème sombre au choix (bouton soleil/lune dans la barre du haut et dans Settings, choix mémorisé).
 
-- **Surfaces** (clair) : canevas crème `#fbf8f3`, cartes blanches avec une **ombre douce** au lieu des filets, fonds secondaires sable (`#f4efe7`). Sombre : même palette en version nuit chaude (`#16130f`).
-- **Encre** : `#1f1d1a` / `#57514a` / `#6b655c` (AA sur crème). Hiérarchie par taille et graisse.
-- **Accent de marque** : corail (`#d4512a` en clair, AA avec un libellé blanc) pour l'action principale, le focus et la sélection.
-- **Une couleur par agent**, utilisée partout où l'agent apparaît (avatar, tuiles d'icônes, libellé « Nova’s reply », lignes du Shift board, graphes qu'il signe) : Nova rose `#e8608a`, Atlas bleu `#3d7bf2`, Iris violet `#8b6cf0`, Echo turquoise `#14a89a`, Sage vert `#5aa83c`. Chaque teinte a un lavis (fond) et une encre foncée (texte AA sur le lavis).
+- **Palette Agorapulse** (valeurs `--ref-color-*` d'ADS, lues sur `agorapulse/design`) : canevas `grey-bg #F9F9FA`, cartes blanches **bordées en `grey-20 #D6DAE0`**, sans ombre (pas d'élévation imbriquée) ; fonds secondaires `grey-05` / `grey-10`. Sombre (ADS n'en a pas, dérivé) : nuit bleu marine construite depuis `grey-150` (`#121a28`).
+- **Encre** : `grey-100 #344563` et `grey-80 #5D6A82`, jamais plus clair (`grey-60` = désactivé). Hiérarchie par taille et graisse. Tous les filets en `grey-20`.
+- **Orange `#FF6726`** (`orange-100`, survol `orange-150`) pour l'action principale. **Bleu électrique `#178DFE`** pour tout ce qui est interactif : liens, actions tertiaires (`#0E72D6`), focus, sélection, contrôles, survol des cartes (bordure bleue). Jamais de bleu pour teinter une donnée : les graphes utilisent `data-navy #4A6ACC`. Statuts : `red`, `tag-orange`, `green` d'ADS.
+- **Une couleur par agent**, utilisée partout où l'agent apparaît (avatar, tuiles d'icônes, libellé « Nova’s reply », lignes du Shift board, graphes qu'il signe) : couleurs data d'ADS — Nova peony `#CC2878`, Atlas tangerine `#DC6A30`, Iris `#8A62CC`, Echo cyan `#12AABA`, Sage lime `#42B85A` (pas de bleu, réservé à l'interactif). Chaque teinte a un lavis (fond) et une encre foncée (texte AA sur le lavis). Réseaux aux couleurs `--ref-color-<réseau>` d'ADS.
 - **Avatars illustrés** : un petit personnage SVG par agent dans sa couleur, avec un trait distinctif (Nova une bulle, Atlas un avion en papier, Iris des lunettes, Echo des ondes, Sage une feuille ; Claire un avatar humain neutre). Tailles 22 / 28 / 44 / 96.
 - **Icônes teintées** : chaque type de remontée a son icône dans une tuile aux couleurs de l'agent (message, calendrier, graphe, radar, flamme, bouclier, livre…). Les réseaux sont des pastilles à leur couleur.
 - **Illustrations** plates et chaleureuses, construites avec les tokens (marchent dans les deux thèmes) : en-tête du brief (montagne, lac, soleil selon l'heure), All clear (tente), états vides (jumelles, plateau, calendrier, lune), onboarding (une scène par étape), fiches agents (l'agent dans son décor).
 - **Typographie** : Geist, corps 14, échelle 12 · 13 · 14 · 16 · 19 · 24 · 32. Mono seulement pour les horodatages et les raccourcis, jamais pour les phrases.
 - **Formes** : rayons 10 (contrôles), 16 (cartes), 20 (panneaux). Chips et pilules entièrement arrondies. Espacements généreux (cartes en 20 px).
 - **Ce qui se clique se voit** — trois apparences seulement :
-  - **Action** : bouton principal (corail plein, une seule par zone), secondaire (blanc, bordure, ombre douce), tertiaire (sans fond, texte et icône corail, souligné au survol). Les boutons icône seule (fermer, supprimer) restent gris.
-  - **Choix** (options d'une décision, ripostes) : ligne blanche avec bordure, ombre, touche numérique et flèche à droite ; survol = bordure corail et fond rosé ; « Recommended » en texte corail avec une étoile, sans pastille.
+  - **Action** : bouton principal (orange plein, une seule par zone), secondaire (blanc, bordure `grey-20`), tertiaire (sans fond, texte et icône bleus, souligné au survol). Les boutons icône seule (fermer, supprimer) restent gris.
+  - **Choix** (options d'une décision, ripostes) : ligne blanche avec bordure, touche numérique et flèche à droite ; survol = bordure bleue et fond `electric-blue-05` ; « Recommended » en texte bleu avec une étoile, sans pastille.
   - **Information** : jamais de fond ni de bordure — texte avec icône ou séparateur « · » (sources, règles appliquées, métadonnées). Les statuts restent de petites pastilles teintées, sans bordure ni ombre, plus petites que les boutons.
-  - Contrastes vérifiés : corail principal 4,56:1 avec libellé blanc, texte d'action 5,1:1 sur crème.
+  - Texte d'action `electric-blue-150` ≥ 4,5:1 sur blanc. Le libellé blanc sur `orange-100` suit ADS (≈ 2,9:1, choix assumé du DS).
 - **Règles conservées** : pas de labels en majuscules, pas de barre d'accent latérale sur un élément actif, boutons jamais pleine largeur, une métrique est toujours nommée en texte, couleurs de statut (urgent, attention, ok) réservées au statut.
 - **Mouvement** : < 250 ms, `cubic-bezier(.23,1,.32,1)`, transform et opacity seulement ; le détail monte en cascade (30 ms), les éléments traités sont tamponnés puis glissent, les nouveaux arrivent par le haut. `prefers-reduced-motion` respecté.
 - **Responsive** : pensé pour 1280-1600 px, utilisable à 375 px (barre latérale en tiroir, liste puis détail empilés, barre du haut compacte).
