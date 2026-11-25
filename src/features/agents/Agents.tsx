@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 
 import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
-import { ago } from '../../app/time'
+import { ago, DAY } from '../../app/time'
 import { AUTONOMY_LABEL, PRESET_LABEL } from '../../data/agents'
 import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs } from '../../ui'
 import { AutonomyList, AutonomySummary, PRESET_SAYS, presetDelta, presetOf } from './autonomy'
@@ -272,7 +272,10 @@ function Escalation({ agent }: { agent: Agent }) {
 
 function Record({ agent }: { agent: Agent }) {
   const { s } = useStore()
-  const days = agent.record.series.map((_, i) => `${i % 5 === 0 ? 30 - i : ''}`)
+  const now = useNow(60_000)
+  // Dated ticks every 5 days, ending today: a bare “25” didn't say whether it was a date or days ago.
+  const n = agent.record.series.length
+  const days = agent.record.series.map((_, i) => ((n - 1 - i) % 5 === 0 ? (i === n - 1 ? 'Today' : new Date(now - (n - 1 - i) * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) : ''))
   const undos = s.log.filter(l => l.agent === agent.id && l.status === 'undone').slice(0, 5)
   return (
     <div className="stack lg">
@@ -316,7 +319,7 @@ function AgentActivity({ agent }: { agent: AgentId }) {
       <div className="card-head"><h2>Last 20 actions</h2><Link to={`/activity?agent=${agent}`} className="btn sm ghost">Full journal for this agent</Link></div>
       <ul className="rows hist">
         {!items.length && <li className="faint">No activity yet.</li>}
-        {items.map(l => <li key={l.id}><span style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined }}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
+        {items.map(l => <li key={l.id}><span className={l.status === 'undone' ? 'struck' : undefined}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
       </ul>
     </section>
   )
