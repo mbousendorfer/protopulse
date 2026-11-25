@@ -30,3 +30,7 @@
 - 25/11 · « Send the weekly report… » sans rapport demandé · planifie le rapport hebdo, qui remplace alors celui que la routine écrit le lundi · deux rapports hebdo le même lundi · éviter le doublon.
 - 25/11 · Pitch n°4 « Rapports par campagne et par label » · **Go** (tel que pitché) · Go plus simple (campagne seule) · décision de l'humain.
 - 25/11 · Campagne / label · reconnus dans la phrase avec l'état (`enrich`) : la campagne de Sage impose sa fenêtre et ses réseaux ; le label lit les posts publiés d'Atlas (`labels`, ou le nom de campagne) · un sélecteur · même parcours que le Report Studio. Aucun post d'Atlas ne porte de label aujourd'hui : la section le dit et se remplit quand ils sortent.
+- 25/11 · Pitch n°5 « Rapport community lu chez Nova » · **Later** · — · décision de l'humain.
+- 25/11 · Pitch n°6 « Social Media ROI » · **Go** (tel que pitché) · Go plus simple · décision de l'humain.
+- 25/11 · ROI · entonnoir GA4 mocké par réseau (clics d'Explore × atterrissage × conversion × panier), résultats de campagne en table GA4 et dépense de boost lue dans les boosts d'Iris · un modèle par post · les clics d'Explore sont la seule source déjà partagée ; le chiffre par euro bouge quand Sam booste un post de la campagne.
+- 25/11 · ROI → Sage · un bouton « Tell Sage » (et un CTA ⌘K) ajoute un fait Playbook pour Sage, journal + Undo · Iris le fait seule · pas d'action ni de cran prévus pour ça dans le pitch ; le fait reste une décision de Sam.

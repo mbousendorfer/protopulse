@@ -26,5 +26,5 @@ ROI) et les **Playbooks** d'Archie. Le reste vient de Sprout et Later (campagnes
 | 8 | **Thèmes de calendrier** (≈ Calendar notes) | absent | Temps forts (Repair Friday, première neige, Black Friday) proposés par Sage, visibles au calendrier d'Atlas | 2 | M | go — en cours |
 | 9 | **Revue mensuelle du 1er** | absent (annoncée `data/agents.ts:122`) | Sage livre sa revue (piliers, cadence, campagnes, propositions) ; déclenchable au modérateur | 2 | M | go — en cours |
 | 10 | **Budget** | `Page.tsx:248` budget seul | Dépensé, engagé, rythme ; boosts d'Iris imputés à la campagne | 1 | M | go — en cours |
-| 11 | **Labels de campagne** (≈ Labels) | `Post.labels` posé, sans UI | Label de campagne partagé (posts d'Atlas, conversations de Nova, rapports d'Iris) | 1 | M | go — en cours |
+| 11 | **Labels de campagne** (≈ Labels) | `Post.labels` posé, sans UI | Label de campagne partagé (posts d'Atlas, conversations de Nova, rapports d'Iris) | 1 | M | done (filtre Inbox et conversations seed : `requests/nova-from-sage-campaign-label.md`) |
 | 12 | **UTM de campagne** (≈ link tracking) | absent | Sage fixe `utm_campaign` ; Atlas l'applique ; Iris l'attribue | 1 | S | go — en cours |

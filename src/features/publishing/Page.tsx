@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, StickyNote, Upload, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
@@ -20,6 +20,7 @@ import { targetsOf } from '../strategy/slice'
 import { uid } from '../../app/core'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
+import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -104,7 +105,7 @@ function Calendar() {
   const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
 
   /** For a future day with fewer than 2 posts: the network Atlas recommends (cadence first, then the pillar behind target). */
-  const recommend = (day: number): Network | null => (view !== 'week' ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
+  const recommend = (day: number): Network | null => (view !== 'week' || isQuiet(s.publishing.notes ?? [], day) ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
   const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
@@ -152,6 +153,7 @@ function Calendar() {
               <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
+                <DayNotes day={day} past={past} />
                 {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
                 {(() => {
                   const idea = view === 'week' ? gapIdea(day) : undefined
@@ -195,6 +197,33 @@ function Calendar() {
         ) : <PostTable posts={visible} sel={sel} onOpen={open} />
       )}
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
+    </div>
+  )
+}
+
+/** Notes on a day: what's on, and whether it's a quiet day Atlas keeps empty. */
+function DayNotes({ day, past }: { day: number; past: boolean }) {
+  const { s, d } = useStore()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [quiet, setQuiet] = useState(false)
+  const notes = notesOn(s.publishing.notes ?? [], day)
+  const add = () => { d({ type: 'publishing/noteAdd', day, text, quiet }); setText(''); setQuiet(false); setOpen(false) }
+  return (
+    <div className="cal-notes">
+      {notes.map(n => (
+        <div key={n.id} className={`cal-daynote ${n.quiet ? 'quiet' : ''}`}>
+          <StickyNote size={12} aria-hidden /><span className="grow">{n.quiet ? <><b>Quiet day:</b> {n.text}. Atlas keeps it empty.</> : n.text}</span>
+          <Btn size="xs" variant="ghost" icon aria-label={`Remove the note “${n.text}”`} onClick={() => d({ type: 'publishing/noteRemove', id: n.id })}><X size={12} /></Btn>
+        </div>
+      ))}
+      {!past && (open ? (
+        <form className="cal-noteform" onSubmit={e => { e.preventDefault(); add() }}>
+          <input autoFocus className="input" aria-label="Note" placeholder="Bank holiday" value={text} onChange={e => { setText(e.target.value); setQuiet(QUIET_WORDS.test(e.target.value)) }} />
+          <label className="row tight t-xs"><input type="checkbox" className="check" checked={quiet} onChange={e => setQuiet(e.target.checked)} />Quiet day: no posts</label>
+          <span className="row tight"><Btn size="xs" variant="ghost" onClick={() => setOpen(false)}>Cancel</Btn><Btn size="xs" type="submit" disabled={!text.trim()}>Add note</Btn></span>
+        </form>
+      ) : <button className="cal-addnote" onClick={() => setOpen(true)}><Plus size={12} />Note</button>)}
     </div>
   )
 }

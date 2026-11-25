@@ -4,6 +4,7 @@ import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
 import { T } from '../../app/time'
 import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../../data/insights'
 import { applyOp, writeStudio, type StudioOp } from './studio'
+import { bestReturn } from './roi'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
@@ -23,6 +24,8 @@ declare module '../../app/types' {
     unshare?: string
     /** A schedule set up from this line: undoing it removes the schedule. */
     schedule?: string
+    /** A Playbook fact Iris gave Sage from this line: undoing it removes the fact. */
+    fact?: string
   }
 }
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
@@ -94,6 +97,7 @@ export type InsightsAction =
   | { type: 'insights/schedule'; name: string; recipe: Recipe; every: 'week' | 'month'; to: 'claire' | 'sam'; via: string }
   | { type: 'insights/schedulePause'; id: string }
   | { type: 'insights/scheduleDelete'; id: string }
+  | { type: 'insights/tellSage'; via: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
@@ -279,6 +283,12 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     }
     case 'insights/schedulePause':
       return patch(s, { schedules: s.insights.schedules.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
+    case 'insights/tellSage': {
+      const b = bestReturn(s)
+      if (!b || s.playbook.rules.some(r => r.text === b.fact)) return s
+      const next = addRule(s, { kind: 'fact', text: b.fact, agents: ['sage'], origin: 'From Iris’s ROI numbers' })
+      return pushLog(next, { agent: 'iris', text: `Told Sage: ${b.fact}`, status: 'done', reason: a.via, undoMinutes: 30, link: '/insights/roi', fact: b.fact })
+    }
     case 'insights/scheduleDelete':
       return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== a.id) })
   }
@@ -342,6 +352,7 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
+  if (entry.fact) return { ...s, playbook: { ...s.playbook, rules: s.playbook.rules.filter(r => r.text !== entry.fact) } }
   if (entry.schedule) return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== entry.schedule) })
   if (entry.unshare) {
     const { [entry.unshare]: _gone, ...shared } = s.insights.shared
