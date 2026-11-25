@@ -29,8 +29,8 @@
 
   --focus: 0 0 0 2px var(--void), 0 0 0 4px var(--signal);
 
-  /* Network previews imitate each network's own app in the mode it is mostly used in (TikTok and Shorts dark,
-     the others light), whatever Protopulse's theme. Values are the networks' own, not ADS. */
+  /* Network previews imitate each network's own app in the same mode as Protopulse (dark values under
+     [data-theme='dark']). TikTok and Shorts are video players, dark in both. Values are the networks' own, not ADS. */
   --pv-font-apple: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --pv-font-li: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Fira Sans', Ubuntu, Oxygen, Cantarell, Helvetica, Arial, sans-serif;
   --pv-font-x: TwitterChirp, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -138,6 +138,13 @@
 /* ---------- Dark: navy night from grey-150 (ADS has no dark theme; derived) ---------- */
 [data-theme='dark'] {
   color-scheme: dark;
+
+  /* Network previews switch to each network's own dark mode with the app. TikTok and Shorts are video players, dark in both. */
+  --pv-ig-bg: #000000; --pv-ig-ink: #f5f5f5; --pv-ig-muted: #a8a8a8; --pv-ig-link: #e0f1ff; --pv-ig-dot: #737373; --pv-ig-empty: #262626;
+  --pv-li-bg: #1b1f23; --pv-li-ink: rgba(255, 255, 255, 0.9); --pv-li-muted: rgba(255, 255, 255, 0.6); --pv-li-blue: #71b7fb; --pv-li-rule: #38434f; --pv-li-empty: #38434f;
+  --pv-fb-bg: #242526; --pv-fb-ink: #e4e6eb; --pv-fb-muted: #b0b3b8; --pv-fb-link: #2d88ff; --pv-fb-rule: #3e4042; --pv-fb-empty: #3a3b3c;
+  --pv-x-bg: #000000; --pv-x-ink: #e7e9ea; --pv-x-muted: #71767b; --pv-x-rule: #2f3336; --pv-x-empty: #16181c;
+  --pv-g-bg: #1f1f1f; --pv-g-ink: #e3e3e3; --pv-g-muted: #c4c7c5; --pv-g-blue: #a8c7fa; --pv-g-rule: #444746; --pv-g-empty: #2b2b2b;
 
   --void: #121a28;
   --deck: #161f2f;
