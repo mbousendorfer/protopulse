@@ -4,7 +4,7 @@ import { flagged, isLead } from '../desk/parts'
 import type { State } from '../../app/state'
 import { CONTACTS, withTeam } from '../../data/inbox'
 import { NEEDS_YOU, onResolveInbox, reduceInbox, onUndoInbox, virtualConvs, type CardConv } from './slice'
-import { matches, thenText, whenText, wordsOf, type RuleOp } from './rules'
+import { matches, thenText, whenText, wordsOf, type InboxRule, type RuleOp } from './rules'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -17,6 +17,8 @@ declare module '../../app/types' {
   interface Handoff {
     /** Nova reply cards: the conversation behind the card (kind, mood, contact), so the Inbox never has to guess. */
     conv?: CardConv
+    /** Nova proposes this Inbox rule (learned from Sam's labels); approving the card adds it. */
+    inboxRule?: Pick<InboxRule, 'words' | 'network' | 'type' | 'then'>
   }
 }
 
