@@ -47,7 +47,8 @@ export function failXPost(s: State): { s: State; card?: string } {
   const act = actionOf(next, 'atlas', 'atlas-retry')
   const id = uid('h')
   next = pushHandoff(next, {
-    id, agent: 'atlas', kind: 'alert', urgency: 'today', topic: 'Publishing failed', action: 'atlas-retry', ref: post.id,
+    // An alert, but one that needs Sam: it goes with Needs you, not Worth a look.
+    id, agent: 'atlas', kind: 'alert', group: 'need', urgency: 'today', topic: 'Publishing failed', action: 'atlas-retry', ref: post.id,
     title: `X refused the ${hhmm(t)} post`, context: `The short link ${SHORT_LINK} was flagged as a possible redirect. Atlas can retry with ${PLAIN_LINK}.`,
     why: `Publishing failures always reach you. ${act?.label ?? 'Retrying'} is set to ${act?.autonomy === 'act' ? 'Act' : act?.autonomy === 'suggest' ? 'Suggest' : 'Draft'}.`,
     confidence: 97, link: `/publishing/calendar?post=${post.id}`,

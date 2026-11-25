@@ -378,6 +378,13 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     if (d.kind === 'reject') return reduceIdeas(s, { type: 'publishing/ideaDismiss', id: idea.id, reason: d.reason ?? 'Not timely' }, true)
     return s
   }
+  if (h.topic === 'Better slot' && h.ref && h.preview?.type === 'post') {
+    const p = s.publishing.posts.find(x => x.id === h.ref)
+    if (!p || !ok) return s
+    const at = parseSlot(h.preview.slot, p.at - 86_400_000)
+    const by = d.act ? 'Atlas' : 'you'
+    return patchPost(s, p.id, note({ ...p, at, note: `Moved from ${hhmm(p.at)} to ${hhmm(at)} by ${by}. ${BEST_SLOT[p.network]?.reason ?? ''}`.trim() }, now(s), `Moved from ${day(p.at)} to ${day(at)} by ${by}`))
+  }
   if (h.topic === 'Publishing failed' && h.ref && d.kind === 'option') {
     const p = s.publishing.posts.find(x => x.id === h.ref)
     const mode = RETRY_OPTIONS[d.index]?.mode
