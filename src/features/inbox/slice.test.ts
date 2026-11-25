@@ -127,8 +127,7 @@ describe('Playbook escalations on arrival', () => {
     const h = s.handoffs.find(x => x.ref === 'ev-injury')!
     expect(h).toMatchObject({ action: 'nova-sensitive', topic: 'Safety', rules: ['Injury, safety or product recall'] })
     expect(s.log[0].text).toBe('Escalated @lucie.alpine to you · rule: Injury, safety or product recall')
-    const { virtualConvs } = await import('./slice')
-    expect(virtualConvs(s).find(c => c.handoff === h.id)).toMatchObject({ status: 'escalated', note: 'Escalated · rule “Injury, safety or product recall”' })
+    expect(s.inbox.convs.find(c => c.handoff === h.id)).toMatchObject({ status: 'escalated', note: 'Escalated · rule “Injury, safety or product recall”' })
   })
 
   it('turning the rule off lets Nova handle it like any complaint; a press rule goes to Claire', async () => {
@@ -140,5 +139,42 @@ describe('Playbook escalations on arrival', () => {
     expect(escalationFor(s, 'I’m a reporter at Outdoor Weekly, writing a piece on PFAS')).toMatchObject({ id: 'e-press', to: 'claire' })
     expect(escalationFor(s, 'Love it!', { followers: 120_000 })?.id).toBe('e-creator')
     expect(escalationFor(s, 'Where is my order?')).toBeUndefined()
+  })
+})
+
+describe('Inbox rules', () => {
+  it('on Act Nova applies the rules to what comes in, with a journal line that undoes', () => {
+    let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-refund-ask' })
+    const c = s.inbox.convs.find(x => x.author === 'Hélène Dubois')!
+    expect(c.status).toBe('auto')
+    expect(c.labels).toContain('Refund')
+    const line = s.log.find(l => l.inboxRuleUses?.id === 'ir-refund')!
+    expect(line.text).toBe('Labelled Hélène Dubois “Refund” · rule: says “refund”, “money back”, “reimburse”')
+    expect(s.inbox.rules.find(r => r.id === 'ir-refund')!.uses).toBe(15)
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(conv(s, c.id).labels).not.toContain('Refund')
+    expect(s.inbox.rules.find(r => r.id === 'ir-refund')!.uses).toBe(14)
+  })
+
+  it('on Draft Nova only suggests, and Sam applies the suggestions in one go', () => {
+    let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-rules', level: 'draft' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-refund-ask' })
+    const c = s.inbox.convs.find(x => x.author === 'Hélène Dubois')!
+    expect(c.labels).not.toContain('Refund')
+    expect(c.suggested).toContain('ir-refund')
+    s = reducer(s, { type: 'inbox/ruleApplyAll' })
+    expect(conv(s, c.id).labels).toContain('Refund')
+    expect(conv(s, c.id).suggested).toEqual([])
+  })
+
+  it('⌘K “label refund requests as Refund” parses into a rule; adding one applies it to what matches now, and Undo removes it', async () => {
+    const { parse } = await import('../../data/command')
+    expect(parse('make nova label pilling or broken strap as Product issue').intent).toMatchObject({ kind: 'inboxRule', words: ['pilling', 'broken strap'], then: { op: 'label', value: 'Product issue' } })
+    expect(parse('assign press requests to Claire').intent).toMatchObject({ kind: 'inboxRule', words: ['press'], then: { op: 'assign', value: 'claire' } })
+    let s = reducer(initialState(), { type: 'inbox/ruleAdd', rule: { words: ['pilling'], then: { op: 'label', value: 'Quality' } }, applyNow: true })
+    expect(conv(s, 'c-ana').labels).toContain('Quality')
+    const added = s.log.find(l => l.inboxRule)!
+    s = reducer(s, { type: 'core/undo', id: added.id })
+    expect(s.inbox.rules.some(r => r.id === added.inboxRule)).toBe(false)
   })
 })

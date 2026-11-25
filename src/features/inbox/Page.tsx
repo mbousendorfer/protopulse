@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
-  Paperclip, Plus, Search, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  ListChecks, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -14,6 +14,8 @@ import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
+import { RulesSheet } from './RulesSheet'
+import { thenText, whenText } from './rules'
 import './inbox.css'
 
 type View = 'needs' | 'review' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
@@ -121,7 +123,9 @@ export default function InboxPage() {
 
   const filtersOn = network !== 'all' || type !== 'all' || sentiment !== 'all' || intent || q || label
   const clear = () => { setNetwork('all'); setType('all'); setSentiment('all'); setIntent(false); setQ(''); setLabel(null) }
-  const labels = [...new Set([...LABELS, ...all.flatMap(c => c.labels ?? [])])]
+  const labels = [...new Set([...LABELS, ...s.inbox.rules.flatMap(r => (r.then.op === 'label' ? [r.then.value] : [])), ...all.flatMap(c => c.labels ?? [])])]
+  const rulesOpen = params2.get('rules') === '1'
+  const setRules = (o: boolean) => nav({ search: o ? '?rules=1' : '' })
 
   const picked = list.filter(c => sel.has(c.id))
   const run = (op: BulkOp) => { d({ type: 'inbox/bulk', ids: picked.map(c => c.id), ...op }); sel.clear() }
@@ -131,7 +135,10 @@ export default function InboxPage() {
 
   return (
     <div className="page ib-page">
-      <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you." />
+      <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you.">
+        <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
+      </PageHead>
+      <RulesSheet open={rulesOpen} onOpenChange={setRules} labels={labels} />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
@@ -372,7 +379,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
 
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
-  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setTab('conversation'); if (c.unread && !c.id.startsWith('h:')) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setTab('conversation'); if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
@@ -408,6 +415,13 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
         <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
       </div>
 
+      {(c.suggested ?? []).map(id => s.inbox.rules.find(r => r.id === id && r.on)).filter(r => !!r).map(r => (
+        <div key={r.id} className="ib-suggest" role="status">
+          <Sparkles size={14} aria-hidden /><span className="grow"><b>Nova suggests: {thenText(r.then)}</b><span className="faint"> · rule: {whenText(r)}</span></span>
+          <Btn size="xs" onClick={() => d({ type: 'inbox/ruleApply', id: c.id, rule: r.id })}>Apply</Btn>
+          <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/ruleDismiss', id: c.id, rule: r.id })}>Dismiss</Btn>
+        </div>
+      ))}
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'conversation', label: 'Conversation', count: c.messages.length },
         { value: 'contact', label: 'Contact' },
