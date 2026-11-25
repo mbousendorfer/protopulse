@@ -71,6 +71,11 @@ export type AgentModule = {
   profileTabs?: { id: string; label: string; count?: (s: State) => number; render: () => ReactNode }[]
   /** Lines of the moderator's tester log. */
   testerStats?: (ev: TesterEvent[]) => [string, number | string][]
+  /**
+   * Moderator (⇧D) › Hard to see: the behaviours a tester rarely stumbles on. Each fires one of your script events,
+   * then opens `to`, where it shows. `label` defaults to the event's label.
+   */
+  triggers?: { event: string; to: string; label?: string }[]
   /** Moderator scenarios: Desk cards kept (by id) and script events fired (by id), on top of the others' choices. */
   presets?: Partial<Record<Preset, { keep?: string[]; fire?: string[] }>>
 }

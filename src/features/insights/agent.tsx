@@ -237,5 +237,7 @@ const iris: AgentModule = {
   intents: [schedule, reportEdit, report, besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-linkedin', to: '/insights/anomalies' }],
 }
 export default iris
