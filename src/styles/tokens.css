@@ -29,11 +29,27 @@
 
   --focus: 0 0 0 2px var(--void), 0 0 0 4px var(--signal);
 
-  /* Network previews mimic each network's own dark UI: same in both themes */
-  --pv-bg: #000000; --pv-ink: #f5f5f5; --pv-muted: #a8a8a8; --pv-brand: #2b3a33; --pv-brand-ink: #e8eaed;
-  --pv-empty: #1a1a1a; --pv-empty-ink: #777777; --pv-shadow: rgba(0, 0, 0, 0.6); --pv-fade: rgba(0, 0, 0, 0.7);
-  --pv-pill: #f1f1f1; --pv-pill-ink: #0f0f0f; --pv-li: #1b1f23; --pv-fb: #242526; --pv-rule: rgba(255, 255, 255, 0.1);
-  --pv-fb-ink: #b0b3b8; --pv-x-muted: #71767b; --pv-x-rule: #2f3336;
+  /* Network previews imitate each network's own app in the same mode as Protopulse (dark values under
+     [data-theme='dark']). TikTok and Shorts are video players, dark in both. Values are the networks' own, not ADS. */
+  --pv-font-apple: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --pv-font-li: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', 'Fira Sans', Ubuntu, Oxygen, Cantarell, Helvetica, Arial, sans-serif;
+  --pv-font-x: TwitterChirp, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --pv-font-yt: Roboto, Arial, sans-serif;
+  --pv-font-g: 'Google Sans', Roboto, Arial, sans-serif;
+  --pv-brand: #2b3a33; --pv-brand-ink: #e8eaed; --pv-on-color: #ffffff;
+  --pv-shadow: rgba(0, 0, 0, 0.45); --pv-scrim: rgba(0, 0, 0, 0.6); --pv-scrim-top: rgba(0, 0, 0, 0.3);
+  --pv-ig-bg: #ffffff; --pv-ig-ink: #000000; --pv-ig-muted: #737373; --pv-ig-link: #00376b; --pv-ig-blue: #0095f6;
+  --pv-ig-dot: #a8a8a8; --pv-ig-pill: rgba(18, 18, 18, 0.7); --pv-ig-empty: #efefef;
+  --pv-tt-bg: #000000; --pv-tt-ink: #ffffff; --pv-tt-muted: rgba(255, 255, 255, 0.75); --pv-tt-red: #fe2c55; --pv-tt-cyan: #25f4ee;
+  --pv-tt-disc: #161823; --pv-tt-ring: #2c2d34; --pv-tt-track: rgba(255, 255, 255, 0.3); --pv-tt-empty: #161823;
+  --pv-li-bg: #ffffff; --pv-li-ink: rgba(0, 0, 0, 0.9); --pv-li-muted: rgba(0, 0, 0, 0.6); --pv-li-blue: #0a66c2; --pv-li-rule: #e8e8e8;
+  --pv-li-like: #378fe9; --pv-li-love: #df704d; --pv-li-idea: #f5bb5c; --pv-li-empty: #f4f2ee;
+  --pv-fb-bg: #ffffff; --pv-fb-ink: #050505; --pv-fb-muted: #65676b; --pv-fb-link: #0064d1; --pv-fb-blue: #0866ff; --pv-fb-love: #f33e58;
+  --pv-fb-rule: #ced0d4; --pv-fb-empty: #f0f2f5;
+  --pv-x-bg: #ffffff; --pv-x-ink: #0f1419; --pv-x-muted: #536471; --pv-x-blue: #1d9bf0; --pv-x-rule: #cfd9de; --pv-x-empty: #f7f9f9;
+  --pv-yt-bg: #0f0f0f; --pv-yt-ink: #f1f1f1; --pv-yt-muted: #aaaaaa; --pv-yt-red: #ff0000; --pv-yt-link: #3ea6ff; --pv-yt-btn: rgba(0, 0, 0, 0.35);
+  --pv-yt-pill: #f1f1f1; --pv-yt-pill-ink: #0f0f0f; --pv-yt-track: rgba(255, 255, 255, 0.3); --pv-yt-empty: #272727;
+  --pv-g-bg: #ffffff; --pv-g-ink: #1f1f1f; --pv-g-muted: #5f6368; --pv-g-blue: #0b57d0; --pv-g-rule: #dadce0; --pv-g-empty: #f1f3f4;
 
   --rail: 240px;
   --topbar: 56px;
@@ -122,6 +138,13 @@
 /* ---------- Dark: navy night from grey-150 (ADS has no dark theme; derived) ---------- */
 [data-theme='dark'] {
   color-scheme: dark;
+
+  /* Network previews switch to each network's own dark mode with the app. TikTok and Shorts are video players, dark in both. */
+  --pv-ig-bg: #000000; --pv-ig-ink: #f5f5f5; --pv-ig-muted: #a8a8a8; --pv-ig-link: #e0f1ff; --pv-ig-dot: #737373; --pv-ig-empty: #262626;
+  --pv-li-bg: #1b1f23; --pv-li-ink: rgba(255, 255, 255, 0.9); --pv-li-muted: rgba(255, 255, 255, 0.6); --pv-li-blue: #71b7fb; --pv-li-rule: #38434f; --pv-li-empty: #38434f;
+  --pv-fb-bg: #242526; --pv-fb-ink: #e4e6eb; --pv-fb-muted: #b0b3b8; --pv-fb-link: #2d88ff; --pv-fb-rule: #3e4042; --pv-fb-empty: #3a3b3c;
+  --pv-x-bg: #000000; --pv-x-ink: #e7e9ea; --pv-x-muted: #71767b; --pv-x-rule: #2f3336; --pv-x-empty: #16181c;
+  --pv-g-bg: #1f1f1f; --pv-g-ink: #e3e3e3; --pv-g-muted: #c4c7c5; --pv-g-blue: #a8c7fa; --pv-g-rule: #444746; --pv-g-empty: #2b2b2b;
 
   --void: #121a28;
   --deck: #161f2f;

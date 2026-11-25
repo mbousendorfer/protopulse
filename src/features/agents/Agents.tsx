@@ -71,7 +71,7 @@ export function Team() {
               <dl className="agent-stats">
                 <div><dt>Handled alone · 30 days</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
                 <div><dt>Raised to you</dt><dd className="num">{a.record.escalated}</dd></div>
-                <div><dt>Approved unchanged</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
+                <div><dt>Approved unchanged</dt><dd className="num">{a.record.handled ? `${a.record.approvedUnchanged}%` : "–"}</dd></div>
                 <div><dt>Undone by you</dt><dd className="num">{a.record.undone}</dd></div>
               </dl>
               <div className="row">
@@ -150,7 +150,7 @@ export function AgentProfile() {
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
                 <p className="preset-says">{PRESET_SAYS[preset]}</p>
-                <p className="muted mw-62ch">Pick a preset, or set each action below.</p>
+                <AutonomySummary agent={a} />
               </div>
               <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: PRESET_LABEL[p], delta: presetDelta(a, p), levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
@@ -159,7 +159,6 @@ export function AgentProfile() {
               <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. {undoPreset.delta}</UndoBar>
             )}
             <Notice scope="agents" className="mt-3" />
-            <AutonomySummary agent={a} />
             <AutonomyList key={a.id} agent={a} onChange={(x, level) => d({ type: 'core/autonomy', agent: a.id, action: x.id, level })} />
           </section>
           <Promotions agent={a} />
@@ -291,7 +290,7 @@ function Record({ agent }: { agent: Agent }) {
       <dl className="grid-4 record-kpis">
         <div className="card pad stat"><dd><b className="num">{agent.record.handled.toLocaleString('en-GB')}</b></dd><dt className="label">Handled alone · 30 days</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.escalated}</b></dd><dt className="label">Raised to you</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.approvedUnchanged}%</b></dd><dt className="label">Approved unchanged</dt></div>
+        <div className="card pad stat"><dd><b className="num">{agent.record.handled ? `${agent.record.approvedUnchanged}%` : "–"}</b></dd><dt className="label">Approved unchanged</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.undone}</b></dd><dt className="label">Undone by you</dt></div>
       </dl>
       <section className="card pad">

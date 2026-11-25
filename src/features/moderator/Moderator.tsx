@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Download, FastForward, Play, RotateCcw, Trash2, Zap } from 'lucide-react'
+import { Download, FastForward, Play, RotateCcw, Sunrise, Trash2, Zap } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { Preset } from '../../app/state'
 import { hhmm } from '../../app/time'
@@ -30,6 +30,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
     ['Sent to Claire', count('core/askClaire')],
     ['Thread messages', count('core/thread')],
     ['Pages visited', count('nav')],
+    ['Onboarding screens', new Set(ev.filter(e => e.kind === 'setup/patch' && (e.detail?.patch as { step?: string })?.step).map(e => (e.detail?.patch as { step: string }).step)).size],
     ['Seconds per Focus card', focus.length ? avg : '–'],
     ['Ideas opened', count('publishing/ideaOpen')],
     ['Ideas redirected', count('publishing/ideaRedirect')],
@@ -57,10 +58,12 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
         <section className="stack">
           <h3>Session</h3>
           <div className="row">
-            <Btn onClick={() => run(() => { d({ type: 'core/reset' }); nav('/') })}><RotateCcw size={14} />Reset demo</Btn>
-            <Btn onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); nav('/onboarding') })}><Play size={14} />Start onboarding</Btn>
+            <Btn onClick={() => run(() => { d({ type: 'core/reset' }); nav('/') })}><RotateCcw size={14} />Day 30 workspace</Btn>
+            <Btn onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); nav('/onboarding/signup') })}><Play size={14} />Start onboarding</Btn>
+            <Btn onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); d({ type: 'setup/start', defaults: true }); nav('/') })}><Sunrise size={14} />Day 1 Desk</Btn>
             <Btn onClick={() => run(() => { d({ type: 'core/skipDay' }); nav('/') })}><FastForward size={14} />Skip to tomorrow 08:00</Btn>
           </div>
+          <p className="faint t-xs">Now: {s.phase === 'day1' ? 'Day 1, the workspace a new sign-up lands in' : s.onboarded ? 'Day 30, the seeded test workspace' : `onboarding, at “${s.setup.step}”`}. Day 30 resets the demo; Start onboarding opens the sign-up; Day 1 Desk skips the sign-up with every default. All keep the tester log.</p>
         </section>
 
         <section className="stack">

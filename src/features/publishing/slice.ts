@@ -14,7 +14,8 @@ import {
 } from './ideasModel'
 
 export type PlanState = {
-  status: 'proposed' | 'approved' | 'rejected'
+  /** upcoming: a Day 1 workspace, before Atlas's first plan. */
+  status: 'upcoming' | 'proposed' | 'approved' | 'rejected'
   version: number
   items: PlanItem[]
   diff?: { added: string[]; removed: string[]; changed: string[] }

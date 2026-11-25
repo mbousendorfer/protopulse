@@ -7,13 +7,11 @@ import { ideasDue } from '../features/publishing/slice'
 
 const KEY = 'protopulse:state'
 
-const SLICES = ['inbox', 'publishing', 'insights', 'listening', 'strategy', 'playbook', 'chats'] as const
+const SLICES = ['inbox', 'publishing', 'insights', 'listening', 'strategy', 'playbook', 'chats', 'setup'] as const
 
 /** Saved state merged over a fresh one, slice by slice, so fields added since the save get their defaults. */
-function load(): State {
-  const fresh = initialState()
+export function mergeSaved(raw: string | null, fresh: State): State {
   try {
-    const raw = localStorage.getItem(KEY)
     if (raw) {
       const s = JSON.parse(raw) as State
       if (s.v === STATE_VERSION) {
@@ -22,8 +20,14 @@ function load(): State {
         return merged
       }
     }
-  } catch { /* private mode or corrupted: start fresh */ }
+  } catch { /* corrupted: start fresh */ }
   return fresh
+}
+
+function load(): State {
+  let raw: string | null = null
+  try { raw = localStorage.getItem(KEY) } catch { /* private mode: start fresh */ }
+  return mergeSaved(raw, initialState())
 }
 
 export const clearSaved = () => { try { localStorage.removeItem(KEY) } catch { /* ignore */ } }
