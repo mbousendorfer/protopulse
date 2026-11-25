@@ -8,7 +8,7 @@ import { hhmm } from '../../app/time'
 import { uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BROLL, MUSIC, PEOPLE, TRANSCRIPT, speakerName, type Source } from '../../data/video'
-import { holdReason, noRelease, unreleased } from './slice'
+import { campaignFor, holdReason, noRelease, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
@@ -449,6 +449,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
   const { s, d } = useStore()
   const open = clip.status === 'ready' || clip.status === 'snoozed'
   const held = open ? holdReason(s, clip) : undefined
+  const campaign = campaignFor(s, clip)
   const who = open ? unreleased(s, clip) : []
   const now = useNow(30000)
   const [own, setOwn] = useState('')
@@ -518,6 +519,12 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
           </div>
         )
       })}
+      <Field label="Label and campaign">
+        <ul className="ed-list">
+          <li><span>Label</span><span>{clip.pillar}</span></li>
+          <li><span>Campaign</span>{campaign ? <span>{campaign.name} (Sage) · joins {s.publishing.posts.filter(p => p.campaign === campaign.name).length} posts already planned for it</span> : <span className="muted">None running for {clip.pillar}</span>}</li>
+        </ul>
+      </Field>
       {(clip.status === 'ready' || clip.status === 'snoozed') && (
         <Field label="When Atlas will post it">
           <ul className="ed-list">{slots.map(p => <li key={p.network}><span className="row tight nowrap"><Net n={p.network} size={16} />{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, {hhmm(p.at)}</span><span className="muted t-sm">best free slot</span></li>)}</ul>
