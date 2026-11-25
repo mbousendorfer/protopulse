@@ -18,6 +18,12 @@ const STATUS: Record<CampaignStatus, { label: string; tone?: 'ok' | 'caution' | 
   brief: { label: 'Brief' }, review: { label: 'Plan to review', tone: 'caution' }, live: { label: 'Live', tone: 'ok' }, done: { label: 'Done' },
 }
 const fmtDate = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+/** “28 Nov”, “10–14 Dec”, “30 Dec – 2 Jan”. */
+const fmtRange = (a: number, b: number) => {
+  const [x, y] = [new Date(a), new Date(b)]
+  if (x.toDateString() === y.toDateString()) return fmtDate(a)
+  return x.getMonth() === y.getMonth() ? `${x.getDate()}–${fmtDate(b)}` : `${fmtDate(a)} – ${fmtDate(b)}`
+}
 const fmtGoal = (c: Campaign, v: number) => (c.goal.label.includes('€') ? `€${v.toLocaleString('en-GB')}` : v.toLocaleString('en-GB'))
 
 export default function StrategyPage() {
@@ -89,11 +95,11 @@ function Moments() {
   if (!list.length) return null
   return (
     <section className="card">
-      <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
+      <div className="card-head moments-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
       <ul className="rows">
         {list.map(m => (
           <li key={m.id} className="moment">
-            <span className="mono faint moment-date">{fmtDate(m.start)}{fmtDate(m.end) !== fmtDate(m.start) ? ` – ${fmtDate(m.end)}` : ''}</span>
+            <span className="mono faint moment-date">{fmtRange(m.start, m.end)}</span>
             <div className="moment-body">
               <b>{m.name}</b>
               <p className="muted">{m.why} <span className="faint">{m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</span></p>
@@ -471,7 +477,7 @@ function LabelCard({ c }: { c: Campaign }) {
       {st.rule
         ? <p className="faint">Nova labels every new conversation that mentions {labelWords(c).map(w => `“${w}”`).join(', ')}.</p>
         : <div className="row"><Btn size="sm" onClick={() => d({ type: 'strategy/label', id: c.id })}>Ask Nova to label conversations</Btn><span className="faint">Through an Inbox rule you can edit or undo.</span></div>}
-      <div className="row tight"><Link to="/publishing/calendar" className="btn sm ghost">Calendar</Link><Link to="/inbox" className="btn sm ghost">Inbox</Link></div>
+      <div className="row tight"><Link to="/publishing/calendar" className="btn sm ghost">Posts in the calendar</Link><Link to={`/inbox?label=${encodeURIComponent(c.name)}`} className="btn sm ghost">Conversations in the Inbox</Link></div>
     </section>
   )
 }

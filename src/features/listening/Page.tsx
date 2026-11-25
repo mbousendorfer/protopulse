@@ -12,7 +12,7 @@ import {
 } from '../../data/listening'
 import { MENTION_NET, type EventState, type MentionOp } from './slice'
 import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
-import { benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -37,7 +37,7 @@ export default function ListeningPage() {
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
       <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
         { value: 'competitors', label: 'Competitors', count: openEvents },
-        { value: 'mentions', label: 'Mentions', count: visibleMentions(s).length },
+        { value: 'mentions', label: 'Mentions', count: unseenNeeds(s).length },
         { value: 'creators', label: 'Creators', count: creatorsOf(s).filter(c => c.fit && !s.listening.creators[c.handle]).length },
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
@@ -361,6 +361,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
     ...list.map(m => [new Date(m.at).toISOString(), m.author, m.network, mood(m), m.reach, m.product ?? '', m.risk ? 'yes' : '', (s.listening.tags[m.id] ?? []).join('; '), m.text]),
   ]))
   const open = feed.find(m => m.id === openId)
+  const unseen = unseenNeeds(s, list)
 
   return (
     <div className="stack">
@@ -381,6 +382,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
         <Switch checked={risk} onChange={setRisk} label="At risk only" />
         <Switch checked={hidden} onChange={setHidden} label="Hidden" />
         <Btn size="sm" onClick={exportCSV} disabled={!list.length}><Download size={14} />Export CSV</Btn>
+        {unseen.length > 0 && <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/seen', ids: unseen.map(m => m.id) })}><Check size={14} />Mark {unseen.length} as seen</Btn>}
       </div>
       <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
         { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
@@ -396,9 +398,9 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
               const tags = s.listening.tags[m.id] ?? []
               const md = mood(m)
               return (
-                <li key={m.id} className={sel.has(m.id) ? 'ls-picked' : ''}>
+                <li key={m.id} className={`${sel.has(m.id) ? 'ls-picked' : ''} ${seenOf(s, m) ? '' : 'ls-unseen'}`}>
                   <SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />
-                  <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : setOpenId(m.id))}>
+                  <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : (setOpenId(m.id), d({ type: 'listening/seen', ids: [m.id] })))}>
                     <span className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>
                       <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
                       {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={11} />At risk</Pill>}

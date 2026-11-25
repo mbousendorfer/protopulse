@@ -243,6 +243,8 @@ test('a campaign that ends gets Sage’s recap, a Desk card and the lesson as a 
   expect(tw.status).toBe('done')
   expect(tw.actual).toHaveLength(9)
   expect(tw.recapBy).toBe('sage')
+  expect(tw.reportId).toBe('campaign-trail-week')
+  expect(s.insights.reports.some(r => r.id === 'campaign-trail-week')).toBe(true)
   expect(tw.recap![0]).toMatch(new RegExp(`^${tw.goal.current} challenge sign-ups, \\d+% of the 300 goal\\.$`))
   expect(tw.recap!.join(' ')).toMatch(/You applied 1 adjustment: Move 2 Instagram posts to TikTok/)
   expect(s.handoffs.find(h => h.topic === 'Campaign recap' && h.ref === 'trail-week')?.cta?.label).toBe('Read the recap')
