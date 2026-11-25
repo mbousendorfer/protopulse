@@ -6,10 +6,11 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  COMPETITORS, EVENTS, FERNWAY_ROW, LESSONS, MENTIONS, TOP_POSTS, TRENDS,
+  COMPETITORS, EVENTS, FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
   type CompEvent, type CompetitorId, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
-import { MENTION_NET, MENTION_TAGS, sentimentOf, type EventState, type MentionOp } from './slice'
+import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
+import { allMentions, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -35,7 +36,7 @@ export default function ListeningPage() {
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
       <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
         { value: 'competitors', label: 'Competitors', count: openEvents },
-        { value: 'mentions', label: 'Mentions', count: MENTIONS.length },
+        { value: 'mentions', label: 'Mentions', count: visibleMentions(s).length },
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
       ]} />
@@ -322,15 +323,16 @@ function Mentions() {
   const now = useNow()
   const [params] = useSearchParams()
   const [sent, setSent] = useState<'all' | Sentiment>(() => (params.get('sentiment') as Sentiment) || 'all')
-  const [product, setProduct] = useState('all')
+  const [product, setProduct] = useState(() => params.get('product') || 'all')
   const [risk, setRisk] = useState(false)
   const [hidden, setHidden] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const mood = (m: Mention) => sentimentOf(s, m)
-  const all = MENTIONS.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
+  const feed = allMentions(s)
+  const all = feed.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
   const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
   const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
-  const products = [...new Set(MENTIONS.map(m => m.product).filter(Boolean))] as string[]
+  const products = [...new Set(feed.map(m => m.product).filter(Boolean))] as string[]
   const ids = useMemo(() => list.map(m => m.id), [list.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, `${sent}-${product}-${risk}-${hidden}`)
   const run = (op: MentionOp, extra: { tag?: string; sentiment?: Sentiment } = {}, which = [...sel.selected]) => { d({ type: 'listening/mentions', ids: which, op, ...extra }); sel.clear() }
@@ -338,7 +340,7 @@ function Mentions() {
     ['Date', 'Author', 'Network', 'Sentiment', 'Reach', 'Product', 'At risk', 'Tags', 'Text'],
     ...list.map(m => [new Date(m.at).toISOString(), m.author, m.network, mood(m), m.reach, m.product ?? '', m.risk ? 'yes' : '', (s.listening.tags[m.id] ?? []).join('; '), m.text]),
   ]))
-  const open = MENTIONS.find(m => m.id === openId)
+  const open = feed.find(m => m.id === openId)
 
   return (
     <div className="stack">
