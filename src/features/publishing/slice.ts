@@ -16,6 +16,7 @@ import { withFormat } from './formats'
 import { fillQueues } from './queues'
 import { perfOf, recycleSeed } from './perf'
 import { editLabels, withLabels } from './labels'
+import { NOTES, avoidQuiet, onQuietDays, quietCardText, startOfDay, type DayNote } from './notes'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -33,11 +34,11 @@ export type PlanState = {
 export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[] }
 /** What one Desk card changed in Publishing, so its Undo restores exactly that (posts and ideas as they were, posts it added, the plan). */
 export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: PlanState }
-export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[] }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[]; notes: DayNote[] }
 const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
 export const initialPublishing = (): PublishingState => ({
   posts: structuredClone(POSTS).map(p => withLabels(p)), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
-  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [], queues: structuredClone(QUEUES),
+  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [], queues: structuredClone(QUEUES), notes: structuredClone(NOTES),
 })
 
 /** Monday 1 December, the plan's week. */
@@ -79,6 +80,8 @@ export type PublishingAction =
   | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
   | { type: 'publishing/recycle'; id: string }
   | { type: 'publishing/labels'; ids: string[]; add?: string[]; remove?: string[] }
+  | { type: 'publishing/noteAdd'; day: number; text: string; quiet: boolean }
+  | { type: 'publishing/noteRemove'; id: string }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -118,7 +121,7 @@ export function parseSlot(slot: string, base: number): number {
 function approvePlan(s: State): State {
   const included = s.publishing.plan.items.filter(i => i.included)
   const posts: Post[] = []
-  for (const i of included) posts.push(fitCap([...s.publishing.posts, ...posts], withFormat({ id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined })))
+  for (const i of included) posts.push(fitCap([...s.publishing.posts, ...posts], avoidQuiet(s.publishing.notes, withFormat({ id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined }))))
   let next = setPlan(setPosts(s, [...s.publishing.posts, ...posts]), { status: 'approved' })
   next = notify(next, 'publishing', `${posts.length} posts scheduled for the week of 1 December. Atlas takes it from here.`)
   return next
@@ -256,6 +259,25 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/fillQueue':
       return fillQueues(s, { queue: a.queue, days: a.days, from: a.from, why: 'You asked Atlas to fill the queue.' })
+    case 'publishing/noteAdd': {
+      const note: DayNote = { id: uid('note'), day: startOfDay(a.day), text: a.text.trim(), quiet: a.quiet }
+      if (!note.text) return s
+      let next: State = { ...s, publishing: { ...s.publishing, notes: [...(s.publishing.notes ?? []), note] } }
+      const hit = note.quiet ? onQuietDays(next).filter(p => startOfDay(p.at) === note.day) : []
+      if (!hit.length) return next
+      // Posts already on a quiet day: Atlas moves them (Act) or asks (Draft, Suggest).
+      const act = actionOf(next, 'atlas', 'atlas-slot')
+      const t = quietCardText(hit, note.text)
+      next = pushHandoff(next, { agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Quiet day', action: 'atlas-slot', ref: note.id, ...t,
+        why: `You marked it a quiet day. Moving posts is set to ${act?.autonomy === 'act' ? 'Act' : act?.autonomy === 'suggest' ? 'Suggest' : 'Draft'}.`, confidence: 92, link: '/publishing/calendar',
+        options: [{ label: 'Move them to the next day', recommended: true }, { label: 'Keep them' }] })
+      return act?.autonomy === 'act' ? actOn(next, next.handoffs[0], `Moved ${hit.length} post${hit.length > 1 ? 's' : ''} off ${new Date(note.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}`, `You marked it a quiet day: “${note.text}”.`) : next
+    }
+    case 'publishing/noteRemove': {
+      const card = s.handoffs.find(h => h.topic === 'Quiet day' && h.ref === a.id)
+      const next = card ? removeHandoff(s, card.id) : s
+      return { ...next, publishing: { ...next.publishing, notes: (next.publishing.notes ?? []).filter(n => n.id !== a.id) } }
+    }
     case 'publishing/labels': {
       const next = setPosts(s, s.publishing.posts.map(p => (a.ids.includes(p.id) ? editLabels(p, a.add, a.remove) : p)))
       if (a.ids.length < 2) return next
@@ -420,6 +442,12 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     if (d.kind === 'reject') return reduceIdeas(s, { type: 'publishing/ideaDismiss', id: idea.id, reason: d.reason ?? 'Not timely' }, true)
     return s
   }
+  if (h.topic === 'Quiet day') {
+    if (!(d.kind === 'option' && d.index === 0) && !ok) return s
+    const note = s.publishing.notes?.find(n => n.id === h.ref)
+    const ids = new Set(onQuietDays(s).filter(p => !note || startOfDay(p.at) === note.day).map(p => p.id))
+    return setPosts(s, s.publishing.posts.map(p => (ids.has(p.id) ? avoidQuiet(s.publishing.notes, p) : p)))
+  }
   if (h.topic === PAUSE_TOPIC) return d.kind === 'option' && d.index === 1 ? resumeAll(s, 'You resumed them from the Desk') : s
   if (h.topic === 'Better slot' && h.ref && h.preview?.type === 'post') {
     const p = s.publishing.posts.find(x => x.id === h.ref)
@@ -454,7 +482,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
     // The card's pillar and campaign follow the post. Trail stories stays the default for cards that don't say.
-    const post = fitCap(s.publishing.posts, withFormat({ id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id }))
+    const post = fitCap(s.publishing.posts, avoidQuiet(s.publishing.notes, withFormat({ id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id })))
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s

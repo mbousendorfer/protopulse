@@ -283,3 +283,25 @@ test('on Act, Sage adds the moment itself; “Not this year” can be reopened',
   s = reducer(s, { type: 'strategy/reopen', id: 'm-snow' })
   expect(s.strategy.moments.find(m => m.id === 'm-snow')!.status).toBeUndefined()
 })
+
+test('a launched campaign gets its label: on Atlas’s posts, and on Nova’s conversations through her own rule', async () => {
+  const { labelStats } = await import('./slice')
+  let s = create(initialState(), 'cmp-a', 'Launch the Summit Bottle in March, goal 500 orders.')
+  s = reducer(s, { type: 'strategy/approve', id: 'cmp-a' })
+  const c = cmp(s, 'cmp-a')
+  const rule = s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === c.name)!
+  expect(rule.words).toContain('summit bottle')
+  expect(s.inbox.labels).toContain(c.name)
+  expect(labelStats(s, c).posts).toBe(c.posts.length)
+  expect(labelStats(s, c).convs).toBeGreaterThan(0)
+  s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.sage?.novaRule)!.id })
+  expect(s.inbox.rules.some(r => r.id === rule.id)).toBe(false)
+})
+
+test('Trail Week: asking Nova to label adds her rule once', () => {
+  let s = reducer(initialState(), { type: 'strategy/label', id: 'trail-week' })
+  const n = s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === 'Trail Week').length
+  expect(n).toBe(1)
+  s = reducer(s, { type: 'strategy/label', id: 'trail-week' })
+  expect(s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === 'Trail Week')).toHaveLength(1)
+})

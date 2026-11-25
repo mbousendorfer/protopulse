@@ -15,6 +15,7 @@ import type { Network } from '../../app/types'
 import type { Recipe } from '../../data/insights'
 import { anomaliesDue, tickAnomalies } from './engine'
 import { reportsDue, schedulesDue, tickReports, tickSchedules } from './reports'
+import { bestReturn, roiByNetwork, roiTotals } from './roi'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -26,6 +27,7 @@ declare module '../../data/command' {
     report: { days: number; networks: Network[]; audience: 'claire' | 'sam'; raw: string }
     reportEdit: { raw: string }
     schedule: { every: 'week' | 'month'; to: 'claire' | 'sam'; raw: string }
+    roi: object
   }
 }
 
@@ -192,6 +194,25 @@ const compare = defineIntent({
   },
 })
 
+/** “Which network brings sales?”: the ROI tab's numbers. */
+const roi = defineIntent({
+  kind: 'roi', owner: 'iris', order: 115,
+  parse: t => (/\broi\b|revenue|\bsales\b|conversions?\b|ga4|google analytics|brings? (in )?(money|sales|orders)|website (traffic|visits|sessions)/.test(t) && !/\bboost/.test(t) ? { kind: 'roi' } : undefined),
+  bar: (_i, { s, d, go }) => {
+    const rows = roiByNetwork(30), t = roiTotals(rows), b = bestReturn(s)
+    return {
+      text: `Over 30 days, social brought ${fmt.int(t.sessions)} sessions, ${fmt.int(t.conversions)} orders and €${fmt.int(t.revenue)} to fernway.co. ${NETWORK_LABEL[rows[0].network]} brings the most (€${fmt.int(rows[0].revenue)}), ${NETWORK_LABEL[rows[1].network]} next (€${fmt.int(rows[1].revenue)}).${b ? ` ${b.fact}.` : ''}`,
+      visual: <HBars items={rows.map(r => ({ label: NETWORK_LABEL[r.network], value: r.revenue }))} format={v => `€${Math.round(v).toLocaleString('en-GB')}`} />,
+      sources: ['Google Analytics 4 · UTM source = social · 30 days'],
+      ctas: [{ label: 'Open ROI', run: () => go('/insights/roi') }, ...(b && !s.playbook.rules.some(r => r.text === b.fact) ? [{ label: 'Tell Sage', run: () => d({ type: 'insights/tellSage', via: 'You asked in the command bar' }) }] : [])],
+    }
+  },
+  chat: () => {
+    const rows = roiByNetwork(30), t = roiTotals(rows)
+    return { replies: [{ from: 'iris', text: `${NETWORK_LABEL[rows[0].network]} brings the most sales: €${fmt.int(rows[0].revenue)} over 30 days, out of €${fmt.int(t.revenue)} from social.`, card: { type: 'chart', label: 'Revenue from social by network (€)', value: `€${fmt.int(t.revenue)}`, delta: '30 days', series: rows.map(r => r.revenue), labels: rows.map(r => NETWORK_LABEL[r.network].slice(0, 2)), sources: ['GA4 · UTM source = social'] } }], effects: [] }
+  },
+})
+
 /** Last 7 days, as Explore shows them. */
 function weekLine() {
   const reach = kpi('reach'), er = kpi('er'), replies = kpi('replies'), reply = kpi('reply'), v = tiktokViews()
@@ -234,7 +255,7 @@ const iris: AgentModule = {
   onUndo: onUndoInsights,
   due: (s, t) => anomaliesDue(s) || reportsDue(s, t) || schedulesDue(s, t),
   tick: (s, t) => { const r = reportsDue(s, t) ? tickReports(s, t) : s; return tickAnomalies(schedulesDue(r, t) ? tickSchedules(r, t) : r) },
-  intents: [schedule, reportEdit, report, besttime, tiktok, compare, performance],
+  intents: [schedule, reportEdit, report, besttime, roi, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
