@@ -2,7 +2,8 @@ import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
 import { T } from '../../app/time'
-import { ANOMALIES, REPORTS, type Anomaly, type Report } from '../../data/insights'
+import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../../data/insights'
+import { applyOp, writeStudio, type StudioOp } from './studio'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
@@ -16,6 +17,8 @@ declare module '../../app/types' {
   interface LogEntry {
     /** The boost this journal line set up: undoing the line cancels it. */
     boost?: string
+    /** A report Iris wrote or edited on request: undoing the line puts back `before` (or removes the report). */
+    report?: { id: string; before?: Report }
   }
 }
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
@@ -35,7 +38,11 @@ export type InsightsState = {
   reports: Report[]
   /** The day the last morning brief was written for. */
   briefDay: string
+  /** Report recipes Sam saved, to ask for again by name. */
+  templates: Template[]
 }
+
+export type Template = { id: string; name: string; recipe: Recipe }
 
 const ALERTS: Alert[] = [
   { id: 'ia1', subject: 'views', condition: 'drops by more than', threshold: 30, unit: '% over 3 posts', to: 'desk', on: true },
@@ -57,6 +64,7 @@ export const initialInsights = (): InsightsState => ({
   spikes: [],
   reports: [],
   briefDay: dayKey(T(7, 0)),
+  templates: [],
 })
 
 export type InsightsAction =
@@ -69,10 +77,20 @@ export type InsightsAction =
   | { type: 'insights/alertSave'; alert: Alert }
   | { type: 'insights/alertToggle'; id: string }
   | { type: 'insights/alertDelete'; id: string }
+  | { type: 'insights/studio'; id: string; recipe: Recipe; via: string }
+  | { type: 'insights/studioEdit'; id: string; ops: StudioOp[]; said: string }
+  | { type: 'insights/template'; id: string; name: string }
+  | { type: 'insights/templateDelete'; id: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
 export const patchInsights = patch
+
+/** Iris writes a report Sam asked for (⌘K, Chat or Insights); Undo removes it. */
+export function writeReport(s: State, recipe: Recipe, id: string, via: string): State {
+  const r = writeStudio(s, recipe, id, now(s))
+  return pushLog(patch(s, { reports: [r, ...s.insights.reports.filter(x => x.id !== id)] }), { agent: 'iris', text: `Wrote “${r.title}”`, status: 'done', reason: via, undoMinutes: 30, link: `/insights/reports/${id}`, report: { id } })
+}
 
 /** Seeded reports and the ones Iris wrote this session, newest first. */
 export const reportList = (s: State): Report[] => [...s.insights.reports, ...REPORTS].sort((a, b) => b.writtenAt - a.writtenAt)
@@ -222,6 +240,24 @@ export function reduceInsights(s: State, a: InsightsAction): State {
       return patch(s, { alerts: s.insights.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
     case 'insights/alertDelete':
       return patch(s, { alerts: s.insights.alerts.filter(x => x.id !== a.id) })
+    case 'insights/studio':
+      return writeReport(s, a.recipe, a.id, a.via)
+    case 'insights/studioEdit': {
+      const r = s.insights.reports.find(x => x.id === a.id)
+      if (!r || !a.ops.length) return s
+      const after = a.ops.reduce((x, o) => applyOp(s, x, o), r)
+      const next = patch(s, { reports: s.insights.reports.map(x => (x.id === a.id ? after : x)) })
+      return pushLog(next, { agent: 'iris', text: `${r.title}: ${a.said}`, status: 'done', reason: 'You asked from the report', undoMinutes: 30, link: `/insights/reports/${a.id}`, report: { id: a.id, before: r } })
+    }
+    case 'insights/template': {
+      const r = s.insights.reports.find(x => x.id === a.id)
+      const name = a.name.trim()
+      if (!r?.recipe || !name) return s
+      const templates = [...s.insights.templates.filter(t => t.name.toLowerCase() !== name.toLowerCase()), { id: uid('tpl'), name, recipe: r.recipe }]
+      return pushLog(patch(s, { templates }), { agent: 'iris', text: `Saved “${name}” as a report template`, status: 'done', reason: 'Ask for it again by name in ⌘K or Chat', link: '/insights' })
+    }
+    case 'insights/templateDelete':
+      return patch(s, { templates: s.insights.templates.filter(t => t.id !== a.id) })
   }
 }
 
@@ -283,6 +319,10 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
+  if (entry.report) {
+    const { id, before } = entry.report
+    return patch(s, { reports: before ? s.insights.reports.map(x => (x.id === id ? before : x)) : s.insights.reports.filter(x => x.id !== id) })
+  }
   const cards = new Set((entry.restore ?? []).map(h => h.id))
   let next = entry.boost || cards.size ? dropBoosts(s, b => b.id !== entry.boost && !(b.card && cards.has(b.card))) : s
   if (entry.boost) {
