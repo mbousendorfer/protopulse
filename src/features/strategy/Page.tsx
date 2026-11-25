@@ -355,7 +355,7 @@ function CampaignView() {
 
       {c.recap && (
         <section className="card pad recap">
-          <div className="section-title"><Mark agent="iris" />Recap by Iris</div>
+          <div className="section-title"><Mark agent={c.recapBy ?? 'iris'} />{c.recapBy === 'sage' ? 'Recap by Sage, with Iris’s numbers' : 'Recap by Iris'}</div>
           {c.recap.map(p => <p key={p}>{p}</p>)}
           {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
         </section>

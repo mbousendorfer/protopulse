@@ -22,3 +22,6 @@ devenir `${lift}× the median reach on ${dayName} ${window}`).
 
 **En attendant.** Les heures d'Iris et d'Atlas sont déjà alignées ; seuls les jours de Facebook et YouTube et l'heure
 TikTok de `agent.tsx` diffèrent.
+
+## Fait (Atlas, PR « Atlas: contracts for Echo, Iris, Juno and Sage »)
+`BEST_SLOT` (`src/data/publishing.ts`) est calculé depuis `bestTime(net)` : heure, jour, raison « 1.8× the median reach on Thursdays, 18:00 – 20:00 ». La table de jours d'`agent.tsx` a disparu : « a TikTok post about the Ridge » propose Thu 27, 18:30.

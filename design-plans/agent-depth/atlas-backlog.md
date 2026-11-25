@@ -17,15 +17,15 @@ avec « Retry now » ; pas de statut « Approved »). Trié par valeur, les corr
 | B1 | Composer par réseau (premier commentaire, formats, specs) | `Composer.tsx` : légende commune + « Customize for X » texte seul ; `format` posé sur `Post` sans UI | Atlas pré-remplit format, premier commentaire et spec par réseau ; signale ce qui viole une spec | 3 | L | done (version simple : format + premier commentaire ; specs TikTok/YouTube : later) |
 | B2 | Approbations multi-étapes (To approve) | `toClaire` (`slice.ts:215`) met le post en `needs` ; pas de statut « To approve » au calendrier | Statut To approve visible, commentaires d'approbation, Atlas route vers Claire ce que le Playbook exige (prix, presse) | 3 | M | done |
 | B3 | Files et créneaux récurrents (Queues) | absent | Catégories (« Tips du mardi ») + créneaux ; Atlas remplit la file depuis Ideas et le recyclage | 3 | L | done (version simple : 2 files, créneaux modifiables ; création de file : later) |
-| B4 | Labels et filtres calendrier | `labels`, `campaign` posés sur `Post` sans UI ; filtre réseau seul (`Page.tsx:128`) | Labels éditables, filtres label / campagne / pilier / auteur / statut ; Atlas étiquette seul | 2 | M | à pitcher |
+| B4 | Labels et filtres calendrier | `labels`, `campaign` posés sur `Post` sans UI ; filtre réseau seul (`Page.tsx:128`) | Labels éditables, filtres label / campagne / pilier / auteur / statut ; Atlas étiquette seul | 2 | M | go |
 | B5 | Garde-fous appliqués | `agents.ts` g1 (3/réseau/jour) appliqué dans Ideas seulement ; g4 (pause pendant alerte critique) = texte | Plafond partout (composer, plan, Act) ; posts du jour « Paused » pendant une alerte critique, reprise en un clic | 3 | M | done |
-| B6 | Liens et UTM | `link` posé sur `Post` sans UI | Champ lien, UTM générés selon une convention du Playbook, lien court simulé ; clics lus chez Iris | 2 | M | à pitcher |
-| B7 | Notes et commentaires | absent | Notes de calendrier par jour, commentaires sur un post avec @Claire ; Atlas lit les notes | 2 | M | à pitcher |
+| B6 | Liens et UTM | `link` posé sur `Post` sans UI | Champ lien, UTM générés selon une convention du Playbook, lien court simulé ; clics lus chez Iris | 2 | M | go |
+| B7 | Notes et commentaires | absent | Notes de calendrier par jour, commentaires sur un post avec @Claire ; Atlas lit les notes | 2 | M | go, plus simple (notes + quiet day) |
 | B8 | Glisser-déposer horaire | `Page.tsx:104-115` : le dépôt garde l'heure ; mois : pas de dépôt | Déposer sur une heure en semaine, déplacer en vue mois ; Atlas commente | 1 | S | à pitcher |
-| B9 | Perf d'un post | aperçu (`Bulk.tsx`) : `stats` seulement | Chiffres d'Iris et lien vers Insights depuis le panneau d'aperçu | 2 | S | à pitcher |
+| B9 | Perf d'un post | aperçu (`Bulk.tsx`) : `stats` seulement | Chiffres d'Iris et lien vers Insights depuis le panneau d'aperçu | 2 | S | go |
 | B10 | Médiathèque complète (dossiers, tags, droits) | Media : filtres par tag, lecture seule | Tags éditables, recherche, alerte droits expirés ; Atlas trie et tagge à l'arrivée | 2 | M | à pitcher |
 | B11 | Fuseaux horaires | absent | Fuseau par profil, aperçu « 18:30 Paris · 17:30 London » | 1 | M | à pitcher |
 | B12 | Import CSV | absent | Import d'un CSV ; Atlas vérifie chaque ligne et propose un lot validable | 1 | M | à pitcher |
 | B13 | Multi-profils | un compte par réseau | Plusieurs comptes par réseau, groupes de profils | 1 | L | à pitcher |
 
-Demandes entrantes (`requests/atlas-from-*.md`) au 25/11 : aucune.
+Demandes entrantes (`requests/atlas-from-*.md`) : 5 traitées (Echo ×2, Iris, Juno, Sage), voir `…-done.md`.

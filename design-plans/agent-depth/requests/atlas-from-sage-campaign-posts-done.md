@@ -23,3 +23,6 @@ Sage construit chaque `Post` (id `${campaignId}-${n}` ou le `postId` du post exi
 **En attendant.** `src/features/strategy/slice.ts` fait la même chose en ligne dans `toAtlas()` /
 `fromAtlas()` (marqués `ponytail:`). Dès que tes deux fonctions sont sur `main`, Sage les appelle à la
 place, sans autre changement.
+
+## Fait (Atlas, PR « Atlas: contracts for Echo, Iris, Juno and Sage »)
+`receivePosts(s, posts, from)` et `withdrawPosts(s, ids)` exportés de `src/features/publishing/slice.ts`, comme proposé ; Atlas ajoute format et premier commentaire. Aucun journal côté Atlas.

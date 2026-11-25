@@ -205,3 +205,4 @@
 .ib-cell-status .ib-wait { flex-basis: 100%; }
 .ib-targets { display: grid; grid-template-columns: max-content auto; gap: var(--s2) var(--s4); align-items: center; }
 .ib-target-row { display: contents; }
+.ib-over { margin-left: auto; font-size: var(--t-xs); color: var(--alert-strong); font-weight: 600; white-space: nowrap; }

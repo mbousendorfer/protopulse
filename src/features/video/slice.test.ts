@@ -278,3 +278,20 @@ test('posts carry the pillar label, and Sage’s running campaign when it alread
   s = run(s, { type: 'core/undo', id: s.log[0].id })
   expect(s.publishing.posts.some(p => p.media === 'clip:clip-live-zips')).toBe(false)
 })
+
+test('language versions go out as their own posts: approved ones on Draft, all on Act; Undo takes them back', () => {
+  const id = 'clip-live-zips'
+  // Draft: French approved, German still to review.
+  let s = run(initialState(), { type: 'video/dub', id, lang: 'fr' }, { type: 'video/dub', id, lang: 'de' }, { type: 'video/approveDub', id, lang: 'fr' }, { type: 'video/send', ids: [id] })
+  const posts = s.publishing.posts.filter(p => p.media === `clip:${id}`)
+  const fr = posts.filter(p => p.labels?.includes('French'))
+  expect(fr.length).toBe(posts.length / 2)
+  expect(posts.some(p => p.labels?.includes('German'))).toBe(false)
+  expect(fr[0].text).not.toBe(posts.find(p => !p.labels?.includes('French'))!.text)
+  expect(s.log[0].text).toMatch(/French version included\. German waits for your review\./)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.some(p => p.media === `clip:${id}`)).toBe(false)
+  // Act: every language made goes.
+  const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'de' }, { type: 'video/send', ids: [id] })
+  expect(act.publishing.posts.some(p => p.media === `clip:${id}` && p.labels?.includes('German'))).toBe(true)
+})
