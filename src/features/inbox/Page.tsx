@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
-  ListChecks, MessageSquareText, Users, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  Ban, Heart, ListChecks, MessageSquareText, OctagonAlert, Trash2, Users, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -10,10 +10,10 @@ import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
-import { CountBadge, UndoBar } from '../../ui/Feedback'
+import { CountBadge, InlineConfirm, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { dur, NEEDS_YOU, needsYou, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
+import { canModerate, deleteWarning, dur, NEEDS_YOU, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { SavedSheet } from './SavedSheet'
 import { LabelsSheet } from './LabelsSheet'
@@ -44,11 +44,11 @@ const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) =>
 
 type Sort = 'newest' | 'oldest' | 'urgent' | 'intent' | 'waiting'
 const SORTS: { id: Sort; label: string }[] = [{ id: 'waiting', label: 'Waiting longest' }, { id: 'newest', label: 'Newest first' }, { id: 'oldest', label: 'Oldest first' }, { id: 'urgent', label: 'Most urgent' }, { id: 'intent', label: 'Buying intent' }]
-const URGENCY: Record<ConvStatus, number> = { escalated: 0, draft: 1, claire: 2, takeover: 3, you: 4, auto: 5, hidden: 6 }
+const URGENCY: Record<ConvStatus, number> = { escalated: 0, draft: 1, claire: 2, takeover: 3, new: 4, you: 5, auto: 6, hidden: 7 }
 
 const STATUS: Record<ConvStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
   auto: { label: 'Auto-replied', tone: 'ok' }, draft: { label: 'Draft ready', tone: 'caution' }, escalated: { label: 'Escalated', tone: 'alert' },
-  hidden: { label: 'Hidden' }, you: { label: 'You replied' }, claire: { label: 'Waiting on Claire', tone: 'signal' }, takeover: { label: 'You took over' },
+  hidden: { label: 'Hidden' }, new: { label: 'New' }, you: { label: 'You replied' }, claire: { label: 'Waiting on Claire', tone: 'signal' }, takeover: { label: 'You took over' },
 }
 const TYPE_LABEL: Record<ConvType, string> = { comment: 'Comment', dm: 'Message', mention: 'Mention', review: 'Review', ad: 'Ad comment' }
 const SENT: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
@@ -150,6 +150,9 @@ export default function InboxPage() {
 
   const picked = list.filter(c => sel.has(c.id))
   const run = (op: BulkOp) => { d({ type: 'inbox/bulk', ids: picked.map(c => c.id), ...op }); sel.clear() }
+  const mod = (op: ModOp) => { d({ type: 'inbox/moderate', ids: picked.map(c => c.id), op }); sel.clear(); setConfirmDelete(false) }
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deletable = picked.filter(canModerate).length
   const drafts = picked.filter(c => (c.status === 'draft' || c.status === 'escalated') && c.draft?.length).length
   const allHidden = picked.length > 0 && picked.every(c => c.status === 'hidden')
   const allReviewed = picked.length > 0 && picked.every(c => c.reviewed)
@@ -209,6 +212,11 @@ export default function InboxPage() {
               <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="More actions">More<ChevronDown size={12} /></Btn>} items={[
                 { heading: 'Sentiment' }, ...(Object.keys(SENT) as Sentiment[]).map(x => ({ label: `Mark ${SENT[x].toLowerCase()}`, onSelect: () => run({ op: 'sentiment', value: x }) })), 'sep',
                 { label: allHidden ? 'Unhide' : 'Hide', icon: allHidden ? <Eye size={14} /> : <EyeOff size={14} />, onSelect: () => run({ op: allHidden ? 'unhide' : 'hide' }) },
+                { heading: 'Moderate' },
+                { label: 'Like', icon: <Heart size={14} />, onSelect: () => mod('like') },
+                { label: 'Report as spam', icon: <OctagonAlert size={14} />, onSelect: () => mod('spam') },
+                { label: 'Ban the authors', icon: <Ban size={14} />, onSelect: () => mod('ban') },
+                { label: 'Delete…', icon: <Trash2 size={14} />, onSelect: () => setConfirmDelete(true) },
               ]} />
               <span className="spacer" />
               <Btn size="sm" variant="ghost" onClick={sel.clear}>Cancel</Btn>
@@ -222,6 +230,11 @@ export default function InboxPage() {
               <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
                 items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
             </div>
+          )}
+          {sel.count > 0 && confirmDelete && (
+            <div className="m-2"><InlineConfirm danger confirm={`Delete ${deletable}`} onCancel={() => setConfirmDelete(false)} onConfirm={() => mod('delete')}>
+              Deleting removes {deletable === 1 ? 'it' : `these ${deletable}`} from the networks for good. Nova keeps a copy here.{deletable < sel.count ? ` ${sel.count - deletable} reviews can’t be deleted.` : ''}
+            </InlineConfirm></div>
           )}
           {!sel.count && undo && (
             <UndoBar className="m-2" until={undo.at + 10_000} onUndo={() => d({ type: 'inbox/undo' })} onDismiss={() => d({ type: 'inbox/dismissUndo' })}>{undo.label}</UndoBar>
@@ -422,6 +435,10 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const draftPlain = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
   const one = (op: BulkOp) => d({ type: 'inbox/bulk', ids: [c.id], ...op })
+  const modOne = (op: ModOp) => d({ type: 'inbox/moderate', ids: [c.id], op })
+  const nav = useNavigate()
+  const [deleting, setDeleting] = useState(false)
+  const banned = !!s.inbox.banned?.includes(c.author)
 
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
@@ -455,6 +472,15 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
         <Menu align="start" trigger={<Btn size="sm" variant="ghost">{SENT[c.sentiment]}<ChevronDown size={12} /></Btn>}
           items={(Object.keys(SENT) as Sentiment[]).map(x => ({ label: SENT[x], onSelect: () => one({ op: 'sentiment', value: x }) }))} />
         <Btn size="sm" variant="ghost" onClick={() => one({ op: 'reviewed', value: !c.reviewed })}><CheckCheck size={14} />{c.reviewed ? 'Mark not reviewed' : 'Mark reviewed'}</Btn>
+        <Btn size="sm" variant="ghost" aria-pressed={!!c.liked} onClick={() => modOne(c.liked ? 'unlike' : 'like')}><Heart size={14} fill={c.liked ? 'currentColor' : 'none'} />{c.liked ? 'Liked' : 'Like'}</Btn>
+        <Menu align="start" trigger={<Btn size="sm" variant="ghost">Moderate<ChevronDown size={12} /></Btn>} items={[
+          ...(c.type !== 'dm' && c.type !== 'review' ? [{ label: 'Reply in private', hint: 'Nova drafts the DM', icon: <Mail size={14} />, onSelect: () => { d({ type: 'inbox/private', id: c.id }); nav(`/inbox/${c.id}-dm`) } }] : []),
+          ...(canModerate(c) ? [
+            { label: 'Report as spam', hint: 'Hides it, Nova learns', icon: <OctagonAlert size={14} />, onSelect: () => modOne('spam') },
+            { label: banned ? `Unban ${c.author}` : `Ban ${c.author}`, hint: banned ? undefined : 'Hides all, now and later', icon: <Ban size={14} />, onSelect: () => modOne(banned ? 'unban' : 'ban') },
+            ...(!c.removed ? [{ label: 'Delete…', hint: 'Can’t be undone', icon: <Trash2 size={14} />, onSelect: () => setDeleting(true) }] : []),
+          ] : [{ label: 'Reviews can’t be hidden, reported or deleted', disabled: true, onSelect: () => {} }]),
+        ]} />
         <span className="ib-sep" aria-hidden />
         {(c.labels ?? []).map(l => (
           <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={11} /></button></span>
@@ -469,6 +495,9 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
           <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/ruleDismiss', id: c.id, rule: r.id })}>Dismiss</Btn>
         </div>
       ))}
+      {deleting && (
+        <InlineConfirm danger confirm="Delete" onCancel={() => setDeleting(false)} onConfirm={() => { modOne('delete'); setDeleting(false) }}>{deleteWarning(c)}</InlineConfirm>
+      )}
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'conversation', label: 'Conversation', count: c.messages.length },
         { value: 'contact', label: 'Contact' },
