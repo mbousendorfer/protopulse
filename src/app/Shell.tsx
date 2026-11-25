@@ -142,7 +142,9 @@ export default function Shell() {
             <b>{CRUMB[seg] ?? seg}</b>
             {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
-              const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
+              const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
+                : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
+                : decodeURIComponent(x).replace(/-/g, ' ')
               return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
           </div>

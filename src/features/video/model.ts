@@ -445,6 +445,16 @@ export function applyAsk(c: Clip, t: Transcript, raw: string, avoid: { s: number
   return same('I can make it shorter, open on a moment, remove the ums or the pauses, change the captions, the format, the language or the cover.')
 }
 
+/* ---------- Language versions that go out ---------- */
+
+/** A post caption in another language: what's said in the clip, translated, cut at a sentence near 160 characters. */
+export function translatedCaption(c: Clip, t: Transcript, lang: Lang): string {
+  const sents = [...new Set(keptWords(c, t).map(w => w.sent))].map(i => t.sentences[i].tr[lang]).filter((x): x is string => !!x)
+  let out = ''
+  for (const x of sents) { if (out && (out + ' ' + x).length > 160) break; out = out ? `${out} ${x}` : x }
+  return out || c.hook
+}
+
 /* ---------- Hand-off to Atlas ---------- */
 
 export const NETWORK_FIT: Partial<Record<Network, string>> = { tiktok: 'TikTok', instagram: 'Reels', youtube: 'Shorts', linkedin: 'LinkedIn feed', facebook: 'Reels' }

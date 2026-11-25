@@ -224,6 +224,12 @@ describe('Echo · search view', () => {
   })
 })
 
+it('a share reads as counts under 10, a percentage from 10', async () => {
+  const { share } = await import('./model')
+  expect(share(2, 3)).toBe('2 of 3')
+  expect(share(5, 10)).toBe('50%')
+})
+
 describe('Echo · creators', () => {
   it('lists creators from the feed and flags the fits', async () => {
     const { creatorsOf } = await import('./model')
