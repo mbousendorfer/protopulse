@@ -2,7 +2,7 @@ import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
 import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid } from '../../app/core'
-import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, PLAN_B, POSTS, type Media, type PlanItem, type Post } from '../../data/publishing'
+import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, PLAN_B, POSTS, QUEUES, type Media, type PlanItem, type Post, type Queue } from '../../data/publishing'
 import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
 import { DEMO_START } from '../../app/time'
@@ -13,6 +13,7 @@ import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
 import { PAUSE_TOPIC, fitCap, overCap, resumeAll } from './guards'
 import { approved, sendToClaire } from './approvals'
 import { withFormat } from './formats'
+import { fillQueues } from './queues'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -30,11 +31,11 @@ export type PlanState = {
 export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[] }
 /** What one Desk card changed in Publishing, so its Undo restores exactly that (posts and ideas as they were, posts it added, the plan). */
 export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: PlanState }
-export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[] }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[] }
 const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
 export const initialPublishing = (): PublishingState => ({
   posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
-  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [],
+  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [], queues: structuredClone(QUEUES),
 })
 
 /** Monday 1 December, the plan's week. */
@@ -72,6 +73,8 @@ export type PublishingAction =
   | { type: 'publishing/retry'; id: string; mode: Retry }
   | { type: 'publishing/resume'; ids: string[] }
   | { type: 'publishing/firstComment'; id: string; text: string }
+  | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
+  | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -243,6 +246,12 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const next = patchPost(s, p.id, note({ ...p, firstComment: a.text }, now(s), `First comment ${p.firstComment ? 'changed' : 'added'}`))
       return pushLog(next, { agent: 'atlas', text: `First comment on the ${NET[p.network] ?? p.network} post for ${day(p.at)}: “${a.text}”`, status: 'done', reason: 'You asked Atlas', link: `/publishing/calendar?post=${p.id}` })
     }
+    case 'publishing/queueSlot': {
+      const queues = s.publishing.queues.map(q => (q.id !== a.queue ? q : { ...q, slots: q.slots.map((sl, i) => (i === a.index ? { weekday: a.weekday ?? sl.weekday, time: a.time ?? sl.time } : sl)) }))
+      return { ...s, publishing: { ...s.publishing, queues } }
+    }
+    case 'publishing/fillQueue':
+      return fillQueues(s, { queue: a.queue, days: a.days, from: a.from, why: 'You asked Atlas to fill the queue.' })
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
     case 'publishing/restore': {
