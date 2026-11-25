@@ -126,7 +126,7 @@ Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes act
 ## 5. Shell et navigation
 
 - **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents, Activity, Playbook ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
-- **Barre supérieure** : fil d'Ariane, **barre de commande** (« Ask or brief an agent… » · ⌘K), pilule **Running now** (« 5 on shift · 7 need you », ouvre la liste des agents avec leur activité, pause et reprise), état de Claire (« Claire · usually replies in ~1 min »), centre de notifications.
+- **Barre supérieure** : fil d'Ariane, **barre de commande** (« Ask or brief an agent… » · ⌘K), état de Claire (« Claire · usually replies in ~1 min »), centre de notifications.
 - **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/A/Y pour naviguer · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
 - **Toasts** seulement pour les urgences et pour confirmer tes propres actions (avec Undo). Le travail des agents en arrière-plan arrive en silence dans la liste et le fil Live.
 

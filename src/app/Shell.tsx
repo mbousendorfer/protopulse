@@ -139,7 +139,6 @@ export default function Shell() {
             <Search size={14} aria-hidden /><span>Ask or brief an agent…</span><Kbd>⌘K</Kbd>
           </button>
           <Btn size="sm" onClick={() => setChatOpen(true)} aria-label="Chat with your agents"><MessageCircle size={14} /><span className="hide-sm">Chat</span></Btn>
-          <RunningNow />
           <ClaireStatus />
           <ThemeToggle />
           <Notifications />
@@ -165,40 +164,6 @@ function RailLink({ to, icon, label, count, hot, end }: { to: string; icon: Reac
       <span className="hide-collapsed">{label}</span>
       {!!count && <span className={`count hide-collapsed ${hot ? 'hot' : ''}`} aria-label={`${count} need you`}>{count}</span>}
     </NavLink>
-  )
-}
-
-function RunningNow() {
-  const { s, d } = useStore()
-  const nav = useNavigate()
-  const on = s.agents.filter(a => a.status === 'on').length
-  const need = s.handoffs.filter(h => !h.lane).length
-  return (
-    <Pop trigger={
-      <button className="btn sm" aria-label={`${on} agents on shift, ${need} items need you`}>
-        <span className="dot" style={{ color: on === s.agents.length ? 'var(--ok)' : 'var(--caution)' }} aria-hidden />
-        <span className="num hide-sm">{on} on shift</span><span className="faint hide-sm">·</span><span className="num">{need} need you</span>
-      </button>
-    }>
-      <div className="stack" style={{ width: 340 }}>
-        <div className="section-title" style={{ margin: 0 }}>Running now</div>
-        {s.agents.map(a => {
-          const waiting = s.handoffs.filter(h => !h.lane && h.agent === a.id).length
-          return (
-            <div key={a.id} className="row nowrap" style={{ alignItems: 'flex-start' }}>
-              <Mark agent={a.id} state={a.status === 'on' ? 'on' : 'paused'} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div className="row tight"><b style={{ fontWeight: 600 }}>{a.name}</b><span className="faint">{a.dept}</span></div>
-                <div className="muted ellipsis" style={{ fontSize: 12 }}>{a.status === 'on' ? a.now : `Paused${a.pausedUntil ? ` until ${a.pausedUntil}` : ''}`}</div>
-                {waiting > 0 && <button className="link-btn" style={{ fontSize: 12 }} onClick={() => nav('/')}>{waiting} waiting for you</button>}
-              </div>
-              <Btn size="xs" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: a.status === 'on' ? 'paused' : 'on' })}>{a.status === 'on' ? 'Pause' : 'Resume'}</Btn>
-            </div>
-          )
-        })}
-        <Btn size="sm" variant="ghost" onClick={() => nav('/agents')} style={{ alignSelf: 'flex-start' }}>Open the team</Btn>
-      </div>
-    </Pop>
   )
 }
 
