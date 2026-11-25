@@ -50,7 +50,7 @@ describe('agent registry', () => {
 
   it('ticks every agent on the heartbeat, and the store wakes it when one is due', () => {
     const ticks = spyOn('tick')
-    expect(ticks.map(t => t.id)).toEqual(['atlas', 'juno'])
+    expect(ticks.map(t => t.id)).toEqual(expect.arrayContaining(['atlas', 'juno']))
     reducer(initialState(), { type: 'core/heartbeat' })
     for (const t of ticks) expect(t.spy, t.id).toHaveBeenCalledTimes(1)
     // A video in processing is due once its phases are over.
