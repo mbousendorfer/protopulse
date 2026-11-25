@@ -69,7 +69,10 @@ export type Clip = {
   edited?: boolean
   stats?: { views: number; er: number }
   posts?: string[]
-  handoff?: string
+  /** Snoozed until this app time. */
+  back?: number
+  /** Desk card it was sent from, so undoing that decision takes it back. */
+  sentFrom?: string
   arrivedAt: number
 }
 

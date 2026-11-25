@@ -9,6 +9,7 @@ import { Confidence, FlagText, Mark, Net, Pill } from '../../ui'
 import { Spark } from '../../ui/charts'
 import Photo from '../../ui/Photo'
 import { SocialAvatar } from '../../ui/SocialAvatar'
+import { ClipPreview } from '../video/parts'
 
 export const KIND_LABEL: Record<Kind, string> = { approval: 'Approval', decision: 'Decision', info: 'Missing info', alert: 'Alert', promotion: 'Autonomy request', news: 'Good news' }
 export const URGENCY_LABEL = { urgent: 'Urgent', today: 'Today', week: 'This week' } as const
@@ -91,6 +92,7 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
       <ul className="plan-lines">{p.lines.map(l => <li key={l}>{l}</li>)}</ul>
     </div>
   )
+  if (p.type === 'clip') return <ClipPreview id={p.clip} />
   return <div className="well preview"><div className="faint">{p.label}</div><p>{p.body}</p></div>
 }
 

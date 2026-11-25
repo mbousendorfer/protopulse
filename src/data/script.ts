@@ -15,6 +15,8 @@ export type ScriptEvent = {
   agent?: AgentId
   /** An idea arrives in Publishing › Ideas instead of a Desk card (urgent ones also reach the Desk). */
   idea?: { seeds?: string[]; origin: IdeaOrigin; agent: AgentId }
+  /** A new video on a watched channel: Juno clips it in Video (and raises a Desk card on Draft). */
+  video?: { source: string }
   handoff?: Omit<Handoff, 'id' | 'at'>
   auto?: { text: string; reason: string; link?: string }
   rule?: { text: string; agents: Handoff['agent'][] }
@@ -40,6 +42,7 @@ export const SCRIPT: ScriptEvent[] = [
       options: [{ label: 'Pause Atlas and ask Claire for a statement', recommended: true }, { label: 'Nova sends the care-instructions reply to each mention' }, { label: 'Monitor for 2 hours' }],
       preview: { type: 'metric', label: 'Negative mentions per hour', value: '41', delta: '3.4× usual', down: true, series: [3, 4, 2, 5, 3, 4, 6, 12, 27, 41] } },
   },
+  { id: 'ev-video-gr20', label: 'Juno · new YouTube upload: Storm Jacket on the GR20', agent: 'juno', video: { source: 'gr20' } },
   {
     id: 'ev-recycle', label: 'Atlas · recycle the drop-test reel',
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Recycle', action: 'atlas-recycle',
@@ -63,6 +66,13 @@ export const SCRIPT: ScriptEvent[] = [
       why: '5× the usual daily growth.', confidence: 84, link: '/insights/anomalies',
       options: [{ label: 'Ask Atlas for a follow-up post', recommended: true }, { label: 'Nice, no action' }],
       preview: { type: 'metric', label: 'New LinkedIn followers per day', value: '+420', delta: '5.2× usual', series: [72, 80, 65, 90, 77, 84, 420] } },
+  },
+  {
+    id: 'ev-video-captions', label: 'Juno · product names fixed in captions', agent: 'juno',
+    handoff: { agent: 'juno', kind: 'approval', urgency: 'week', topic: 'Captions', action: 'juno-captions',
+      title: 'Fix “Ridge 28” to “Ridge 28L” in 3 captions', context: 'The narrator says “Ridge 28L”, the speech-to-text heard “Ridge 28”.',
+      why: 'Caption fixes are set to Draft.', confidence: 93, link: '/video', sources: [{ label: 'Ridge 28L · €140', from: 'Playbook facts' }] },
+    auto: { text: 'Fixed “Ridge 28” → “Ridge 28L” in 3 captions', reason: 'Caption fixes, set to Act', link: '/video' },
   },
   {
     id: 'ev-trailkind', label: 'Echo · Trailkind viral reel',

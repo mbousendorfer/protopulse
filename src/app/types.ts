@@ -52,6 +52,7 @@ export type Preview =
   | { type: 'plan'; title: string; lines: string[] }
   | { type: 'evidence'; lines: string[] }
   | { type: 'text'; label: string; body: string }
+  | { type: 'clip'; clip: string }
 
 export type ThreadMsg = { id: string; from: 'agent' | 'you' | 'claire'; text: string; at: number; rule?: string; ruleAdded?: boolean }
 
@@ -125,13 +126,15 @@ export type LogEntry = {
   restore?: Handoff[]
   /** Idea Atlas scheduled on its own: Undo takes the posts back out and returns it to Ideas. */
   idea?: string
+  /** Clips sent to Atlas: Undo takes their posts back out and returns them to Video. */
+  clips?: string[]
 }
 
 /** A Desk card the user settled this session. */
 export type DoneItem = { id: string; title: string; text: string; at: number; ms?: number; h: Handoff }
 
 /** Where your own action's confirmation shows: the top of the list it acted on. */
-export type NoticeScope = 'desk' | 'publishing' | 'listening' | 'agents'
+export type NoticeScope = 'desk' | 'publishing' | 'listening' | 'agents' | 'video'
 /** The one confirmation of your last action. `undo` is a journal entry id; it lasts while that entry can be undone. */
 export type Notice = { scope: NoticeScope; text: string; undo?: string; link?: { to: string; label: string }; until: number }
 
