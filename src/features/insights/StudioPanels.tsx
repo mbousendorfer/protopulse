@@ -10,7 +10,7 @@ import { nextRun } from './reports'
 import type { Recipe, Report, ReportSection, SectionKind } from '../../data/insights'
 import { Btn, Mark, Menu } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
-import { DEFAULT_SECTIONS, SECTION_LABEL, parseEdits, parseRecipe } from './studio'
+import { DEFAULT_SECTIONS, SECTION_LABEL, enrich, parseEdits, parseRecipe } from './studio'
 
 /** Reports tab: one sentence, and Iris writes it. Saved templates sit underneath. */
 export function StudioAsk() {
@@ -21,7 +21,7 @@ export function StudioAsk() {
   const write = (t: string, saved?: Recipe) => {
     const id = uid('r')
     const asked = parseRecipe(t.toLowerCase()) ?? parseRecipe(`a report ${t.toLowerCase()}`) ?? { days: 7, networks: [], audience: 'sam' as const }
-    d({ type: 'insights/studio', id, recipe: saved ?? { ...asked, sections: DEFAULT_SECTIONS }, via: 'You asked from Insights' })
+    d({ type: 'insights/studio', id, recipe: saved ?? enrich(s, t, { ...asked, sections: DEFAULT_SECTIONS }), via: 'You asked from Insights' })
     setText('')
     nav(`/insights/reports/${id}`)
   }
@@ -74,7 +74,7 @@ export function StudioEdit({ r }: { r: Report }) {
     setMiss(!ops.length)
     if (ops.length) { d({ type: 'insights/studioEdit', id: r.id, ops, said: said.join(', ') }); setText('') }
   }
-  const missing = (Object.keys(SECTION_LABEL) as SectionKind[]).filter(k => !r.sections.some(x => x.kind === k))
+  const missing = (Object.keys(SECTION_LABEL) as SectionKind[]).filter(k => !r.sections.some(x => x.kind === k) && (k !== 'campaign' || r.recipe?.campaign) && (k !== 'label' || r.recipe?.label))
   const last = s.log.find(l => l.report?.id === r.id && l.status !== 'undone' && (l.undoUntil ?? 0) > now)
   return (
     <div className="stack in-studio-edit">
