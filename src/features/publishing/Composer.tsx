@@ -11,7 +11,7 @@ import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
 import { slotComment } from './slice'
 import { checkPost } from './checks'
-import { forLinkedIn, shorten } from './ideas'
+import { forLinkedIn, shorten } from './ideasModel'
 
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
 

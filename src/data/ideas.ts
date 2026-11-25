@@ -64,6 +64,10 @@ export type Idea = IdeaSeed & {
   openedAt?: number
   /** Rule Atlas proposes after the same redirect or dismissal twice. */
   proposal?: { key: string; text: string }
+  /** Your last instruction and Atlas's answer, shown in the panel. */
+  said?: { you: string; atlas: string }
+  /** Added to next week's plan instead of the calendar. */
+  inPlan?: boolean
 }
 
 /* ---------- Sources, read from the data so the numbers match the other screens ---------- */
@@ -86,7 +90,7 @@ export const srcAnomaly = (id: string): IdeaSource => {
 }
 export const srcTrend = (id: string): IdeaSource => {
   const t = trend(id)
-  return { type: 'listening', agent: 'echo', label: `“${t.name}” trend`, proof: `${t.growth}, ${t.fit.toLowerCase()} fit`, link: '/listening/trends' }
+  return { type: 'listening', agent: 'echo', label: `“${t.name.replace(/[“”]/g, '')}” trend`, proof: `${t.growth}, ${t.fit.toLowerCase()} fit`, link: '/listening/trends' }
 }
 export const srcLesson = (id: string, label: string): IdeaSource =>
   ({ type: 'listening', agent: 'echo', label, proof: lesson(id).evidence, link: '/listening/competitors/benchmark' })

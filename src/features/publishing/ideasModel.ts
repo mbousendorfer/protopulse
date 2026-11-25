@@ -1,4 +1,4 @@
-// Atlas's ideas: pure functions, no state. The reducer in slice.ts calls them; ideas.test.ts covers them.
+// Atlas's ideas: pure functions, no state. The reducer in slice.ts calls them; ideasModel.test.ts covers them.
 import type { Autonomy, Network, PlaybookRule } from '../../app/types'
 import { DAY, MIN, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -22,6 +22,8 @@ const offsetOf = (dayStart: number) => Math.round((dayStart - DAY0) / DAY)
 export const shorten = (t: string) => { const first = t.split(/(?<=[.!?])\s/)[0]; return first.length > 100 ? first.slice(0, 97).replace(/\s\S*$/, '') + '…' : first }
 export const forLinkedIn = (t: string) => `${t.replace(EMOJI, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim()}\n\nAt Fernway we build gear to last, and we repair what breaks. What would you add?`
 const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean)
+/** Closes a sentence that has no final punctuation ("Photo: @camille.outdoors"), so the next one doesn't run into it. */
+const stop = (t: string) => (/[.!?…:]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
 /** Text without its trailing emojis, and those emojis. */
 const tail = (t: string) => { const m = t.match(/(\s*(?:\p{Extended_Pictographic}️?\s*)+)$/u); return m ? { body: t.slice(0, -m[1].length), end: ' ' + m[1].trim() } : { body: t, end: '' } }
 const COMPETITORS = /\b(peakline|norrø|norro|trailkind|basecamp)\b/i
@@ -68,11 +70,11 @@ export function gapSeed(gap: { day: number; network: Network }, posts: Post[]): 
     : []
   return {
     key: `gap-${offsetOf(gap.day)}-${gap.network}`, kind: 'post', topic: copy.text.split(' ').slice(0, 3).join(' '),
-    title: `${long} is ${count ? 'almost ' : ''}empty: “${shorten(copy.text).replace(/\.$/, '')}”`,
+    title: `For ${long}: ${shorten(copy.text).replace(/\.$/, '')}`,
     why: `${long} has ${count === 0 ? 'nothing planned' : `${count} post`}${pillarSource.length ? `, and ${behind.pillar} is your pillar furthest below target` : ` and ${NETWORK_LABEL[gap.network]} is behind its weekly rhythm`}.`,
     sources: [{ type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing' }, ...pillarSource],
     confidence: 84, pillar: copy.pillar, networks: [gap.network], action: 'atlas-fill', copy: { [gap.network]: copy.text }, media: copy.media, day: offsetOf(gap.day),
-    expires: { at: gap.day + DAY, reason: `${label} has passed` },
+    expires: { at: gap.day + DAY - MIN, reason: `${label} has passed` },
   }
 }
 
@@ -204,11 +206,11 @@ function rewrite(idea: Idea, d: IdeaDraft, angle: Angle): { text: string; note: 
         : /ridge|bag|pack/.test(all) ? 'And if it ever tears, your first repair is free: 1,200 bags fixed in 2026.' : 'Built to last, and we repair what breaks.'
       const note = jacket ? 'Added the care tip from Sunday’s re-proofing post. I didn’t promise a free repair: the repair programme covers bags, not jackets.'
         : add.includes('1,200') ? 'Added the repair promise. 1,200 bags fixed comes from the Playbook facts.' : 'Added the repair line from the Playbook.'
-      return { text: `${kept.join(' ')} ${add}${end}`.trim(), note: CTA.test(s.at(-1) ?? '') ? `${note} I dropped “${s.at(-1)}”: one call to action per post.` : note }
+      return { text: `${stop(kept.join(' '))} ${add}${end}`.trim(), note: CTA.test(s.at(-1) ?? '') ? `${note} I dropped “${s.at(-1)}”: one call to action per post.` : note }
     }
     case 'carousel': {
       if (d.format?.startsWith('Carousel') || !['instagram', 'linkedin', 'facebook'].includes(d.network)) return null
-      return { text: /swipe/i.test(d.text) ? d.text : `${body} Swipe for all 5.${end}`, note: 'Turned it into a 5-slide carousel: the caption sets up the slides.' }
+      return { text: /swipe/i.test(d.text) ? d.text : `${stop(body)} Swipe for all 5.${end}`, note: 'Turned it into a 5-slide carousel: the caption sets up the slides.' }
     }
     case 'linkedin':
       return null
@@ -227,7 +229,7 @@ export function applyAngle(idea: Idea, angle: Angle, ctx: Ctx, by: 'you' | 'atla
     return { idea: withVersion({ ...idea, networks: [...idea.networks, 'linkedin'] }, [...drafts, li], { mode: 'angle', label, note, by }, ctx.now), note, changed: true }
   }
   if (angle === 'carousel' && !drafts.some(d => ['instagram', 'linkedin', 'facebook'].includes(d.network))) {
-    const ig: IdeaDraft = { network: 'instagram', text: `${tail(drafts[0]?.text ?? idea.title).body} Swipe for all 5.`, media: idea.media, at: pickSlot('instagram', idea.day, ctx.posts, ctx.now), format: 'Carousel · 5 slides' }
+    const ig: IdeaDraft = { network: 'instagram', text: `${stop(tail(drafts[0]?.text ?? idea.title).body)} Swipe for all 5.`, media: idea.media, at: pickSlot('instagram', idea.day, ctx.posts, ctx.now), format: 'Carousel · 5 slides' }
     const note = 'Added an Instagram carousel, 5 slides, from the same story.'
     return { idea: withVersion({ ...idea, networks: [...idea.networks, 'instagram'] }, [...drafts, ig], { mode: 'angle', label, note, by }, ctx.now), note, changed: true }
   }
@@ -270,17 +272,17 @@ export function applyInstruction(idea: Idea, input: string, ctx: Ctx): { idea: I
   const text = drafts.map(d => d.text).join(' ').toLowerCase()
   if (/code|promo|discount|% off/.test(t)) {
     if (!/trail week|#fernwaytrailweek/.test(text) && idea.pillar !== 'Trail stories') return no('I can’t invent a promo code. The only live one is TRAIL10, for bags during Trail Week, and this post isn’t about Trail Week.')
-    drafts = drafts.map(d => ({ ...d, text: `${tail(d.text).body} 10% off bags with TRAIL10, 1 to 7 December.${tail(d.text).end}` }))
+    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} 10% off bags with TRAIL10, 1 to 7 December.${tail(d.text).end}` }))
     did.push('added the Trail Week code, TRAIL10')
   }
   if (/price|€|cost|how much/.test(t)) {
     const p = PRICES.find(x => text.includes(x.name.toLowerCase()))
     if (!p) return no('I can’t add a price: this post isn’t about one product.')
-    drafts = drafts.map(d => ({ ...d, text: `${tail(d.text).body} The ${p.name} is ${d.network === 'linkedin' ? `${p.price} €` : `€${p.price}`}.${tail(d.text).end}` }))
+    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} The ${p.name} is ${d.network === 'linkedin' ? `${p.price} €` : `€${p.price}`}.${tail(d.text).end}` }))
     did.push(`added the ${p.name} price from the catalog`)
   }
   if (/pfc|pfas/.test(t)) {
-    drafts = drafts.map(d => ({ ...d, text: `${tail(d.text).body} PFAS-free since 2024.${tail(d.text).end}` }))
+    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} PFAS-free since 2024.${tail(d.text).end}` }))
     did.push('added “PFAS-free since 2024”, from the Playbook facts')
   }
   const day = WEEKDAYS.findIndex(w => t.includes(w))
@@ -324,7 +326,7 @@ export function variantsOf(idea: Idea, network: Network): Variant[] {
   return [
     { key: 'A', label: 'Question hook', hook: h.question, body: `${s.join(' ')}${end}` },
     { key: 'B', label: 'Number first', hook: h.number, body: `${rest}${end}` },
-    { key: 'C', label: 'Story', hook: h.story, body: `${s.slice(-1)[0] ?? ''}${end}`.trim() },
+    { key: 'C', label: 'Story', hook: h.story, body: `${s.slice(Math.floor(s.length / 2)).join(' ')}${end}`.trim() },
   ]
 }
 export const variantText = (v: Variant) => `${v.hook} ${v.body}`.trim()
@@ -373,11 +375,22 @@ export function wakeIdeas(ideas: Idea[], now: number): Idea[] {
   return ideas.map(i => (i.status === 'snoozed' && (i.snoozedUntil ?? Infinity) <= now ? { ...i, status: i.drafts ? 'ready' : 'new', snoozedUntil: undefined } : i))
 }
 
-/** Never more than 8 open: the strongest newcomers fill the free places, the rest are held back. */
-export function capIdeas(ideas: Idea[], incoming: Idea[]): { accepted: Idea[]; held: Idea[] } {
-  const free = Math.max(0, MAX_OPEN - ideas.filter(isOpen).length)
-  const ranked = [...incoming].sort((a, b) => b.confidence - a.confidence)
-  return { accepted: ranked.slice(0, free), held: ranked.slice(free) }
+/**
+ * Never more than 8 open. Newcomers fill the free places, strongest first. When full, a newcomer that is urgent or more
+ * confident than the weakest undrafted idea takes its place (Atlas retires that one); the rest are held back.
+ */
+export function capIdeas(ideas: Idea[], incoming: Idea[]): { accepted: Idea[]; held: Idea[]; retired: Idea[] } {
+  const open = ideas.filter(isOpen)
+  let free = Math.max(0, MAX_OPEN - open.length)
+  // A series and an idea also on the Desk are never retired to make room.
+  const weak = open.filter(i => i.status === 'new' && i.kind === 'post' && !i.handoff).sort((a, b) => a.confidence - b.confidence)
+  const accepted: Idea[] = [], held: Idea[] = [], retired: Idea[] = []
+  for (const inc of [...incoming].sort((a, b) => Number(b.origin === 'urgent') - Number(a.origin === 'urgent') || b.confidence - a.confidence)) {
+    if (free > 0) { accepted.push(inc); free--; continue }
+    if (weak[0] && (inc.origin === 'urgent' || inc.confidence > weak[0].confidence)) { retired.push(weak.shift()!); accepted.push(inc) }
+    else held.push(inc)
+  }
+  return { accepted, held, retired }
 }
 
 /** Atlas's one-line summary at the top of Ideas. */

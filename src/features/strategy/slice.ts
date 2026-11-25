@@ -27,17 +27,17 @@ const updateCampaign = (s: State, id: string, f: (c: Campaign) => Campaign): Sta
   patch(s, { campaigns: s.strategy.campaigns.map(c => (c.id === id ? f(c) : c)) })
 
 /** Sage turns a brief into a plan to review, and puts a card on the Desk. Used by Listening's “Brief Sage”. */
-export function briefSage(s: State, brief: string, source: string): State {
+export function briefSage(s: State, brief: string, source: string, from: AgentId = 'echo'): State {
   const id = uid('cmp')
   const c = generatePlan(id, brief, now(s), { source })
   let next = patch(s, { campaigns: [c, ...s.strategy.campaigns] })
   next = pushHandoff(next, {
-    agent: 'sage', kind: 'approval', urgency: 'week', topic: 'Campaign plan', action: 'sage-plan', chain: ['echo', 'sage'], ref: id,
+    agent: 'sage', kind: 'approval', urgency: 'week', topic: 'Campaign plan', action: 'sage-plan', chain: [from, 'sage'], ref: id,
     title: `Campaign plan ready: ${c.name}`, context: `${c.posts.length} posts in 3 phases, goal ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}. Brief: “${brief}”`,
     why: 'Campaign plans are set to Draft.', confidence: 72, link: `/strategy/campaigns/${id}`,
     preview: { type: 'plan', title: c.name, lines: [`Goal: ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, `${c.posts.length} posts · boost budget €${c.budget}`, `Starts ${dayLabel(c.start, now(s))}`] },
   })
-  return pushLog(next, { agent: 'sage', text: `Built a campaign plan from Echo’s brief: ${c.name}`, status: 'done', reason: source, link: `/strategy/campaigns/${id}` })
+  return pushLog(next, { agent: 'sage', text: `Built a campaign plan from ${from[0].toUpperCase() + from.slice(1)}’s brief: ${c.name}`, status: 'done', reason: source, link: `/strategy/campaigns/${id}` })
 }
 
 function approveCampaign(s: State, id: string): State {

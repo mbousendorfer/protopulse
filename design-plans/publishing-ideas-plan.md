@@ -2,7 +2,7 @@
 
 Brief: `design-plans/publishing-ideas.md`. Short plan, written after reading the code.
 
-## Model — `src/features/publishing/ideas.ts` (pure) + `src/data/ideas.ts` (seeds)
+## Model — `src/features/publishing/ideasModel.ts` (pure; `Ideas.tsx` is the screen) + `src/data/ideas.ts` (seeds)
 
 `PublishingState` gets `ideas: Idea[]` and `learned: Record<string, number>` (how many times each redirect chip or
 dismiss reason was used, for the rule proposal).
@@ -21,7 +21,7 @@ type Idea = {
 }
 ```
 
-Pure functions, each tested in `ideas.test.ts`:
+Pure functions, each tested in `ideasModel.test.ts`:
 
 | Function | Does |
 |---|---|
@@ -72,3 +72,30 @@ Heartbeat expires and un-snoozes ideas. Autonomy: arrival is always Suggest; dra
 ## Out of scope, unchanged
 
 The existing `ev-fill` Desk card and the Composer UI (only its check function moves).
+
+## Définition de fini — état
+
+- [x] Au chargement : 7 idées couvrant les quatre sources (analytics, listening, brand, calendar), 2 prêtes, 1 série,
+  1 qui expire bientôt (#GR20, 09:30) ; chaque source a son chiffre et son lien (test `demo load`).
+- [x] Les quatre modes de réorientation produisent une version visible avec ce qui a changé (diff surligné, note d'Atlas,
+  historique avec retour arrière). Vérifié dans le navigateur et par les tests.
+- [x] Deux réorientations identiques → règle Playbook proposée sur la carte ; acceptée, l'idée suivante l'applique
+  (« Following your rule… »). Vérifié avec Repair angle puis l'arrivée des « 5 knots ».
+- [x] Une idée acceptée devient un post programmé (média avec droits, ou statut Needs you + brief visuel), avec créneau ;
+  Undo 10 s la remet dans Ideas. Sur Act, l'Undo du journal fait de même.
+- [x] Une série part chez Sage (`briefSage`, chaîne Atlas → Sage) et revient comme campagne dans Strategy, liée depuis l'idée.
+- [x] Pendant le scénario : flux (`ev-idea-signal`), Desk urgent (`ev-idea-urgent`, synchronisé dans les deux sens),
+  trou du calendrier (`ev-idea-gap`, visible dans la case), lot du jeudi (`ev-idea-weekly`) ; les quatre dans ⇧D.
+- [x] 1440 et 375 px, clair et sombre vérifiés dans le navigateur (pas de débordement horizontal) ; vrais liens et boutons,
+  menus Radix au clavier, tokens du thème.
+- [x] `npx tsc -b`, `npx vitest run` (47 tests), `npm run build` verts.
+- [ ] Pas d'audit AA automatisé lancé : contrastes hérités des tokens existants, non mesurés un à un.
+
+Ouvert, volontairement :
+- `/publishing` ouvre toujours le Calendar : Ideas est le premier onglet mais pas la page d'arrivée. Changer l'arrivée
+  touche la navigation (liens existants vers le calendrier) : à valider avant.
+- La carte urgente arrive sur le Desk dans le lot « N posts to approve » d'Atlas (regroupement existant du Desk), pas
+  seule. La sortir du lot est un changement de motif du Desk : à valider avant.
+- Annuler la programmation d'une idée urgente la remet dans Ideas mais ne recrée pas sa carte Desk.
+- Bug existant, hors périmètre : la démo dit « mardi 25 novembre 2026 », qui est un mercredi. Les jours écrits à la
+  main dans les données (« Thu 27 ») ne collent pas au calendrier. Le code des idées calcule la semaine comme le calendrier.

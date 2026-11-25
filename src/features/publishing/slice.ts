@@ -1,8 +1,17 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
-import { now, pushHandoff, notify, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
+import { actionOf, addRule, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, POSTS, type PlanItem, type Post } from '../../data/publishing'
+import { AGENTS, agentName } from '../../data/agents'
+import { RULES } from '../../data/playbook'
+import { DEMO_START } from '../../app/time'
+import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
+import { briefSage } from '../strategy/slice'
+import {
+  LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
+  isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
+} from './ideasModel'
 
 export type PlanState = {
   status: 'proposed' | 'approved' | 'rejected'
@@ -12,9 +21,13 @@ export type PlanState = {
   request?: string
 }
 /** Last bulk change, kept 10 s so it can be undone in one click. */
-export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number }
-export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo }
-export const initialPublishing = (): PublishingState => ({ posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) } })
+export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[] }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number> }
+const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
+export const initialPublishing = (): PublishingState => ({
+  posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
+  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {},
+})
 
 /** Monday 1 December, the plan's week. */
 export const PLAN_MONDAY = T(0, 0, 6)
@@ -33,6 +46,20 @@ export type PublishingAction =
   | { type: 'publishing/addToPlan'; post: Post }
   | { type: 'publishing/bulk'; ids: string[]; op: BulkOp; shiftDays?: number; at?: number; network?: Network }
   | { type: 'publishing/restore' }
+  | { type: 'publishing/ideaOpen'; id: string }
+  | { type: 'publishing/ideaDraft'; id: string }
+  | { type: 'publishing/ideaRedirect'; id: string; mode: 'angle'; angle: Angle }
+  | { type: 'publishing/ideaRedirect'; id: string; mode: 'free'; text: string }
+  | { type: 'publishing/ideaRedirect'; id: string; mode: 'variant' | 'edit'; network: Network; text: string; label: string }
+  | { type: 'publishing/ideaRestoreVersion'; id: string; n: number }
+  | { type: 'publishing/ideaSlot'; id: string; network: Network; at: number }
+  | { type: 'publishing/ideaSchedule'; ids: string[] }
+  | { type: 'publishing/ideaSnooze'; ids: string[] }
+  | { type: 'publishing/ideaDismiss'; id: string; reason: string }
+  | { type: 'publishing/ideaReopen'; id: string }
+  | { type: 'publishing/ideaRule'; id: string; accept: boolean }
+  | { type: 'publishing/ideaToPlan'; id: string }
+  | { type: 'publishing/ideaToSage'; id: string }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -142,24 +169,10 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       return pushLog(next, { agent: 'atlas', text: `Plan v${v} ready after your note: “${a.text}”`, status: 'done', link: '/publishing/plan' })
     }
     case 'publishing/askFill': {
-      const at = T(...(BEST_SLOT[a.network].time.split(':').map(Number) as [number, number]), 0) + (a.day) * DAY
-      const date = new Date(at)
-      const slot = `${date.toLocaleDateString('en-GB', { weekday: 'short' })} ${date.getDate()}, ${BEST_SLOT[a.network].time}`
-      const ideas: Record<string, string> = {
-        instagram: 'Carousel: 4 ways to layer the Ember Fleece under the Storm Jacket.',
-        tiktok: 'POV: you forgot the rain cover is in the bottom pocket.',
-        linkedin: 'How we test a bag before it reaches you: 40 hours, 3 climates.',
-        facebook: 'Show us your oldest Fernway bag. The most worn one gets a free repair kit.',
-        youtube: 'Short: how to pack a sleeping bag in 15 seconds.',
-        x: 'Rain tomorrow in the Alps. Good day to test a jacket.',
-      }
-      const next = pushHandoff(s, {
-        agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Empty slot', action: 'atlas-fill', link: '/publishing',
-        title: `Fill ${slot} on ${a.network === 'x' ? 'X' : a.network[0].toUpperCase() + a.network.slice(1)}`, context: 'You asked Atlas to fill a recommended empty slot from the calendar.',
-        why: 'Filling empty slots is set to Draft.', confidence: 78,
-        preview: { type: 'post', network: a.network, slot, text: [ideas[a.network]], media: a.network === 'linkedin' ? 'workshop' : a.network === 'facebook' ? 'pack' : 'fleece' },
-      })
-      return notify(next, 'publishing', 'Atlas drafted a post for that slot.', { link: { to: '/', label: 'Review on Desk' } })
+      const day = T(0, 0, a.day)
+      const next = arriveIdeas(s, [gapSeed({ day, network: a.network }, s.publishing.posts)], 'gap', 'atlas')
+      const idea = next.publishing.ideas.find(i => i.key === `gap-${a.day}-${a.network}`)
+      return idea ? notify(next, 'publishing', `Atlas wrote an idea for ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}.`, { link: { to: `/publishing/ideas/${idea.id}`, label: 'Review the idea' } }) : next
     }
     case 'publishing/claire':
       return notify(toClaire(s, a.post).s, 'publishing', 'Asked Claire. The post stays on hold until she answers.')
@@ -179,10 +192,14 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/bulk':
       return bulk(s, a)
+    case 'publishing/ideaOpen': case 'publishing/ideaDraft': case 'publishing/ideaRedirect': case 'publishing/ideaRestoreVersion': case 'publishing/ideaSlot':
+    case 'publishing/ideaSchedule': case 'publishing/ideaSnooze': case 'publishing/ideaDismiss': case 'publishing/ideaReopen':
+    case 'publishing/ideaRule': case 'publishing/ideaToPlan': case 'publishing/ideaToSage':
+      return reduceIdeas(s, a)
     case 'publishing/restore': {
       const u = s.publishing.undo
       if (!u) return s
-      const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, undo: undefined } }
+      const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, ideas: u.ideas ?? s.publishing.ideas, undo: undefined } }
       return pushLog(next, { agent: 'atlas', text: `Undone: ${u.label}`, status: 'undone', link: '/publishing' })
     }
   }
@@ -266,6 +283,13 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
     return setPosts(s, s.publishing.posts.map(p => (moved.includes(p) ? { ...p, network: 'tiktok', note: 'Moved from Instagram by Sage.' } : p)))
   }
 
+  if (h.topic === 'Idea' && h.ref) {
+    const idea = s.publishing.ideas.find(i => i.id === h.ref)
+    if (!idea || !isOpen(idea)) return s
+    if (ok) return reduceIdeas(s, { type: 'publishing/ideaSchedule', ids: [idea.id] }, true)
+    if (d.kind === 'reject') return reduceIdeas(s, { type: 'publishing/ideaDismiss', id: idea.id, reason: d.reason ?? 'Not timely' }, true)
+    return s
+  }
   const linked = s.publishing.posts.find(p => p.handoff === h.id || p.id === h.ref)
   const preview = h.preview?.type === 'post' ? h.preview : undefined
   if (linked) {
@@ -286,4 +310,199 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s
+}
+
+/* ---------- Ideas ---------- */
+
+type IdeaAct = Extract<PublishingAction, { type: 'publishing/ideaOpen' | 'publishing/ideaDraft' | 'publishing/ideaRedirect' | 'publishing/ideaRestoreVersion' | 'publishing/ideaSlot' | 'publishing/ideaSchedule' | 'publishing/ideaSnooze' | 'publishing/ideaDismiss' | 'publishing/ideaReopen' | 'publishing/ideaRule' | 'publishing/ideaToPlan' | 'publishing/ideaToSage' }>
+const setIdeas = (s: State, ideas: Idea[]): State => ({ ...s, publishing: { ...s.publishing, ideas } })
+const patchIdea = (s: State, id: string, f: (i: Idea) => Idea): State => setIdeas(s, s.publishing.ideas.map(i => (i.id === id ? f(i) : i)))
+const ctxOf = (s: State) => ({ now: now(s), posts: s.publishing.posts, rules: s.playbook.rules })
+/** An idea settled in Ideas leaves the Desk too. */
+const dropCard = (s: State, i: Idea) => (i.handoff && s.handoffs.some(h => h.id === i.handoff) ? removeHandoff(s, i.handoff) : s)
+const decided = (s: State, i: Idea, outcome: string, reason?: string) =>
+  track(s, 'ideas/decision', { idea: i.key, origin: i.origin, outcome, reason, ms: now(s) - (i.openedAt ?? i.at) })
+const tomorrow8 = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1, 8, 0).getTime() }
+const slotLabel = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(t)}`
+
+export function reduceIdeas(s: State, a: IdeaAct, fromDesk = false): State {
+  const t = now(s)
+  const idea = 'id' in a ? s.publishing.ideas.find(i => i.id === a.id) : undefined
+  const reason = fromDesk ? 'Your call from the Desk' : 'Your call from Ideas'
+  switch (a.type) {
+    case 'publishing/ideaOpen':
+      return idea && !idea.openedAt ? patchIdea(s, a.id, i => ({ ...i, openedAt: t })) : s
+    case 'publishing/ideaDraft': {
+      if (!idea || idea.drafts || idea.kind === 'series') return s
+      return pushLog(patchIdea(s, a.id, i => draftIdea(i, ctxOf(s))), { agent: 'atlas', text: `Drafted “${idea.title}”`, status: 'done', reason, link: `/publishing/ideas/${idea.id}` })
+    }
+    case 'publishing/ideaRedirect': {
+      if (!idea) return s
+      const ctx = ctxOf(s)
+      const base = idea.drafts || idea.kind === 'series' ? idea : draftIdea(idea, ctx)
+      if (a.mode === 'angle') {
+        const r = applyAngle(base, a.angle, ctx)
+        const l = r.changed ? learn(s.publishing.learned, `angle:${a.angle}`, s.playbook.rules) : { learned: s.publishing.learned, proposal: undefined }
+        const label = r.idea.versions.at(-1)?.label ?? a.angle
+        const next = patchIdea(s, a.id, () => ({ ...r.idea, said: { you: r.changed ? label : a.angle, atlas: r.note }, proposal: l.proposal ?? r.idea.proposal }))
+        return { ...next, publishing: { ...next.publishing, learned: l.learned } }
+      }
+      if (a.mode === 'free') {
+        const r = applyInstruction(base, a.text, ctx)
+        return patchIdea(s, a.id, () => ({ ...r.idea, said: { you: a.text, atlas: r.reply } }))
+      }
+      return patchIdea(s, a.id, () => ({ ...setDraftText(base, a.network, a.text, { mode: a.mode, label: a.label }, t), said: undefined }))
+    }
+    case 'publishing/ideaRestoreVersion': {
+      const v = idea?.versions.find(x => x.n === a.n)
+      if (!idea || !v) return s
+      return patchIdea(s, a.id, i => ({ ...withVersionOf(i, v.drafts, `Back to version ${a.n}`, t), said: undefined }))
+    }
+    case 'publishing/ideaSlot':
+      return idea ? patchIdea(s, a.id, i => ({ ...i, drafts: i.drafts?.map(d => (d.network === a.network ? { ...d, at: a.at } : d)) })) : s
+    case 'publishing/ideaSchedule': {
+      const picked = s.publishing.ideas.filter(i => a.ids.includes(i.id) && isOpen(i))
+      if (!picked.length) return s
+      const before = { posts: s.publishing.posts, ideas: s.publishing.ideas }
+      let next = s
+      const made: Post[] = []
+      for (const i0 of picked) {
+        const i = i0.kind === 'post' && !i0.drafts ? draftIdea(i0, ctxOf(next)) : i0
+        const posts = ideaPosts(i, () => uid('p'))
+        made.push(...posts)
+        next = setPosts(dropCard(next, i), [...next.publishing.posts, ...posts])
+        next = patchIdea(next, i.id, () => ({ ...i, status: 'scheduled', posts: posts.map(p => p.id), proposal: undefined }))
+        next = decided(next, i, outcomeOf(i))
+      }
+      const label = picked.length === 1
+        ? `Scheduled “${picked[0].title}”${made.length === 1 ? ` for ${slotLabel(made[0].at)}` : `: ${made.length} posts`}`
+        : `${picked.length} ideas scheduled: ${made.length} posts in the calendar`
+      next = { ...next, publishing: { ...next.publishing, undo: { label, posts: before.posts, ideas: before.ideas, handoffs: [], until: t + 10_000 } } }
+      return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason, link: '/publishing' })
+    }
+    case 'publishing/ideaSnooze': {
+      const picked = s.publishing.ideas.filter(i => a.ids.includes(i.id) && isOpen(i))
+      if (!picked.length) return s
+      let next = s
+      for (const i of picked) next = patchIdea(dropCard(next, i), i.id, x => ({ ...x, status: 'snoozed', snoozedUntil: tomorrow8(t), handoff: undefined }))
+      return pushLog(next, { agent: 'atlas', text: `Not now: ${picked.length === 1 ? `“${picked[0].title}”` : `${picked.length} ideas`}. Back tomorrow at 08:00`, status: 'done', reason, link: '/publishing/ideas' })
+    }
+    case 'publishing/ideaDismiss': {
+      if (!idea || !isOpen(idea)) return s
+      const l = learn(s.publishing.learned, `dismiss:${a.reason}`, s.playbook.rules)
+      let next = patchIdea(dropCard(s, idea), a.id, i => ({ ...i, status: 'dismissed', dismissReason: a.reason, handoff: undefined, proposal: l.proposal }))
+      next = { ...next, publishing: { ...next.publishing, learned: l.learned } }
+      next = decided(next, idea, 'rejected', a.reason)
+      return pushLog(next, { agent: 'atlas', text: `Dismissed “${idea.title}” (${a.reason.toLowerCase()})`, status: 'rejected', reason, link: '/publishing/ideas' })
+    }
+    case 'publishing/ideaReopen': {
+      if (!idea || (idea.status !== 'dismissed' && idea.status !== 'snoozed')) return s
+      return patchIdea(s, a.id, i => ({ ...i, status: i.drafts ? 'ready' : 'new', dismissReason: undefined, snoozedUntil: undefined, proposal: undefined }))
+    }
+    case 'publishing/ideaRule': {
+      const p = idea?.proposal
+      if (!idea || !p) return s
+      let next = patchIdea(s, a.id, i => ({ ...i, proposal: undefined }))
+      if (!a.accept) return { ...next, publishing: { ...next.publishing, learned: { ...next.publishing.learned, [`no:${p.key}`]: 1 } } }
+      next = addRule(next, { kind: 'do', text: p.text, agents: ['atlas'], origin: LEARNED_ORIGIN })
+      return pushLog(next, { agent: 'atlas', text: `New Playbook rule: “${p.text}”`, status: 'approved', reason: 'You redirected two ideas the same way', rule: p.text, link: '/playbook' })
+    }
+    case 'publishing/ideaToPlan': {
+      if (!idea || !isOpen(idea)) return s
+      const i = idea.drafts ? idea : draftIdea(idea, ctxOf(s))
+      let next = dropCard(s, i)
+      for (const post of ideaPosts(i, () => uid('p'))) next = reducePublishing(next, { type: 'publishing/addToPlan', post: { ...post, status: 'draft' } })
+      next = patchIdea(next, i.id, () => ({ ...i, status: 'scheduled', inPlan: true, handoff: undefined }))
+      return decided(next, i, outcomeOf(i))
+    }
+    case 'publishing/ideaToSage': {
+      if (!idea || !isOpen(idea)) return s
+      const steps = idea.steps?.map(x => `${x.step}: ${x.text}`).join(' ') ?? ''
+      let next = briefSage(dropCard(s, idea), `${idea.title}. ${idea.why} ${steps}`.trim(), `Atlas’s series idea: ${idea.title}`, 'atlas')
+      const cid = next.strategy.campaigns[0].id
+      next = patchIdea(next, idea.id, i => ({ ...i, status: 'sent-to-sage', campaign: cid, handoff: undefined }))
+      next = decided(next, idea, 'sent-to-sage')
+      return notify(next, 'publishing', `Sent to Sage: “${idea.title}”. Sage is turning it into a campaign plan.`, { link: { to: `/strategy/campaigns/${cid}`, label: 'See the campaign' } })
+    }
+  }
+}
+
+const withVersionOf = (i: Idea, drafts: Idea['drafts'] & object, label: string, t: number): Idea =>
+  ({ ...i, drafts: structuredClone(drafts), versions: [...i.versions, { n: i.versions.length + 1, at: t, mode: 'edit', label, note: 'You went back to an earlier version.', by: 'you', drafts: structuredClone(drafts) }] })
+
+/** Ideas whose window closed leave, and Atlas says why; snoozed ones come back. Runs on the heartbeat. */
+export function tickIdeas(s: State, t: number): State {
+  const { ideas, expired } = expireIdeas(wakeIdeas(s.publishing.ideas, t), t)
+  let next = ideas === s.publishing.ideas ? s : setIdeas(s, ideas)
+  for (const i of expired) {
+    next = dropCard(next, i)
+    next = pushLog(next, { agent: 'atlas', text: `Retired “${i.title}”. Expired: ${i.expires?.reason}.`, status: 'done', reason: 'Ideas with a window leave when it closes', link: '/publishing/ideas' })
+  }
+  return next
+}
+export const ideasDue = (s: State, t: number) =>
+  s.publishing.ideas.some(i => (isOpen(i) && !!i.expires && i.expires.at <= t) || (i.status === 'snoozed' && (i.snoozedUntil ?? Infinity) <= t))
+
+/** New ideas arrive: rules and the cap of 8 apply, drafting follows Atlas's autonomy, urgent ones also go to the Desk. */
+export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed[], origin: IdeaOrigin, agent: Handoff['agent']): State {
+  let next = tickIdeas(s, now(s))
+  const t = now(next)
+  const fresh = seeds.filter(seed => !next.publishing.ideas.some(i => i.key === seed.key))
+  if (!fresh.length) return next
+  const { keep, held: byRule } = heldByRules(fresh, next.playbook.rules, next.publishing.posts, t)
+  const { accepted, held, retired } = capIdeas(next.publishing.ideas, keep.map(seed => makeIdea(seed, origin, t)))
+  for (const r of retired) {
+    const by = accepted[retired.indexOf(r) + accepted.length - retired.length]
+    next = patchIdea(next, r.id, i => ({ ...i, status: 'expired', expires: { at: t, reason: `Atlas made room for “${by?.title}”` } }))
+    next = pushLog(next, { agent: 'atlas', text: `Retired “${r.title}” to make room for “${by?.title}”`, status: 'done', reason: `8 open ideas at most; it was the weakest (${r.confidence}% confident)`, link: '/publishing/ideas' })
+  }
+  const added: Idea[] = []
+  for (const i0 of accepted) {
+    const act = actionOf(next, 'atlas', i0.action)
+    const alone = draftsAlone(i0, act?.autonomy)
+    let i = alone || origin === 'urgent' ? draftIdea(i0, ctxOf(next)) : i0
+    if (alone && act?.autonomy === 'act' && origin !== 'weekly') {
+      const posts = ideaPosts(i, () => uid('p'))
+      i = { ...i, status: 'scheduled', posts: posts.map(p => p.id) }
+      next = setPosts(next, [...next.publishing.posts, ...posts])
+      next = pushLog(next, { agent: 'atlas', text: `Scheduled on its own: “${i.title}” for ${slotLabel(posts[0].at)}`, reason: `${act.label}, set to Act`, status: 'done', undoMinutes: 10, link: '/publishing', idea: i.id })
+    } else if (origin === 'urgent') {
+      const hid = uid('h')
+      const d0 = i.drafts?.[0]
+      next = pushHandoff(next, {
+        id: hid, agent: 'atlas', chain: agent === 'atlas' ? ['atlas'] : [agent, 'atlas'], kind: 'approval', urgency: 'urgent', topic: 'Idea', action: i.action, ref: i.id,
+        link: `/publishing/ideas/${i.id}`, title: i.title, context: i.why, confidence: i.confidence,
+        why: `Short window: good until ${i.expires ? hhmm(i.expires.at) : 'tonight'}. Atlas wrote it so you only have to check it.`,
+        sources: i.sources.map(x => ({ label: `${x.label}: ${x.proof}`, from: x.type === 'brand' ? 'Playbook' : x.type === 'calendar' ? 'Calendar' : x.type === 'analytics' ? 'Insights' : 'Listening' })),
+        preview: d0 && { type: 'post', network: d0.network, slot: slotLabel(d0.at), text: [d0.text], media: d0.media },
+      })
+      i = { ...i, handoff: hid }
+    }
+    added.push(i)
+  }
+  next = setIdeas(next, [...added, ...next.publishing.ideas])
+  const from = agent === 'atlas' ? '' : ` from ${agentName(agent)}’s signal`
+  if (origin === 'weekly') {
+    next = pushLog(next, { agent: 'atlas', text: `Ideas for next week: ${added.length} new${held.length ? `, ${held.length} held back (8 open ideas at most)` : ''}`, status: 'done', reason: 'Thursday: Atlas prepares next week', link: '/publishing/ideas' })
+  } else {
+    for (const i of added.filter(x => x.status !== 'scheduled')) next = pushLog(next, { agent: 'atlas', text: `New idea${from}: “${i.title}”`, status: 'done', reason: i.sources[0] ? `${i.sources[0].label}: ${i.sources[0].proof}` : undefined, link: `/publishing/ideas/${i.id}` })
+    for (const i of held) next = pushLog(next, { agent: 'atlas', text: `Held back “${i.title}”: 8 ideas are already open`, status: 'done', reason: 'Atlas never keeps more than 8 ideas open', link: '/publishing/ideas' })
+  }
+  if (byRule.length) next = pushLog(next, { agent: 'atlas', text: `Following your rule, held back ${byRule.length} idea${byRule.length > 1 ? 's' : ''}: ${byRule.map(x => `“${x.seed.title}”`).join(', ')}`, rule: byRule[0].rule, status: 'done', link: '/playbook' })
+  return next
+}
+
+/** A scripted idea event: named seeds, or the next calendar gap. */
+export function ideaEvent(s: State, ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }): State {
+  const seeds = ev.origin === 'gap'
+    ? gapDays(s.publishing.posts, now(s), 14).map(g => gapSeed(g, s.publishing.posts)).filter(seed => !s.publishing.ideas.some(i => i.key === seed.key)).slice(0, 1)
+    : (ev.seeds ?? []).map(k => IDEA_SEEDS[k]).filter(Boolean)
+  return arriveIdeas(s, seeds, ev.origin, ev.agent)
+}
+
+/** Undo of an idea Atlas scheduled on its own: the posts leave the calendar, the idea is back in Ideas. */
+export function unscheduleIdea(s: State, id: string): State {
+  const i = s.publishing.ideas.find(x => x.id === id)
+  if (!i || i.status !== 'scheduled') return s
+  return patchIdea(setPosts(s, s.publishing.posts.filter(p => !i.posts?.includes(p.id))), id, x => ({ ...x, status: x.drafts ? 'ready' : 'new', posts: undefined }))
 }

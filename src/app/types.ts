@@ -123,6 +123,8 @@ export type LogEntry = {
   detail?: { before?: string; after?: string }
   /** Cards to bring back when this entry is undone (bulk decisions). */
   restore?: Handoff[]
+  /** Idea Atlas scheduled on its own: Undo takes the posts back out and returns it to Ideas. */
+  idea?: string
 }
 
 /** A Desk card the user settled this session. */

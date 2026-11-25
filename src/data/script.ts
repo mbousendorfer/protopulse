@@ -1,15 +1,21 @@
-import type { Handoff } from '../app/types'
+import type { AgentId, Handoff } from '../app/types'
+import type { IdeaOrigin } from './ideas'
 
 /**
  * Scripted events the agents produce while the demo runs.
  * - If `always` is false and the agent's action is set to Act, the event becomes a journal entry (`auto`) instead of a Desk card.
  * - `rule` events carry a Playbook rule proposal, added when approved.
+ * - `idea` events bring Atlas ideas: a signal (continuous), Thursday's batch (weekly), a short window (urgent, also on the Desk), an empty day (gap).
  */
 export type ScriptEvent = {
   id: string
   label: string
   always?: boolean
-  handoff: Omit<Handoff, 'id' | 'at'>
+  /** Who raises it (shown in the moderator panel). */
+  agent?: AgentId
+  /** An idea arrives in Publishing › Ideas instead of a Desk card (urgent ones also reach the Desk). */
+  idea?: { seeds?: string[]; origin: IdeaOrigin; agent: AgentId }
+  handoff?: Omit<Handoff, 'id' | 'at'>
   auto?: { text: string; reason: string; link?: string }
   rule?: { text: string; agents: Handoff['agent'][] }
 }
@@ -42,6 +48,7 @@ export const SCRIPT: ScriptEvent[] = [
       preview: { type: 'post', network: 'instagram', slot: 'Thu 27, 18:00', media: 'bottle', text: ['We dropped it from 3 metres. Then from 5. The bottle is fine, the floor isn’t.'] } },
     auto: { text: 'Rewrote the “drop test” reel and scheduled it Thursday 18:00 on Instagram', reason: 'Recycling, set to Act', link: '/publishing' },
   },
+  { id: 'ev-idea-signal', label: 'Iris · knots carousel saved again (idea)', agent: 'iris', idea: { origin: 'continuous', agent: 'iris', seeds: ['knots-winter'] } },
   {
     id: 'ev-stove', label: 'Nova · safety question (stove clip)', always: true,
     handoff: { agent: 'nova', kind: 'decision', urgency: 'urgent', topic: 'Safety', action: 'nova-sensitive',
@@ -65,6 +72,7 @@ export const SCRIPT: ScriptEvent[] = [
       options: [{ label: 'Atlas tests the same format with the Ridge', recommended: true }, { label: 'Add to Echo’s lessons only' }, { label: 'Nothing to do' }] },
     auto: { text: 'Asked Atlas to test the split-screen format with the Ridge', reason: 'Counter-moves, set to Act', link: '/listening/competitors' },
   },
+  { id: 'ev-idea-urgent', label: 'Echo · first snow, post tonight (urgent idea)', agent: 'echo', idea: { origin: 'urgent', agent: 'echo', seeds: ['first-snow'] } },
   {
     id: 'ev-german', label: 'Nova · German warranty question',
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Product question', action: 'nova-faq',
@@ -105,6 +113,7 @@ export const SCRIPT: ScriptEvent[] = [
         draft: ['Martine, we’re sorry your visit went badly. ', { text: 'Our Annecy pop-up closed in October', note: 'Is she talking about a reseller? Check before stating this publicly.' }, ', so could you tell us where this happened? We’d like to make it right: support@fernway.co.'] } },
     auto: { text: 'Replied to Martine L.’s Google review and asked where it happened', reason: 'Reviews, set to Act', link: '/inbox' },
   },
+  { id: 'ev-idea-gap', label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', idea: { origin: 'gap', agent: 'atlas' } },
   {
     id: 'ev-demote', label: 'Nova · steps back on refunds', always: true,
     handoff: { agent: 'nova', kind: 'promotion', urgency: 'today', topic: 'Autonomy',
@@ -158,6 +167,7 @@ export const SCRIPT: ScriptEvent[] = [
       why: 'Your Summit Bottle is the obvious alternative. Talking about a rival’s recall is sensitive.', confidence: 70, link: '/listening/competitors',
       options: [{ label: 'Nova answers bottle safety questions with our lab results', recommended: true }, { label: 'Atlas posts our materials page, without naming them' }, { label: 'Nothing to do' }] },
   },
+  { id: 'ev-idea-weekly', label: 'Atlas · Thursday: ideas for next week', agent: 'atlas', idea: { origin: 'weekly', agent: 'atlas', seeds: ['fleece-city', 'bottle-bifl', 'zip-flaw', 'staff-picks', 'hook-test', 'support-sunday'] } },
   {
     id: 'ev-collab', label: 'Nova · creator collab request', always: true,
     handoff: { agent: 'nova', kind: 'decision', urgency: 'today', topic: 'Creator', action: 'nova-sensitive',

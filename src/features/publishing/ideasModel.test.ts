@@ -8,7 +8,7 @@ import type { PlaybookRule } from '../../app/types'
 import {
   LEARNED_ORIGIN, LEARN_RULES, MAX_OPEN, applyAngle, applyInstruction, capIdeas, diffWords, draftIdea, expireIdeas, gapDays, heldByRules,
   ideaPosts, isOpen, learn, makeIdea, mixVariants, namesCompetitor, pickSlot, spotIdeas, summarize, variantsOf, wakeIdeas,
-} from './ideas'
+} from './ideasModel'
 import { checkPost } from './checks'
 
 const NOW = T(8, 12)
@@ -152,10 +152,15 @@ test('expiry, snooze and the cap of 8 open ideas', () => {
   const snoozed = ideas.map(i => (i.key === 'storm-snow' ? { ...i, status: 'snoozed' as const, snoozedUntil: T(14, 0) } : i))
   expect(wakeIdeas(snoozed, T(14, 0)).find(i => i.key === 'storm-snow')!.status).toBe('ready')
   const incoming = ['fleece-city', 'bottle-bifl', 'zip-flaw'].map(k => makeIdea(IDEA_SEEDS[k], 'weekly', NOW))
-  const { accepted, held } = capIdeas(ideas, incoming)
-  expect(ideas.filter(isOpen).length + accepted.length).toBe(MAX_OPEN)
-  expect(accepted.map(i => i.key)).toEqual(['bottle-bifl'])
-  expect(held).toHaveLength(2)
+  const { accepted, held, retired } = capIdeas(ideas, incoming)
+  // 7 open: one free place (the strongest, 80%), then the 71% one replaces the weakest undrafted idea (68%), the 63% one waits.
+  expect(ideas.filter(isOpen).length + accepted.length - retired.length).toBe(MAX_OPEN)
+  expect(accepted.map(i => i.key)).toEqual(['bottle-bifl', 'zip-flaw'])
+  expect(retired.map(i => i.key)).toEqual(['gr20-throwback'])
+  expect(held.map(i => i.key)).toEqual(['fleece-city'])
+  // Urgent always gets in.
+  const full = [...ideas, ...accepted]
+  expect(capIdeas(full, [makeIdea(IDEA_SEEDS['first-snow'], 'urgent', NOW)]).accepted).toHaveLength(1)
 })
 
 test('scheduling: a post per draft, a brief without a photo waits for the visual, a series becomes its steps', () => {

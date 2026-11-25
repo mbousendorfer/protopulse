@@ -20,6 +20,9 @@ Pas de POC. La barre : un social media manager doit croire, pendant 45 minutes, 
 2. **Le Desk remplace la routine.** Le matin, il traite ce qui demande un humain en quelques minutes au lieu de parcourir chaque module.
 3. **L'autonomie qui se gagne.** Il accepte qu'un agent demande plus d'autonomie preuves à l'appui, et il comprend pourquoi un agent redescend d'un cran.
 4. **Valider un plan plutôt que des items.** Il préfère approuver une semaine ou une campagne entière, avec la possibilité de retirer des éléments.
+5. **Atlas propose avant qu'on demande.** Sam comprend en 5 secondes pourquoi Atlas propose une idée (preuve chiffrée et sourcée), la réoriente sans réécrire, et fait assez confiance au brouillon pour le programmer tel quel.
+
+**Tâches du scénario de test (Ideas)** : « Find out why Atlas suggests this » · « Make this post about repair » · « Schedule the two ready ideas » · « Turn this series into a campaign ».
 
 Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage d'autonomie lisible par l'utilisateur métier, la validation d'un plan, un journal de ce que l'agent a fait avec annulation, un brief livré avant la journée, une mémoire de marque visible. Anti-patterns à éviter : autopilote sans revue sur le contenu public, promesse « autopilot » opaque, crédits IA opaques, fonctions annoncées non livrées.
 
@@ -82,6 +85,8 @@ Planning : lun.–ven., prépare la semaine suivante le jeudi. Activité type : 
 | Publish anything mentioning a competitor | destructive | Suggest | 🔒 |
 
 Garde-fous : max 3 posts par réseau et par jour · respecte les piliers et la cadence de Strategy · jamais de photo de banque d'images · se met en pause pendant une alerte critique.
+
+**Idées (Publishing › Ideas).** Atlas cherche en continu quoi publier à partir de ce qui a marché (Iris), de ce qui monte (Echo), de la marque (Playbook, Strategy) et des trous du calendrier. Une idée est toujours en Suggest ; la rédaction suit le cran de l'action concernée (`atlas-trend`, `atlas-recycle`, `atlas-fill`) ; sur Act, Atlas programme lui-même et le journal garde un Undo réel. Jamais plus de 8 idées ouvertes : une idée plus forte ou urgente remplace la plus faible non rédigée, les idées à fenêtre expirent seules (« Expired: the #GR20 conversation dropped 40% »). Rien qui nomme un concurrent, jamais le Ridge 40L, jamais de stock (brief visuel à la place).
 
 ### Iris — Insights (Analytics)
 Planning : brief à 07:00, rapport hebdo le lundi 08:00, bilans de campagne en fin de campagne.
@@ -191,6 +196,14 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 ### 6.3 Publishing — Atlas
 
 Onglets : **Calendar** · **Plan review** · **Drafts** · **Media**. Bouton « New post » partout.
+
+- **Ideas** (premier onglet, `/publishing/ideas`) : une phrase d'Atlas qui résume (« 7 ideas this week, 2 ready to schedule. Community is behind target, so 3 of them are Community. »), puis **Ready to review** (brouillons complets), **New ideas** (l'angle et la preuve), **Series** (3 à 5 posts : teaser, preuve, voix client, appel).
+  - carte : provenance (« Spotted by Echo → drafted by Atlas »), angle, pourquoi, sources cliquables avec leur chiffre, confiance, pilier, réseaux, fraîcheur (« Good until Fri 27 ») ; si rédigée, aperçu avec média ou brief visuel et créneau ;
+  - actions dans cet ordre : principale (**Schedule** / **Draft it** / **Add to next week's plan** pour le lot du jeudi / **Send to Sage** pour une série), **Redirect**, **Not now**, **Dismiss** (raison en un clic : Off-brand, Not timely, Already covered, Wrong pillar ; « Dismissed · Undo ») ;
+  - sélection et action groupée « Schedule N ready », avec Undo 10 s qui remet les idées dans Ideas ;
+  - volet latéral (comme l'Inbox) : brouillon par réseau éditable, aperçu fidèle, checks Playbook du Composer, créneau, et les **quatre façons de réorienter** : angles en un clic (Shorter, More playful, Customer angle, Repair angle, As a carousel, For LinkedIn) avec diff surligné ; consigne libre (« Tell Atlas what to change ») avec réponse franche quand il ne peut pas (« I can't mention the Ridge 40L: it isn't announced ») ; 3 variantes côte à côte (garder l'une, ou l'accroche de l'une sur le corps d'une autre) ; apprentissage : même angle ou même raison de rejet deux fois → règle Playbook proposée sur la carte, appliquée ensuite (« Following your rule… ») ; historique des versions avec retour arrière ;
+  - le badge de l'onglet compte les idées prêtes à relire, pas le total.
+- Les cases vides recommandées du calendrier montrent l'idée « gap » d'Atlas (« Idea from Atlas · Review the idea »), ou « Ask Atlas for an idea » qui en crée une.
 
 - **Calendar** : vue semaine (par défaut) et mois. Chaque post : réseau, heure, vignette, statut (`Scheduled` · `Published` · `Draft` · `Needs you` · `Failed`), auteur (Atlas ou Sam), campagne et pilier. Glisser-déposer pour déplacer (Atlas commente : « 18:30 gets 2.1× the reach on Fridays »). Les créneaux recommandés vides sont marqués en pointillé avec « Ask Atlas to fill ».
 - **Plan review** (validation d'un plan, pas d'items) :
@@ -331,6 +344,7 @@ Le prototype vit sans qu'on touche à rien.
 - **Moteur d'événements** : toutes les 25 à 40 s (cadence réglable), un agent produit un événement scripté. Si l'action correspondante est en Act, il devient une entrée du journal avec toast et Undo. Sinon, il devient une remontée qui arrive en haut de la bonne file avec une animation.
 - **Script** (au moins 20 événements, joués dans l'ordre puis en boucle avec des variantes) couvrant : nouvelle plainte, question produit, DM presse, avis 1 étoile, créateur qui mentionne la marque, pic de mentions négatives, baisse de prix chez Peakline, post viral chez Trailkind, anomalie de reach, post qui surperforme (boost ?), visuel manquant, code promo manquant, **demande de promotion** de Nova, **rétrogradation** proposée par Nova, ajustement de cadence par Sage, campagne Trail Week qui dépasse sa trajectoire, Claire qui répond, règle proposée pour le Playbook.
 - **Agents en pause** : leurs événements ne se produisent pas, et la pilule Running now l'indique.
+- **Idées proactives** (événements `idea` du script, dans le même moteur) : **flux continu** (un post d'Iris qui repart, une tendance d'Echo, une mention client : l'idée arrive en haut d'Ideas, datée et sourcée) ; **lot du jeudi** (« Ideas for next week », jusqu'à 6 idées qui peuvent rejoindre Plan review) ; **urgent → Desk** (fenêtre courte, ex. première neige : carte Needs you qui ouvre l'idée ; traitée d'un côté, elle disparaît de l'autre) ; **trou du calendrier** (jour à moins de 2 posts ou pilier sous la cible). Le battement de cœur fait expirer les idées à fenêtre et revenir les « Not now ».
 - **Le temps avance** : l'horloge de l'app part de 08:12 et avance avec le temps réel. « Skip to tomorrow 08:00 » (panneau modérateur) génère un nouveau brief et une nouvelle file.
 
 ### 7.1 Claire simulée
@@ -345,9 +359,10 @@ Caché, pour l'animateur du test.
 
 - Reset demo (état initial Jour 30) · Start onboarding.
 - Proactive feed : on/off, cadence (10 s / 30 s / 60 s), **Trigger now** avec un menu de tous les événements scriptés.
+- Les quatre arrivées d'idées sont déclenchables une à une (marquées « idea » / « idea + Desk ») : knots carousel (flux), first snow (urgent), empty day (gap), Thursday batch (hebdo).
 - Time : Skip to tomorrow 08:00.
 - Scenario presets : « Calm morning » (4 remontées), « Busy morning » (12), « Competitor day » (Peakline + Trailkind), « Trust test » (2 demandes de promotion + 1 rétrogradation).
-- **Tester log** : enregistre chaque action du testeur avec horodatage (navigation, approve/edit/reject/snooze/undo, changements d'autonomie, commandes tapées, temps passé par carte). Compteurs en direct. **Export JSON** et **Clear**. Stocké en localStorage.
+- **Tester log** : enregistre chaque action du testeur avec horodatage (navigation, approve/edit/reject/snooze/undo, changements d'autonomie, commandes tapées, temps passé par carte). Ideas : idée ouverte, réorientée (mode), décision `ideas/decision` (acceptée telle quelle / modifiée / rejetée avec la raison / envoyée à Sage) avec le temps jusqu'à la décision ; compteurs dédiés. Compteurs en direct. **Export JSON** et **Clear**. Stocké en localStorage.
 
 ---
 
