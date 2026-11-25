@@ -77,6 +77,9 @@ test('ideas: urgent idea reaches the Desk; settling it on the Desk schedules it 
   expect(idea.status).toBe('ready')
   const card = s.handoffs.find(h => h.ref === idea.id)!
   expect(card).toMatchObject({ topic: 'Idea', urgency: 'urgent', link: `/publishing/ideas/${idea.id}` })
+  // It stands alone on the Desk, never inside Atlas's batch of post approvals.
+  const { batchesOf } = await import('../desk/Batch')
+  expect(batchesOf(s.handoffs).batches.some(x => x.items.some(h => h.id === card.id))).toBe(false)
   s = reducer(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
   expect(s.publishing.ideas.find(i => i.id === idea.id)!.status).toBe('scheduled')
   expect(s.publishing.posts.filter(p => p.note?.startsWith('From Ideas')).length).toBe(2)

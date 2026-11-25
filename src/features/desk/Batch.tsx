@@ -42,7 +42,8 @@ export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] 
       verb: { many: n => `Send ${n} selected`, done: n => `Sent ${n} replies Nova drafted` },
     },
     {
-      id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal,
+      // An idea with a short window stands on its own: it opens the idea, and its other networks live there.
+      id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal && h.topic !== 'Idea',
       ready: h => h.confidence >= 75 && !flagged(h),
       title: n => `${n} posts to approve`, meta: (_xs, r) => `${r} ready to schedule`,
       verb: { many: n => `Schedule ${n} selected`, done: n => `Scheduled ${n} posts Atlas drafted` },

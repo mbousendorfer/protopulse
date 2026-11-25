@@ -94,8 +94,8 @@ The existing `ev-fill` Desk card and the Composer UI (only its check function mo
 Ouvert, volontairement :
 - ~~`/publishing` ouvre le Calendar~~ : validé, `/publishing` arrive sur Ideas ; le calendrier est à
   `/publishing/calendar` et tous les liens qui voulaient dire « le calendrier » (journal, Desk, aperçus `?post=`) y pointent.
-- La carte urgente arrive sur le Desk dans le lot « N posts to approve » d'Atlas (regroupement existant du Desk), pas
-  seule. La sortir du lot est un changement de motif du Desk : à valider avant.
+- ~~La carte urgente arrive dans le lot « N posts to approve » d'Atlas~~ : validé (avant / après dans
+  `design-plans/proposals/idea-desk-*.jpg`), une carte d'idée ne rejoint plus le lot d'Atlas et reste seule dans Needs you.
 - Annuler la programmation d'une idée urgente la remet dans Ideas mais ne recrée pas sa carte Desk.
 - Bug existant, hors périmètre : la démo dit « mardi 25 novembre 2026 », qui est un mercredi. Les jours écrits à la
   main dans les données (« Thu 27 ») ne collent pas au calendrier. Le code des idées calcule la semaine comme le calendrier.
