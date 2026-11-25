@@ -7,7 +7,7 @@ import { PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/video'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
-import { captionSlips, type Clip } from './model'
+import { LANG_LABEL, captionSlips, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipScore } from './parts'
 import { holdReason } from './slice'
 import Sources, { SourceDetail } from './Sources'
@@ -98,6 +98,7 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
           {proof && <span>{proof.value} {proof.label}</span>}
           <span className="row tight nowrap">{c.post.networks.map(n => <Net key={n} n={n} size={16} />)}</span>
           <span>{src.title}</span>
+          {c.audio.dubs.length > 0 && <span title={c.audio.dubs.map(l => LANG_LABEL[l]).join(', ')}>{c.audio.dubs.map(l => l.toUpperCase()).join(' ')}</span>}
           {c.edited && <span>Edited by you</span>}
           {todo.map(t => <span key={t}>{t}</span>)}
         </p>

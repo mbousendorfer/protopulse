@@ -432,10 +432,10 @@ function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
           })}
         </ul>
         <p className="muted t-sm">{level === 'act'
-          ? 'Translate and dub is set to Act: Juno makes your brand kit languages for every new clip, and you can undo it from the journal.'
+          ? 'Translate and dub is set to Act: Juno makes your brand kit languages for every new clip and sends them with it, as their own posts. Undo from the journal.'
           : level === 'draft'
-            ? 'Translate and dub is set to Draft: Juno makes your brand kit languages for every new clip, and each one waits for your review.'
-            : 'Translate and dub is set to Suggest: Juno points out the languages worth making. You make them.'}</p>
+            ? 'Translate and dub is set to Draft: Juno makes your brand kit languages for every new clip. Each waits for your review; approved ones go out with the clip, as their own posts.'
+            : 'Translate and dub is set to Suggest: Juno points out the languages worth making. The ones you make go out with the clip, as their own posts.'}</p>
       </Field>
       <Field label="Re-voiced words">
         {voiced.length ? <ul className="ed-list">{voiced.map(([i, v]) => <li key={i}><span>“{pb.tr.words[+i].w}” → “{v}”</span><Btn size="xs" variant="ghost" onClick={() => { const o = { ...clip.overdub }; for (const k of Object.keys(o)) if (+k >= +i && (+k === +i || o[+k] === '')) delete o[+k]; edit({ overdub: o }) }}>Revert</Btn></li>)}</ul>
