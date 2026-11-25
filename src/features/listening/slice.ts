@@ -3,7 +3,7 @@ import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
 import { DEMO_START, hhmm, MIN } from '../../app/time'
 import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
-import { creatorOf, competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
+import { netLabel, theirTop, creatorOf, competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -78,6 +78,7 @@ export type ListeningAction =
   | { type: 'listening/alertToggle'; id: string }
   | { type: 'listening/alertDelete'; id: string }
   | { type: 'listening/creator'; handle: string; op: 'list' | 'unlist' | 'propose' }
+  | { type: 'listening/testFormat'; network: Network; competitor: string }
 
 const patch = (s: State, p: Partial<ListeningState>): State => ({ ...s, listening: { ...s.listening, ...p } })
 const setEvent = (s: State, id: string, e: Omit<EventState, 'at'>): State => patch(s, { events: { ...s.listening.events, [id]: { ...e, at: now(s) } } })
@@ -219,6 +220,7 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return patch(s, { alerts: s.listening.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
     case 'listening/alertDelete':
       return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
+    case 'listening/testFormat': return testFormat(s, a.network, a.competitor)
     case 'listening/creator':
       return a.op === 'propose' ? proposeCollab(s, a.handle, 'You asked from Listening › Creators.') : setCreator(s, a.handle, a.op === 'list' ? 'listed' : undefined)
   }
@@ -607,4 +609,23 @@ export function creatorEvent(s: State, manual: boolean): State {
     title, context: c.history.join(' · '), why: c.fitWhy, confidence: 72, link: `/listening/creators?c=${encodeURIComponent(c.handle)}`,
     options: [{ label: 'Nova drafts a collab DM', recommended: true }, { label: 'Shortlist only' }, { label: 'Not a fit' }],
   })
+}
+
+/* ---------- Benchmark per network ---------- */
+
+/** Atlas drafts a post in the rival's best format on that network. Answering a competitor stays locked to Suggest: you publish. */
+function testFormat(s: State, n: Network, id: string): State {
+  const ref = `format:${n}:${id}`
+  if (s.handoffs.some(h => h.ref === ref)) return s
+  const top = theirTop(n, id)
+  const name = competitorName(s, id)
+  const format = top?.format.toLowerCase() ?? 'format'
+  const next = pushHandoff(s, {
+    agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-competitor', chain: ['echo', 'atlas'], ref,
+    title: `Test ${name}’s ${format} on ${netLabel(n)}`, context: top ? `Their best on ${netLabel(n)}: “${top.title}”, ${top.views} views. ${top.takeaway}` : `What works for ${name} on ${netLabel(n)}.`,
+    why: 'You asked from Listening › Benchmark. Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 64, link: `/listening/competitors/benchmark?net=${n}`,
+    rules: ['Never name a competitor in a post'],
+    preview: { type: 'post', network: n, slot: 'This week', text: [top ? `Our take on “${top.title.toLowerCase()}”, with the Ridge 28L and a real customer. Draft v1.` : `Our version of what works on ${netLabel(n)} right now. Draft v1.`] },
+  })
+  return notify(next, 'listening', `Atlas is drafting a ${format} for ${netLabel(n)}. It’s on your Desk.`, { link: { to: '/', label: 'Review on Desk' } })
 }
