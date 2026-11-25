@@ -1,0 +1,141 @@
+<title>Protopulse UX Audit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one reading column; score band, then findings grouped by status, most severe first. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --s4: #C8102E; --s4-bg: #FDECEE; --s3: #B5480F; --s3-bg: #FFF1E8; --s2: #8A6100; --s2-bg: #FFF7DB; --s1: #5D6A82; --s1-bg: #EEF0F3;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --s4: #FF8A98; --s4-bg: #3A1D25; --s3: #FFB27E; --s3-bg: #3A2718; --s2: #F2CF63; --s2-bg: #332B12; --s1: #AEB7C6; --s1-bg: #253048;
+  --ok: #7FD69A; --ok-bg: #173225; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --s4: #FF8A98; --s4-bg: #3A1D25; --s3: #FFB27E; --s3-bg: #3A2718; --s2: #F2CF63; --s2-bg: #332B12; --s1: #AEB7C6; --s1-bg: #253048;
+  --ok: #7FD69A; --ok-bg: #173225; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 880px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--link); }
+.lede { color: var(--ink-2); margin-top: 8px; }
+.score { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 28px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.list li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 14px 16px; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; }
+.sev { width: 28px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; }
+.sev.s4 { color: var(--s4); background: var(--s4-bg); } .sev.s3 { color: var(--s3); background: var(--s3-bg); }
+.sev.s2 { color: var(--s2); background: var(--s2-bg); } .sev.s1 { color: var(--s1); background: var(--s1-bg); }
+.item { display: grid; gap: 4px; min-width: 0; }
+.item p { color: var(--ink-2); font-size: 14px; }
+.item .fix { color: var(--ink); }
+.item .fix::before { content: "Fixed: "; font-weight: 600; color: var(--ok); }
+.item .next::before { content: "Recommended: "; font-weight: 600; }
+.where { font-size: 12px; color: var(--ink-2); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; color: var(--ink-2); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+summary:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; border-radius: 12px; }
+details .list { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 12px 12px; }
+.method { display: grid; gap: 8px; font-size: 14px; color: var(--ink-2); }
+</style>
+
+<main>
+  <header>
+    <h1>Protopulse UX audit</h1>
+    <p class="lede">A heuristic review of every screen (Nielsen's 10 heuristics, Krug's "Don't make me think"), done in the live app at 1440×900 and 375×812 and in the code. Each issue is rated 1 (cosmetic) to 4 (blocks the task). 25 November 2026.</p>
+  </header>
+
+  <div class="score" role="list">
+    <div class="tile" role="listitem"><span>Score before</span><b>4 / 10</b><span>4 blockers, counts that contradict each other</span></div>
+    <div class="tile" role="listitem"><span>Score after the fixes</span><b>7 / 10</b><span>No blockers left, some consistency debt</span></div>
+    <div class="tile" role="listitem"><span>Issues found</span><b>≈ 70</b><span>After merging duplicates between reviews</span></div>
+    <div class="tile" role="listitem"><span>Fixed and deployed</span><b>≈ 52</b><span>18 left, listed below with a recommendation</span></div>
+  </div>
+
+  <section aria-labelledby="why">
+    <h2 id="why">What held the score down</h2>
+    <p>Three patterns caused most of the damage. Undo buttons that marked a line "Undone" while the reply stayed sent. Badges that gave three different numbers for the same work (Desk 37 in the menu, 25 on the page; Inbox 14, 13 and 10). Actions with real consequences on a single click: a €150 ad boost, the Autonomous preset, deleting a guardrail. A keyboard shortcut could also send a reply by accident: on the Desk, G then A opened Agents <em>and</em> approved the selected card.</p>
+  </section>
+
+  <section aria-labelledby="fixed">
+    <h2 id="fixed">Fixed</h2>
+    <div class="legend" aria-hidden="true"><span><i class="sev s4">4</i>Blocks the task</span><span><i class="sev s3">3</i>Major</span><span><i class="sev s2">2</i>Minor</span><span><i class="sev s1">1</i>Cosmetic</span></div>
+    <ul class="list">
+      <li><span class="sev s4">4</span><div class="item"><h3>Undo didn't undo</h3><p>Undo on a Desk decision, a single Inbox send, the plan approval, the sales email and the campaign launch only crossed the line out. The card stayed in Done and the action stood.</p><p class="fix">Undo on a Desk decision brings the card back and reverses what it changed (autonomy move, Playbook rule). A single Inbox send now gets the same 10-second Undo bar as Send all. Actions that can't be reversed (an email, a launched campaign) no longer offer Undo.</p><span class="where">Desk, Focus, Live feed, Activity, Inbox, Publishing, Listening, Strategy</span></div></li>
+      <li><span class="sev s4">4</span><div class="item"><h3>A navigation shortcut could approve a card</h3><p>On the Desk, G then A (Agents) also pressed A on the selected card and sent it. G then N rejected an autonomy request, G then S opened Snooze.</p><p class="fix">Shell shortcuts run first and the decision keys ignore them.</p><span class="where">Desk, Focus</span></div></li>
+      <li><span class="sev s4">4</span><div class="item"><h3>Settings forgot what you did</h3><p>Reconnecting X, switching a notification or editing the profile was lost as soon as you opened another Settings tab. Profile said "Saved" in a toast and dropped the edits.</p><p class="fix">Tabs keep their state; Save shows "Saved" next to the button.</p><span class="where">Settings</span></div></li>
+      <li><span class="sev s4">4</span><div class="item"><h3>€150 of ad spend in one click</h3><p>"Boost €150 for 5 days" ran on a single click and the boost wasn't recorded, unlike the same decision taken on the Desk.</p><p class="fix">An inline confirmation states the amount and that it's paid spend; the boost is recorded. Same for the €100 boost in Chats.</p><span class="where">Insights › Anomalies, Chats</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Counts that contradicted each other</h3><p>The menu counted every open card (Needs you + Worth a look + Good news), the page counted only Needs you. The Inbox badge counted Nova's Desk cards, the Inbox page counted conversations.</p><p class="fix">Every badge means "needs you". The Inbox badge uses the Inbox's own Needs you rule, so the two always match. ⌘K "What needs me" uses it too.</p><span class="where">Menu, brief, Agents, ⌘K</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Inbox sent text you hadn't seen</h3><p>"Send as is" and "Holding reply" sent Nova's full draft while the row showed only the doubtful passage or "Nova suggests a holding reply".</p><p class="fix">The row shows the full text that will go out. Edit opens the conversation already in edit mode.</p><span class="where">Inbox › Needs you</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>"I'll reply" buried the conversation</h3><p>Taking over removed the conversation from Needs you and switched the view to All.</p><p class="fix">It stays in Needs you under "You're replying" and is assigned to you.</p><span class="where">Inbox</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Deletes with no way back</h3><p>Composer delete, a chat, a saved search, a guardrail, an escalation rule and the Autonomous preset all applied at once with no undo. Other deletes in the app ask first or offer Undo.</p><p class="fix">Each now shows an inline "Deleted … · Undo" line, the same pattern as the Playbook.</p><span class="where">Publishing, Chats, Listening, Agents</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Add to plan after approval copied the whole plan</h3><p>The plan went back to "Waiting for you" and approving again scheduled every post twice. A date outside the plan week was moved to Monday or Sunday without saying so.</p><p class="fix">Once the plan is approved, the post is scheduled directly. The message names the day it lands on.</p><span class="where">Publishing › Composer</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Shown data didn't match the settings</h3><p>Benchmark still listed competitors you'd removed. Playbook pillars showed different targets from Strategy. Nova's profile could show Echo's alert rules.</p><p class="fix">Benchmark follows the watch list, Playbook reads Strategy's pillars, and the profile tab resets per agent.</p><span class="where">Listening, Playbook, Agents</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Repeat clicks created duplicates</h3><p>"Hand to Atlas", "Ask Atlas to fill" and ⌘K answer buttons put a new identical card on the Desk at every click. The Live feed and Activity repeated the same two lines all day.</p><p class="fix">Each runs once and then says so ("With Atlas", "Done"); the feed logs each action once.</p><span class="where">Listening, Publishing, ⌘K, Activity</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Misleading Desk states</h3><p>A filter that hid everything showed "All clear, nothing needs you". A highlight button in the brief applied the recommended option without showing the card.</p><p class="fix">"No item matches this filter · Clear filters". Highlights open the card ("Review").</p><span class="where">Desk</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>Inbox unreadable on a phone</h3><p>At 375 px the actions squeezed the text to "@ma…" and "Nova…".</p><p class="fix">Actions drop under the text and the message keeps two lines.</p><span class="where">Inbox, mobile</span></div></li>
+      <li><span class="sev s3">3</span><div class="item"><h3>⌘K "New post" opened nothing</h3><p class="fix">It opens the composer.</p><span class="where">⌘K</span></div></li>
+    </ul>
+
+    <details>
+      <summary>Smaller fixes (severity 1–2)</summary>
+      <ul class="list">
+        <li><span class="sev s2">2</span><div class="item"><h3>Same decision, different words</h3><p class="fix">One pair per decision: Apply / Decline in Strategy; Snooze a week instead of Ignore; "Closed" instead of "Handled"; Send, Send edited reply, Send holding reply in the Inbox; Discuss everywhere; Move to Draft and "suggests stepping back" on step-back cards instead of OK and "asks for more autonomy".</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Keyboard help was wrong or incomplete</h3><p class="fix">Lists the Desk and Focus keys (arrows, 1–9, S then 1–4, T/N, Esc, shift-click). The footer shows A only when A does something. Arrows stay in the tab you're on. Esc in Reject or Snooze steps back instead of leaving Focus. F no longer opens an empty Focus.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>No way back from Claire</h3><p class="fix">"Take it back" on a card waiting for Claire, and the hint "If she approves, it goes out".</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Links to the Desk dropped you on the full Desk</h3><p class="fix">"Review on Desk" and "Also on your Desk" open that card.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Forms</h3><p class="fix">Composer errors clear as soon as the problem is fixed. Reschedule refuses a past slot and says why. Guardrails can't be saved empty. An escalation rule can't be added twice. The threshold field is numeric.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Settings › Approver</h3><p class="fix">A rule switched off in the Playbook shows as off instead of "goes to you", and this switch no longer turns it back on. "All escalation rules" opens the Escalation tab.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Listening</h3><p class="fix">Competitors badge ignores paused competitors. Fake keycaps on counter-moves removed. "Events: react / Benchmark: learn" are now "Events / Benchmark". ⌘K "negative mentions" really filters on negative.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Publishing</h3><p class="fix">"Ask Atlas for a new plan" no longer fakes a note from you or pastes it into a caption. Atlas's comment on a moved post stays on the post. A drop on an hour already gone takes the next half hour. The Duplicate dialog no longer promises rewording that doesn't happen.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Modals and buttons</h3><p class="fix">Footers read Cancel then the action, on the right. Remove competitor is a danger button. Pause on the team card offers the same durations as the profile.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Toasts (house rule) on six screens</h3><p class="fix">Replaced by inline feedback or removed where the screen already changes: Profile saved, account reconnected, onboarding done, past slot, search saved, tag added, campaign launched, plan revised, sales email.</p></div></li>
+        <li><span class="sev s2">2</span><div class="item"><h3>Strategy kept building after you left</h3><p class="fix">Leaving the brief while Sage thinks cancels it.</p></div></li>
+        <li><span class="sev s1">1</span><div class="item"><h3>Small things</h3><p class="fix">Breadcrumbs show names, not ids. Same stat labels on the team card and the profile. "No activity yet" in an empty journal. Filter button says "This week", not "week". Reject count is exact. "Approve 3 of 5" explains the skipped items on screen, not in a tooltip. "Contact 3" badge (orders) removed. "Mark not reviewed" says what it does.</p></div></li>
+      </ul>
+    </details>
+  </section>
+
+  <section aria-labelledby="open">
+    <h2 id="open">Still open</h2>
+    <p class="sub">Not fixed in this pass, either because it changes a pattern you should validate or because it touches many screens at once.</p>
+    <ul class="list">
+      <li><span class="sev s2">2</span><div class="item"><h3>Twelve confirmations still go through toasts</h3><p>Autonomy approved, rule added, sent to Claire, Claire's verdict, trial over, Atlas drafted, post saved, report shared, alert saved. The Desk group actions keep their only Undo in a 6-second toast.</p><p class="next">Give each an inline home: an undo line at the top of Your day for group actions, the card's own stamp for the rest.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Your day starts below the first screen</h3><p>At 1440×900 the brief takes the whole first screen; the list of decisions starts underneath. You asked to leave the Desk layout for now.</p><p class="next">Fold the brief after the first visit of the day, or put the agent rows beside the list.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Autonomy has several vocabularies</h3><p>Suggest / Draft / Act, "Suggests / Drafts for you / Acts alone", presets Cautious / Balanced / Autonomous on top. Onboarding lists the levels in the opposite order.</p><p class="next">One label set and one order everywhere.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Four places to talk to agents</h3><p>⌘K, the Chat drawer, the Chats page and Discuss on each card. ⌘K answers and Discuss threads never appear in Chats.</p><p class="next">Make Chats the one home for conversations; ⌘K becomes "Search and commands".</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Batch cards repeat their buttons</h3><p>"Send 3 ready" and "Send 3 selected" act on the same items; "Review" per lane plus "Review one by one".</p><p class="next">Keep one primary (the footer) and one Review per lane.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Escalation lives in three places</h3><p>Add and delete on an agent profile, toggle and route in the Playbook, a Claire-only switch in Settings.</p><p class="next">Edit in the Playbook only; the other two link to it.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Agents contradict each other on timing</h3><p>Iris says the best Instagram slot is Friday 18:00; the composer's Atlas then says 18:30 is better.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Onboarding drops two edits</h3><p>Edits to the voice and the press escalation are offered, then not applied.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Discuss suggestions are the same on every card</h3><p>"Don't offer discount codes on complaints" appears on a TikTok anomaly. "Ask Claire" looks like a question but moves the card.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>Insights › Explore</h3><p>The network filter changes the KPIs but not the heatmap, best slot or pillar charts.</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>One-click dismissals can't be reopened</h3><p>Dismissing a counter-move, a lesson or a trend ("Not for us"), or declining a Sage adjustment, replaces the buttons with a pill for good.</p><p class="next">Turn the pill into "Dismissed · Undo".</p></div></li>
+      <li><span class="sev s2">2</span><div class="item"><h3>"New label…" uses the browser prompt</h3><p class="next">An input inside the label menu.</p></div></li>
+      <li><span class="sev s1">1</span><div class="item"><h3>Details</h3><p>Ask Iris has no visible send button. Alert rules delete without undo. The Inbox undo bar has no countdown. Monday's post is titled "Sunday reset". Report cards repeat their type in the title. On a phone, the Inbox filters push the list below the first screen.</p></div></li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="ten">
+    <h2 id="ten">To reach 10 / 10</h2>
+    <p>Close the four "Still open" items that change patterns (toasts, Desk first screen, one autonomy vocabulary, one home for conversations), then test Focus and the Inbox with three or four people doing a real morning: the remaining risk is in how fast a first-time user trusts Send, not in the screens themselves.</p>
+  </section>
+
+  <section class="method" aria-labelledby="how">
+    <h2 id="how" style="color: var(--ink)">How it was done</h2>
+    <p>Every screen walked in the live prototype at desktop and phone widths, then three parallel code reviews (Desk and shell; Inbox, Publishing and Insights; Listening, Strategy, Agents, Playbook, Settings and Onboarding). Each finding was checked against the code before being fixed. Typecheck, 28 tests and the build pass; the fixes are live on GitHub Pages.</p>
+  </section>
+</main>
