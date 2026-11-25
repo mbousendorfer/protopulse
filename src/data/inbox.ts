@@ -6,7 +6,9 @@ export type ConvType = 'comment' | 'dm' | 'mention' | 'review' | 'ad'
 export type Sentiment = 'positive' | 'neutral' | 'negative'
 
 export type Attachment = { id: string; kind: 'exchange' | 'refund' | 'code'; label: string; limit: string; removed?: boolean }
-export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean }
+export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean
+  /** The Desk card this reply settled, and the journal entry Nova wrote when she sent it alone: their Undo deletes it. */
+  card?: string; log?: string }
 
 export type Conversation = {
   id: string
@@ -33,6 +35,8 @@ export type Conversation = {
   assignee?: Assignee
   reviewed?: boolean
   notes?: Note[]
+  /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
+  settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; note?: string; unread?: boolean }
 }
 
 export type Assignee = 'sam' | 'claire'
