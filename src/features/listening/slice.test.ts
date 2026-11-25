@@ -205,3 +205,21 @@ describe('Echo · a competitor you add', () => {
     expect(s.notice?.text).toMatch(/your cap/)
   })
 })
+
+describe('Echo · search view', () => {
+  it('a new search on the seams catches the spike, and Echo reads it', async () => {
+    const { searchMentions, searchRead } = await import('./model')
+    let s = fire(level(s0(), 'draft'))
+    s = reducer(s, { type: 'listening/searchSave', search: { id: '', name: 'Seams', keywords: 'storm jacket seams', exclude: '', volume: 0 } })
+    const x = s.listening.searches[0]
+    expect(searchMentions(s, x).filter(m => m.id.startsWith('spike-')).length).toBeGreaterThan(20)
+    expect(searchRead(s, x)).toMatch(/negative mentions in the last 24 hours, \d+ about the Storm Jacket/)
+  })
+
+  it('the search table and the search page give the same volume', async () => {
+    const { searchLive, searchVolume } = await import('./model')
+    const s = fire(level(s0(), 'draft'))
+    const x = s.listening.searches.find(y => y.id === 's3')!
+    expect(searchVolume(x, 0, searchLive(s, x)).volume).toBe(310 + 27)
+  })
+})

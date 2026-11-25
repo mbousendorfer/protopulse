@@ -93,8 +93,8 @@ const hash = (t: string) => [...t].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >
 /** How many mentions a new search finds in a week, from its keywords: the same answer every time. */
 export const searchTarget = (x: Search) => 120 + (hash(x.keywords.toLowerCase()) % 780)
 /** The search's 7-day volume as of `t`, and whether Echo is still collecting it. */
-export function searchVolume(x: Search, t: number) {
-  if (!x.startedAt) return { volume: x.volume, collecting: false, progress: 1 }
+export function searchVolume(x: Search, t: number, live = 0) {
+  if (!x.startedAt) return { volume: x.volume + live, collecting: false, progress: 1 }
   const progress = Math.min(1, Math.max(0, (t - x.startedAt) / FILL_MS))
   return { volume: Math.round(searchTarget(x) * progress), collecting: progress < 1, progress }
 }
@@ -175,4 +175,45 @@ export function firstEvent(w: Watched, at: number): CompEvent {
     read: 'One post doesn’t make a trend. Echo will tell you if they repeat it.',
     moves: [{ label: 'Add to Echo’s lessons only', agent: 'echo', kind: 'lesson' }, { label: 'Atlas tests the same format', agent: 'atlas', kind: 'counter' }, { label: 'Nothing to do', agent: 'echo', kind: 'none' }],
   }
+}
+
+/* ---------- What a search caught ---------- */
+
+const terms = (list: string) => list.split(',').map(x => x.trim().toLowerCase()).filter(Boolean)
+/** The Brand search is the feed itself; the others match any keyword (all its words present) minus the exclusions, or were tagged by Echo. */
+export function inSearch(x: Search, m: Mention) {
+  if (x.id === 's1') return true
+  const t = `${m.author} ${m.text} ${m.product ?? ''}`.toLowerCase()
+  const has = (k: string) => k.replace(/^[@#]/, '').split(/\s+/).every(w => t.includes(w))
+  return m.search === x.id || (terms(x.keywords).some(has) && !terms(x.exclude).some(has))
+}
+export const searchMentions = (s: State, x: Search) => visibleMentions(s).filter(m => inSearch(x, m))
+/** Mentions filed during the session add to the search's weekly volume, so the table and the search page agree. */
+export const searchLive = (s: State, x: Search) => (x.startedAt ? 0 : s.listening.live.filter(m => inSearch(x, m)).length)
+
+/** Echo's one-paragraph read of a search: what dominates, what's rising, who's loudest, what's waiting. */
+export function searchRead(s: State, x: Search) {
+  const ms = searchMentions(s, x)
+  if (!ms.length) return x.startedAt ? `I’m still reading the last 7 days for “${x.name}”.` : `Nothing new on “${x.name}” in the mentions I filed.`
+  const c = moodCount(s, ms)
+  const day = ms.filter(m => m.at > now(s) - DAY && sentimentOf(s, m) === 'negative')
+  const top = topComplaints(s, day)[0]
+  const loud = [...ms].sort((a, b) => b.reach - a.reach)[0]
+  const open = (ref: string) => s.handoffs.some(h => h.ref === ref && !h.lane)
+  const waiting = ms.filter(m => open(`mention:${m.id}`) || (m.id.startsWith('spike-') && open('spike-replies') && !s.listening.mentions[m.id])).length
+  const word = topWord(day, `${x.name} ${x.keywords} ${top?.[0] ?? ''}`)
+  const head = day.length >= 3
+    ? `${day.length} negative mentions in the last 24 hours${top && !x.name.toLowerCase().includes(top[0].toLowerCase()) ? `, ${top[1]} about the ${top[0]}` : ''}${word ? `; ${word[1]} say “${word[0]}”` : ''}.`
+    : `Mostly ${c.positive >= c.negative ? 'positive' : 'negative'}: ${pct(c.positive, c.total)} positive, ${pct(c.negative, c.total)} negative.`
+  return `${head} Loudest: ${loud.author} on ${loud.network} (${loud.reach.toLocaleString('en-GB')} reach).${waiting ? ` Nova has ${waiting} repl${waiting === 1 ? 'y' : 'ies'} waiting on your Desk.` : ''}`
+}
+
+const STOP = new Set('about after again anyone because before being from have here into just like more only other same some than that their them then there they this what when with your yours mine read thread photos inside after washes season glad didn’t yet'.split(' '))
+/** The word most negative mentions share, leaving out the search's own words: “seams”. */
+function topWord(ms: Mention[], own: string) {
+  const skip = new Set(own.toLowerCase().split(/[^a-zà-ÿ]+/))
+  const by = new Map<string, number>()
+  for (const m of ms) for (const w of new Set(m.text.toLowerCase().split(/[^a-zà-ÿ’]+/))) if (w.length > 3 && !STOP.has(w) && !skip.has(w)) by.set(w, (by.get(w) ?? 0) + 1)
+  const best = [...by].sort((a, b) => b[1] - a[1])[0]
+  return best && best[1] >= 3 ? best : undefined
 }
