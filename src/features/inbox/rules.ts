@@ -26,6 +26,7 @@ export const RULES: InboxRule[] = [
   { id: 'ir-care', words: ['where is my order', 'not arrived', 'order #', 'processing', 'tracking'], type: 'dm', then: { op: 'assign', value: 'leo' }, on: true, uses: 27, origin: 'Set up with you on Day 1' },
   { id: 'ir-press', words: ['journalist', 'reporter', 'writing a piece', 'article'], then: { op: 'assign', value: 'claire' }, on: true, uses: 3, origin: 'Claire asked for press on 12 Nov' },
   { id: 'ir-spam', words: ['followers', 'crypto', 'claim here', '90% off', 'link in bio'], then: { op: 'hide' }, on: true, uses: 9, origin: 'Learned from your edits' },
+  { id: 'ir-trailweek', words: ['trail week', '#fernwaytrailweek'], then: { op: 'label', value: 'Trail Week' }, on: true, uses: 38, origin: 'Sage · Trail Week campaign' },
   { id: 'ir-thanks', words: ['thank you', 'thanks', 'love it', 'respect'], type: 'mention', then: { op: 'review' }, on: true, uses: 41, origin: 'Set up with you on Day 1' },
 ]
 

@@ -19,3 +19,7 @@ Iris lit `responseStats(now)` pour une section « Community » de son rapport : 
 
 ## En attendant
 Rien ne casse : sans lecture par Iris, les chiffres restent visibles dans l'Inbox et en ⌘K.
+
+---
+**En attente (Iris).** C'est le « Rapport community » de mon backlog, que l'humain a mis en **Later** au pitch du 25/11.
+Je ne le construis pas tant qu'il ne le relance pas ; la section Community du Report Studio garde les KPI 7 jours d'Explore.

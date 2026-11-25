@@ -105,6 +105,10 @@ type Q = [id: string, author: string, network: Network, type: ConvType, sentimen
 
 // Handled by Nova on her own (product, shipping, thanks…).
 const AUTO: Q[] = [
+  // Trail Week (Sage's live campaign): Nova answers the "how do I join?" questions and labels them.
+  ['c-tw-join', '@claire.runs', 'instagram', 'comment', 'positive', T(7, 52), 'How do I join the Trail Week challenge?', 'Easy: post any outdoor moment this week with #FernwayTrailWeek and you’re in. Walks count too!', { post: 'Reel · “Trail Week starts now”', labels: ['Trail Week'], intent: 0.4 }],
+  ['c-tw-walk', 'Mathieu Blanc', 'facebook', 'comment', 'neutral', T(7, 20), 'Does a 2 km walk count for Trail Week?', 'It does, Mathieu. Every step outside counts, just tag #FernwayTrailWeek.', { post: 'Facebook · “Trail Week: the rules”', labels: ['Trail Week'] }],
+  ['c-tw-photo', '@sophie.altitude', 'instagram', 'mention', 'positive', T(6, 40), 'Day 1 of #FernwayTrailWeek above Chamonix 🏔️', 'Sophie, what a start. We’re saving this one for Friday’s recap.', { labels: ['Trail Week'] }],
   ['c-tom', '@tom.bivouac', 'instagram', 'comment', 'neutral', T(8, 8), 'Does the Ridge 28L fit as cabin luggage?', 'It does, Tom: 55 × 30 × 20 cm, so it fits the cabin rules of every major airline.', { contact: 'k-tom', intent: 0.74, rules: ['Give the number, then the answer'], post: 'Reel · “3 days, one bag” · yesterday' }],
   ['c-ines', '@ines.mrr', 'instagram', 'dm', 'negative', T(8, 1), 'My fleece arrived 5 days late, I paid for express 😤', 'Inès, express should mean express. Sorry. I’ve refunded your €9.90 shipping, you’ll see it in 3 to 5 days.', { contact: 'k-ines', rules: ['Apologise once, then fix'], note: 'Refunded €9.90 shipping · within the €15 limit' }],
   ['c-julien', '@julien_trail', 'tiktok', 'comment', 'positive', T(7, 33), 'which colour is this?? need it', 'That’s Moss! Link’s in our bio 🌿', { contact: 'k-julien', intent: 0.81, rules: ['One emoji max'], post: 'TikTok · “Lac Blanc at 5am”' }],
@@ -204,6 +208,12 @@ export const CONVERSATIONS: Conversation[] = ([
     messages: [m('them', 'Great bag, but delivery took 9 days and nobody told me why.', T(3, 38))],
     draft: ['Thanks Martine, and sorry about the silence. 9 days is too long and we should have told you. We’ve changed carriers for Annecy since. Glad the bag made it worth the wait.'],
     rules: ['Never blame the carrier publicly'],
+  },
+  {
+    id: 'c-tw-prize', author: '@leon.bike', network: 'instagram', type: 'dm', status: 'draft', sentiment: 'positive', at: T(7, 48), unread: true, intent: 0.55, labels: ['Trail Week'],
+    messages: [m('them', 'Is there a prize for Trail Week? Asking for my cycling club, we’d join as a team.', T(7, 46))],
+    draft: ['Hi Léon! The 3 best trails of the week win a Ridge 28L each, and ', { text: 'every finisher gets 15% off', note: 'Sage’s Trail Week brief doesn’t mention a finisher discount. Check before promising it.' }, '. Your club can join as a team: tag #FernwayTrailWeek.'],
+    rules: ['Give the number, then the answer'],
   },
   {
     id: 'c-parcel', author: '@nico.trail', network: 'instagram', type: 'dm', status: 'takeover', sentiment: 'negative', at: T(7, 30), teamDue: T(8, 15),

@@ -59,3 +59,22 @@ describe('Clip and post numbers for Juno and Atlas', () => {
     expect(clipPerf(withClip, clip.id, 80)).toMatchObject({ views: postPerf(st, out.id, 80)!.reach })
   })
 })
+
+describe('Contracts for Atlas and Sage', () => {
+  it('bestSlotOf follows the heatmap day by day; clicksOf needs a tracked link; Sage’s campaign report is written', async () => {
+    const { initialState } = await import('../../app/state')
+    const { bestSlotOf, clicksOf } = await import('./metrics')
+    const { writeCampaignReport, reportList } = await import('./slice')
+    const s = initialState()
+    expect(bestSlotOf(s, 'instagram', 4)).toEqual({ time: '18:30', reason: '18:30 gets 2.1× the median reach on Fridays' })
+    expect(bestSlotOf(s, 'instagram', 0)!.time).toMatch(/^\d\d:\d\d$/)
+    const p = s.publishing.posts.find(x => x.status === 'published' && x.stats)!
+    expect(clicksOf(s, p.id)).toBeUndefined()
+    const linked = { ...s, publishing: { ...s.publishing, posts: s.publishing.posts.map(x => (x.id === p.id ? { ...x, link: { url: 'https://fernway.co', utm: { utm_campaign: 'trail-week' } } } : x)) } }
+    expect(clicksOf(linked, p.id)).toBeGreaterThan(0)
+    const tw = s.strategy.campaigns.find(c => c.id === 'trail-week')!
+    const r = reportList(writeCampaignReport(s, tw)).find(x => x.id === 'campaign-trail-week')!
+    expect(r).toMatchObject({ kind: 'campaign', title: 'Trail Week' })
+    expect(r.sections[0].kind).toBe('campaign')
+  })
+})

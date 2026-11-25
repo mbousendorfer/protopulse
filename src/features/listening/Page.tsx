@@ -10,7 +10,8 @@ import {
   FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
-import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
+import { MENTION_NET, type EventState, type MentionOp } from './slice'
+import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
 import { benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
@@ -342,11 +343,14 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
   const [product, setProduct] = useState(() => params.get('product') || 'all')
   const [risk, setRisk] = useState(false)
   const [hidden, setHidden] = useState(false)
+  const [tag, setTag] = useState('all')
+  const [managing, setManaging] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const TAGS = s.listening.tagDefs.map(t => t.name)
   const mood = (m: Mention) => sentimentOf(s, m)
   const feed = scope ? allMentions(s).filter(scope) : allMentions(s)
   const all = feed.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
-  const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
+  const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk) && (tag === 'all' || (s.listening.tags[m.id] ?? []).includes(tag))).sort((a, b) => b.at - a.at)
   const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
   const products = [...new Set(feed.map(m => m.product).filter(Boolean))] as string[]
   const ids = useMemo(() => list.map(m => m.id), [list.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -371,6 +375,8 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
       <div className="row">
         <Filters label="Sentiment" value={sent} onChange={setSent} items={[{ value: 'all', label: 'All' }, { value: 'positive', label: 'Positive', count: count('positive') }, { value: 'neutral', label: 'Neutral', count: count('neutral') }, { value: 'negative', label: 'Negative', count: count('negative') }]} />
         <Filters label="Product" value={product} onChange={setProduct} items={[{ value: 'all', label: 'All products' }, ...products.map(p => ({ value: p, label: p }))]} />
+        <Menu align="start" trigger={<Btn size="sm"><Tag size={14} />{tag === 'all' ? 'All tags' : tag}<ChevronDown size={14} /></Btn>}
+          items={[{ label: 'All tags', onSelect: () => setTag('all') }, ...TAGS.map(t => ({ label: t, onSelect: () => setTag(t) })), { label: 'Manage tags…', onSelect: () => setManaging(true) }]} />
         <span className="spacer" />
         <Switch checked={risk} onChange={setRisk} label="At risk only" />
         <Switch checked={hidden} onChange={setHidden} label="Hidden" />
@@ -401,6 +407,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
                     <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
                   </button>
                   <div className="row nowrap">
+                    {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
                     {st === 'replied' ? <Pill tone="ok"><Check size={11} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
                       <Btn size="xs" onClick={() => run('nova', {}, [m.id])}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
                     )}
@@ -414,11 +421,12 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
       )}
       {sel.count > 0 && (
         <div className="row ls-bulk-more">
-          <Menu align="center" trigger={<Btn size="sm"><Tag size={14} />Tag<ChevronDown size={14} /></Btn>} items={MENTION_TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
+          <Menu align="center" trigger={<Btn size="sm"><Tag size={14} />Tag<ChevronDown size={14} /></Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
           <Menu align="center" trigger={<Btn size="sm">Correct sentiment<ChevronDown size={14} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: SENT_LABEL[x], onSelect: () => run('sentiment', { sentiment: x }) }))} />
         </div>
       )}
 
+      {managing && <ManageTags onClose={() => setManaging(false)} />}
       <Sheet open={!!open} onOpenChange={o => !o && setOpenId(null)} title={open ? `${open.author} on ${open.network}` : ''}
         footer={open && <>
           <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Bring back</> : <><EyeOff size={14} />Hide</>}</Btn>
@@ -437,7 +445,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
               <div><dt>Sentiment</dt><dd><span className={`ls-mood ${mood(open)}`}>{SENT_LABEL[mood(open)]}</span>{s.listening.sentiment[open.id] && <span className="faint"> · you corrected Echo</span>}</dd></div>
               {open.product && <div><dt>Product</dt><dd>{open.product}</dd></div>}
               <div><dt>Tags</dt><dd className="row tight">{(s.listening.tags[open.id] ?? []).map(t => <span key={t} className="chip ls-tag">{t}</span>)}
-                <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Tag size={12} />Add tag</Btn>} items={MENTION_TAGS.map(t => ({ label: t, onSelect: () => d({ type: 'listening/mentions', ids: [open.id], op: 'tag', tag: t }) }))} /></dd></div>
+                <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Tag size={12} />Add tag</Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => d({ type: 'listening/mentions', ids: [open.id], op: 'tag', tag: t }) }))} /></dd></div>
             </dl>
             <div className="row tight"><span className="faint">Correct the sentiment:</span>{(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => (
               <button key={x} className="filter" aria-pressed={mood(open) === x} onClick={() => d({ type: 'listening/mentions', ids: [open.id], op: 'sentiment', sentiment: x })}>{SENT_LABEL[x]}</button>
@@ -699,5 +707,31 @@ function NetworkBench({ n }: { n: Network }) {
         </section>
       )}
     </>
+  )
+}
+
+/* ---------- Tags ---------- */
+function ManageTags({ onClose }: { onClose: () => void }) {
+  const { s, d } = useStore()
+  const used = (name: string) => Object.values(s.listening.tags).filter(ts => ts.includes(name)).length
+  const save = (def: TagDef) => d({ type: 'listening/tagSave', def })
+  const kinds: (TagRule['kind'] | 'none')[] = ['none', 'product', 'press', 'creator', 'competitor', 'word']
+  return (
+    <Modal open onOpenChange={o => !o && onClose()} title="Mention tags"
+      footer={<><Btn variant="ghost" onClick={() => save({ id: '', name: `Tag ${s.listening.tagDefs.length + 1}` })}><Plus size={14} />New tag</Btn><span className="spacer" /><Btn variant="primary" onClick={onClose}>Done</Btn></>}>
+      <p className="muted mb-3">Echo applies a tag’s rule to every mention she files. Changing a rule tags the matching mentions at once; Undo is in the journal.</p>
+      <ul className="rows ls-tagdefs">
+        {s.listening.tagDefs.map(t => (
+          <li key={t.id}>
+            <input className="input" defaultValue={t.name} aria-label={`Name of the tag ${t.name}`} onBlur={e => { const v = e.target.value.trim(); if (v && v !== t.name) save({ ...t, name: v }) }} onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()} />
+            <Menu align="start" trigger={<Btn size="sm">{t.rule ? RULE_LABEL[t.rule.kind] : 'No rule'}<ChevronDown size={14} /></Btn>}
+              items={kinds.map(k => ({ label: k === 'none' ? 'No rule' : RULE_LABEL[k], onSelect: () => save({ ...t, rule: k === 'none' ? undefined : { kind: k, value: k === 'word' ? t.rule?.value ?? '' : undefined } }) }))} />
+            {t.rule?.kind === 'word' && <input className="input" defaultValue={t.rule.value} placeholder="repair, fix" aria-label={`Words for ${t.name}`} onBlur={e => { const v = e.target.value.trim(); if (v !== t.rule?.value) save({ ...t, rule: { kind: 'word', value: v } }) }} />}
+            <span className="faint num ls-tag-used" title={ruleText(t.rule)}>{used(t.name)} mentions</span>
+            <Btn size="xs" variant="ghost" icon aria-label={`Delete the tag ${t.name}`} onClick={() => d({ type: 'listening/tagDelete', id: t.id })}><Trash2 size={12} /></Btn>
+          </li>
+        ))}
+      </ul>
+    </Modal>
   )
 }

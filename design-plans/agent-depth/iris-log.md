@@ -34,3 +34,4 @@
 - 25/11 · Pitch n°6 « Social Media ROI » · **Go** (tel que pitché) · Go plus simple · décision de l'humain.
 - 25/11 · ROI · entonnoir GA4 mocké par réseau (clics d'Explore × atterrissage × conversion × panier), résultats de campagne en table GA4 et dépense de boost lue dans les boosts d'Iris · un modèle par post · les clics d'Explore sont la seule source déjà partagée ; le chiffre par euro bouge quand Sam booste un post de la campagne.
 - 25/11 · ROI → Sage · un bouton « Tell Sage » (et un CTA ⌘K) ajoute un fait Playbook pour Sage, journal + Undo · Iris le fait seule · pas d'action ni de cran prévus pour ça dans le pitch ; le fait reste une décision de Sam.
+- 25/11 · Demandes Sage (writeCampaignReport) et Atlas (bestSlotOf, clicksOf) · contrats exposés sans pitch · — · demandes d'exposition de contrat. Demande de Nova (temps de réponse) laissée en attente : elle recoupe le rapport community mis en Later par l'humain.
