@@ -6,7 +6,7 @@ import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BEST_SLOT, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
-import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs } from '../../ui'
+import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Pop, Seg, Sheet, Tabs } from '../../ui'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { PostPreview, PostsBulk, useOpenPost } from './Bulk'
@@ -19,6 +19,7 @@ import { isOpen, recommendNetwork } from './ideasModel'
 import { targetsOf } from '../strategy/slice'
 import { uid } from '../../app/core'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
+import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -88,8 +89,9 @@ function Calendar() {
   const open = useOpenPost()
   const [anchor, setAnchor] = useState(MONDAY_THIS_WEEK)
   const [network, setNetwork] = useState<Network | 'all'>('all')
+  const [filters, setFilters] = useState<CalFilters>({})
   const [over, setOver] = useState<number | null>(null)
-  const posts = s.publishing.posts.filter(p => network === 'all' || p.network === network).sort((a, b) => a.at - b.at)
+  const posts = s.publishing.posts.filter(p => (network === 'all' || p.network === network) && passes(p, filters)).sort((a, b) => a.at - b.at)
   const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0)).getTime()
 
   const days = view === 'month' ? 35 : 7
@@ -107,7 +109,7 @@ function Calendar() {
 
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
   const ids = useMemo(() => visible.map(p => p.id), [visible.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, `${view}-${start}-${network}`)
+  const sel = useSelection(ids, `${view}-${start}-${network}-${JSON.stringify(filters)}`)
 
   const drop = (e: DragEvent, day: number) => {
     e.preventDefault(); setOver(null)
@@ -133,6 +135,7 @@ function Calendar() {
         <div className="row">
           <Menu trigger={<button className="select-btn">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
             items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...PUBLISH_NETWORKS.map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
+          <CalendarFilters value={filters} onChange={setFilters} />
           {view !== 'month' && <span className="row tight faint pub-selall"><SelectAll sel={sel} label="Select every post shown" />Select all</span>}
           <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'list', label: 'List' }]} />
         </div>
@@ -193,6 +196,38 @@ function Calendar() {
       )}
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
     </div>
+  )
+}
+
+/** The calendar's Filters popover: status, label, campaign, pillar, author. Several choices in a facet = any of them. */
+function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f: CalFilters) => void }) {
+  const { s } = useStore()
+  const n = activeCount(value)
+  const campaigns = [...new Set(s.publishing.posts.map(p => p.campaign).filter((c): c is string => !!c))]
+  const facets: { key: Facet; label: string; options: { value: string; label: string }[] }[] = [
+    { key: 'status', label: 'Status', options: (Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[]).map(k => ({ value: k, label: STATUS_LABEL[k] })) },
+    { key: 'label', label: 'Label', options: [...knownLabels(s).map(l => ({ value: l, label: l })), { value: NO_LABEL, label: 'No label' }] },
+    { key: 'campaign', label: 'Campaign', options: campaigns.map(c => ({ value: c, label: c })) },
+    { key: 'pillar', label: 'Pillar', options: s.strategy.pillars.map(p => ({ value: p.name, label: p.name })) },
+    { key: 'author', label: 'Author', options: [{ value: 'atlas', label: 'Atlas' }, { value: 'you', label: 'You' }] },
+  ]
+  const toggle = (k: Facet, v: string) => { const cur = value[k] ?? []; onChange({ ...value, [k]: cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v] }) }
+  return (
+    <Pop align="end" trigger={<button className="select-btn" aria-label={n ? `Filters, ${n} on` : 'Filters'}>Filters{n > 0 && <span className="num pub-filter-n">{n}</span>}<ChevronDown size={14} /></button>}>
+      <div className="pub-filters">
+        {facets.filter(f => f.options.length).map(f => (
+          <fieldset key={f.key}>
+            <legend className="label">{f.label}</legend>
+            {f.options.map(o => (
+              <label key={o.value} className="row tight pub-filter-opt">
+                <input type="checkbox" className="check" checked={!!value[f.key]?.includes(o.value)} onChange={() => toggle(f.key, o.value)} />{o.label}
+              </label>
+            ))}
+          </fieldset>
+        ))}
+        <div className="row"><span className="spacer" /><Btn size="sm" variant="ghost" disabled={!n} onClick={() => onChange({})}>Clear</Btn></div>
+      </div>
+    </Pop>
   )
 }
 

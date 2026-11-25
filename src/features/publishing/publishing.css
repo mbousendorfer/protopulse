@@ -156,6 +156,12 @@
 .pub-perf dd { margin: 2px 0 0; }
 .pub-perf-read { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; margin-bottom: var(--s2); }
 .pub-perf-read p { margin: 0; flex: 1 1 240px; }
+.pub-filters { display: flex; flex-direction: column; gap: var(--s3); max-height: 60vh; overflow: auto; min-width: 240px; padding: var(--s3); }
+.pub-filters fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+.pub-filter-opt { cursor: pointer; }
+.pub-filter-n { margin-left: 4px; font-weight: 600; }
+.pub-labels { display: flex; flex-wrap: wrap; gap: var(--s1); align-items: center; }
+.pub-labels .input { width: 140px; }
 .cmp-net { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
 .cmp-net-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s2) var(--s3); align-items: center; }
 .cmp-net-row > :last-child { grid-column: 1 / -1; }
