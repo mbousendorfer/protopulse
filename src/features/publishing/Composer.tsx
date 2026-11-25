@@ -39,7 +39,7 @@ const toLocal = (t: number) => { const d = new Date(t); return `${d.getFullYear(
 const dayLabel = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const names = (ns: Network[]) => ns.map(n => NETWORK_LABEL[n]).join(ns.length > 2 ? ', ' : ' and ')
 const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-const tidy = (t: string) => t.replace(/[ \t]{2,}/g, ' ').replace(/\s([.,!?])/g, '$1').replace(/^\s*[,:;]?\s*/, '').replace(/^./, c => c.toUpperCase())
+const tidy = (t: string) => t.replace(/[ \t]{2,}/g, ' ').replace(/\s([.,!?])/g, '$1').replace(/,+(?=[.!?]|$)/g, '').replace(/^\s*[,:;]?\s*/, '').replace(/^./, c => c.toUpperCase())
 const STATUS_TONE: Partial<Record<Post['status'], 'alert' | 'caution' | 'ok'>> = { failed: 'alert', needs: 'caution', paused: 'caution', published: 'ok' }
 
 type Where = 'accounts' | 'caption' | 'visual' | 'when'
@@ -86,6 +86,9 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
     const what = c.label.slice(c.label.indexOf(': ') + 2)
     return m.set(what, [...(m.get(what) ?? []), NETWORK_LABEL[c.n]])
   }, new Map<string, string[]>())].map(([what, ns]) => `${ns.join(', ')}: ${what}`)
+  // Lengths read on one line, each network with its own limit.
+  const lengths = captionOk.filter(l => / of \d+ characters$/.test(l))
+  const okLines = [...captionOk.filter(l => !lengths.includes(l)), ...(lengths.length ? [`Characters: ${lengths.map(l => l.replace(' characters', '').replace(':', '')).join(' · ')}`] : [])]
   const needVisual = media ? [] : accounts.filter(n => NEEDS_MEDIA.includes(n))
   const alert = criticalAlert(s)
   const problems: Problem[] = [
@@ -201,7 +204,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
               : <div className="row tight" role="group" aria-label="Accounts">
                   {PUBLISH_NETWORKS.map(n => (
                     <button key={n} type="button" className={`cmp-acc ${accounts.includes(n) ? 'on' : ''}`} aria-pressed={accounts.includes(n)} onClick={() => toggle(n)}>
-                      <Net n={n} />{NETWORK_LABEL[n]}{accounts.includes(n) && <Check size={12} aria-hidden />}
+                      <Net n={n} />{NETWORK_LABEL[n]}
                     </button>
                   ))}
                 </div>}
@@ -209,7 +212,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
 
           <section className="cmp-sec" id="cmp-caption" aria-labelledby="cmp-h-caption">
             <div className="row between">
-              <h3 className="section-title flush" id="cmp-h-caption"><label htmlFor="cmp-text">Caption</label>{accounts.length > 1 && <span className="faint t-sm">shared by {names(accounts)}</span>}</h3>
+              <h3 className="section-title flush" id="cmp-h-caption"><label htmlFor="cmp-text">Caption</label>{accounts.length > 1 && <span className="faint t-sm">shared by {accounts.length > 2 ? `all ${accounts.length} networks` : names(accounts)}</span>}</h3>
               <span className="row tight t-sm"><span className="faint">Pillar</span>
                 <Menu align="end" trigger={<button type="button" className="select-btn" aria-label={`Pillar: ${pillar}`}><span>{pillar}</span><ChevronDown size={14} /></button>}
                   items={s.strategy.pillars.map(({ name: p }) => ({ label: p, onSelect: () => setPillar(p), icon: p === pillar ? <Check size={14} /> : undefined }))} />
@@ -245,7 +248,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 {captionBad.map(c => { const fix = fixOf(c); return (
                   <li key={c.label} className="bad"><AlertTriangle size={14} aria-hidden /><span>{c.label}</span>{fix && <Btn size="xs" variant="ghost" onClick={fix.run}>{fix.label}</Btn>}</li>
                 ) })}
-                {captionOk.map(l => <li key={l} className="ok"><Check size={14} aria-hidden /><span>{l}</span></li>)}
+                {okLines.map(l => <li key={l} className="ok"><Check size={14} aria-hidden /><span>{l}</span></li>)}
               </ul>
             )}
           </section>
@@ -273,7 +276,6 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 {uploadError && <p className="cmp-hint bad" role="alert"><AlertTriangle size={14} aria-hidden />{uploadError}</p>}
               </div>
             </div>
-            <input ref={file} type="file" accept="image/*" hidden onChange={e => { upload(e.target.files?.[0]); e.target.value = '' }} />
           </section>
 
           <section className="cmp-sec" id="cmp-when" aria-labelledby="cmp-h-when">
@@ -298,6 +300,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           </section>
         </div>
 
+        <input ref={file} type="file" accept="image/*" hidden aria-hidden onChange={e => { upload(e.target.files?.[0]); e.target.value = '' }} />
         <aside className="cmp-side" aria-label="Preview">
           {accounts.length > 1 && (
             <Seg name="pv" label="Preview network" size="sm" value={net} onChange={setPreview}
@@ -307,12 +310,12 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             <>
               <div className="cmp-net">
                 {accounts.length === 1 && <p className="row tight"><Net n={net} /><b>{NETWORK_LABEL[net]}</b></p>}
-                <div className="field">
-                  <span className="label">Format{!(net in formats) && (FORMATS[net]?.length ?? 0) > 1 && <span className="faint"> · picked by Atlas</span>}</span>
-                  {(FORMATS[net]?.length ?? 0) > 1
-                    ? <Seg name={`fmt-${net}`} label={`${NETWORK_LABEL[net]} format`} size="sm" value={formatOf(net)} onChange={v => setFormats(f => ({ ...f, [net]: v }))} options={FORMATS[net]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
-                    : <span className="t-sm">{FORMAT_LABEL[formatOf(net)]}</span>}
-                </div>
+                {(FORMATS[net]?.length ?? 0) > 1 ? (
+                  <div className="field">
+                    <span className="label">Format{!(net in formats) && <span className="faint"> · picked by Atlas</span>}</span>
+                    <Seg name={`fmt-${net}`} label={`${NETWORK_LABEL[net]} format`} size="sm" value={formatOf(net)} onChange={v => setFormats(f => ({ ...f, [net]: v }))} options={FORMATS[net]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
+                  </div>
+                ) : <p className="row tight t-sm"><span className="faint">Format</span>{FORMAT_LABEL[formatOf(net)]}</p>}
                 {accounts.length > 1 && (
                   <Switch checked={variants[net] !== undefined} label={`Own caption on ${NETWORK_LABEL[net]}`} onChange={on => setVariants(v => ({ ...v, [net]: on ? text : undefined }))} />
                 )}
