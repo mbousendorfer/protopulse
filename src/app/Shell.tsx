@@ -33,6 +33,8 @@ const CRUMB: Record<string, string> = {
 
 // Agents › Shared rules and Escalation are tabs of the Agents page, named in the crumbs.
 const AGENT_TABS: Record<string, string> = { rules: 'Shared rules', escalation: 'Escalation' }
+// Crumbs a capital first letter can't spell.
+const CRUMB_WORD: Record<string, string> = { roi: 'ROI' }
 
 const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/activity', b: '/agents/rules' }
 
@@ -145,7 +147,7 @@ export default function Shell() {
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
                 : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
                 : decodeURIComponent(x).replace(/-/g, ' ')
-              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
+              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{CRUMB_WORD[t] ?? t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
           </div>
           <div className="spacer" />
