@@ -291,7 +291,12 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
           {/* "Send as is" sends this whole text, so it is on the row. */}
           <p className="ib-need-line ib-need-draft"><span className="ib-need-by">Nova</span>{draft}</p>
         </>}
-        {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? <>Holding reply: {draft}</> : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
+        {need === 'call' && (() => {
+          const [by, ...rest] = (c.note ?? 'Locked topic').split(' · ')
+          const why = rest.join(' · ')
+          // An escalation quotes its Playbook rule before the holding reply.
+          return <p className="ib-need-line"><span className="ib-need-by">{by}</span>{why.startsWith('rule') && <>{cap(why)}. </>}{c.draft ? <>Holding reply: {draft}</> : cap(why)}</p>
+        })()}
         {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
         {need === 'claire' && <ClaireLine c={c} />}
       </div>
