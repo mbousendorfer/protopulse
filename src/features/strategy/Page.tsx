@@ -49,8 +49,10 @@ function Campaigns() {
   const { s } = useStore()
   const order: CampaignStatus[] = ['review', 'live', 'brief', 'done']
   const list = [...s.strategy.campaigns].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
-  if (!list.length) return <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} />
   return (
+    <div className="stack lg">
+    <Moments />
+    {!list.length ? <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} /> : (
     <div className="campaigns">
       {list.map(c => {
         const pct = Math.round((c.goal.current / c.goal.target) * 100)
@@ -74,6 +76,40 @@ function Campaigns() {
         )
       })}
     </div>
+    )}
+    </div>
+  )
+}
+
+/** Dates worth planning for. Sage raises each one 3 weeks before; added ones show in Atlas's calendar. */
+function Moments() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const list = s.strategy.moments.filter(m => m.end > now)
+  if (!list.length) return null
+  return (
+    <section className="card">
+      <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
+      <ul className="rows">
+        {list.map(m => (
+          <li key={m.id} className="moment">
+            <span className="mono faint moment-date">{fmtDate(m.start)}{fmtDate(m.end) !== fmtDate(m.start) ? ` – ${fmtDate(m.end)}` : ''}</span>
+            <div className="moment-body">
+              <b>{m.name}</b>
+              <p className="muted">{m.why} <span className="faint">{m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</span></p>
+            </div>
+            {m.status === 'added' ? <Pill tone="ok">In the calendar</Pill>
+              : m.status === 'skipped' ? <Reopen label="Not this year" onUndo={() => d({ type: 'strategy/reopen', id: m.id })} />
+              : (
+                <div className="row nowrap">
+                  <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add to the calendar</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
+                </div>
+              )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
