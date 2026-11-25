@@ -10,3 +10,9 @@ Pitch B13 (multi-profils) : la cadence affichée chez Sage doit dire si Fernway 
 
 ## En attendant
 Ses posts comptent dans la cible Instagram (même réseau). Le plafond de 3 posts par jour d'Atlas, lui, est par profil.
+
+## Réponse de Sage
+Fernway Repair compte dans la cible Instagram (un seul réseau, une seule cible) : pas de cible propre.
+La table de cadence de Sage dit combien des posts Instagram des 7 derniers jours sont partis sur
+Fernway Repair (« incl. N on Fernway Repair »), via `accountLastWeek(s, 'ig-repair')` dans
+`src/features/strategy/slice.ts`.
