@@ -4,10 +4,12 @@ import { useStore } from '../../app/store'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Heatmap, HBars, LineChart } from '../../ui/charts'
-import { BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
+import { ALERT_CONDITIONS, ALERT_SUBJECTS, ALERT_UNITS, BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
 import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
 import { AlertsTable } from './alerts'
-import { onResolveInsights } from './slice'
+import { onResolveInsights, onUndoInsights } from './slice'
+import { anomaliesDue, tickAnomalies } from './engine'
+import { reportsDue, tickReports } from './reports'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -114,9 +116,8 @@ const performance = defineIntent({
 function Alerts() {
   const { s, d } = useStore()
   return (
-    <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris raises an anomaly on your Desk when a rule fires, and copies Claire when you ask."
-      subjects={[{ value: 'views', label: 'Views per video' }, { value: 'reach', label: 'Daily reach' }, { value: 'er', label: 'Engagement rate of a post' }, { value: 'followers', label: 'New followers' }, { value: 'clicks', label: 'Link clicks' }, { value: 'reply', label: 'Reply time' }, { value: 'sentiment', label: 'Negative sentiment' }]}
-      conditions={['drops by more than', 'rises above', 'falls below']} units={['%', '% over 3 posts', '× the account average', '× usual daily growth', ' min median']}
+    <AlertsTable agent="Iris" alerts={s.insights.alerts} intro="Iris checks these every few minutes against what she measures. When one fires she opens an anomaly in Insights and, unless “Raise anomalies” is on Suggest, brings it to your Desk."
+      subjects={ALERT_SUBJECTS} conditions={ALERT_CONDITIONS} units={ALERT_UNITS}
       onSave={alert => d({ type: 'insights/alertSave', alert })} onToggle={id => d({ type: 'insights/alertToggle', id })} onDelete={id => d({ type: 'insights/alertDelete', id })} />
   )
 }
@@ -125,6 +126,9 @@ const iris: AgentModule = {
   id: 'iris',
   script: SCRIPT,
   onResolve: onResolveInsights,
+  onUndo: onUndoInsights,
+  due: (s, t) => anomaliesDue(s) || reportsDue(s, t),
+  tick: (s, t) => tickAnomalies(reportsDue(s, t) ? tickReports(s, t) : s),
   intents: [besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },

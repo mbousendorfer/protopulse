@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, Lock, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
-import type { AgentId } from '../../app/types'
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
+import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
-import type { Campaign, CampaignStatus, Phase } from '../../data/strategy'
+import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase } from '../../data/strategy'
+import { PUBLISH_NETWORKS } from '../../data/publishing'
+import { lastWeekOf, launchBlock, mixOf, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -26,7 +28,8 @@ export default function StrategyPage() {
   return (
     <div className="page strategy">
       <PageHead agent="sage" title="Strategy" lede="Sage turns a two-line brief into a plan the whole team follows, and keeps the pillars and cadence on track.">
-        <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>
+        {/* Only on the lists: on the brief it would point to itself, in a campaign it would compete with Approve. */}
+        {(seg === '' || seg === 'pillars') && <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>}
       </PageHead>
       {seg !== 'new' && <Tabs value={tab} onChange={v => nav(v === 'campaigns' ? '/strategy' : '/strategy/pillars')} items={[{ value: 'campaigns', label: 'Campaigns' }, { value: 'pillars', label: 'Pillars and cadence' }]} />}
       <Routes>
@@ -76,52 +79,150 @@ function Campaigns() {
 
 /* ---------- New brief ---------- */
 const PHASES = ['Reading your last 3 launches', 'Checking pillars and cadence', 'Splitting the work between agents']
+const STEP_MS = 1100
+const UNIT_LABEL: Record<GoalUnit, string> = { 'pre-orders': 'pre-orders', orders: 'orders', 'sign-ups': 'sign-ups', requests: 'requests', 'new followers': 'new followers', 'revenue from social (€)': '€ revenue from social' }
+const isoDay = (t: number) => new Date(t).toLocaleDateString('en-CA')
+const fromIso = (v: string) => (v ? new Date(`${v}T09:00`).getTime() : undefined)
+
+type Fields = { product: string; launch: string; target: string; unit: GoalUnit; audience: string; networks: Network[] }
+
+/** The one question Sage asks before building, with answers in one click. */
+function questionFor(gap: BriefGap, text: string, now: number): { q: string; choices: { label: string; value: Partial<BriefInput> }[]; placeholder: string } {
+  if (gap === 'goal') {
+    const unit: GoalUnit = /pre-?order/i.test(text) ? 'pre-orders' : /launch|bottle|jacket|ridge|fleece/i.test(text) ? 'orders' : 'sign-ups'
+    return {
+      q: 'What number says it worked?', placeholder: 'e.g. 500 orders',
+      choices: [
+        { label: `300 ${unit}`, value: { goal: { target: 300, unit } } },
+        { label: `1,000 ${unit}`, value: { goal: { target: 1000, unit } } },
+        { label: '€20,000 revenue from social', value: { goal: { target: 20000, unit: 'revenue from social (€)' } } },
+      ],
+    }
+  }
+  const d = new Date(now)
+  const first = new Date(d.getFullYear(), d.getMonth() + 2, 1, 9).getTime()
+  return {
+    q: 'When does it launch?', placeholder: '',
+    choices: [3, 6].map(w => ({ label: `In ${w} weeks, ${fmtDate(now + w * 7 * DAY)}`, value: { launch: now + w * 7 * DAY } })).concat([{ label: fmtDate(first), value: { launch: first } }]),
+  }
+}
 
 function NewBrief() {
   const [params] = useSearchParams()
-  const { d } = useStore()
+  const { s, d } = useStore()
+  const now = useNow()
   const nav = useNavigate()
   const [brief, setBrief] = useState(params.get('brief') ?? '')
   const [budget, setBudget] = useState('')
+  const cadence = targetsOf(s).cadence
+  const [f, setF] = useState<Fields>({ product: '', launch: '', target: '', unit: 'orders', audience: '', networks: PUBLISH_NETWORKS.filter(n => (cadence[n] ?? 0) > 0) })
+  const [more, setMore] = useState(false)
   const [phase, setPhase] = useState(-1)
+  const [ask, setAsk] = useState<{ gap: BriefGap; input: BriefInput } | null>(null)
+  const [answer, setAnswer] = useState('')
   const started = useRef(false)
 
   // Leaving the page while Sage is thinking cancels the plan: no campaign appears behind your back.
   const timers = useRef<number[]>([])
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
+  useEffect(() => () => { timers.current.forEach(clearTimeout); timers.current = []; started.current = false }, [])
+  const after = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms))
+
+  const fields = (): Partial<BriefInput> => ({
+    product: f.product || undefined, launch: fromIso(f.launch), audience: f.audience.trim() || undefined, networks: f.networks,
+    goal: +f.target ? { target: +f.target, unit: f.unit } : undefined, budget: budget ? +budget : undefined,
+  })
+  /** Build once nothing is missing: the last two thinking steps, then the plan. */
+  const build = (input: BriefInput) => {
+    setAsk(null)
+    after(0, () => setPhase(1))
+    after(STEP_MS, () => setPhase(2))
+    after(2 * STEP_MS, () => {
+      const id = uid('cmp')
+      const { text, ...rest } = input
+      d({ type: 'strategy/create', id, brief: text, input: rest })
+      nav(`/strategy/campaigns/${id}`, { replace: true })
+    })
+  }
+  /** Sage asks for the first thing the brief leaves out, or builds. */
+  const next = (input: BriefInput) => {
+    const { missing } = readBrief(input.text, now, input)
+    if (missing.length) { setAnswer(''); setAsk({ gap: missing[0], input }) } else build(input)
+  }
   const run = (text = brief) => {
     if (!text.trim() || started.current) return
     started.current = true
     setPhase(0)
-    PHASES.forEach((_, i) => timers.current.push(window.setTimeout(() => setPhase(i), i * 1100)))
-    timers.current.push(window.setTimeout(() => {
-      const id = uid('cmp')
-      d({ type: 'strategy/create', id, brief: text.trim(), budget: budget ? +budget : undefined })
-      nav(`/strategy/campaigns/${id}`, { replace: true })
-    }, PHASES.length * 1100))
+    after(STEP_MS, () => next(readBrief(text.trim(), now, fields()).input))
+  }
+  const reply = (value: Partial<BriefInput>) => ask && next({ ...ask.input, ...value })
+  const typed = (): Partial<BriefInput> | undefined => {
+    if (!ask || !answer.trim()) return
+    if (ask.gap === 'goal') { const goal = readGoal(answer); return goal && { goal } }
+    const launch = readLaunch(answer, now) ?? fromIso(answer)
+    return launch ? { launch } : undefined
   }
 
   useEffect(() => { if (params.get('auto') === '1' && params.get('brief')) run(params.get('brief')!) }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleNet = (n: Network) => setF(x => ({ ...x, networks: x.networks.includes(n) ? x.networks.filter(y => y !== n) : [...x.networks, n] }))
+  const qa = ask && questionFor(ask.gap, ask.input.text, now)
+  const typedValue = typed()
 
   return (
     <div className="new-brief">
       <Btn variant="ghost" size="sm" onClick={() => nav('/strategy')}><ArrowLeft size={14} />Campaigns</Btn>
       <section className="card pad-lg stack">
         <div className="row tight"><Mark agent="sage" /><b>Brief Sage</b></div>
-        <p className="muted">Two or three lines are enough: what, when, and the one number that says it worked.</p>
+        <p className="muted">Two or three lines are enough: what, when, and the one number that says it worked. Sage asks for what’s missing.</p>
         {phase < 0 ? (
           <form className="stack" onSubmit={e => { e.preventDefault(); run() }}>
             <div className="field">
               <label htmlFor="brief">Brief</label>
               <textarea id="brief" className="textarea" rows={4} autoFocus value={brief} onChange={e => setBrief(e.target.value)} placeholder="Launch the new Storm Jacket on March 15, goal 300 pre-orders." />
             </div>
-            <div className="field mw-220">
-              <label htmlFor="budget">Boost budget (optional)</label>
-              <input id="budget" className="input" inputMode="numeric" placeholder="€600" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
-            </div>
+            <button type="button" className="disclose" aria-expanded={more} aria-controls="brief-more" onClick={() => setMore(o => !o)}>
+              <ChevronRight size={14} aria-hidden />More details <span className="faint">(optional)</span>
+            </button>
+            {more && (
+              <div id="brief-more" className="brief-fields">
+                <div className="field">
+                  <span className="label" id="product-l">Product</span>
+                  <Menu align="start" trigger={<button type="button" className="select-btn" aria-labelledby="product-l">{f.product || 'Sage picks from the brief'}<ChevronDown size={14} /></button>}
+                    items={[{ label: 'Sage picks from the brief', onSelect: () => setF(x => ({ ...x, product: '' })) }, ...PRODUCT_NAMES.map(p => ({ label: p, onSelect: () => setF(x => ({ ...x, product: p })) }))]} />
+                </div>
+                <div className="field">
+                  <label htmlFor="launch">Launch date</label>
+                  <input id="launch" type="date" className="input" value={f.launch} min={isoDay(now)} onChange={e => setF(x => ({ ...x, launch: e.target.value }))} />
+                </div>
+                <div className="field">
+                  <label htmlFor="target">Goal</label>
+                  <div className="row tight nowrap">
+                    <input id="target" className="input goal-input" inputMode="numeric" placeholder="300" value={f.target} onChange={e => setF(x => ({ ...x, target: e.target.value.replace(/[^\d]/g, '') }))} />
+                    <Menu align="start" trigger={<button type="button" className="select-btn" aria-label="Goal unit">{UNIT_LABEL[f.unit]}<ChevronDown size={14} /></button>}
+                      items={GOAL_UNITS.map(u => ({ label: UNIT_LABEL[u], onSelect: () => setF(x => ({ ...x, unit: u })) }))} />
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="budget">Boost budget</label>
+                  <input id="budget" className="input" inputMode="numeric" placeholder="€600" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
+                </div>
+                <div className="field span-2">
+                  <label htmlFor="audience">Audience</label>
+                  <input id="audience" className="input" placeholder="Sage picks it from the product and your followers" value={f.audience} onChange={e => setF(x => ({ ...x, audience: e.target.value }))} />
+                </div>
+                <div className="field span-2">
+                  <span className="label" id="nets-l">Networks</span>
+                  <div className="row tight" role="group" aria-labelledby="nets-l">
+                    {PUBLISH_NETWORKS.map(n => (
+                      <button key={n} type="button" className="filter net-toggle" aria-pressed={f.networks.includes(n)} aria-label={NETWORK_LABEL[n]} title={NETWORK_LABEL[n]} onClick={() => toggleNet(n)}><Net n={n} /></button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="row">
-              <Btn variant="primary" type="submit" disabled={!brief.trim()}><Sparkles size={14} />Build the plan</Btn>
-              <span className="faint">Sage drafts it. Nothing goes live until you approve.</span>
+              <Btn variant="primary" type="submit" disabled={!brief.trim() || (more && !f.networks.length)}><Sparkles size={14} />Build the plan</Btn>
+              <span className="faint">{more && !f.networks.length ? 'Pick at least one network.' : 'Sage drafts it. Nothing goes live until you approve.'}</span>
             </div>
             <div className="row tight examples">
               <span className="faint">Try:</span>
@@ -135,9 +236,25 @@ function NewBrief() {
             <blockquote>“{brief}”</blockquote>
             <ol>
               {PHASES.map((p, i) => (
-                <li key={p} className={i < phase ? 'done' : i === phase ? 'now' : ''}>
-                  {i < phase ? <Check size={14} /> : i === phase ? <Thinking label={p} /> : <span className="faint">{p}</span>}
-                  {i < phase && <span>{p}</span>}
+                <li key={p} className={i < phase || (i === 0 && ask) ? 'done' : i === phase && !ask ? 'now' : ''}>
+                  {i < phase || (i === 0 && ask) ? <Check size={14} /> : i === phase && !ask ? <Thinking label={p} /> : <span className="faint">{p}</span>}
+                  {(i < phase || (i === 0 && ask)) && <span>{p}</span>}
+                  {i === 0 && qa && (
+                    <form className="sage-ask" onSubmit={e => { e.preventDefault(); if (typedValue) reply(typedValue) }}>
+                      <p className="row tight"><Mark agent="sage" /><b>{qa.q}</b></p>
+                      <div className="row tight">
+                        {qa.choices.map((c, n) => <Btn key={c.label} size="sm" variant={n === 0 ? 'primary' : undefined} autoFocus={n === 0} onClick={() => reply(c.value)}>{c.label}</Btn>)}
+                      </div>
+                      <div className="row tight nowrap">
+                        <label htmlFor="sage-answer" className="sr-only">Your answer</label>
+                        {ask!.gap === 'launch'
+                          ? <input id="sage-answer" type="date" className="input mw-220" min={isoDay(now)} value={answer} onChange={e => setAnswer(e.target.value)} />
+                          : <input id="sage-answer" className="input mw-220" placeholder={qa.placeholder} value={answer} onChange={e => setAnswer(e.target.value)} />}
+                        <Btn size="sm" type="submit" disabled={!typedValue}>Use this</Btn>
+                        <Btn size="sm" variant="ghost" onClick={() => build(ask!.input)}>Let Sage decide</Btn>
+                      </div>
+                    </form>
+                  )}
                 </li>
               ))}
             </ol>
@@ -163,6 +280,7 @@ function CampaignView() {
   const days = Math.ceil((c.end - c.start) / DAY)
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
   const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
+  const block = c.status === 'review' ? launchBlock(s, c) : undefined
 
   return (
     <div className="stack lg">
@@ -172,15 +290,18 @@ function CampaignView() {
           <div className="row tight"><Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill><span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}{c.version > 1 ? ` · version ${c.version}` : ''}</span></div>
           <h1>{c.name}</h1>
           <p className="muted brief-quote">“{c.brief}”</p>
+          {c.assumptions && <p className="assumptions"><b>Sage assumed</b>{c.assumptions.map(x => <span key={x}>{x}</span>)}</p>}
         </div>
         {c.status === 'review' && (
           <div className="row">
-            <Btn variant="primary" onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve campaign</Btn>
+            <Btn variant="primary" disabled={!!block} aria-describedby={block ? 'launch-block' : undefined} onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve campaign</Btn>
             <Btn onClick={() => setChanges(o => !o)}>Request changes</Btn>
             <Btn variant="ghost" onClick={() => setDiscard(true)}><Trash2 size={14} />Discard</Btn>
           </div>
         )}
       </header>
+
+      {block && <p id="launch-block" className="launch-block"><Lock size={14} aria-hidden />{block}</p>}
 
       {changes && c.status === 'review' && (
         <form className="card pad stack" onSubmit={e => { e.preventDefault(); if (note.trim()) { d({ type: 'strategy/changes', id: c.id, feedback: note.trim() }); setNote(''); setChanges(false) } }}>
@@ -222,7 +343,7 @@ function CampaignView() {
                 <p>{a.text}</p>
                 {a.status === 'proposed' ? (
                   <div className="row nowrap">
-                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
+                    <Btn size="sm" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
                   </div>
                 ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
@@ -236,7 +357,7 @@ function CampaignView() {
         <section className="card pad recap">
           <div className="section-title"><Mark agent="iris" />Recap by Iris</div>
           {c.recap.map(p => <p key={p}>{p}</p>)}
-          <Link to="/insights/reports/repair-friday" className="btn sm">Full recap</Link>
+          {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
         </section>
       )}
 
@@ -261,7 +382,7 @@ function CampaignView() {
       </section>
 
       <section className="card pad">
-        <div className="section-title">Posts by phase <span className="faint">· {c.posts.length} posts</span></div>
+        <div className="section-title">Posts by phase <span className="faint">· {c.posts.length} posts</span>{c.status === 'live' && <Link to="/publishing/calendar" className="section-link">See them in Atlas’s calendar</Link>}</div>
         <div className="phase-cols">
           {(['Teasing', 'Launch', 'Follow-up'] as Phase['name'][]).map(ph => (
             <div key={ph} className="phase-col">
@@ -356,6 +477,9 @@ function DelegateBoard({ c }: { c: Campaign }) {
 /* ---------- Pillars and cadence ---------- */
 function Pillars() {
   const { s, d } = useStore()
+  const now = useNow()
+  const mix = mixOf(s, now)
+  const week = lastWeekOf(s, now)
   return (
     <div className="stack lg">
       <section className="card pad">
@@ -365,19 +489,20 @@ function Pillars() {
         </div>
         <div className="pillars">
           {s.strategy.pillars.map(p => {
-            const off = p.actual - p.target
+            const actual = mix[p.name] ?? 0
+            const off = actual - p.target
             return (
               <div key={p.id} className="pillar">
                 <div className="row between">
                   <b>{p.name}</b>
-                  <span className="num">{p.actual}% <span className="faint">of posts · target {p.target}%</span></span>
+                  <span className="num">{actual}% <span className="faint">of posts · target {p.target}%</span></span>
                 </div>
                 <p className="faint">{p.desc}</p>
-                <div className="pbar" role="img" aria-label={`${p.name}: ${p.actual}% of posts, target ${p.target}%`}>
-                  <i style={{ width: `${p.actual * 2}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
+                <div className="pbar" role="img" aria-label={`${p.name}: ${actual}% of posts, target ${p.target}%`}>
+                  <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
                   <span className="target" style={{ left: `${p.target * 2}%` }} />
                 </div>
-                {Math.abs(off) > 5 && <span className={`delta ${off < 0 ? 'down' : 'up'}`}>{off > 0 ? '+' : ''}{off} pt vs target</span>}
+                {Math.abs(off) > 5 && <span className="off-target">{Math.abs(off)} pt {off > 0 ? 'over' : 'under'} target</span>}
               </div>
             )
           })}
@@ -393,7 +518,7 @@ function Pillars() {
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
                   <td><Net n={c.network} size={20} /></td>
-                  <td className="r">{c.actual}{c.actual < c.target && <span className="delta down"> −{c.target - c.actual}</span>}</td>
+                  <td className="r">{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}</td>
                   <td className="r">
                     <span className="stepper">
                       <Btn size="xs" variant="ghost" icon aria-label={`Lower ${NETWORK_LABEL[c.network]} target`} onClick={() => d({ type: 'strategy/cadence', network: c.network, target: c.target - 1 })}><Minus size={12} /></Btn>
@@ -418,7 +543,7 @@ function Pillars() {
                 </div>
                 {p.status === 'proposed' ? (
                   <div className="row nowrap">
-                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                    <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
                   </div>
                 ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
