@@ -62,18 +62,16 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
     onBulk()
   }
 
-  // One primary per batch: the footer acts on the selection (ready items start selected); lanes only open a review.
-  const lanes: { id: Lane; label: string; count: number; note: string }[] =
-    b.id === 'nova' ? [
-      { id: 'leads', label: 'Leads', count: leads.length, note: leads.length ? 'People asking before they buy' : 'No buying questions right now' },
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Sure of the facts and the tone' },
-      { id: 'decide', label: 'To decide', count: decide.length, note: 'Nova marked a passage she’s unsure about' },
-    ] : b.id === 'atlas' ? [
-      { id: 'ready', label: 'Ready', count: b.ready.length, note: 'Checked against the Playbook' },
-      { id: 'decide', label: 'To decide', count: decide.length, note: 'Atlas marked a passage to check' },
-    ] : [
-      { id: 'all', label: 'Proposed', count: b.items.length, note: 'Each rule comes from edits you repeated' },
-    ]
+  // One primary per batch: the footer acts on the selection (ready items start selected). The list is grouped in the
+  // order the agent sorted it, so the sentence above is what you see; empty groups don't show.
+  const lead = b.id === 'nova' ? leads : []
+  const groups: { id: Lane; label: string; note: string; items: Handoff[] }[] = (b.id === 'rules'
+    ? [{ id: 'all' as Lane, label: 'Proposed', note: 'Each comes from edits you repeated', items: b.items }]
+    : [
+      { id: 'leads' as Lane, label: 'Want to buy', note: 'Asking before they buy', items: lead },
+      { id: 'ready' as Lane, label: 'Ready', note: b.id === 'nova' ? 'Sure of the facts and the tone' : 'Checked against the Playbook', items: b.ready.filter(h => !lead.includes(h)) },
+      { id: 'decide' as Lane, label: 'To decide', note: `${agentName(b.agent)} marked a passage to check`, items: decide.filter(h => !lead.includes(h)) },
+    ]).filter(g => g.items.length)
 
   const shown = review === 'leads' ? leads : review === 'ready' ? b.ready : review === 'decide' ? decide : b.items
 
@@ -86,56 +84,42 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
       <h2 className="detail-title">{b.title}</h2>
       <p className="handoff-ctx">{b.meta}. {b.id === 'nova' ? 'Nova sorted them: buying questions first, then the replies she’s sure of, then the ones to check.' : b.id === 'atlas' ? 'Atlas checked each one against the Playbook and Sage’s cadence.' : 'Add them all, or review them one by one.'}</p>
 
-      <div className="lanes">
-        {lanes.map(l => (
-          <section key={l.id} className={`lane-card ${l.id === 'ready' || l.id === 'all' ? 'main' : ''}`} style={{ ['--agent' as string]: `var(--a-${b.agent})`, ['--agent-wash' as string]: `var(--a-${b.agent}-wash)`, ['--agent-ink' as string]: `var(--a-${b.agent}-ink)` }}>
-            <div className="faint">{l.label}</div>
-            <b className="num">{l.count}</b>
-            <p className="faint">{l.note}</p>
-            <div className="row">
-              {l.count > 0 && <Btn size="sm" onClick={() => setReview(l.id)}>Review</Btn>}
-            </div>
-          </section>
-        ))}
-        {b.id === 'nova' && (
-          <section className="lane-card">
-            <div className="faint">Spam</div>
-            <b className="num">{hidden}</b>
-            <p className="faint">Hidden by Nova on her own, set to Act</p>
-            <div className="row"><Btn size="sm" onClick={() => nav('/inbox?view=hidden')}>See them</Btn></div>
-          </section>
-        )}
-      </div>
-
       <div className="batch-head row">
         <SelectAll sel={sel} label="Select every item" />
         <span className="faint">{sel.count} of {b.items.length} selected · click a row to see it in full</span>
       </div>
-      <ul className="batch-rows">
-        {b.items.map(h => {
-          const isOpen = open === h.id
-          const p = h.preview
-          return (
-            <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
-              <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
-                <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
-                {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
-                <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
-                <span className="faint">{h.proposal ? 'rule' : b.ready.includes(h) ? (p?.type === 'post' ? `ready · ${NETWORK_LABEL[p.network]}` : 'reply ready') : 'to decide'}</span>
-                <ChevronDown size={14} className="faint chev" aria-hidden />
-              </div>
-              {isOpen && (
-                <div className="batch-open">
-                  {p?.type === 'post' && (
-                    <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} at={p.slot} /></div>
+      {groups.map(g => (
+        <section key={g.id} className="batch-group" aria-label={g.label}>
+          <h3>{g.label}<span className="n">{g.items.length}</span><span className="note">· {g.note}</span>
+            <Btn size="xs" variant="ghost" onClick={() => setReview(g.id)}>Review one by one</Btn></h3>
+          <ul className="batch-rows">
+            {g.items.map(h => {
+              const isOpen = open === h.id
+              const p = h.preview
+              return (
+                <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
+                  <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
+                    <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
+                    {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
+                    <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
+                    <span className="faint">{p?.type === 'post' ? NETWORK_LABEL[p.network] : ''}</span>
+                    <ChevronDown size={14} className="faint chev" aria-hidden />
+                  </div>
+                  {isOpen && (
+                    <div className="batch-open">
+                      {p?.type === 'post' && (
+                        <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} at={p.slot} /></div>
+                      )}
+                      <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
+                    </div>
                   )}
-                  <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
-                </div>
-              )}
-            </li>
-          )
-        })}
-      </ul>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
+      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova also hid {hidden} spam on her own (set to Act). <button className="link-btn" onClick={() => nav('/inbox?view=hidden')}>See them</button></p>}
 
       <footer className="detail-foot">
         <span className="faint">Nothing goes out until you confirm.</span>
@@ -147,7 +131,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>
         <Tabs value={review ?? 'all'} onChange={v => setReview(v)} items={[
           { value: 'all' as Lane, label: 'All', count: b.items.length },
-          ...(b.id === 'nova' ? [{ value: 'leads' as Lane, label: 'Leads', count: leads.length }] : []),
+          ...(b.id === 'nova' ? [{ value: 'leads' as Lane, label: 'Want to buy', count: leads.length }] : []),
           ...(b.id !== 'rules' ? [{ value: 'ready' as Lane, label: 'Ready', count: b.ready.length }, { value: 'decide' as Lane, label: 'To decide', count: decide.length }] : []),
         ]} />
         <div className="cards">
