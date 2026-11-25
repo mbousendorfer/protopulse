@@ -8,7 +8,7 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
+import { labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -438,6 +438,8 @@ function CampaignView() {
         </div>
       </section>
 
+      {c.status !== 'review' && <LabelCard c={c} />}
+
       <section className="card pad">
         <div className="section-title">Who does what <span className="faint">· drag a task to another agent, or use its menu</span></div>
         <DelegateBoard c={c} />
@@ -454,6 +456,23 @@ function CampaignView() {
         <p className="muted">The plan and its Desk card go away. Sage keeps the brief in the journal.</p>
       </Modal>
     </div>
+  )
+}
+
+/** The campaign's label, shared by Atlas's posts and Nova's conversations. */
+function LabelCard({ c }: { c: Campaign }) {
+  const { s, d } = useStore()
+  const st = labelStats(s, c)
+  return (
+    <section className="card pad stack">
+      <div className="section-title flush">Campaign label <span className="faint">· shared by Atlas and Nova</span></div>
+      <p className="row tight"><Pill>{c.name}</Pill><span>{st.posts} post{st.posts === 1 ? '' : 's'} in Atlas’s calendar ({st.published} published) · {st.convs} conversation{st.convs === 1 ? '' : 's'} in the Inbox</span></p>
+      {st.latest && <p className="muted">Latest: {st.latest.author}, “{st.latest.text}”</p>}
+      {st.rule
+        ? <p className="faint">Nova labels every new conversation that mentions {labelWords(c).map(w => `“${w}”`).join(', ')}.</p>
+        : <div className="row"><Btn size="sm" onClick={() => d({ type: 'strategy/label', id: c.id })}>Ask Nova to label conversations</Btn><span className="faint">Through an Inbox rule you can edit or undo.</span></div>}
+      <div className="row tight"><Link to="/publishing/calendar" className="btn sm ghost">Calendar</Link><Link to="/inbox" className="btn sm ghost">Inbox</Link></div>
+    </section>
   )
 }
 
