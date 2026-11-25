@@ -29,6 +29,8 @@
 .bubble.you { background: var(--lift-2); border-top-right-radius: 6px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .bubble.you .mono { font-size: var(--t-xs); }
 .bubble.agent { background: var(--sunk); border-top-left-radius: 6px; flex: 1; }
+/* In dark, --sunk is the sheet's own colour: the agent's bubble takes one step up to stay a shape. */
+[data-theme='dark'] .bubble.agent { background: var(--lift); }
 .bubble .who { display: flex; align-items: baseline; gap: var(--s2); margin-bottom: 2px; }
 .bubble .who b { color: var(--agent-ink); font-weight: 600; }
 .bubble .who .mono { font-size: var(--t-xs); }

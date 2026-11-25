@@ -130,9 +130,12 @@ export default function Shell() {
             <SocialAvatar name="Sam Rivera" size={24} />
             <span className="hide-collapsed">Sam Rivera</span>
           </div>
-          <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
-          </button>
+          {/* The phone drawer closes on its own: collapsing it would only shrink it. */}
+          {!mobileOpen && (
+            <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
+            </button>
+          )}
         </div>
       </nav>
       {mobileOpen && <div className="overlay mobile-only" onClick={() => setMobileOpen(false)} />}

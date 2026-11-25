@@ -17,4 +17,8 @@
   .focus-queue { display: none; }
   .focus-card { padding: var(--s4); }
   .focus-progress .bar { width: 80px; }
+  .focus-top { gap: var(--s2); padding: 0 var(--s3); }
+  /* One card on a phone: the title steps down a size so the decision stays near the top. */
+  .detail.big .detail-title { font-size: var(--t-2xl); }
 }
+.focus-progress .num { white-space: nowrap; }
