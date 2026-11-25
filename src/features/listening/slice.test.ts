@@ -287,3 +287,52 @@ describe('Echo · benchmark per network', () => {
     expect(cards[0].agent).toBe('atlas')
   })
 })
+
+describe('Echo · tags', () => {
+  const lvl = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-file', level: l })
+  const tick = (s: State) => reducer(at(s, s.clock.base + 2 * MIN), { type: 'core/heartbeat' })
+
+  it('the seeded feed comes tagged by the seeded rules', () => {
+    const s = s0()
+    expect(s.listening.tags.m4).toContain('Press')
+    expect(s.listening.tags.m1).toEqual(expect.arrayContaining(['Product feedback', 'Creator']))
+  })
+
+  it('on Act, Echo tags new mentions herself and Undo takes the tags off', () => {
+    let s = tick(fire(level(lvl('act'), 'draft')))
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    const line = s.log.find(l => /^Tagged \d+ new mentions/.test(l.text))!
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+  })
+
+  it('on Draft, the tags wait on a Desk card; on Suggest, only on Mentions', () => {
+    let s = tick(fire(level(lvl('draft'), 'draft')))
+    const card = s.handoffs.find(h => h.ref === 'tag-batch')!
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    s = reducer(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(h => h.id === card.id))!.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    const sug = tick(fire(level(lvl('suggest'), 'draft')))
+    expect(sug.handoffs.some(h => h.ref === 'tag-batch')).toBe(false)
+    expect(sug.listening.pendingTags['spike-1']).toContain('Product feedback')
+  })
+
+  it('a new rule tags matching mentions at once; deleting a tag can be undone', () => {
+    let s = reducer(s0(), { type: 'listening/tagSave', def: { id: '', name: 'Repair', rule: { kind: 'word', value: 'repair' } } })
+    expect(Object.values(s.listening.tags).filter(t => t.includes('Repair')).length).toBeGreaterThan(1)
+    const id = s.listening.tagDefs.find(t => t.name === 'Repair')!.id
+    s = reducer(s, { type: 'listening/tagDelete', id })
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(false)
+    s = reducer(s, { type: 'core/undo', id: s.notice!.undo! })
+    expect(s.listening.tagDefs.some(t => t.name === 'Repair')).toBe(true)
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(true)
+  })
+
+  it('renaming a tag renames it on every mention', () => {
+    const s = reducer(s0(), { type: 'listening/tagSave', def: { id: 'tg-press', name: 'Media', rule: { kind: 'press' } } })
+    expect(s.listening.tags.m4).toContain('Media')
+    expect(s.listening.tags.m4).not.toContain('Press')
+  })
+})
