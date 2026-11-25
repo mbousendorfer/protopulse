@@ -37,7 +37,7 @@ export default function ManageCompetitors() {
               <li key={w.id} className={`ls-watch ${w.tracking ? '' : 'ls-paused'}`}>
                 <SocialAvatar name={w.name} org size={40} />
                 <div className="ls-watch-main">
-                  <div className="row tight"><b>{w.name}</b><a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight" onClick={e => e.preventDefault()}>{w.website}<ExternalLink size={11} /></a></div>
+                  <div className="row tight"><b>{w.name}</b><a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight">{w.website}<ExternalLink size={11} /></a></div>
                   <div className="row tight">
                     {w.accounts.map(acc => <span key={acc.network + acc.handle} className="chip"><Net n={acc.network} size={14} />{acc.handle}</span>)}
                   </div>
