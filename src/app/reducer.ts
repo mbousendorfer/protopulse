@@ -6,6 +6,7 @@ import {
   actionOf, addRule, agentOf, now, pronoun, notify, pushHandoff, pushLog, removeHandoff, setAutonomy, track, uid, updateHandoff,
 } from './core'
 import { SCRIPT, CLAIRE } from '../data/script'
+import { levelFor } from '../data/agents'
 import { onResolveInbox, reduceInbox, type InboxAction } from '../features/inbox/slice'
 import { ideaEvent, onResolvePublishing, reducePublishing, tickIdeas, unscheduleIdea, type PublishingAction } from '../features/publishing/slice'
 import { onResolveInsights, reduceInsights, type InsightsAction } from '../features/insights/slice'
@@ -330,13 +331,11 @@ function reduceCore(s: State, a: CoreAction): State {
     }
 
     case 'core/preset': {
-      // Cautious: everything suggests or drafts. Balanced: safe acts, risky drafts. Autonomous: everything not locked acts.
       const ag = agentOf(s, a.agent)
       let next = s
       for (const x of ag.actions) {
         if (x.locked) continue
-        const level: Autonomy = a.preset === 'cautious' ? (x.risk === 'safe' ? 'draft' : 'suggest') : a.preset === 'balanced' ? (x.risk === 'safe' ? 'act' : 'draft') : 'act'
-        next = setAutonomy(next, a.agent, x.id, level, `You set ${ag.name} to ${a.preset}`)
+        next = setAutonomy(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
       }
       return next
     }

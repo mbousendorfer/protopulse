@@ -10,16 +10,64 @@
 .agent-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; }
 .h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }
 
-.aboard { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); margin-top: var(--s5); }
-.acol { background: var(--sunk); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s3); display: flex; flex-direction: column; gap: var(--s2); min-height: 160px; }
-.acol h3 { font-size: var(--t-md); font-weight: 600; display: flex; gap: 6px; }
-.acol-sub { font-size: var(--t-sm); margin-top: -6px; margin-bottom: 4px; }
-.aitem { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-ctl); padding: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
-.aitem h4 { font-size: var(--t-md); font-weight: 600; flex: 1; line-height: 1.35; }
-.aitem .says { font-size: var(--t-sm); color: var(--ink-2); }
-.aitem .seg { align-self: flex-start; }
-.lock { color: var(--ink-3); display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 4px; }
-.aempty { font-size: var(--t-sm); color: var(--ink-2); padding: var(--s3); text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--r-ctl); }
+/* Autonomy: one ramp in the agent's colour (--tone). More fill, more autonomy. Same ramp as the Team card bar. */
+.aset, .aset-sum { --lv-act: var(--tone); --lv-draft: color-mix(in srgb, var(--tone) 40%, var(--panel)); --lv-suggest: color-mix(in srgb, var(--tone) 20%, var(--panel)); }
+.lv-act { --fill: var(--lv-act); }
+.lv-draft { --fill: var(--lv-draft); }
+.lv-suggest { --fill: var(--lv-suggest); }
+.aset-sum .lv-act, .aset-sum .lv-draft, .aset-sum .lv-suggest { background: var(--fill); }
+
+.aset-sum { margin-top: var(--s5); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-card); display: flex; flex-direction: column; gap: var(--s3); }
+.aset-sum-title { font-size: var(--t-lg); color: var(--ink); }
+.aset-sum-title b { font-weight: 600; }
+.aset-bar { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; }
+.aset-bar i { display: block; flex-basis: 0; transition: flex-grow var(--slow) var(--ease-move); }
+.aset-legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font-size: var(--t-md); color: var(--ink-2); }
+.aset-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.aset-legend i { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+.aset-legend i.lv-suggest { box-shadow: inset 0 0 0 1px var(--line); }
+.aset-legend b { color: var(--ink); font-weight: 600; }
+
+.aset { margin-top: var(--s4); }
+.aset-list { border-top: 1px solid var(--line); }
+.aset-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s5); padding: var(--s4) 0; border-bottom: 1px solid var(--line); }
+.aset-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.aset-main > .pill { align-self: flex-start; }
+.aset-row h4 { font-size: var(--t-md); font-weight: 600; color: var(--ink); line-height: 1.35; }
+.aset-meta { font-size: var(--t-sm); color: var(--ink-2); }
+.aset-says { font-size: var(--t-md); color: var(--ink-2); margin-top: 4px; max-width: 72ch; }
+.aset-says svg { display: inline; vertical-align: -2px; margin: 0 6px; color: var(--ink-2); }
+.aset-eg { color: var(--ink); font-weight: 500; }
+.aset-delta { font-size: var(--t-sm); color: var(--ink); font-weight: 500; animation: aset-in var(--slow) var(--ease); }
+@keyframes aset-in { from { opacity: 0; transform: translateY(-2px); } }
+.aset.compact { margin-top: var(--s2); }
+.aset.compact .aset-row { padding: var(--s2) 0; align-items: center; }
+
+/* Scale: three steps, a track segment over each label. */
+.ascale { display: inline-grid; grid-template-columns: repeat(3, 72px); flex: none; }
+.ascale label { position: relative; cursor: pointer; }
+.ascale input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.ascale span { display: flex; flex-direction: column; gap: 8px; min-height: 44px; padding: 8px 2px 4px; font-size: var(--t-sm); font-weight: 500; color: var(--ink-2); text-align: center; border-radius: var(--r-sm); transition: color var(--fast) var(--ease); }
+.ascale span i { display: block; height: 8px; background: var(--lift-2); transition: background-color var(--base) var(--ease); }
+.ascale > :first-child i { border-radius: 4px 0 0 4px; }
+.ascale > :last-child i { border-radius: 0 4px 4px 0; }
+.ascale .on i { background: var(--fill); }
+.ascale.lv-suggest .on i { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 35%, transparent); }
+.ascale .cur span, .ascale span.cur { color: var(--ink); font-weight: 600; }
+.ascale label:hover input:not(:checked) + span { color: var(--action-ink); }
+.ascale input:focus-visible + span { box-shadow: var(--focus); }
+.ascale label:active span { transform: scale(0.97); }
+.ascale.ro { grid-template-columns: repeat(3, 56px); }
+.ascale.ro span { min-height: 0; padding: 4px 2px 0; gap: 6px; font-size: var(--t-xs); }
+.ascale.ro span i { height: 6px; }
+
+.aset-locked { margin-top: var(--s4); padding: var(--s3) var(--s4); background: var(--sunk); border-radius: var(--r-ctl); }
+.aset-locked h3 { display: flex; align-items: center; gap: 6px; font-size: var(--t-md); font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.aset-locked li { font-size: var(--t-md); color: var(--ink-2); padding: 2px 0; }
+.aset-locked b { color: var(--ink); font-weight: 500; }
+.preset-says { margin-top: var(--s2); color: var(--ink); font-weight: 500; }
+
+@media (prefers-reduced-motion: reduce) { .aset-bar i, .ascale span i { transition: none; } .aset-delta { animation: none; } }
 
 .hist li { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4); }
 .hist li > span:first-of-type, .hist li > span:only-child { flex: 1; }
@@ -33,5 +81,5 @@
 .record-kpis dd { margin: 0; }
 .record-kpis .stat { flex-direction: column; }
 
-@media (max-width: 1000px) { .aboard { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .aset-row { flex-direction: column; gap: var(--s2); } }
 @media (max-width: 820px) { .team-grid { grid-template-columns: minmax(0, 1fr); } .agent-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -1,7 +1,8 @@
 // First-run model: who signed up, what Protopulse found on the site, what the user kept. Pure: no React, no store.
 import type { Agent, AgentId, Autonomy, Network, Risk } from '../../app/types'
+import { levelFor as presetLevel, type Preset } from '../../data/agents'
 
-export type Preset = 'cautious' | 'balanced' | 'autonomous'
+export type { Preset }
 export const STEPS = ['signup', 'site', 'reading', 'accounts', 'playbook', 'team', 'results'] as const
 export type Step = (typeof STEPS)[number]
 /** What the progress bar shows: four stages, the brand stage spans four screens. */
@@ -155,9 +156,8 @@ export const PRESETS: { value: Preset; label: string; says: string }[] = [
   { value: 'balanced', label: 'Balanced', says: 'Agents handle routine work alone, like product questions and spam. Anything risky waits for you.' },
   { value: 'autonomous', label: 'Autonomous', says: 'Agents act alone within their limits. You can undo anything for 10 minutes.' },
 ]
-/** Cautious: safe drafts, risky suggests. Balanced: safe acts, risky drafts. Autonomous: everything acts. Locked actions always suggest. */
-export const levelFor = (risk: Risk, p: Preset, locked?: boolean): Autonomy =>
-  locked ? 'suggest' : p === 'cautious' ? (risk === 'safe' ? 'draft' : 'suggest') : p === 'balanced' ? (risk === 'safe' ? 'act' : 'draft') : 'act'
+/** The preset rule from data/agents, with locked actions always on Suggest. */
+export const levelFor = (risk: Risk, p: Preset, locked?: boolean): Autonomy => (locked ? 'suggest' : presetLevel(risk, p))
 
 export const presetOf = (setup: Setup, agent: AgentId): Preset => setup.custom[agent] ?? setup.preset
 
