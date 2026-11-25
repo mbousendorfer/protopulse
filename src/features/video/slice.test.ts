@@ -258,3 +258,10 @@ test('covers follow the reframe level: Juno picks one (Act, Draft), only suggest
   expect(cut('suggest').every(c => !c.cover)).toBe(true)
   expect(initialState().video.clips.find(c => c.id === 'clip-repair-strap')?.cover?.by).toBe('juno')
 })
+
+test('versions follow the reframe level: built on Act and Draft, not on Suggest', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  expect(cut('act').find(c => c.post.networks.includes('linkedin'))?.versions?.linkedin?.aspect).toBe('1:1')
+  expect(cut('draft').every(c => c.versions)).toBe(true)
+  expect(cut('suggest').every(c => !c.versions)).toBe(true)
+})
