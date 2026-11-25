@@ -353,3 +353,13 @@ describe('Echo · seen and unseen', () => {
     expect(unseenNeeds(s).length).toBe(before.length + 25)
   })
 })
+
+describe('Echo · competitor answer', () => {
+  it('⌘K reads open events from the feed and stops citing one once it is handled', () => {
+    const ask = (s: State) => intentDef('competitor')!.bar({ kind: 'competitor', name: 'peakline' } as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    let s = s0()
+    expect(ask(s)).toMatch(/Aero 30/)
+    s = reducer(s, { type: 'listening/move', event: 'e-peak-price', index: 3 })
+    expect(ask(s)).toMatch(/Nothing open from Peakline/)
+  })
+})
