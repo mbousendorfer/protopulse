@@ -22,13 +22,16 @@ Desk cards). Captures: `design-plans/previews/composer-before-*.png` and `compos
 
 Left column, top to bottom, sections separated by grey-20 rules:
 
-1. **Post to**: one row of account toggles. In edit mode, the post's network as text ("each network's post is edited
-   on its own"), no disabled chips.
+1. **Post to**: the profile toggles (main accounts plus Fernway Repair, from `accounts.ts`), Profile groups as a
+   tertiary menu beside the title, and Atlas's routing tip ("Repair content on Instagram goes to Fernway Repair" ·
+   Use Fernway Repair) right under them. In edit mode, the post's profile as text, no disabled chips.
 2. **Caption**: the field, the pillar on the same line (it shapes Atlas's variants and first comment), then Atlas's
    copilot right under the text (3 variants, Shorten, Adapt for LinkedIn, as tertiary actions), then the live
    Playbook check: each problem with a one-click fix (Remove the banned words, Keep one emoji, Remove emojis,
    Shorten), passing rules ticked, lengths per network on one line. Variants are Choice rows ("Use"), "Keep mine"
-   closes them. Every Atlas edit and every fix shows an Undo line.
+   closes them. Every Atlas edit and every fix shows an Undo line. The optional **Link** follows, with Atlas's
+   tracking said as information (UTM convention, then per profile: short link, plain link on X, first comment on
+   Instagram).
 3. **Visual**: larger thumbnail, Pick from Media (the library, plus **Upload**, which the composer lacked), Remove, and
    which networks need a visual.
 4. **When**: the slot as a sentence (`Thu 27 Nov, 18:30`, time in mono), **Change** opens the date-time field in a
@@ -56,8 +59,13 @@ Editing a post that isn't simply scheduled shows its status pill and note or fai
   under When (cap, past time), summarized in the footer.
 - Copilot box under the preview → under the caption.
 - Native date and time inputs → slot sentence + Change (one `datetime-local` in a popover, like Ideas and Bulk).
-- Check marks inside the account chips → the selected state matches `Filters` (blue border and wash), so six fit.
+- Check marks inside the account chips → the selected state matches `Filters` (blue border and wash). Six networks
+  fit on one row; with Fernway Repair (seven profiles, merged from main during this work) the row wraps once at 1440.
+- Atlas's routing and link-tracking notes lose their grey well (§10 Information: no background, no border).
 - "Ask Claire" and "Add to plan" as footer buttons → More menu.
+
+Merged from main while this was in review: profiles, profile groups, repair routing and tracked links (Atlas
+contracts). They are carried over into the new layout, not redesigned.
 
 Shared code touched: `readImage` moved from `Page.tsx` to `visuals.ts` so Media and the composer upload the same way.
 No change to the store, the reducer, the engine, mock data or slice actions.
@@ -74,6 +82,7 @@ No change to the store, the reducer, the engine, mock data or slice actions.
 
 ## Still open
 
+- Seven profiles wrap to two rows at 1440; a compact chip (icon + short name) or grouping by network would fix it.
 - Day shortcuts in When (Atlas's best day this week, tomorrow) would spare the native picker for the common case.
 - "Ask Claire" sits in More; if Claire's approval becomes frequent, it may deserve the secondary slot instead of
   Save draft.
