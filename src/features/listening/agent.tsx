@@ -2,7 +2,10 @@
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { useStore } from '../../app/store'
 import { AlertsTable } from '../insights/alerts'
-import { onResolveListening } from './slice'
+import { now } from '../../app/core'
+import { ago } from '../../app/time'
+import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
+import { alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -12,15 +15,30 @@ declare module '../../data/command' {
   }
 }
 
+const startOfDay = (t: number) => new Date(new Date(t).toDateString()).getTime()
+const NEG_LINK = '/listening/mentions?sentiment=negative'
+
 const mentions = defineIntent({
   kind: 'mentions', owner: 'echo', order: 90,
   parse: t => (/negative|complain(t|ts)? about us|mentions/.test(t) && !/post/.test(t) ? { kind: 'mentions' } : undefined),
-  bar: (_i, { go }) => ({
-    text: 'This week: 14 negative mentions out of 388, 3.6%. Most are about the Storm Jacket seams thread on Reddit and late deliveries. Opening Listening filtered on negative.',
-    sources: ['Echo’s mention feed, 18–24 Nov'],
-    after: () => setTimeout(() => go('/listening/mentions?sentiment=negative'), 700),
-  }),
-  chat: () => ({ replies: [{ from: 'echo', text: '2 negative mentions today, both about the Storm Jacket seams. One Reddit thread is gaining traction.', card: { type: 'list', items: [{ title: 'r/ultralight: “Storm Jacket seams leak after 3 washes”', agent: 'echo', meta: '41 upvotes · 2 h ago', link: '/listening/mentions' }, { title: '@hugo.rando: “Seams on my Storm are peeling”', agent: 'echo', meta: 'X · 4 h ago', link: '/listening/mentions' }] } }], effects: [] }),
+  bar: (_i, { s, go }) => {
+    const week = recent(s, WEEK)
+    const c = moodCount(s, week)
+    const top = topComplaints(s, week).slice(0, 2)
+    const about = top.length ? ` Most are about the ${top.map(([p, n]) => `${p} (${n})`).join(' and the ')}.` : ''
+    return {
+      text: `Last 7 days: ${c.negative} negative mention${c.negative === 1 ? '' : 's'} out of ${c.total}, ${pct(c.negative, c.total)}.${about} Opening Listening filtered on negative.`,
+      sources: [`Echo’s mention feed, last 7 days (${c.total} mentions)`],
+      after: () => setTimeout(() => go(NEG_LINK), 700),
+    }
+  },
+  chat: (_i, { s }) => {
+    const neg = recent(s, now(s) - startOfDay(now(s))).filter(m => sentimentOf(s, m) === 'negative').sort((a, b) => b.reach - a.reach)
+    const top = topComplaints(s, neg)[0]
+    return { replies: [{ from: 'echo',
+      text: neg.length ? `${neg.length} negative mention${neg.length === 1 ? '' : 's'} today${top ? `, ${top[1]} about the ${top[0]}` : ''}. The ones reaching the most people:` : 'No negative mention today.',
+      card: neg.length ? { type: 'list', items: neg.slice(0, 3).map(m => ({ title: `${m.author}: “${m.text}”`, agent: 'echo' as const, meta: `${m.network} · reach ${m.reach.toLocaleString('en-GB')} · ${ago(m.at, now(s))}`, link: NEG_LINK })) } : undefined }], effects: [] }
+  },
 })
 
 const competitor = defineIntent({
@@ -48,8 +66,8 @@ const competitor = defineIntent({
 function Alerts() {
   const { s, d } = useStore()
   return (
-    <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo raises these on your Desk as soon as they happen, and copies Claire when you ask."
-      subjects={[{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]}
+    <AlertsTable agent="Echo" alerts={s.listening.alerts} intro="Echo checks these every minute against her mention feed and raises a match on your Desk, at most once an hour (once a day for daily rules). She copies Claire when you ask."
+      subjects={alertSubjects(s)}
       conditions={['gets more than', 'grows faster than']} units={[' negative mentions in 1 h', ' mentions in 1 h', ' mention from press', '% in a day']}
       onSave={alert => d({ type: 'listening/alertSave', alert })} onToggle={id => d({ type: 'listening/alertToggle', id })} onDelete={id => d({ type: 'listening/alertDelete', id })} />
   )
@@ -59,6 +77,9 @@ const echo: AgentModule = {
   id: 'echo',
   script: SCRIPT,
   onResolve: onResolveListening,
+  onUndo: onUndoListening,
+  due: listeningDue,
+  tick: tickListening,
   intents: [mentions, competitor],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.listening.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { competitor: { keep: ['h-peakline'], fire: ['ev-trailkind', 'ev-norro', 'ev-basecamp'] } },

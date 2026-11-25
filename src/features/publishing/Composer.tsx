@@ -5,12 +5,13 @@ import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, MEDIA, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
+import { BEST_SLOT, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
 import { Btn, Mark, Menu, Net, Pop, Seg, Sheet, Thinking, Tip } from '../../ui'
 import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
 import { slotComment } from './slice'
 import { checkPost } from './checks'
+import { libraryOf } from './visuals'
 import { forLinkedIn, shorten } from './ideasModel'
 
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
@@ -149,7 +150,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 {media ? <span className="cmp-thumb"><Photo name={media} /></span> : <span className="cmp-thumb empty"><ImagePlus size={16} /></span>}
                 <Pop align="start" trigger={<Btn size="sm">{media ? 'Change' : 'Pick from Media'}</Btn>}>
                   <div className="cmp-picker" role="listbox" aria-label="Media library">
-                    {MEDIA.map(m => (
+                    {libraryOf(s).map(m => (
                       <button key={m.id} role="option" aria-selected={media === m.name} className={media === m.name ? 'on' : ''} onClick={() => setMedia(m.name)} title={m.title}>
                         <Photo name={m.name} />
                       </button>

@@ -154,3 +154,37 @@ test('Atlas reads pillars and cadence from Sage: one source, and it follows Sage
   s = { ...s, strategy: { ...s.strategy, pillars: s.strategy.pillars.map(p => (p.name === 'Repair & care' ? { ...p, target: 60 } : p)) } }
   expect(behindPillar(targetsOf(s)).pillar).toBe('Repair & care')
 })
+
+test('plan on Act: the plan is approved and scheduled, and Undo takes its posts back out', () => {
+  let s = initialState()
+  const before = s.publishing.posts.length
+  s = reducer(s, { type: 'core/autonomy', agent: 'atlas', action: 'atlas-plan', level: 'act' })
+  expect(s.publishing.plan.status).toBe('approved')
+  expect(s.publishing.posts.length).toBe(before + 14)
+  s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(h => h.id === 'h-plan'))!.id })
+  expect(s.publishing.plan.status).toBe('proposed')
+  expect(s.publishing.posts.length).toBe(before)
+  expect(s.handoffs.some(h => h.id === 'h-plan')).toBe(true)
+})
+
+test('Undo of an approved post card takes the post back out; Undo of the trend card puts its post back to Needs you', () => {
+  let s = initialState()
+  const before = s.publishing.posts.length
+  s = reducer(s, { type: 'core/resolve', id: 'h-trend', decision: { kind: 'approve' } })
+  expect(s.publishing.posts.find(p => p.id === 'p-trend')!.status).toBe('scheduled')
+  s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.find(p => p.id === 'p-trend')!.status).toBe('needs')
+  expect(s.publishing.posts.length).toBe(before)
+})
+
+test('a new plan after a rejection swaps Atlas’s own posts and keeps the campaign ones', () => {
+  let s = initialState()
+  s = reducePublishing(s, { type: 'publishing/planReject' })
+  s = reducePublishing(s, { type: 'publishing/planReset' })
+  const p = s.publishing.plan
+  expect(p.status).toBe('proposed')
+  expect(p.version).toBe(2)
+  expect(p.diff!.added.length).toBe(10)
+  expect(p.items.filter(i => i.tag === 'Campaign').length).toBe(4)
+  expect(p.items.length).toBe(14)
+})
