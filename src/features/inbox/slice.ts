@@ -68,6 +68,7 @@ export type InboxAction =
   | { type: 'inbox/labelDelete'; name: string }
   | { type: 'inbox/moderate'; ids: string[]; op: ModOp }
   | { type: 'inbox/private'; id: string }
+  | { type: 'inbox/ingest'; mention: Ingest }
   | { type: 'inbox/viewAdd'; view: Omit<SavedView, 'id'> }
   | { type: 'inbox/viewDelete'; id: string }
   | { type: 'inbox/viewRestore'; view: SavedView; index: number }
@@ -236,6 +237,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
   if (a.type === 'inbox/viewAdd') return a.view.name.trim() ? { ...s0, inbox: { ...s0.inbox, views: [...s0.inbox.views, { ...a.view, name: a.view.name.trim(), id: uid('v') }] } } : s0
   if (a.type === 'inbox/viewDelete') return { ...s0, inbox: { ...s0.inbox, views: s0.inbox.views.filter(v => v.id !== a.id) } }
   if (a.type === 'inbox/viewRestore') return s0.inbox.views.some(v => v.id === a.view.id) ? s0 : { ...s0, inbox: { ...s0.inbox, views: [...s0.inbox.views.slice(0, a.index), a.view, ...s0.inbox.views.slice(a.index)] } }
+  if (a.type === 'inbox/ingest') return ingest(s0, a.mention)
   if (a.type === 'inbox/moderate') return moderate(s0, a.ids, a.op, 'sam')
   if (a.type === 'inbox/private') return replyInPrivate(s0, a.id)
   if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)
@@ -856,4 +858,36 @@ export function botWave(s: State): State {
     why: 'Spam and bots are set to Draft: I hide them when you say so.', inboxSpam: ids,
     preview: { type: 'evidence', lines: convs.map(c => `${c.author}: “${c.messages[0].text}”`) },
   })
+}
+
+/* ---------- Contract for Echo: mentions that need an answer become Inbox conversations ---------- */
+
+/**
+ * What Echo hands over. `id` makes it idempotent (the same mention twice is one conversation). `draft`: Echo's or
+ * Nova's suggested answer; without it the conversation waits as New.
+ */
+export type Ingest = {
+  id: string; author: string; network: Conversation['network']; text: string; at?: number
+  sentiment?: Sentiment; post?: string; followers?: number; draft?: string; from?: string; account?: string
+}
+
+/** A mention lands in the Inbox: escalations first, then Nova's rules, like any conversation that arrives. */
+export function ingest(s: State, m: Ingest): State {
+  const id = `c-in-${m.id}`
+  if (s.inbox.convs.some(c => c.id === id)) return s
+  const t = m.at ?? now(s)
+  const hit = escalationFor(s, m.text, { followers: m.followers })
+  const conv: Conversation = {
+    id, author: m.author, network: m.network, account: m.account, type: 'mention', sentiment: m.sentiment ?? 'neutral', at: t, post: m.post, labels: [], unread: true,
+    status: hit ? 'escalated' : m.draft ? 'draft' : 'new',
+    messages: [{ id: uid('m'), from: 'them', text: m.text, at: t }],
+    draft: m.draft ? [m.draft] : undefined,
+    note: hit ? `Escalated · rule “${hit.label}”` : m.from ? `Found by ${m.from}` : undefined,
+  }
+  let next = pushLog({ ...s, inbox: { ...s.inbox, convs: [conv, ...s.inbox.convs] } }, {
+    agent: 'nova', text: `${m.from ?? 'Echo'} passed ${m.author}’s mention to the Inbox${hit ? ` · escalated: ${hit.label}` : ''}`,
+    status: 'done', reason: hit ? 'Playbook escalation' : 'A mention that needs an answer', link: `/inbox/${id}`,
+  })
+  next = runRules(next, id)
+  return next
 }

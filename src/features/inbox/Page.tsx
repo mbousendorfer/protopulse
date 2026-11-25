@@ -16,6 +16,7 @@ import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { canModerate, deleteWarning, dur, NEEDS_YOU, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { translate } from './translate'
+import { ACCOUNTS, accountById, accountLabel } from '../publishing/accounts'
 import { DATES, describe, fromSearch, isEmpty, matchFilters, postKey, toSearch, type Filters, type SavedView } from './filters'
 import { SavedSheet } from './SavedSheet'
 import { LabelsSheet } from './LabelsSheet'
@@ -102,12 +103,13 @@ export default function InboxPage() {
   const [q, setQ] = useState('')
   const [date, setDate] = useState<Filters['date']>()
   const [post, setPost] = useState<string>()
+  const [account, setAccount] = useState<string>()
   const [who, setWho] = useState<Filters['who']>()
   const [review, setReview] = useState<Filters['review']>()
-  const f: Filters = { network: network === 'all' ? undefined : network, type: type === 'all' ? undefined : type, sentiment: sentiment === 'all' ? undefined : sentiment, intent, date, who, review, label: label ?? undefined, q, post }
+  const f: Filters = { network: network === 'all' ? undefined : network, type: type === 'all' ? undefined : type, sentiment: sentiment === 'all' ? undefined : sentiment, intent, date, who, review, label: label ?? undefined, q, post, account }
   const apply = (x: Filters, to: View = 'all') => {
     setNetwork(x.network ?? 'all'); setType(x.type ?? 'all'); setSentiment(x.sentiment ?? 'all'); setIntent(!!x.intent)
-    setDate(x.date); setWho(x.who); setReview(x.review); setPost(x.post); setLabel(x.label ?? null); setQ(x.q ?? ''); setView(to)
+    setDate(x.date); setWho(x.who); setReview(x.review); setPost(x.post); setAccount(x.account); setLabel(x.label ?? null); setQ(x.q ?? ''); setView(to)
   }
   // ⌘K opens the Inbox with filters in the URL ("negative Instagram DMs this week").
   const asking = params2.toString()
@@ -121,7 +123,7 @@ export default function InboxPage() {
   const list = useMemo(() => all
     .filter(c => v.match(c, now) && matchFilters(c, f, now))
     .sort((a, b) => sort === 'waiting' ? Number(waitingOn(b)) - Number(waitingOn(a)) || (waitingOn(a) ? waitSince(a) - waitSince(b) : b.at - a.at) : sort === 'oldest' ? a.at - b.at : sort === 'urgent' ? URGENCY[a.status] - URGENCY[b.status] || b.at - a.at : sort === 'intent' ? (b.intent ?? 0) - (a.intent ?? 0) || b.at - a.at : b.at - a.at),
-  [all, v, now, label, network, type, sentiment, intent, q, sort, date, who, review, post]) // eslint-disable-line react-hooks/exhaustive-deps
+  [all, v, now, label, network, type, sentiment, intent, q, sort, date, who, review, post, account]) // eslint-disable-line react-hooks/exhaustive-deps
   const ids = useMemo(() => list.map(c => c.id), [list])
   const sel = useSelection(ids, `${view}|${toSearch(f)}`)
   const current = all.find(c => c.id === id)
@@ -229,6 +231,8 @@ export default function InboxPage() {
               items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
             <Menu align="start" trigger={<button className="select-btn block">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
               items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
+            <Menu align="start" trigger={<button className="select-btn block">{account ? accountLabel(accountById(account)) : 'All profiles'}<ChevronDown size={14} /></button>}
+              items={[{ label: 'All profiles', onSelect: () => setAccount(undefined) }, ...ACCOUNTS.filter(a => all.some(c => (c.account ?? c.network) === a.id)).map(a => ({ label: accountLabel(a), icon: <Net n={a.network} />, hint: a.handle, onSelect: () => setAccount(a.id) }))]} />
             <Menu align="start" trigger={<button className="select-btn block">{date ? DATES[date] : 'Any date'}<ChevronDown size={14} /></button>}
               items={[{ label: 'Any date', onSelect: () => setDate(undefined) }, ...(Object.keys(DATES) as NonNullable<Filters['date']>[]).map(x => ({ label: DATES[x], onSelect: () => setDate(x) }))]} />
             <Menu align="start" trigger={<button className="select-btn block">{who ? (who === 'none' ? 'Not assigned' : `Assigned to ${ROSTER[who].short}`) : 'Anyone'}<ChevronDown size={14} /></button>}
@@ -309,7 +313,7 @@ export default function InboxPage() {
                     <Link to={`/inbox/${c.id}`} className="ellipsis" onClick={e => e.stopPropagation()}>{c.author}</Link>
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
-                  <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
+                  <div className="ib-cell-tags">{c.account && c.account !== c.network && <span className="ib-tag">{accountById(c.account).name}</span>}<TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
                   <div className="ib-cell-status"><Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
@@ -536,7 +540,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
         <SocialAvatar name={c.author} network={c.network} size={40} />
         <div className="ib-panel-title">
           <h2 className="ellipsis">{c.author}</h2>
-          <div className="row tight"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} /><span className="faint">on {NETWORK_LABEL[c.network]} · {ago(c.at, now)}</span></div>
+          <div className="row tight"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} /><span className="faint">on {NETWORK_LABEL[c.network]}{c.account && c.account !== c.network ? ` · ${accountById(c.account).name}` : ''} · {ago(c.at, now)}</span></div>
         </div>
         <Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill>
         <Btn variant="ghost" icon size="sm" aria-label="Close the conversation" title="Close (Esc)" onClick={onClose}><X size={16} /></Btn>

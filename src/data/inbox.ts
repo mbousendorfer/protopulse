@@ -17,6 +17,8 @@ export type Conversation = {
   author: string
   handle?: string
   network: Network
+  /** The profile it came in on (Atlas's `ACCOUNTS`); absent = the main account of the network. */
+  account?: string
   type: ConvType
   status: ConvStatus
   sentiment: Sentiment
@@ -119,6 +121,9 @@ const AUTO: Q[] = [
   ['c-fr-blue', '@margaux.rando', 'instagram', 'comment', 'neutral', T(6, 22), 'Il existe en bleu, le Ridge ?', 'Pas encore, Margaux : Moss, Ember, Slate et Glacier. Glacier est le plus proche du bleu, il revient le 8 décembre.', { post: 'Reel · “3 days, one bag”', intent: 0.6 }],
   ['c-es-ship', 'Javier R.', 'youtube', 'comment', 'neutral', T(4, 48), '¿Envían a Canarias?', 'Sí, Javier. El envío a Canarias tarda de 5 a 7 días laborables y los impuestos se pagan a la entrega.', { post: 'YouTube · “Storm Jacket in 60 seconds”' }],
   ['c-it-weight', '@giulia.monti', 'instagram', 'dm', 'neutral', T(3, 30), 'Quanto pesa la Storm Jacket in taglia M?', 'Ciao Giulia! In taglia M pesa 340 g, e si ripiega nella sua tasca.', { intent: 0.7 }],
+  // Fernway Repair (Instagram), under Atlas's repair posts.
+  ['c-rep-zip', '@lou.fixes', 'instagram', 'comment', 'positive', T(7, 5), 'Can I bring a bag that isn’t Fernway to the Annecy workshop?', 'You can, Lou. We repair any brand at cost price, Fernway bags for free.', { account: 'ig-repair', post: 'Post · “Inside the Annecy workshop”' }],
+  ['c-rep-dry', '@paulo.outdoor', 'instagram', 'comment', 'neutral', T(5, 40), 'Can I tumble dry it after washing?', 'Yes, on low for 20 minutes: the heat reactivates the waterproof coating.', { account: 'ig-repair', post: 'Post · “Sunday reset: how to clean your jacket”' }],
   ['c-julien', '@julien_trail', 'tiktok', 'comment', 'positive', T(7, 33), 'which colour is this?? need it', 'That’s Moss! Link’s in our bio 🌿', { contact: 'k-julien', intent: 0.81, rules: ['One emoji max'], post: 'TikTok · “Lac Blanc at 5am”' }],
   ['c-sam', '@sam_outside', 'x', 'mention', 'neutral', T(6, 10), '@fernway is the Storm Jacket warm enough for skiing?', 'It’s a shell, Sam, so it keeps you dry but not warm. Layer the Ember Fleece under it for the slopes.', { intent: 0.62 }],
   ['c-nadia', 'Nadia R.', 'youtube', 'comment', 'positive', T(5, 2), 'Great review, what’s the warranty on the bottle?', 'Lifetime, Nadia. If it breaks, we replace it.', { contact: 'k-nadia', post: 'YouTube Short · “Summit Bottle drop test”' }],
@@ -221,6 +226,12 @@ export const CONVERSATIONS: Conversation[] = ([
     id: 'c-tw-prize', author: '@leon.bike', network: 'instagram', type: 'dm', status: 'draft', sentiment: 'positive', at: T(7, 48), unread: true, intent: 0.55, labels: ['Trail Week'],
     messages: [m('them', 'Is there a prize for Trail Week? Asking for my cycling club, we’d join as a team.', T(7, 46))],
     draft: ['Hi Léon! The 3 best trails of the week win a Ridge 28L each, and ', { text: 'every finisher gets 15% off', note: 'Sage’s Trail Week brief doesn’t mention a finisher discount. Check before promising it.' }, '. Your club can join as a team: tag #FernwayTrailWeek.'],
+    rules: ['Give the number, then the answer'],
+  },
+  {
+    id: 'c-rep-free', account: 'ig-repair', author: '@anna.verte', network: 'instagram', type: 'dm', status: 'draft', sentiment: 'neutral', at: T(7, 25), unread: true,
+    messages: [m('them', 'My Ridge zip broke after 2 years. Is the repair free?', T(7, 23))],
+    draft: ['Anna, it is: zips are repaired free for 5 years. Send the bag to our Annecy workshop with the label we just emailed, it’s back within 10 days.'],
     rules: ['Give the number, then the answer'],
   },
   {
