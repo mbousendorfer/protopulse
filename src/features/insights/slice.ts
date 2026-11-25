@@ -1,7 +1,8 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { T } from '../../app/time'
+import { DAY, T } from '../../app/time'
+import type { Campaign } from '../../data/strategy'
 import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../../data/insights'
 import { applyOp, writeStudio, type StudioOp } from './studio'
 import { bestReturn } from './roi'
@@ -102,6 +103,18 @@ export type InsightsAction =
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
 export const patchInsights = patch
+
+/**
+ * The recap report of one of Sage's campaigns (id `campaign-<id>`), on its window and networks: goal vs actual,
+ * results, top posts, website results. No journal line: Sage logs the end of the campaign (requests/iris-from-sage-campaign-report).
+ */
+export function writeCampaignReport(s: State, c: Campaign): State {
+  const id = `campaign-${c.id}`
+  const days = Math.min(90, Math.max(1, Math.round((c.end - c.start) / DAY) + 1))
+  const recipe: Recipe = { days, networks: [...new Set(c.posts.map(p => p.network))], audience: 'claire', sections: ['campaign', 'summary', 'top', 'roi'], campaign: c.id }
+  const r: Report = { ...writeStudio(s, recipe, id, Math.min(c.end, now(s))), kind: 'campaign', title: c.name }
+  return patch(s, { reports: [r, ...s.insights.reports.filter(x => x.id !== id)] })
+}
 
 /** Iris writes a report Sam asked for (⌘K, Chat or Insights); Undo removes it. */
 export function writeReport(s: State, recipe: Recipe, id: string, via: string): State {
