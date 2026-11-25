@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
-import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase } from '../../data/strategy'
+import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { lastWeekOf, launchBlock, mixOf, targetsOf } from './slice'
+import { lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -355,7 +355,7 @@ function CampaignView() {
 
       {c.recap && (
         <section className="card pad recap">
-          <div className="section-title"><Mark agent="iris" />Recap by Iris</div>
+          <div className="section-title"><Mark agent={c.recapBy ?? 'iris'} />{c.recapBy === 'sage' ? 'Recap by Sage, with Iris’s numbers' : 'Recap by Iris'}</div>
           {c.recap.map(p => <p key={p}>{p}</p>)}
           {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
         </section>
@@ -475,8 +475,45 @@ function DelegateBoard({ c }: { c: Campaign }) {
 }
 
 /* ---------- Pillars and cadence ---------- */
+
+/** Sam edits the shares and descriptions; Sage checks the sum and says what it means in posts a week. */
+function PillarEditor({ draft, onChange, onDone }: { draft: Pillar[]; onChange: (p: Pillar[]) => void; onDone: () => void }) {
+  const { s, d } = useStore()
+  const check = pillarCheck(s, draft)
+  const set = (id: string, patch: Partial<Pillar>) => onChange(draft.map(p => (p.id === id ? { ...p, ...patch } : p)))
+  return (
+    <form className="pillar-edit" onSubmit={e => { e.preventDefault(); if (check.ok) { d({ type: 'strategy/pillars', pillars: draft }); onDone() } }}>
+      <table className="table">
+        <thead><tr><th>Pillar</th><th className="r">Target</th><th>Description</th></tr></thead>
+        <tbody>
+          {draft.map(p => (
+            <tr key={p.id}>
+              <td><b>{p.name}</b></td>
+              <td className="r">
+                <span className="row tight nowrap pct-input">
+                  <input className="input" type="number" min={0} max={100} step={5} aria-label={`${p.name} target share`} value={Number.isFinite(p.target) ? p.target : ''} onChange={e => set(p.id, { target: e.target.value === '' ? NaN : +e.target.value })} />%
+                </span>
+              </td>
+              <td><input className="input" aria-label={`${p.name} description`} value={p.desc} onChange={e => set(p.id, { desc: e.target.value })} /></td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot><tr><td>Total</td><td className={`r num ${check.total === 100 ? '' : 'warn'}`}>{check.total}%</td><td /></tr></tfoot>
+      </table>
+      <div className="sage-check" aria-live="polite">
+        <Mark agent="sage" />
+        <p>{check.issues[0] ?? (check.impact.length ? `${check.impact.join('. ')}. Atlas plans to it from next week.` : 'Change a share or a description and I’ll check it.')}</p>
+      </div>
+      <div className="row">
+        <Btn variant="primary" type="submit" disabled={!check.ok}>Apply</Btn>
+        <Btn variant="ghost" onClick={onDone}>Cancel</Btn>
+      </div>
+    </form>
+  )
+}
 function Pillars() {
   const { s, d } = useStore()
+  const [edit, setEdit] = useState<Pillar[] | null>(null)
   const now = useNow()
   const mix = mixOf(s, now)
   const week = lastWeekOf(s, now)
@@ -485,9 +522,15 @@ function Pillars() {
       <section className="card pad">
         <div className="row between">
           <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
-          <span className="row tight faint lock-note"><Lock size={13} />Locked: Sage suggests, you decide</span>
+          {edit ? null : (
+            <div className="row tight">
+              <span className="row tight faint lock-note"><Lock size={13} />Sage suggests, you decide</span>
+              <Btn size="sm" onClick={() => setEdit(structuredClone(s.strategy.pillars))}><Pencil size={14} />Edit pillars</Btn>
+            </div>
+          )}
         </div>
-        <div className="pillars">
+        {edit && <PillarEditor draft={edit} onChange={setEdit} onDone={() => setEdit(null)} />}
+        <div className="pillars" hidden={!!edit}>
           {s.strategy.pillars.map(p => {
             const actual = mix[p.name] ?? 0
             const off = actual - p.target
