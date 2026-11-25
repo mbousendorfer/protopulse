@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nova Inbox Depth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ui-quality.html: one reading column, measures first, then parity, captures, open items. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; white-space: nowrap; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Nova · Inbox depth</h1>
+    <p class="lede">25 November 2026. Nova's Inbox brought to Agorapulse's level, agentic-first: Nova triages, labels, assigns, answers and moderates under rules Sam can read and undo, and only what needs a person reaches him, with the reason. 17 pull requests on <code>main</code>, from #23 to #128.</p>
+  </header>
+
+  <section aria-label="Measures">
+    <h2>In numbers</h2>
+    <div class="tiles">
+      <div class="tile"><b>8</b><span>bugs fixed first (Act, Desk, Claire, reply-to)</span></div>
+      <div class="tile"><b>12</b><span>features shipped after an explicit Go</span></div>
+      <div class="tile"><b>3 + 1</b><span>later (contacts, volume, export) · dropped (guardrails)</span></div>
+      <div class="tile"><b>55</b><span>conversations in the seed (40 before)</span></div>
+      <div class="tile"><b>9</b><span>new ⇧D events and scenarios for testers</span></div>
+      <div class="tile"><b>319</b><span>tests green on main (97 before)</span></div>
+    </div>
+  </section>
+
+  <section aria-label="Parity">
+    <h2>Parity, capability by capability</h2>
+    <p class="sub">Agorapulse's Inbox (from the agorapulse-product reference) against what Protopulse had on 25/11 at 73a7ba2 and what it has now.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Agorapulse</th><th>Before</th><th>Now (agentic version)</th></tr></thead>
+      <tbody>
+        <tr><td>Automated moderation rules</td><td>None beyond spam hidden by script</td><td>Nova's Inbox rules (words, network, type → label, assign, hide, review, sentiment), applied on arrival on Act, proposed on Draft and Suggest, counted, undoable; created from the Rules panel, ⌘K, Chat, or proposed by Nova after three identical hand labels</td></tr>
+        <tr><td>Review / To review / Review all</td><td>A flag and a button</td><td>To review view, Nova reviews what she settles alone, Review all with one Undo</td></tr>
+        <tr><td>Saved replies</td><td>None</td><td>Team library; Nova cites the one she adapted under her draft; composer menu; Save as reply; ⌘K “reply to Léa with the exchange saved reply”</td></tr>
+        <tr><td>Response time (SLA)</td><td>None</td><td>Waiting time on every row, targets per type, Waiting longest sort, Desk warning 15 minutes before a miss, ⌘K “who is waiting longest?”, numbers exposed to Iris</td></tr>
+        <tr><td>Assign, Assigned to me</td><td>Sam or Claire</td><td>Team of four; Léo and Yanis answer what is assigned to them; rules assign on arrival; Team section with open and over-target counts</td></tr>
+        <tr><td>Labels</td><td>Create only</td><td>Rename everywhere (rules included), delete with Undo, campaign labels from Sage</td></tr>
+        <tr><td>Like, Hide, Delete, Spam, Ban, Reply in DM</td><td>Hide</td><td>All of them, delete said before it happens; bot waves reported by Nova on Act or raised as one card on Draft</td></tr>
+        <tr><td>Filter presets</td><td>Three hard-coded views</td><td>Date, assignee, review, profile, post filters; Save as view; ⌘K “show me negative Instagram DMs this week”</td></tr>
+        <tr><td>Filter items by post</td><td>Post as a text line</td><td>Post link opens all its comments with Nova's summary; By post in the sidebar</td></tr>
+        <tr><td>Translate</td><td>None</td><td>English shown under foreign-language messages and Nova's replies (German, French, Spanish, Italian)</td></tr>
+        <tr><td>Escalation (approval workflows)</td><td>Locked action, nothing checked on arrival</td><td>Playbook escalations applied on arrival, before the level; Your call or Waiting on Claire, rule quoted</td></tr>
+        <tr><td>Social profiles</td><td>Network only</td><td>Fernway Repair profile on conversations, Profile filter (Atlas's accounts)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-label="Captures">
+    <h2>Before and after</h2>
+    <div class="pair">
+      <figure><img src="nova/needs-before.jpg" alt="Inbox Needs you before: four groups, times only, three hard-coded saved views"><figcaption><b>Before</b> · Needs you shows times only; saved views are fixed; nothing says who waits how long.</figcaption></figure>
+      <figure><img src="nova/needs-after.jpg" alt="Inbox Needs you after: waiting times with over-target flags, Team section, By post, Saved replies and Rules in the header"><figcaption><b>After</b> · “Waiting 2 h 19 · over 1 h”, the Team section with who is late, By post, and Saved replies and Rules in the header.</figcaption></figure>
+    </div>
+    <div class="pair">
+      <figure><img src="nova/panel-before.jpg" alt="Conversation panel before"><figcaption><b>Before</b> · Assign to Sam or Claire, Hide as the only moderation, the post as plain text.</figcaption></figure>
+      <figure><img src="nova/panel-after.jpg" alt="Conversation panel after with Like, Moderate, saved reply cited under the draft, post link"><figcaption><b>After</b> · Like and Moderate, the saved reply Nova adapted cited under her draft, the post as a link to all its comments.</figcaption></figure>
+    </div>
+    <div class="pair">
+      <figure><img src="nova/rules-before.jpg" alt="All conversations before: no rules"><figcaption><b>Before</b> · no place where Nova's automatic work is written down.</figcaption></figure>
+      <figure><img src="nova/rules-after.jpg" alt="Nova's Inbox rules panel with use counts and switches"><figcaption><b>After</b> · Nova's rules with what they do, how often, where they came from, a switch and an Undo; response targets below.</figcaption></figure>
+    </div>
+    <div class="pair phone">
+      <figure><img src="nova/phone-before.jpg" alt="Inbox at 375 px before"><figcaption><b>Before</b> · 375 px.</figcaption></figure>
+      <figure><img src="nova/phone-after.jpg" alt="Inbox at 375 px after"><figcaption><b>After</b> · 375 px.</figcaption></figure>
+    </div>
+  </section>
+
+  <section aria-label="Open items">
+    <h2>What stays open, and why</h2>
+    <ul class="check">
+      <li><span class="tag open">Later</span><div><b>CRM contacts</b><p>Contacts view, editable record and timeline, records created by Nova, duplicate merge. Held at the pitch; the Contact tab stays read-only.</p></div></li>
+      <li><span class="tag open">Later</span><div><b>Credible volume</b><p>Seed to ~85 and a live trickle handled by Nova. Held at the pitch; the Inbox moves through the scripted events and teammates' replies.</p></div></li>
+      <li><span class="tag open">Later</span><div><b>Export to CSV</b><p>Held at the pitch.</p></div></li>
+      <li><span class="tag open">Dropped</span><div><b>Guardrails applied</b><p>Daily caps and LinkedIn quiet hours stay declarative: refused at the pitch. PROMPT.md §4 says so.</p></div></li>
+      <li><span class="tag ok">Skipped</span><div><b>Approval workflows, custom inboxes, live collision</b><p>Covered by the Suggest · Draft · Act levels and Ask Claire; one brand; no real multi-user session to simulate.</p></div></li>
+      <li><span class="tag ok">Contract</span><div><b>Iris and Echo</b><p><code>responseStats</code> and <code>waitingList</code> for Iris's community report; <code>inbox/ingest</code> for Echo's mentions. Both requests are in <code>design-plans/agent-depth/requests/</code>.</p></div></li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

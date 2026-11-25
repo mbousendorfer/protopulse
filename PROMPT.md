@@ -65,12 +65,13 @@ Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage 
 Six agents préconfigurés, chacun responsable d'un département. Un agent a : un nom, une couleur et un avatar illustré (§10), un département, une ligne de rôle, un statut (`On shift` / `Paused` / `Off shift`), un planning, une activité en cours, des **actions** avec leur cran d'autonomie, des **garde-fous**, et un **track record** (géré seul, remonté, taux d'approbation sans modification, annulations).
 
 ### Nova — Community (Inbox)
-Planning : 24/7. Activité type : « Watching 8 inboxes ».
+Planning : 24/7. Activité type : « Watching 8 inboxes ». Travaille avec une équipe de quatre : Sam, Claire (approuve), Léo Marchand (service client) et Yanis Haddad (wholesale), qui répondent seuls à ce qui leur est assigné.
 
 | Action | Risque | Cran par défaut | Verrou |
 |---|---|---|---|
 | Answer product and shipping questions | safe | Act | |
 | Hide spam and bots | safe | Act | |
+| Apply Inbox rules (label, assign, hide, review) | safe | Act | |
 | Answer complaints | risky | Draft | |
 | Send an exchange or a replacement (≤ €150) | risky | Draft | |
 | Refund shipping costs (≤ €15) | risky | Act | |
@@ -78,7 +79,15 @@ Planning : 24/7. Activité type : « Watching 8 inboxes ».
 | Reply to reviews (Google, Trustpilot) | risky | Draft | |
 | Reply to press, legal, safety, injuries | destructive | Suggest | 🔒 |
 
-Garde-fous : max 200 réponses publiques par jour · aucune réponse LinkedIn entre 23:00 et 07:00 · remboursements cumulés ≤ €300 par jour · escalade obligatoire : blessure, avocat, journaliste, créateur > 50k abonnés.
+Ce que fait chaque cran : **Act** = Nova répond, applique ses règles ou signale le spam seule, une ligne au journal avec un Undo qui restaure la conversation ; une carte prise par Act passe la conversation en « Nova · auto » (Handled by Nova). **Draft** = brouillon dans Needs you (et carte Desk), règles proposées groupées (« Apply all »), spam regroupé en une carte. **Suggest** = Nova signale et propose (règle suggérée sur la conversation).
+
+**Escalades appliquées** : chaque message qui arrive est vérifié contre les règles d'escalade du Playbook actives pour Nova (blessure, presse, juridique, créateur > 50k, remboursement > €150, budget, prix) ; une règle qui matche passe avant le cran : Your call (ou Waiting on Claire), réponse d'attente, règle citée.
+
+**Règles d'Inbox** (Automated moderation) : mots + réseau + type → label, assigner, masquer, marquer revu, sentiment ; compteur d'usages, Undo ; créées depuis le panneau Rules, ⌘K/Chat (« make Nova label refund requests as Refund ») ou proposées par Nova après trois étiquetages identiques à la main.
+
+**Temps de réponse** : cible par type (messages 1 h, commentaires et mentions 4 h, avis 24 h, réglables) ; Nova prévient 15 minutes avant qu'une cible soit manquée (carte Desk) ; « who is waiting longest? » en ⌘K.
+
+Garde-fous affichés : max 200 réponses publiques par jour · aucune réponse LinkedIn entre 23:00 et 07:00 · remboursements cumulés ≤ €300 par jour. (Leur application a été écartée au pitch du 25/11 : ils restent déclaratifs.)
 
 ### Atlas — Publishing
 Planning : lun.–ven., prépare la semaine suivante le jeudi. Activité type : « Reworking Friday's reel caption ». Registre : `src/features/publishing/agent.tsx` et `script.ts`.
@@ -235,13 +244,14 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 
 ### 6.2 Inbox — Nova
 
-- **Disposition** : barre latérale du module (vues Needs you, Nova's drafts, Handled by Nova, Hidden, All ; vues enregistrées Assigned to me, Assigned to Claire, Negative today ; labels avec compteurs ; filtres), puis une **liste pleine largeur** dense (case · avatar social avec badge réseau · auteur · extrait · type · sentiment · intention d'achat · statut · revu · labels · assigné · heure), triable (récent, ancien, urgence, intention d'achat).
-- **Vue Needs you = ce que Nova attend de Sam**, groupée par type d'input plutôt qu'en liste uniforme : **Ready to send** (Nova est sûre ; « Send all N » en tête de groupe), **One passage to check** (le passage marqué et la note de Nova, ex. « Check “GR20”. Léa wrote GR20 but tagged the TMB »), **Your call** (sujets verrouillés : presse, sécurité, juridique, créateur, avec la raison), **Waiting on Claire**. Chaque groupe a un **bandeau d'en-tête** (icône teintée selon le type, titre, compteur, explication) et n'affiche que **3 lignes**, puis « Show N more ». Chaque ligne tient sur **deux lignes** : auteur + message d'origine, puis la réponse de Nova ou la question (« Check “GR20” … », « Safety topic … ») ; à droite l'heure et **la décision rapide** (Edit · Send ; Edit · Send as is ; More (I'll reply, Ask Claire) · Holding reply). Cliquer la ligne ouvre le panneau ; panneau ouvert, la liste se resserre (qui et quoi seulement).
-- **Panneau de conversation** ancré à droite (~620 px, ↑/↓ ou J/K pour passer à la suivante) avec une barre d'outils (assigner, sentiment, Mark reviewed, labels) et deux onglets : **Conversation** (fil, brouillon de Nova dans sa couleur, règles appliquées, pièces jointes e-commerce, Approve & send, Edit, Take over, Ask Claire, Hide) et **Contact** (commandes Shopify, historique, tags).
-- **Type et sentiment lisibles d'un coup d'œil** : tag avec icône (Comment, Message, Review, Mention) et sentiment en couleur avec visage (Positive, Neutral, Negative).
-- **Notes internes** : bascule « Reply / Note for the team » dans le composeur ; les notes (de Sam ou de Claire) ont leur propre style dans le fil.
-- **Actions groupées** : Approve Nova's drafts (seulement celles qui ont un brouillon ; règle aussi les cartes du Desk), Hide / Unhide, Mark as reviewed, Assign to Claire / to me, Add label, Set sentiment. Undo groupé.
-- Données : 40+ conversations, labels (Refund, Product issue, Press, Creator, Lead), assignations, notes.
+- **Disposition** : barre latérale du module — vues Needs you, To review, Nova's drafts, Handled by Nova, Hidden, All ; **Team** (Sam, Claire, Léo, Yanis : conversations ouvertes et « N over ») ; Saved views (Negative today + vues créées par Sam) ; **By post** (posts avec commentaires en attente) ; Labels (avec *Manage*) ; filtres (réseau, **profil**, type, sentiment, date, assigné, statut de revue, intention d'achat, *Save as view*). Puis une **liste pleine largeur** dense (case · avatar social · auteur · extrait · profil · type · sentiment · intention · statut · **attente** · revu · labels · assigné · heure), triable (Waiting longest, récent, ancien, urgence, intention d'achat). En-tête : **Saved replies** et **Rules**.
+- **Vue Needs you = ce que Nova attend de Sam**, groupée : **Ready to send** (« Send all N »), **One passage to check**, **Your call** (sujets verrouillés et escalades, règle citée), **You're replying**, puis, hors compteur, **Waiting on Claire** et **With your team** (assigné à Léo ou Yanis). 3 lignes par groupe puis « Show N more » ; chaque ligne : auteur + message d'origine (langue notée), la réponse de Nova ou la question, **« Waiting 2 h 58 · over 1 h »** et la décision rapide.
+- **Panneau de conversation** (~620 px, ↑/↓ ou J/K) : assigner (équipe de 4), sentiment, Mark reviewed, **Like**, **Moderate** (Reply in private, Report as spam, Ban, Delete… avec confirmation inline ; les avis ne se modèrent pas), labels ; suggestions de règle de Nova (Apply / Dismiss). Onglets **Conversation** (fil avec traductions anglaises sous les messages étrangers, notes internes, brouillon de Nova avec la réponse sauvegardée citée et sa version anglaise, pièces e-commerce, Send, Edit, Take over, Ask Claire, Hide ; composeur avec menu **Saved replies** ; « Save as reply » sous chaque réponse envoyée ; lien du post → tous ses commentaires) et **Contact** (commandes Shopify, historique, tags, lecture seule).
+- **Panneaux** : *Rules* (règles de Nova, on/off, usages, ajout, cibles de réponse), *Saved replies* (8 réponses d'équipe, `{name}`), *Labels* (renommer partout, supprimer avec Undo).
+- **Actions groupées** : Approve, Mark reviewed (et *Review all* dans To review), Assign, Label, Sentiment, Hide / Unhide, Like, Report as spam, Ban, Delete. Une ligne de journal, une barre d'Undo.
+- **⌘K / Chat** : « reply to Léa (with the exchange saved reply) », « make Nova label … as … », « assign … to Yanis », « who is waiting longest? », « show me negative Instagram DMs this week » (ouvre l'Inbox filtrée ou enregistre la vue).
+- **URL** : `?view=`, `?label=`, `?sort=waiting`, `?rules=1`, `?saved=1`, `?labels=1`, et les filtres (`network`, `type`, `sentiment`, `date`, `who`, `review`, `post`, `account`).
+- **⇧D** : wrong colour, injury (escalade), German warranty, money-back question (règle), 1-star Google review, bots (spam), learned rule, response targets, buying intent, plus les événements toujours en carte (stove, collab, promotions, règle emoji).
 
 ### 6.3 Publishing — Atlas
 
@@ -450,7 +460,7 @@ Caché, pour l'animateur du test.
 
 Un module de données par domaine, typé. Toutes les dates sont relatives au « maintenant » de l'app. Volumes minimum :
 - 18 remontées initiales sur le Desk couvrant les 5 agents et tous les types, dont 3 « Good news » ;
-- 40 conversations Inbox + 15 contacts avec commandes ;
+- 55 conversations Inbox (8 réseaux, dont 3 sur Fernway Repair, 4 Trail Week, 4 en langue étrangère) + 15 contacts avec commandes, 8 règles d'Inbox, 8 réponses sauvegardées, 7 labels, une équipe de 4 ;
 - Publishing : 34 posts (semaines passée et courante, dont 3 sur Fernway Repair, 3 brouillons), 14 items de plan + 14 d'un plan v2, 30 médias (1 licence de créateur qui finit en décembre), 2 files (8 textes), 1 note de calendrier, 7 profils dont Fernway Repair ;
 - 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
 - 4 concurrents (chiffres par réseau), 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions (+ 27 du pic), 5 tags à règle, 5 fiches créateurs, 8 tendances, 12 recherches, 3 règles d'alerte ;
