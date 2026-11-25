@@ -5,6 +5,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { Btn, Mark, Menu, Net, Pill } from '../../ui'
 import { useOpenPost } from './Bulk'
 import { upcoming } from './queues'
+import { notesOn } from './notes'
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const day = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -45,7 +46,7 @@ export default function Queues() {
                       {x.post.status === 'needs' ? <Pill tone="caution">Needs you</Pill> : x.post.status === 'scheduled' ? <span className="faint">Scheduled</span> : <Pill>{x.post.status}</Pill>}
                       {x.post.author === 'atlas' && <Mark agent="atlas" />}
                     </button>
-                  ) : <span className="faint q-post">Empty</span>}
+                  ) : <span className="faint q-post">{notesOn(s.publishing.notes ?? [], x.at).find(n => n.quiet) ? `Quiet day: ${notesOn(s.publishing.notes ?? [], x.at).find(n => n.quiet)!.text}. Atlas leaves it empty.` : 'Empty'}</span>}
                 </li>
               ))}
             </ul>
