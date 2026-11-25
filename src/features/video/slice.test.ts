@@ -234,3 +234,17 @@ test('a sent clip becomes Published at its posts’ time, with numbers, and good
   expect(news?.kind).toBe('news')
   expect(news?.title).toContain(`${(c.stats!.views / 1000).toFixed(1)}k views`)
 })
+
+test('the score learns: published clips of the same pillar move the total, and the closest one is cited', () => {
+  let s = initialState()
+  const strap = () => s.video.clips.find(c => c.id === 'clip-repair-strap')!
+  // “Most brands…” (Repair & care, published, 48.2k) against TikTok's usual reach.
+  expect(strap().track?.like?.id).toBe('clip-repair-brands')
+  const before = rescore(strap(), TRANSCRIPT.repair).total
+  expect(before - rescore({ ...strap(), track: undefined }, TRANSCRIPT.repair).total).toBe(strap().track!.delta)
+  // A Gear that lasts clip going out big lifts the other Gear that lasts clips once it's published.
+  s = run(s, { type: 'video/send', ids: ['clip-live-zips'] })
+  const first = Math.min(...s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips').map(p => p.at))
+  s = run(later(s, first - now(s) + 1000), { type: 'core/heartbeat' })
+  expect(s.video.clips.find(c => c.id === 'clip-live-bottle')?.track?.like?.id).toBe('clip-live-zips')
+})
