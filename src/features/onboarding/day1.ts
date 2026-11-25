@@ -30,7 +30,7 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
   const social = setup.connected.some(id => INTEGRATIONS.find(i => i.id === id)?.group === 'Social')
 
   // Autonomy from the chosen preset; track records start empty.
-  const NOW_DAY1: Record<AgentId, string> = { nova: 'Watching your inboxes', atlas: 'Reading your best posts', iris: 'Writing tomorrow’s first brief', echo: 'Watching your competitors', sage: 'Waiting for your OK on the pillars' }
+  const NOW_DAY1: Record<AgentId, string> = { nova: 'Watching your inboxes', atlas: 'Reading your best posts', iris: 'Writing tomorrow’s first brief', echo: 'Watching your competitors', sage: 'Waiting for your OK on the pillars', juno: 'Watching your YouTube channel' }
   const agents = base.agents.map(a => ({
     ...a, now: NOW_DAY1[a.id],
     record: { handled: 0, escalated: 0, approvedUnchanged: 0, undone: 0, series: Array(30).fill(0) },
@@ -158,6 +158,8 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
     playbook: { ...base.playbook, rules, escalate: base.playbook.escalate.map(e => (e.id === 'e-press' ? { ...e, on: press.keep, label: press.text } : e)) },
     listening: { ...base.listening, watch: base.listening.watch.filter(w => watched.includes(w.id)).map(w => ({ ...w, since: t })) },
     chats: { list: [] },
+    // Juno has cut nothing yet: the next upload on the channel is her first job.
+    video: { ...base.video, sources: [], clips: [], opened: {} },
   }
 }
 

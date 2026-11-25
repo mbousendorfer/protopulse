@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, ChevronDown } from 'lucide-react'
 import type { AgentId, Handoff, Urgency } from '../../app/types'
 import { useStore } from '../../app/store'
-import { NETWORK_LABEL } from '../../data/agents'
+import { NETWORK_LABEL, agentName } from '../../data/agents'
 import { Btn, Mark, Net, Pill, Sheet, Tabs, TopicIcon } from '../../ui'
 import HandoffCard from './HandoffCard'
 import Detail from './Detail'
@@ -106,7 +106,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
   return (
     <article className="detail batch" aria-label={b.title}>
       <div className="handoff-top">
-        <div className="slip"><span className="chain">{[...new Set(b.items.map(h => h.agent))].map(a => <Mark key={a} agent={a} />)}</span><span><b>{b.id === 'rules' ? 'Your agents' : b.agent === 'nova' ? 'Nova' : 'Atlas'}</b> {b.id === 'rules' ? 'suggest rules' : 'prepared a batch'}</span><span className="faint">· {b.items.length} items</span></div>
+        <div className="slip"><span className="chain">{[...new Set(b.items.map(h => h.agent))].map(a => <Mark key={a} agent={a} />)}</span><span><b>{b.id === 'rules' ? 'Your agents' : agentName(b.agent)}</b> {b.id === 'rules' ? 'suggest rules' : 'prepared a batch'}</span><span className="faint">· {b.items.length} items</span></div>
         {b.urgency === 'urgent' ? <Pill tone="alert" dot>Has urgent</Pill> : b.urgency === 'today' ? <Pill tone="caution">Today</Pill> : <Pill>This week</Pill>}
       </div>
       <h2 className="detail-title">{b.title}</h2>

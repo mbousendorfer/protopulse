@@ -4,15 +4,16 @@ import { pushLog } from '../../app/core'
 import { OWNER, draftPost, parse, type Intent } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import type { Chat, ChatMsg } from './slice'
+import { reduceVideo, validUrl, videoEvent } from '../video/slice'
 
 type Reply = Omit<ChatMsg, 'id' | 'at'>
 export type Route = { intent: Intent; agent: AgentId; raw: string; mentioned?: AgentId }
 
 /** "@Atlas, a post about…" or "… @iris" → the mentioned agent leads, the rest is parsed as usual. */
 export function routeText(raw: string): Route {
-  const m = raw.match(/@(nova|atlas|iris|echo|sage)\b/i)
+  const m = raw.match(/@(nova|atlas|iris|echo|sage|juno)\b/i)
   const mentioned = m ? (m[1].toLowerCase() as AgentId) : undefined
-  const clean = raw.replace(/@(nova|atlas|iris|echo|sage)\b[,:]?\s*/gi, '').trim()
+  const clean = raw.replace(/@(nova|atlas|iris|echo|sage|juno)\b[,:]?\s*/gi, '').trim()
   const { intent, forced } = parse(mentioned ? `${mentioned} ${clean}` : clean)
   return { intent, agent: mentioned ?? forced ?? OWNER[intent.kind], raw: clean, mentioned }
 }
@@ -58,6 +59,14 @@ export function respond(r: Route, s: State, chat: Chat): { replies: Reply[]; eff
 
     case 'mentions':
       return { replies: [{ from: 'echo', text: '2 negative mentions today, both about the Storm Jacket seams. One Reddit thread is gaining traction.', card: { type: 'list', items: [{ title: 'r/ultralight: “Storm Jacket seams leak after 3 washes”', agent: 'echo', meta: '41 upvotes · 2 h ago', link: '/listening/mentions' }, { title: '@hugo.rando: “Seams on my Storm are peeling”', agent: 'echo', meta: 'X · 4 h ago', link: '/listening/mentions' }] } }], effects: [] }
+
+    case 'clip': {
+      if (i.url && validUrl(i.url)) return { replies: [{ from: 'juno', text: 'On it. I’ll transcribe it, pick the best moments and caption them. They’ll be in Video in about 40 seconds.', card: { type: 'done', text: 'Video added to Juno’s queue' } }], effects: [(st: State) => reduceVideo(st, { type: 'video/addLink', url: i.url! })] }
+      if (i.url) return { replies: [{ from: 'juno', text: 'That link doesn’t look right. Paste the full address, starting with https://.' }], effects: [] }
+      const ready = s.video.clips.filter(c => c.status === 'ready')
+      if (!s.video.sources.some(x => x.id === 'gr20')) return { replies: [{ from: 'juno', text: 'Your latest upload is “Storm Jacket: 3 days of GR20 rain”. I’m cutting it now and will tell you when the clips are ready.', card: { type: 'done', text: 'Juno is clipping the latest video' } }], effects: [(st: State) => videoEvent(st, 'gr20', true)] }
+      return { replies: [{ from: 'juno', text: `I already cut the latest video. ${ready.length} clip${ready.length === 1 ? ' is' : 's are'} waiting for you:`, card: { type: 'list', items: ready.slice(0, 5).map(c => ({ title: c.title, agent: 'juno' as const, meta: `“${c.hook}”`, link: `/video/clips/${c.id}` })) } }], effects: [] }
+    }
 
     case 'rule':
       return { replies: [{ from: i.agent, text: `Got it. I’ll stop doing that here. Should every agent follow it?`, card: { type: 'rule', text: i.rule, agent: i.agent, status: 'proposed' } }], effects: [] }

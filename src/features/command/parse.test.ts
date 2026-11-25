@@ -6,8 +6,9 @@ test('every example maps to its intent and agent', () => {
   const got = EXAMPLES.map(x => { const p = parse(x); return [p.intent.kind, p.forced ?? OWNER[p.intent.kind]] })
   expect(got).toEqual([
     ['post', 'atlas'], ['post', 'atlas'], ['tiktok', 'iris'], ['besttime', 'iris'], ['competitor', 'echo'], ['pause', 'sage'],
-    ['rule', 'nova'], ['campaign', 'sage'], ['needs', 'iris'], ['overnight', 'iris'], ['reply', 'nova'], ['mentions', 'echo'],
+    ['rule', 'nova'], ['campaign', 'sage'], ['needs', 'iris'], ['overnight', 'iris'], ['reply', 'nova'], ['mentions', 'echo'], ['clip', 'juno'],
   ])
+  expect(parse('Clip https://youtu.be/abc123 please').intent).toEqual({ kind: 'clip', url: 'https://youtu.be/abc123' })
   const sale = parse(EXAMPLES[0]).intent
   expect(sale).toMatchObject({ kind: 'post', topic: 'weekend sale', slot: 'Fri 28, 18:30' })
   expect(parse(EXAMPLES[1]).intent).toMatchObject({ network: 'linkedin', topic: 'repair programme' })

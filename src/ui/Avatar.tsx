@@ -40,6 +40,13 @@ export function AgentAvatar({ agent, size = 28, title }: { agent: Who; size?: nu
         <path d="M20 11.5c3.5-6.5 10.5-6.2 12-5-.8 5.6-6.6 8.6-12 6.3z" fill={c} opacity="0.6" />
         <circle cx="20" cy="23" r="12" fill={c} />{face}
       </>}
+      {agent === 'juno' && <>
+        <g transform="rotate(-14 29 9)" opacity="0.6">
+          <rect x="22" y="9" width="14" height="7" rx="1.2" fill={c} />
+          <path d="M22 5.5l14-1.8.4 2.6-14 1.8z" fill={c} />
+        </g>
+        <circle cx="20" cy="23" r="12" fill={c} />{face}
+      </>}
       {agent === 'claire' && <>
         <path d="M9 36c1.5-6 6-9 11-9s9.5 3 11 9" fill={c} />
         <circle cx="20" cy="17" r="7" fill={c} />

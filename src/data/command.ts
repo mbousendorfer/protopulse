@@ -16,14 +16,15 @@ export type Intent =
   | { kind: 'overnight'; agent: AgentId }
   | { kind: 'reply'; name: string; convo?: string }
   | { kind: 'mentions' }
+  | { kind: 'clip'; url?: string }
   | { kind: 'unknown' }
 
 export const OWNER: Record<Intent['kind'], AgentId> = {
   post: 'atlas', tiktok: 'iris', besttime: 'iris', compare: 'iris', performance: 'iris', competitor: 'echo', pause: 'sage', resume: 'sage',
-  rule: 'nova', campaign: 'sage', needs: 'iris', overnight: 'iris', reply: 'nova', mentions: 'echo', unknown: 'iris',
+  rule: 'nova', campaign: 'sage', needs: 'iris', overnight: 'iris', reply: 'nova', mentions: 'echo', clip: 'juno', unknown: 'iris',
 }
 
-const NAMES: AgentId[] = ['nova', 'atlas', 'iris', 'echo', 'sage']
+const NAMES: AgentId[] = ['nova', 'atlas', 'iris', 'echo', 'sage', 'juno']
 const NETS: [RegExp, Network][] = [[/linkedin/, 'linkedin'], [/tiktok/, 'tiktok'], [/instagram|insta\b|\big\b|reel|carousel/, 'instagram'], [/facebook|\bfb\b/, 'facebook'], [/youtube|short\b/, 'youtube'], [/\bx\b|twitter|tweet/, 'x']]
 const BEST_SLOT: Record<Network, string> = { instagram: 'Fri 28, 18:30', linkedin: 'Tue 2, 08:30', tiktok: 'Thu 27, 18:00', facebook: 'Sat 29, 10:00', youtube: 'Sun 30, 11:00', x: 'Today, 12:00', google: '', trustpilot: '' }
 const DAYS: [RegExp, string][] = [[/monday/, 'Mon 1'], [/tuesday/, 'Tue 2'], [/wednesday/, 'Wed 26'], [/thursday/, 'Thu 27'], [/friday/, 'Fri 28'], [/saturday/, 'Sat 29'], [/sunday/, 'Sun 30'], [/tomorrow/, 'Wed 26'], [/today|tonight/, 'Today']]
@@ -33,29 +34,31 @@ const net = (t: string): Network | undefined => NETS.find(([re]) => re.test(t))?
 
 export function parse(raw: string): { intent: Intent; forced?: AgentId } {
   let t = raw.toLowerCase().trim().replace(/[?!.]+$/, '')
-  const lead = t.match(/^(nova|atlas|iris|echo|sage)\b[,:]?\s*/)
+  const lead = t.match(/^(nova|atlas|iris|echo|sage|juno)\b[,:]?\s*/)
   const forced = lead ? (lead[1] as AgentId) : undefined
   if (lead) t = t.slice(lead[0].length)
   const named = NAMES.find(n => new RegExp(`\\b${n}\\b`).test(t))
 
-  if (/^(pause|stop)\s+(nova|atlas|iris|echo|sage)/.test(t)) {
+  if (/^(pause|stop)\s+(nova|atlas|iris|echo|sage|juno)/.test(t)) {
     const m = t.match(/^(?:pause|stop)\s+(\w+)(?:\s+(?:until|till)\s+(.+))?/)!
     return { intent: { kind: 'pause', agent: m[1] as AgentId, until: m[2] }, forced }
   }
-  if (/^(resume|restart|unpause|wake)\s+(nova|atlas|iris|echo|sage)/.test(t)) return { intent: { kind: 'resume', agent: t.split(/\s+/)[1] as AgentId }, forced }
+  if (/^(resume|restart|unpause|wake)\s+(nova|atlas|iris|echo|sage|juno)/.test(t)) return { intent: { kind: 'resume', agent: t.split(/\s+/)[1] as AgentId }, forced }
   const never = t.match(/^(?:please\s+)?(never|don['’]?t|do not|stop|no more)\s+(.+)/)
   if (never) {
     const body = never[2].replace(/\byou\b/g, 'we')
     return { intent: { kind: 'rule', rule: `Never ${body.replace(/^(ever\s+)/, '')}`, agent: forced ?? named ?? (/post|caption|publish|hashtag/.test(body) ? 'atlas' : 'nova') }, forced }
   }
+  const url = raw.match(/https?:\/\/\S+/)?.[0]
+  if (url || /\bclips?\b|latest video|\bshorts? from\b/.test(t)) return { intent: { kind: 'clip', url }, forced }
   if (/^brief\b|campaign|launch/.test(t)) return { intent: { kind: 'campaign', brief: raw.replace(/^\s*(sage[,:]?\s*)?(brief:?\s*)?/i, '').trim() }, forced }
   if (/reply to\s+(\S+)/.test(t)) {
     const name = t.match(/reply to\s+(\S+)/)![1].replace(/^@/, '')
     return { intent: { kind: 'reply', name, convo: CONVOS[name] }, forced }
   }
   if (/what needs me|needs me|on my desk|what('?s| is) waiting/.test(t)) return { intent: { kind: 'needs' }, forced }
-  if (/(did|has)\s+(nova|atlas|iris|echo|sage)\s+(do|done)|overnight|while i was/.test(t)) {
-    const who = (t.match(/\b(nova|atlas|iris|echo|sage)\b/)?.[1] ?? 'nova') as AgentId
+  if (/(did|has)\s+(nova|atlas|iris|echo|sage|juno)\s+(do|done)|overnight|while i was/.test(t)) {
+    const who = (t.match(/\b(nova|atlas|iris|echo|sage|juno)\b/)?.[1] ?? 'nova') as AgentId
     return { intent: { kind: 'overnight', agent: who }, forced }
   }
   if (/negative|complain(t|ts)? about us|mentions/.test(t) && !/post/.test(t)) return { intent: { kind: 'mentions' }, forced }
@@ -108,4 +111,5 @@ export const EXAMPLES = [
   'What did Nova do overnight?',
   'Reply to Léa',
   'Show me negative mentions this week',
+  'Juno, clip the latest video',
 ]

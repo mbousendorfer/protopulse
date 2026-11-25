@@ -14,6 +14,7 @@ import { onResolveListening, reduceListening, type ListeningAction } from '../fe
 import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../features/strategy/slice'
 import { onResolvePlaybook, reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
 import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
+import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, unsendClips, videoEvent, type VideoAction } from '../features/video/slice'
 import { reduceSetup, type SetupAction } from '../features/onboarding/slice'
 
 export type CoreAction =
@@ -47,7 +48,7 @@ export type CoreAction =
   | { type: 'core/hydrate'; state: State }
   | { type: 'core/restore'; handoff: Handoff }
 
-export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction | SetupAction
+export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction | SetupAction | VideoAction
 
 const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropNotice', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
 
@@ -65,6 +66,7 @@ function reduceAll(s: State, a: Action): State {
   if (a.type.startsWith('listening/')) return reduceListening(s, a as ListeningAction)
   if (a.type.startsWith('strategy/')) return reduceStrategy(s, a as StrategyAction)
   if (a.type.startsWith('playbook/')) return reducePlaybook(s, a as PlaybookAction)
+  if (a.type.startsWith('video/')) return reduceVideo(s, a as VideoAction)
   if (a.type.startsWith('chats/')) return reduceChats(s, a as ChatsAction, resolve)
   if (a.type.startsWith('setup/')) return reduceSetup(s, a as SetupAction, initialState)
   return reduceCore(s, a as CoreAction)
@@ -119,6 +121,7 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
   next = onResolveListening(next, h, d)
   next = onResolveStrategy(next, h, d)
   next = onResolvePlaybook(next, h, d)
+  next = onResolveVideo(next, h, d)
 
   // An answer to "missing info" becomes a Playbook fact, so the agent never asks twice.
   if (h.kind === 'info' && d.kind === 'answer') {
@@ -165,6 +168,7 @@ function fire(s: State, eventId?: string): State {
     if (!eventId && (agentOf(next, ev.idea.agent).status !== 'on' || agentOf(next, 'atlas').status !== 'on')) return next
     return ideaEvent(next, ev.idea)
   }
+  if (ev.video) return videoEvent(next, ev.video.source, !!eventId)
   if (!ev.handoff) return next
   // Never raise the same thing twice: skip it if it's already on the Desk or was settled since the brief.
   const handoff = ev.handoff
@@ -312,9 +316,10 @@ function reduceCore(s: State, a: CoreAction): State {
       if (l.restore?.length) {
         const ids = new Set(l.restore.map(h => h.id))
         next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true, lane: undefined })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
-        for (const h of l.restore) next = reverseDecision(next, h)
+        for (const h of l.restore) next = undoDeskClips(reverseDecision(next, h), h)
       }
       if (l.idea) next = unscheduleIdea(next, l.idea)
+      if (l.clips) next = unsendClips(next, l.clips)
       return next.notice?.undo === a.id ? { ...next, notice: undefined } : next
     }
 
@@ -387,6 +392,8 @@ function reduceCore(s: State, a: CoreAction): State {
       next = deliverFollowUps(next, t)
       // Ideas whose window closed leave; snoozed ones come back.
       next = tickIdeas(next, t)
+      // Videos being processed move on; snoozed clips come back.
+      next = tickVideo(next, t)
       // Proactive feed.
       if (next.engine.live && t >= next.engine.nextAt) {
         next = fire({ ...next, engine: { ...next.engine, nextAt: t + next.engine.cadence * 1000 } })

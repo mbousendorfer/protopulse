@@ -37,6 +37,12 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
     ['Ideas accepted as is', ev.filter(e => e.kind === 'ideas/decision' && e.detail?.outcome === 'as-is').length],
     ['Ideas accepted modified', ev.filter(e => e.kind === 'ideas/decision' && e.detail?.outcome === 'modified').length],
     ['Ideas rejected', ev.filter(e => e.kind === 'ideas/decision' && e.detail?.outcome === 'rejected').length],
+    ['Clips opened', count('video/open')],
+    ['Clip edits', count('video/edit')],
+    ['Asked Juno', count('video/ask')],
+    ['Clips sent as is', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'as-is').length],
+    ['Clips sent modified', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'modified').length],
+    ['Clips dismissed', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'dismissed').length],
   ]
   const run = (fn: () => void) => { fn(); onOpenChange(false) }
 
@@ -92,6 +98,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
                 <Mark agent={e.agent ?? e.handoff?.agent ?? 'atlas'} />
                 <span className="ellipsis">{e.label.replace(/^\w+ · /, '')}</span>
                 {e.always && <span className="faint mod-tag">always a card</span>}
+                {e.video && <span className="faint mod-tag">video</span>}
                 {e.idea && <span className="faint mod-tag">{e.idea.origin === 'urgent' ? 'idea + Desk' : 'idea'}</span>}
                 <Btn size="xs" onClick={() => d({ type: 'core/fire', eventId: e.id })} aria-label={`Trigger ${e.label}`}><Zap size={12} />Trigger</Btn>
               </li>

@@ -212,6 +212,7 @@ const FOR_FERNWAY: Record<AgentId, (c: Ctx) => string> = {
   iris: () => 'Reads 90 days of results tonight. Your first morning brief lands tomorrow at 07:00.',
   echo: c => c.watched.length ? `Watches ${andList(c.watched)}, and every mention of Fernway.` : 'Watches every mention of Fernway. Add competitors any time.',
   sage: () => 'Proposes your editorial pillars and a posting cadence from what already works.',
+  juno: () => 'Watches your YouTube channel and lives, and cuts each new video into captioned clips for you to review.',
 }
 
 export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
@@ -227,7 +228,7 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
   const label = (v: string) => (v === 'cautious' ? <>Cautious <em className="rec-tag">· Recommended</em></> : PRESETS.find(p => p.value === v)!.label)
   return (
     <section className="onb-step">
-      <Head title="Meet your team" lede="Five agents, one per department. Here’s what each will do for Fernway, starting now." />
+      <Head title="Meet your team" lede="Six agents, one per department. Here’s what each will do for Fernway, starting now." />
       <ul className="card rows onb-team">
         {AGENTS.map(a => (
           <li key={a.id}>

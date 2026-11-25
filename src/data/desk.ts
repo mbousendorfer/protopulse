@@ -1,5 +1,9 @@
 import type { Handoff } from '../app/types'
 import { T, MIN } from '../app/time'
+import { SEEDS, SOURCE_DEFS, clipFromSeed, clipsCard } from './video'
+
+const LIVE = { ...SOURCE_DEFS.live, status: 'ready' as const }
+const LIVE_CARD = clipsCard(LIVE, SEEDS.live.map(seed => clipFromSeed(seed, LIVE, 0)))
 
 export const HANDOFFS: Handoff[] = [
   {
@@ -215,5 +219,14 @@ export const HANDOFFS: Handoff[] = [
     confidence: 86, at: T(6, 50), link: '/publishing/calendar',
     cta: { label: 'Make a similar post', to: '/publishing/new?network=tiktok&text=' + encodeURIComponent('We dropped the Ridge 28L from the Lac Blanc trail sign. Then we kept hiking.') },
     preview: { type: 'post', network: 'tiktok', slot: 'Posted Thu 18:30', media: 'bottle', text: ['Bottle drop test from 3 metres. The bottle is fine, the floor isn’t.'] },
+  },
+  { ...LIVE_CARD, id: 'h-clips-live', at: T(7, 20) } as Handoff,
+  {
+    id: 'h-clip-win', agent: 'juno', kind: 'news', urgency: 'week', topic: 'Clip', group: 'good', ref: 'clip-repair-brands',
+    title: 'Your repair clip passed 48k views on TikTok',
+    context: '“Most brands would sell you a new bag” · 7.1% engagement, 3× your TikTok average.',
+    why: 'Juno cut it from yesterday’s repair video. Three more moments from that video are waiting in Video.',
+    confidence: 95, at: T(6, 45), link: '/video/clips/clip-repair-brands',
+    cta: { label: 'Find more moments in that video', to: '/video/sources/repair' },
   },
 ]

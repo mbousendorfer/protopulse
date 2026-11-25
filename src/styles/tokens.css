@@ -107,6 +107,7 @@
   --a-iris: #8A62CC;  --a-iris-wash: color-mix(in srgb, #8A62CC 11%, #fff);  --a-iris-ink: color-mix(in srgb, #8A62CC 78%, #000);
   --a-echo: #12AABA;  --a-echo-wash: color-mix(in srgb, #12AABA 11%, #fff);  --a-echo-ink: color-mix(in srgb, #12AABA 62%, #000);
   --a-sage: #42B85A;  --a-sage-wash: color-mix(in srgb, #42B85A 12%, #fff);  --a-sage-ink: color-mix(in srgb, #42B85A 62%, #000);
+  --a-juno: #12A87A;  --a-juno-wash: color-mix(in srgb, #12A87A 11%, #fff);  --a-juno-ink: color-mix(in srgb, #12A87A 60%, #000);
   --a-claire: #5D6A82; --a-claire-wash: #EAECEF; --a-claire-ink: #344563;
 
   /* Networks: ADS brand colours */
@@ -186,6 +187,7 @@
   --a-iris: #a585e0;  --a-iris-wash: rgba(138, 98, 204, 0.22); --a-iris-ink: #c9b3f0;
   --a-echo: #2ec4d4;  --a-echo-wash: rgba(18, 170, 186, 0.2);  --a-echo-ink: #8fe0e8;
   --a-sage: #61C26D;  --a-sage-wash: rgba(66, 184, 90, 0.2);   --a-sage-ink: #a8e0b0;
+  --a-juno: #2ec49a;  --a-juno-wash: rgba(18, 168, 122, 0.2);  --a-juno-ink: #8fe3c8;
   --a-claire: #AEB5C1; --a-claire-wash: rgba(174, 181, 193, 0.16); --a-claire-ink: #D6DAE0;
 
   --n-instagram: #f0609f; --n-tiktok: #EAECEF; --n-linkedin: #5b95d6; --n-facebook: #4d8fff;

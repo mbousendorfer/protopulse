@@ -69,6 +69,8 @@ export const POSTS: Post[] = [
   P('p-repair', 'linkedin', 1, 9, 0, 'Our repair programme in numbers: 1,200 bags fixed, 3.4 tonnes of waste avoided.', 'Repair & care', undefined, { status: 'needs', handoff: 'h-visual', note: 'Missing visual. Atlas won’t use stock photos.' }),
   P('p-18', 'instagram', 1, 18, 30, 'Reel: rain test on the GR5 with the Storm Jacket.', 'Gear that lasts', 'rain'),
   P('p-19', 'facebook', 1, 19, 0, 'Winter hiking checklist, rewritten for 2025.', 'Trail stories', 'snow'),
+  P('p-clip-repair-brands', 'tiktok', -1, 18, 30, 'Most brands would sell you a new bag. We fix yours.', 'Repair & care', 'clip:clip-repair-brands', { ...st(48200, 7.1), note: 'Clip by Juno: Most brands would sell you a new bag' }),
+  P('p-clip-repair-unpick', 'tiktok', 2, 18, 30, 'How we replace a strap, one stitch at a time.', 'Repair & care', 'clip:clip-repair-unpick', { note: 'Clip by Juno: One stitch at a time' }),
   P('p-20', 'tiktok', 2, 18, 0, 'Trail Week teaser: 7 days, 7 trails.', 'Trail stories', 'mountain', { campaign: 'Trail Week' }),
   P('p-21', 'instagram', 2, 18, 0, 'Trail kit list: everything we pack for Trail Week.', 'Gear that lasts', 'pack', { campaign: 'Trail Week' }),
   P('p-22', 'youtube', 2, 17, 0, 'Short: Summit Bottle, 12 hours hot. We timed it.', 'Gear that lasts', 'bottle'),

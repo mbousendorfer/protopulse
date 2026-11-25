@@ -10,6 +10,7 @@ import { initialListening, type ListeningState } from '../features/listening/sli
 import { initialStrategy, type StrategyState } from '../features/strategy/slice'
 import { initialPlaybook, type PlaybookState } from '../features/playbook/slice'
 import { initialChats, type ChatsState } from '../features/chats/slice'
+import { initialVideo, type VideoState } from '../features/video/slice'
 import { initialSetup, type Setup } from '../features/onboarding/model'
 
 export type Engine = { live: boolean; cadence: number; nextAt: number; cursor: number }
@@ -37,9 +38,10 @@ export type State = {
   strategy: StrategyState
   playbook: PlaybookState
   chats: ChatsState
+  video: VideoState
 }
 
-export const STATE_VERSION = 2
+export const STATE_VERSION = 3
 
 export type Preset = 'calm' | 'busy' | 'competitor' | 'trust'
 
@@ -65,5 +67,6 @@ export function initialState(): State {
     strategy: initialStrategy(),
     playbook: initialPlaybook(),
     chats: initialChats(),
+    video: initialVideo(),
   }
 }

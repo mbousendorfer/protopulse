@@ -18,6 +18,7 @@ const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: nu
   iris: s => { const n = s.handoffs.filter(h => h.agent === 'iris' && h.kind === 'alert' && !h.lane).length; return `${n || 'No'} ${n === 1 ? 'anomaly' : 'anomalies'}${s.phase === 'day1' ? '' : ' · weekly report written'}` },
   echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'}${s.phase === 'day1' ? '' : ' · 23 new mentions'}` },
   sage: s => (s.phase === 'day1' ? 'Pillars and cadence proposed' : 'Trail Week is at 128% of its trajectory'),
+  juno: s => (s.phase === 'day1' ? 'Watching your YouTube channel for the next video' : s.handoffs.some(h => h.agent === 'juno' && !h.lane) ? 'New clips are ready for you' : 'No new video since yesterday'),
 }
 
 export function Brief({ onPick }: { onPick: (key: string) => void }) {

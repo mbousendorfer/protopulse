@@ -67,4 +67,4 @@ export function addRule(s: State, rule: Omit<PlaybookRule, 'id' | 'addedAt' | 'u
   return { ...s, playbook: { ...s.playbook, rules: [r, ...s.playbook.rules] } }
 }
 
-export const pronoun = (agent: AgentId) => (agent === 'nova' || agent === 'iris' || agent === 'echo' ? 'her' : 'its')
+export const pronoun = (agent: AgentId) => (agent === 'nova' || agent === 'iris' || agent === 'echo' || agent === 'juno' ? 'her' : 'its')

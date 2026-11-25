@@ -8,7 +8,7 @@ export const NETWORK_LABEL: Record<Network, string> = {
   youtube: 'YouTube', x: 'X', google: 'Google Reviews', trustpilot: 'Trustpilot',
 }
 
-export const AGENT_INITIAL: Record<AgentId, string> = { nova: 'N', atlas: 'A', iris: 'I', echo: 'E', sage: 'S' }
+export const AGENT_INITIAL: Record<AgentId, string> = { nova: 'N', atlas: 'A', iris: 'I', echo: 'E', sage: 'S', juno: 'J' }
 
 const says = (suggest: string, draft: string, act: string) => ({ suggest, draft, act })
 
@@ -135,6 +135,34 @@ export const AGENTS: Agent[] = [
     guardrails: [
       { id: 'g1', label: 'Every campaign has', value: 'One number goal' },
       { id: 'g2', label: 'Active campaigns', value: '2 max' },
+    ],
+  },
+  {
+    id: 'juno', unit: 'clips', name: 'Juno', dept: 'Video', route: '/video',
+    role: 'Watches your videos and lives, finds the best moments and cuts them into captioned clips.',
+    status: 'on', shift: '24/7 · checks YouTube every 15 minutes', now: 'Captioning the Repair Friday live',
+    record: { handled: 212, escalated: 31, approvedUnchanged: 74, undone: 1, series: [4, 6, 3, 9, 7, 2, 1, 5, 8, 6, 4, 3, 2, 1, 6, 9, 7, 5, 4, 2, 1, 7, 8, 6, 9, 4, 2, 1, 8, 7] },
+    actions: [
+      { id: 'juno-clip', perWeek: 2, example: 'A new upload: “Storm Jacket: 3 days of GR20 rain”', label: 'Draft clips from new videos', risk: 'risky', autonomy: 'draft', reviewed: 38, approvedUnchanged: 71,
+        says: says('Juno tells you a new video is out and suggests moments. You cut the clips.', 'Juno cuts, captions and frames the clips and asks you to review them.', 'Juno cuts clips from every new video on her own. You still review them before they go to Atlas.') },
+      { id: 'juno-captions', perWeek: 9, example: 'Speech-to-text heard “Ridge 28”, the Playbook says Ridge 28L', label: 'Fix captions (product names, Playbook words)', risk: 'safe', autonomy: 'act', reviewed: 64, approvedUnchanged: 97,
+        says: says('Juno flags captions that look wrong. You fix them.', 'Juno proposes caption fixes for your approval.', 'Juno fixes product names and Playbook words in captions on her own. You can undo for 10 minutes.') },
+      { id: 'juno-reframe', perWeek: 11, example: 'Léa walks out of frame at the sewing machine', label: 'Reframe and apply the brand kit', risk: 'safe', autonomy: 'act', reviewed: 52, approvedUnchanged: 94,
+        says: says('Juno suggests a framing. You set it.', 'Juno frames each clip and waits for your approval.', 'Juno follows the subject and applies the brand kit on her own.') },
+      { id: 'juno-dub', perWeek: 3, example: 'A French version of “The repair follows the bag”', label: 'Translate and dub clips', risk: 'risky', autonomy: 'draft', reviewed: 9, approvedUnchanged: 78,
+        says: says('Juno suggests which clips are worth a French or German version.', 'Juno translates the captions and dubs the clip in the same voice, then asks you.', 'Juno makes the language versions on her own for every approved clip.') },
+      { id: 'juno-handoff', perWeek: 6, example: '“Zips break, not fabric” scores 86', label: 'Send her best clips (80+) to Atlas’s calendar', risk: 'risky', autonomy: 'draft', reviewed: 21, approvedUnchanged: 86,
+        says: says('Juno tells you a clip is ready. You schedule it yourself.', 'Juno waits for your go before Atlas schedules a clip.', 'Juno sends clips scoring 80 or more straight to Atlas, who schedules them. You can undo for 10 minutes.') },
+      { id: 'juno-overdub', perWeek: 1, example: 'Léa said “twenty-eight stitches” where she meant forty-two', label: 'Change words in someone’s voice', risk: 'destructive', autonomy: 'suggest', locked: true,
+        lockReason: 'Putting words in someone’s voice always needs a person.',
+        says: says('Juno points out a word that could be re-voiced. You decide and confirm.', '', '') },
+    ],
+    guardrails: [
+      { id: 'g1', label: 'Clip length', value: '15–60 s · 90 s on LinkedIn' },
+      { id: 'g2', label: 'Captions', value: 'Always on' },
+      { id: 'g3', label: 'Brand kit', value: 'On every clip' },
+      { id: 'g4', label: 'Clips per video per week', value: '5 max' },
+      { id: 'g5', label: 'Guests and customers on screen', value: 'Only with a signed release' },
     ],
   },
 ]
