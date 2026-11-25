@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
   Paperclip, Plus, Search, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
@@ -12,13 +12,14 @@ import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvTy
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Switch, Tabs, type MenuItem } from '../../ui'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { virtualConvs, type BulkOp } from './slice'
+import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
 import './inbox.css'
 
 type View = 'needs' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 const DAY_START = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
 const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; saved?: boolean }[] = [
-  { id: 'needs', label: 'Needs you', match: c => ['draft', 'escalated', 'claire'].includes(c.status) },
+  // Needs you = what waits on Sam. Waiting on Claire lives in its own view; a conversation Sam took over stays here until he replies.
+  { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) },
   { id: 'drafts', label: 'Nova’s drafts', match: c => c.status === 'draft' },
   { id: 'handled', label: 'Handled by Nova', match: c => c.status === 'auto' },
   { id: 'hidden', label: 'Hidden', match: c => c.status === 'hidden' },
@@ -185,7 +186,7 @@ export default function InboxPage() {
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
           ) : view === 'needs' && !label ? (
-            <NeedsList list={list} sel={sel} currentId={id} onOpen={cid => nav(`/inbox/${cid}`)} />
+            <NeedsList list={list} sel={sel} currentId={id} onOpen={(cid, edit) => nav(`/inbox/${cid}`, { state: edit ? { edit: true } : undefined })} />
           ) : (
             <ul className="ib-rows">
               {list.map(c => (
@@ -216,21 +217,21 @@ export default function InboxPage() {
 }
 
 /** What Nova needs from you, in three kinds: send what she is sure of, check the passage she doubts, decide what she never answers. */
-type Need = 'ready' | 'check' | 'call' | 'claire'
+type Need = 'ready' | 'check' | 'call' | 'yours'
 const flagsOf = (c: Conversation) => (c.draft ?? []).filter((x): x is Exclude<typeof x, string> => typeof x !== 'string')
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-const needOf = (c: Conversation): Need => c.status === 'claire' ? 'claire' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
+const needOf = (c: Conversation): Need => c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
 const NEEDS: { id: Need; title: string; hint: string }[] = [
   { id: 'ready', title: 'Ready to send', hint: 'Nova is sure of the facts and the tone.' },
   { id: 'check', title: 'One passage to check', hint: 'Nova marked what she is unsure about.' },
   { id: 'call', title: 'Your call', hint: 'Locked topics Nova never answers herself.' },
-  { id: 'claire', title: 'Waiting on Claire', hint: 'She usually answers within the hour.' },
+  { id: 'yours', title: 'You’re replying', hint: 'You took these over. Nova stays out.' },
 ]
 
-const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, claire: UserRound }
+const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand }
 const SHOWN = 3
 
-function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string) => void }) {
+function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string, edit?: boolean) => void }) {
   const { d } = useStore()
   const [more, setMore] = useState<Need[]>([])
   return (
@@ -252,7 +253,7 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
             </header>
-            <ul>{shown.map(c => <NeedRow key={c.id} c={c} need={g.id} sel={sel} current={c.id === currentId} onOpen={() => onOpen(c.id)} />)}</ul>
+            <ul>{shown.map(c => <NeedRow key={c.id} c={c} need={g.id} sel={sel} current={c.id === currentId} onOpen={edit => onOpen(c.id, edit)} />)}</ul>
             {rows.length > shown.length && <button className="ib-need-more" onClick={() => setMore(m => [...m, g.id])}>Show {rows.length - shown.length} more<ChevronDown size={14} /></button>}
             {open && rows.length > SHOWN && <button className="ib-need-more" onClick={() => setMore(m => m.filter(x => x !== g.id))}>Show less</button>}
           </section>
@@ -262,33 +263,40 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
   )
 }
 
-function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Need; sel: ReturnType<typeof useSelection>; current: boolean; onOpen: () => void }) {
+function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Need; sel: ReturnType<typeof useSelection>; current: boolean; onOpen: (edit?: boolean) => void }) {
   const { d } = useStore()
   const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn() }
   const flags = flagsOf(c)
   const draft = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
+  // A single send goes through the group action so it gets the same 10-second Undo strip as Send all.
+  const send = () => d({ type: 'inbox/bulk', ids: [c.id], op: 'approve' })
   const extras = (c.attachments ?? []).filter(a => !a.removed).map(a => a.label.split(':')[0]).join(' · ')
   return (
     <li className={`ib-need ${current ? 'current' : ''} ${sel.has(c.id) ? 'picked' : ''}`} onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : onOpen()}>
       <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
       <SocialAvatar name={c.author} network={c.network} size={32} />
       <div className="ib-need-main">
-        <p className="ib-need-them"><b>{c.author}</b><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</span></p>
+        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</span></p>
         {need === 'ready' && <p className="ib-need-line"><span className="ib-need-by">Nova</span>{draft}{extras && <span className="faint"> · with {extras}</span>}</p>}
-        {need === 'check' && <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{flags[0].note}</p>}
-        {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? 'Nova suggests a holding reply only.' : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
-        {need === 'claire' && <p className="ib-need-line">Claire is looking at it.</p>}
+        {need === 'check' && <>
+          <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{flags[0].note}</p>
+          {/* "Send as is" sends this whole text, so it is on the row. */}
+          <p className="ib-need-line ib-need-draft"><span className="ib-need-by">Nova</span>{draft}</p>
+        </>}
+        {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? <>Holding reply: {draft}</> : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
+        {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
         <span className="mono faint">{hhmm(c.at)}</span>
-        {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send</Btn></>}
-        {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send as is</Btn></>}
+        {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn></>}
+        {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn></>}
+        {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
         {need === 'call' && <>
           <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
             { label: 'I’ll reply myself', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
             { label: 'Ask Claire', icon: <UserRound size={14} />, onSelect: () => d({ type: 'inbox/claire', id: c.id }) },
           ]} />
-          {c.draft ? <Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Holding reply</Btn>
+          {c.draft ? <Btn size="sm" onClick={stop(send)}><Send size={14} />Send holding reply</Btn>
             : <Btn size="sm" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />I’ll reply</Btn>}
         </>}
       </div>
@@ -322,13 +330,14 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
   const [text, setText] = useState('')
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [reply, setReply] = useState('')
-  const contact = CONTACTS.find(k => k.id === c.contact)
   const others = s.inbox.convs.filter(x => x.contact && x.contact === c.contact && x.id !== c.id)
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const draftPlain = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
   const one = (op: BulkOp) => d({ type: 'inbox/bulk', ids: [c.id], ...op })
 
-  useEffect(() => { setEditing(false); setReply(''); setTab('conversation'); if (c.unread && !c.id.startsWith('h:')) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  const loc = useLocation()
+  const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
+  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setTab('conversation'); if (c.unread && !c.id.startsWith('h:')) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
@@ -356,7 +365,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
           items={assignItems(v => one({ op: 'assign', value: v }))} />
         <Menu align="start" trigger={<Btn size="sm" variant="ghost">{SENT[c.sentiment]}<ChevronDown size={12} /></Btn>}
           items={(Object.keys(SENT) as Sentiment[]).map(x => ({ label: SENT[x], onSelect: () => one({ op: 'sentiment', value: x }) }))} />
-        <Btn size="sm" variant="ghost" onClick={() => one({ op: 'reviewed', value: !c.reviewed })}><CheckCheck size={14} />{c.reviewed ? 'Reviewed' : 'Mark reviewed'}</Btn>
+        <Btn size="sm" variant="ghost" onClick={() => one({ op: 'reviewed', value: !c.reviewed })}><CheckCheck size={14} />{c.reviewed ? 'Mark not reviewed' : 'Mark reviewed'}</Btn>
         <span className="ib-sep" aria-hidden />
         {(c.labels ?? []).map(l => (
           <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={11} /></button></span>
@@ -366,7 +375,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
 
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'conversation', label: 'Conversation', count: c.messages.length },
-        { value: 'contact', label: 'Contact', count: contact?.orders.length },
+        { value: 'contact', label: 'Contact' },
       ]} />
 
       {tab === 'contact' ? <ContactTab c={c} others={others} /> : (
@@ -408,7 +417,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
             <div className="ib-draft">
               <div className="row tight ib-draft-by">
                 <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
-                {card && <Link to="/" className="link-btn" style={{ marginLeft: 'auto', fontSize: 12 }}>Also on your Desk</Link>}
+                {card && <Link to={`/?card=${card.id}`} className="link-btn" style={{ marginLeft: 'auto', fontSize: 12 }}>Also on your Desk</Link>}
               </div>
               {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
@@ -427,12 +436,12 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
               <div className="row">
                 {editing ? (
                   <>
-                    <Btn variant="primary" onClick={() => { d({ type: 'inbox/approve', id: c.id, text }); setEditing(false) }}><Send size={14} />Send edit</Btn>
+                    <Btn variant="primary" onClick={() => { d({ type: 'inbox/approve', id: c.id, text }); setEditing(false) }}><Send size={14} />Send edited reply</Btn>
                     <Btn variant="ghost" onClick={() => setEditing(false)}>Cancel</Btn>
                   </>
                 ) : (
                   <>
-                    <Btn variant="primary" onClick={() => d({ type: 'inbox/approve', id: c.id })}><Send size={14} />{c.status === 'escalated' ? 'Send holding reply' : 'Approve & send'}</Btn>
+                    <Btn variant="primary" onClick={() => one({ op: 'approve' })}><Send size={14} />{c.status === 'escalated' ? 'Send holding reply' : 'Send'}</Btn>
                     <Btn onClick={() => { setText(draftPlain); setEditing(true) }}>Edit</Btn>
                   </>
                 )}

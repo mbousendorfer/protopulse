@@ -62,7 +62,6 @@ export default function OnboardingPage() {
         const k = kept[p.id]
         if (k?.keep && p.kind !== 'voice' && p.kind !== 'escalate') d({ type: 'playbook/addRule', kind: p.kind, text: k.text, agents: p.agents, origin: 'Onboarding', quiet: true })
       }
-      d({ type: 'core/toast', toast: { agent: 'iris', text: 'Your team is on shift. Here’s what a normal morning looks like.' } })
     }
     nav('/')
   }

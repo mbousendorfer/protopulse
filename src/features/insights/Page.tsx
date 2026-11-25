@@ -259,6 +259,7 @@ function Anomalies() {
   const { s, d } = useStore()
   const now = useNow()
   const [view, setView] = useState<'open' | 'closed'>('open')
+  const [confirm, setConfirm] = useState<{ id: string; action: string } | null>(null)
   const list = ANOMALIES.map(a => ({ ...a, ...(s.insights.anomalies[a.id] ?? {}) }))
   const shown = list.filter(a => (view === 'open') === a.open)
   const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -270,14 +271,14 @@ function Anomalies() {
         {shown.length > 0 && <span className="row tight faint in-selall"><SelectAll sel={sel} label="Select every anomaly shown" />Select all</span>}
         <Filters label="Status" value={view} onChange={setView} items={[
           { value: 'open', label: 'Open', count: list.filter(a => a.open).length },
-          { value: 'closed', label: 'Handled', count: list.filter(a => !a.open).length },
+          { value: 'closed', label: 'Closed', count: list.filter(a => !a.open).length },
         ]} />
       </div>
       <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={view === 'open' ? [
         { label: 'Mark handled', icon: <Check size={14} />, primary: true, onRun: () => bulk('handle') },
         { label: 'Snooze a week', icon: <Clock size={14} />, onRun: () => bulk('snooze') },
       ] : [{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => bulk('reopen') }]} />
-      {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing handled yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
+      {!shown.length && <Empty icon={<Check size={18} />} title={view === 'open' ? 'No open anomalies' : 'Nothing closed yet'} body={view === 'open' ? 'Iris checks every network every hour. She’ll raise anything outside the normal range.' : undefined} />}
       {shown.map(a => (
         <article key={a.id} className={`card anomaly ${sel.has(a.id) ? 'in-picked' : ''}`}>
           <SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />
@@ -297,8 +298,15 @@ function Anomalies() {
           <div className="row"><Confidence v={a.confidence} /></div>
           {a.open ? (
             <div className="row">
-              {a.actions.map(x => <Btn key={x} size="sm" onClick={() => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
-              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to="/" className="btn sm ghost">Also on your Desk</Link>}
+              {confirm?.id === a.id ? (
+                // Paid spend never goes out on one click.
+                <div className="pb-undo" role="alertdialog" aria-label="Confirm the boost">
+                  <span>{confirm.action}? This is paid ad spend, billed to Fernway’s ad account.</span>
+                  <Btn size="xs" variant="ghost" onClick={() => setConfirm(null)}>Cancel</Btn>
+                  <Btn size="xs" variant="primary" onClick={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>Confirm boost</Btn>
+                </div>
+              ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
+              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Also on your Desk</Link>}
             </div>
           ) : (
             <div className="resolution row nowrap"><Check size={14} className="ok" /><span>{a.resolution}</span><span className="spacer" /><Btn size="xs" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn></div>

@@ -47,7 +47,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
   const hasFlags = h.preview && (h.preview.type === 'reply' ? h.preview.draft : h.preview.type === 'post' ? h.preview.text : []).some(x => typeof x !== 'string')
 
   return (
-    <article className={`detail ${big ? 'big' : ''} ${stamp ? 'leaving' : ''}`} aria-label={h.title}>
+    <article className={`detail ${big ? 'big' : ''} ${stamp ? 'leaving' : ''}`} aria-label={h.title} data-mode={mode}>
       {stamp && <div className="detail-stamp" role="status"><Check size={16} />{stamp}</div>}
       <div className="handoff-top"><Slip h={h} /><span className="row tight">{position && <span className="mono faint">{position}</span>}<UrgencyPill h={h} /></span></div>
       <h2 className="detail-title">{h.title}</h2>
@@ -62,7 +62,11 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
 
       <div className="detail-acts">
         {waiting ? (
-          <Thinking label={`Waiting on Claire · asked ${ago(h.claire!.askedAt, now)}`} />
+          <div className="row">
+            <Thinking label={`Waiting on Claire · asked ${ago(h.claire!.askedAt, now)}. If she approves, it goes out.`} />
+            <span className="spacer" />
+            <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/takeBack', id: h.id })}>Take it back</Btn>
+          </div>
         ) : mode === 'edit' ? (
           <div className="row">
             <Btn variant="primary" onClick={() => finish('edited', 'Approved with your edits', () => act.approve(h, draft))} kbd="⌘↵">Approve edit</Btn>
@@ -87,7 +91,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
           </div>
         ) : h.kind === 'promotion' ? (
           <div className="row">
-            <Btn variant="primary" onClick={() => finish('approved', 'Allowed', () => act.approve(h))} kbd="A">{h.promote?.to === 'act' ? 'Allow' : 'OK'}</Btn>
+            <Btn variant="primary" onClick={() => finish('approved', h.promote?.to === 'act' ? 'Allowed' : `Moved to ${h.promote?.to === 'draft' ? 'Draft' : 'Suggest'}`, () => act.approve(h))} kbd="A">{h.promote?.to === 'act' ? 'Allow' : `Move to ${h.promote?.to === 'draft' ? 'Draft' : 'Suggest'}`}</Btn>
             {h.promote?.to === 'act' && <Btn onClick={() => finish('approved', 'Trial for a week', () => act.trial(h))} kbd="T">Try for a week</Btn>}
             <Btn variant="ghost" onClick={() => finish('rejected', 'Not yet', () => act.reject(h, 'Not yet'))} kbd="N">{h.promote?.to === 'act' ? 'Not yet' : 'Keep on Act'}</Btn>
           </div>
@@ -119,7 +123,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
         <span className="spacer" />
         {!waiting && h.kind !== 'news' && mode === 'idle' && <>
           <Btn size="sm" variant="ghost" onClick={() => setMode('snooze')} kbd="S">Snooze</Btn>
-          <Btn size="sm" variant="ghost" onClick={() => finish('claire', 'Sent to Claire', () => act.claire(h))} kbd="C">Ask Claire</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => finish('claire', 'Sent to Claire', () => act.claire(h))} kbd="C" title="If Claire approves, it goes out">Ask Claire</Btn>
         </>}
         {h.link && <Btn size="sm" variant="ghost" onClick={() => nav(h.link!)}><ArrowUpRight size={14} />Open</Btn>}
         {onDiscuss && <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Discuss{h.thread?.length ? <span className="faint num">{h.thread.length}</span> : null}</Btn>}

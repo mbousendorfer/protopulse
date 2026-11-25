@@ -71,7 +71,10 @@ export function reduceInsights(s: State, a: InsightsAction): State {
       let next = setAnomaly(s, a.id, a.action)
       next = { ...next, handoffs: next.handoffs.filter(h => !(h.id === 'h-tiktok' && a.id === 'an-tiktok') && !(h.id === 'h-boost' && a.id === 'an-storm')) }
       if (/atlas/i.test(a.action)) next = followUpPost(next, a.title)
-      return pushToast(pushLog(next, { agent: 'iris', text: `${a.title}: ${a.action}`, status: 'approved', reason: 'Your call from Insights' }), { agent: 'iris', text: a.action })
+      // A boost decided here is recorded like one decided on the Desk.
+      const boost = /€(\d+) for (\d+) days/.exec(a.action)
+      if (boost) next = patch(next, { boosts: [...next.insights.boosts, { post: a.title, budget: +boost[1], days: +boost[2], at: now(s) }] })
+      return pushLog(next, { agent: 'iris', text: `${a.title}: ${a.action}`, status: 'approved', reason: 'Your call from Insights' })
     }
     case 'insights/reopen':
       return patch(s, { anomalies: { ...s.insights.anomalies, [a.id]: { open: true } } })
@@ -116,7 +119,7 @@ function followUpPost(s: State, about: string): State {
 export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
   if (h.id === 'h-tiktok') {
     if (d.kind === 'option' && d.index === 0) return followUpPost(setAnomaly(s, 'an-tiktok', 'Atlas testing 3-second hooks this week'), 'TikTok views')
-    if (d.kind === 'option') return setAnomaly(s, 'an-tiktok', 'Ignored for a week. Iris will check again on Tue 2 Dec.')
+    if (d.kind === 'option') return setAnomaly(s, 'an-tiktok', 'Snoozed for a week. Iris checks again on Tue 2 Dec.')
     if (d.kind === 'reject') return setAnomaly(s, 'an-tiktok', 'Dismissed from the Desk')
   }
   if (h.id === 'h-boost' && d.kind === 'option') {

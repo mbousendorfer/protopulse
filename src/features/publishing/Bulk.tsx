@@ -29,6 +29,7 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
   const [mode, setMode] = useState<'shift' | 'date'>('shift')
   const [days, setDays] = useState(1)
   const [dt, setDt] = useState('')
+  const now = useNow()
   const [net, setNet] = useState<Network>('instagram')
   const posts = s.publishing.posts.filter(p => dialog?.ids.includes(p.id))
   useEffect(() => { if (dialog && posts[0]) { const x = new Date(posts[0].at + DAY); setDt(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}T${hhmm(posts[0].at)}`); setNet(posts[0].network === 'instagram' ? 'tiktok' : 'instagram') } }, [dialog?.ids.join()]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -47,7 +48,7 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
   if (dialog.kind === 'duplicate') return (
     <Modal open onOpenChange={o => !o && onClose()} title={`Duplicate ${noun}`}
       footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={() => run('duplicate', { network: net })}><Copy size={14} />Duplicate to {NETWORK_LABEL[net]}</Btn></>}>
-      <p className="muted">Copies land in Drafts for {NETWORK_LABEL[net]}, same slot. Atlas will adapt the wording when you open them.</p>
+      <p className="muted">Copies land in Drafts for {NETWORK_LABEL[net]}, same slot.</p>
       <div className="pub-net-pick" role="radiogroup" aria-label="Network">
         {PUBLISH_NETWORKS.map(x => <button key={x} role="radio" aria-checked={net === x} className={`filter ${net === x ? 'on' : ''}`} aria-pressed={net === x} onClick={() => setNet(x)}><Net n={x} />{NETWORK_LABEL[x]}</button>)}
       </div>
@@ -56,7 +57,7 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
   return (
     <Modal open onOpenChange={o => !o && onClose()} title={`Reschedule ${noun}`}
       footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn>
-        <Btn variant="primary" onClick={() => (mode === 'shift' ? run('reschedule', { shiftDays: days }) : run('reschedule', { at: new Date(dt).getTime() }))} disabled={mode === 'date' && !dt}><CalendarClock size={14} />Reschedule</Btn></>}>
+        <Btn variant="primary" onClick={() => (mode === 'shift' ? run('reschedule', { shiftDays: days }) : run('reschedule', { at: new Date(dt).getTime() }))} disabled={mode === 'date' && (!dt || new Date(dt).getTime() < now)}><CalendarClock size={14} />Reschedule</Btn></>}>
       <div className="stack">
         <Seg name="resched" label="How" value={mode} onChange={setMode} options={[{ value: 'shift', label: 'Shift by days' }, { value: 'date', label: 'Pick a date and time' }]} />
         {mode === 'shift' ? (
@@ -69,7 +70,8 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
           <div className="field">
             <label htmlFor="pub-dt">New date and time</label>
             <input id="pub-dt" type="datetime-local" className="input" style={{ width: 240 }} value={dt} onChange={e => setDt(e.target.value)} />
-            {n > 1 && <span className="hint">All {n} posts go to this exact slot.</span>}
+            {dt && new Date(dt).getTime() < now ? <span className="hint" role="alert">That slot is in the past. Pick today or later.</span>
+              : n > 1 && <span className="hint">All {n} posts go to this exact slot.</span>}
           </div>
         )}
       </div>

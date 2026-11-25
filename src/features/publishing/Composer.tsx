@@ -61,7 +61,8 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const [preview, setPreview] = useState<Network>(post?.network ?? initial?.network ?? 'instagram')
   const [busy, setBusy] = useState<string | null>(null)
   const [ideas, setIdeas] = useState<{ label: string; text: string }[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // After a failed submit the error follows the form live: it clears as soon as the problem is fixed.
+  const [tried, setTried] = useState<boolean | null>(null)
 
   const at = useMemo(() => { const [y, m, dd] = date.split('-').map(Number); const [h, mi] = time.split(':').map(Number); return new Date(y, m - 1, dd, h || 0, mi || 0).getTime() }, [date, time])
   const textFor = (n: Network) => variants[n] ?? text
@@ -97,9 +98,10 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
     if (forSchedule && at < now) return 'Pick a time in the future.'
     return null
   }
+  const error = tried === null ? null : validate(tried)
   const submit = (kind: 'schedule' | 'draft' | 'plan' | 'claire') => {
     const err = validate(kind === 'schedule' || kind === 'claire')
-    if (err) { setError(err); return }
+    if (err) { setTried(kind === 'schedule' || kind === 'claire'); return }
     const posts = build(kind === 'schedule' ? 'scheduled' : 'draft')
     if (kind === 'plan') posts.forEach(p => d({ type: 'publishing/addToPlan', post: p }))
     else if (kind === 'claire') posts.forEach(p => d({ type: 'publishing/claire', post: p }))
@@ -114,7 +116,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
     <Sheet open={open} onOpenChange={o => !o && onClose()} wide title={editing ? 'Edit post' : 'New post'}
       head={<Mark agent="atlas" />}
       footer={<>
-        {editing && <Btn variant="ghost" className="danger" onClick={() => { d({ type: 'publishing/delete', id: post!.id }); onClose() }}><Trash2 size={14} />Delete</Btn>}
+        {editing && <Btn variant="ghost" className="danger" onClick={() => { d({ type: 'publishing/bulk', ids: [post!.id], op: 'delete' }); onClose() }}><Trash2 size={14} />Delete</Btn>}
         {error && <span className="cmp-error" role="alert"><AlertTriangle size={14} />{error}</span>}
         <span className="spacer" />
         <Btn variant="ghost" onClick={() => submit('draft')}>Save draft</Btn>
@@ -137,7 +139,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
 
           <div className="field">
             <label htmlFor="cmp-text">Caption{accounts.length > 1 ? ' · shared by every account' : ''}</label>
-            <textarea id="cmp-text" className="textarea" rows={5} value={text} onChange={e => { setText(e.target.value); setError(null) }} placeholder="Packing the Ridge 28L for 3 days on the Tour du Mont Blanc." />
+            <textarea id="cmp-text" className="textarea" rows={5} value={text} onChange={e => setText(e.target.value)} placeholder="Packing the Ridge 28L for 3 days on the Tour du Mont Blanc." />
           </div>
 
           {accounts.length > 1 && (

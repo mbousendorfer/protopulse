@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, Lock, Minus, Plus, Sparkles, Trash2, X } from 'lucide-react'
+import { ArrowLeft, Check, Lock, Minus, Plus, Sparkles, Trash2 } from 'lucide-react'
 import type { AgentId } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
@@ -85,16 +85,19 @@ function NewBrief() {
   const [phase, setPhase] = useState(-1)
   const started = useRef(false)
 
+  // Leaving the page while Sage is thinking cancels the plan: no campaign appears behind your back.
+  const timers = useRef<number[]>([])
+  useEffect(() => () => timers.current.forEach(clearTimeout), [])
   const run = (text = brief) => {
     if (!text.trim() || started.current) return
     started.current = true
     setPhase(0)
-    PHASES.forEach((_, i) => setTimeout(() => setPhase(i), i * 1100))
-    setTimeout(() => {
+    PHASES.forEach((_, i) => timers.current.push(window.setTimeout(() => setPhase(i), i * 1100)))
+    timers.current.push(window.setTimeout(() => {
       const id = uid('cmp')
       d({ type: 'strategy/create', id, brief: text.trim(), budget: budget ? +budget : undefined })
       nav(`/strategy/campaigns/${id}`, { replace: true })
-    }, PHASES.length * 1100)
+    }, PHASES.length * 1100))
   }
 
   useEffect(() => { if (params.get('auto') === '1' && params.get('brief')) run(params.get('brief')!) }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -289,7 +292,7 @@ function CampaignView() {
         </section>
       )}
 
-      <Modal open={discard} onOpenChange={setDiscard} title={`Discard ${c.name}?`} footer={<><Btn variant="danger" onClick={() => { d({ type: 'strategy/discard', id: c.id }); nav('/strategy') }}>Discard plan</Btn><Btn variant="ghost" onClick={() => setDiscard(false)}>Keep it</Btn></>}>
+      <Modal open={discard} onOpenChange={setDiscard} title={`Discard ${c.name}?`} footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setDiscard(false)}>Keep it</Btn><Btn variant="danger" onClick={() => { d({ type: 'strategy/discard', id: c.id }); nav('/strategy') }}>Discard plan</Btn></>}>
         <p className="muted">The plan and its Desk card go away. Sage keeps the brief in the journal.</p>
       </Modal>
     </div>
@@ -414,10 +417,10 @@ function Pillars() {
                 </div>
                 {p.status === 'proposed' ? (
                   <div className="row nowrap">
-                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}><Check size={13} />Accept</Btn>
-                    <Btn size="sm" variant="ghost" icon aria-label="Decline" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}><X size={13} /></Btn>
+                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                    <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
                   </div>
-                ) : <Pill tone={p.status === 'accepted' ? 'ok' : undefined}>{p.status === 'accepted' ? 'Accepted' : 'Declined'}</Pill>}
+                ) : <Pill tone={p.status === 'accepted' ? 'ok' : undefined}>{p.status === 'accepted' ? 'Applied' : 'Declined'}</Pill>}
               </li>
             ))}
           </ul>

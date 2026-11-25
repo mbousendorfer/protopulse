@@ -92,9 +92,9 @@ export function applyMove(s: State, ev: CompEvent, move: Move): State {
       return setEvent(briefSage(s, brief, `Echo · ${ev.title}`), ev.id, { status: 'handed', move: move.label, result: 'Sage built a campaign plan. It’s on your Desk.' })
     }
     case 'sales': {
-      const next = pushLog(s, { agent: 'echo', text: `Emailed the sales team: ${ev.title}`, status: 'approved', reason: 'You asked from Listening', undoMinutes: 5 })
-      return pushToast(setEvent(next, ev.id, { status: 'done', move: move.label, result: 'Sales team informed by email.' }),
-        { agent: 'echo', text: `Email to sales: “${ev.title}. ${ev.read.split('.')[0]}.”`, undo: next.log[0].id })
+      // An email can't be unsent: no undo offered.
+      const next = pushLog(s, { agent: 'echo', text: `Emailed the sales team: ${ev.title}`, status: 'approved', reason: 'You asked from Listening' })
+      return setEvent(next, ev.id, { status: 'done', move: move.label, result: `Sales team informed by email: “${ev.title}”.` })
     }
     case 'nova':
       return setEvent(pushLog(s, { agent: 'nova', text: `Counter-move: ${move.label}`, status: 'approved', reason: `Echo’s counter-move to: ${ev.title}` }), ev.id, { status: 'done', move: move.label, result: 'Nova is on it.' })
@@ -161,13 +161,13 @@ export function reduceListening(s: State, a: ListeningAction): State {
       if (!m) return s
       const next = patch(s, { mentions: { ...s.listening.mentions, [a.id]: a.action } })
       return a.action === 'replied'
-        ? pushToast(pushLog(next, { agent: 'nova', text: `Drafted a reply to ${m.author} on ${m.network}`, status: 'done', reason: 'You asked from Listening', undoMinutes: 10 }), { agent: 'nova', text: `Nova is replying to ${m.author}` })
+        ? pushToast(pushLog(next, { agent: 'nova', text: `Drafted a reply to ${m.author} on ${m.network}`, status: 'done', reason: 'You asked from Listening' }), { agent: 'nova', text: `Nova is replying to ${m.author}` })
         : pushLog(next, { agent: 'echo', text: `Hid ${m.author}’s mention from the feed`, status: 'done', reason: 'You hid it' })
     }
     case 'listening/searchSave': {
       const exists = s.listening.searches.some(x => x.id === a.search.id)
       const searches = exists ? s.listening.searches.map(x => (x.id === a.search.id ? a.search : x)) : [{ ...a.search, id: a.search.id || uid('s'), volume: 0 }, ...s.listening.searches]
-      return pushToast(patch(s, { searches }), { agent: 'echo', text: exists ? `Search “${a.search.name}” updated` : `Echo started tracking “${a.search.name}”. First results within the hour.` })
+      return patch(s, { searches })
     }
     case 'listening/searchToggle':
       return patch(s, { searches: s.listening.searches.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
@@ -235,7 +235,7 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
       if (!a.tag) return s
       const tags = { ...s.listening.tags }
       for (const m of ms) tags[m.id] = [...new Set([...(tags[m.id] ?? []), a.tag])]
-      return pushToast(patch(s, { tags }), { agent: 'echo', text: `Tagged ${noun} “${a.tag}”` })
+      return patch(s, { tags })
     }
     case 'sentiment': {
       if (!a.sentiment) return s
@@ -245,7 +245,8 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
     }
     case 'atlas': {
       let next = s
-      for (const m of ms) {
+      // Handing the same mention twice would put two identical cards on the Desk.
+      for (const m of ms.filter(m => !s.handoffs.some(h => h.ref === `mention-post:${m.id}`))) {
         next = pushHandoff(next, {
           agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Mention to post', action: 'atlas-fill', chain: ['echo', 'atlas'], ref: `mention-post:${m.id}`,
           title: `Post from ${m.author}’s mention`, context: m.text, why: 'You handed this mention to Atlas from Listening.', confidence: 72, link: '/publishing',

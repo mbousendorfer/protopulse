@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter, Undo2 } from 'lucide-react'
 import type { AgentId, Decision, DoneItem, Handoff, Kind, Urgency } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -30,6 +30,15 @@ export default function Desk() {
   const [kind, setKind] = useState<'all' | Kind>('all')
   const [urgency, setUrgency] = useState<'all' | Urgency>('all')
   const [selected, setSelected] = useState<string | null>(null)
+  // Links from other pages ("Review on Desk") open that card directly.
+  const [params, setParams] = useSearchParams()
+  const cardParam = params.get('card')
+  useEffect(() => {
+    if (!cardParam) return
+    const h = s.handoffs.find(x => x.id === cardParam)
+    if (h && !h.lane) { setTab(groupOf(h)); setSelected(`h:${h.id}`) }
+    setParams({}, { replace: true })
+  }, [cardParam]) // eslint-disable-line react-hooks/exhaustive-deps
   const [thread, setThread] = useState<string | null>(null)
   const [shift, setShift] = useState(false)
   const [showDone, setShowDone] = useState(false)
@@ -53,6 +62,8 @@ export default function Desk() {
     return out
   }, [s.handoffs, agent, kind, urgency])
 
+  const filtering = agent !== 'all' || kind !== 'all' || urgency !== 'all'
+  const clearFilters = () => { setAgent('all'); setKind('all'); setUrgency('all') }
   const actionable = entries.filter(e => e.group === 'need' || e.group === 'look' || e.group === 'good' || e.group === 'claire')
   const needCount = entries.filter(e => e.group === 'need').reduce((n, e) => n + (e.b ? e.b.items.length : 1), 0)
   const done = s.desk.done
@@ -69,12 +80,13 @@ export default function Desk() {
     setSelected(pool[Math.min(lastIndex, pool.length - 1)]?.key ?? null)
   }, [current, doneSel, actionable, lastIndex, selected, needCount])
 
+  // ↑/↓ stay inside the tab on screen, so the highlighted row is always visible.
   const move = useCallback((dir: 1 | -1) => {
-    const list = entries
+    const list = entries.filter(e => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(e.group))
     const i = list.findIndex(e => e.key === selected)
     const n = list[Math.max(0, Math.min(list.length - 1, i + dir))]
     if (n) setSelected(n.key)
-  }, [entries, selected])
+  }, [entries, selected, tab])
 
   // ↑/↓, J/K to move; F for full-screen Focus. Decisions are handled by the detail pane.
   useEffect(() => {
@@ -84,7 +96,6 @@ export default function Desk() {
       const k = e.key.toLowerCase()
       if (k === 'arrowdown' || k === 'j') { e.preventDefault(); move(1) }
       if (k === 'arrowup' || k === 'k') { e.preventDefault(); move(-1) }
-      if (k === 'f') { e.preventDefault(); nav('/focus') }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -131,7 +142,7 @@ export default function Desk() {
             <span className="faint num">{done.length} done</span>
             <span className="spacer" />
             <Btn size="xs" variant="ghost" onClick={() => nav('/focus')} disabled={!needCount} title="Process what needs you one at a time, full screen (F)"><FocusIcon size={13} />Focus</Btn>
-            <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter the list"><ListFilter size={13} />{[agent !== 'all' && agentName(agent), kind !== 'all' && KIND_LABEL[kind], urgency !== 'all' && urgency].filter(Boolean).join(' · ') || 'Filter'}</Btn>}
+            <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter the list"><ListFilter size={13} />{[agent !== 'all' && agentName(agent), kind !== 'all' && KIND_LABEL[kind], urgency !== 'all' && (urgency === 'week' ? 'This week' : urgency === 'today' ? 'Today' : 'Urgent')].filter(Boolean).join(' · ') || 'Filter'}</Btn>}
               items={[
                 { heading: 'Agent' }, { label: 'All agents', onSelect: () => setAgent('all') }, ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) })), 'sep',
                 { heading: 'Type' }, { label: 'All types', onSelect: () => setKind('all') }, ...(Object.keys(KIND_LABEL) as Kind[]).map(k => ({ label: KIND_LABEL[k], onSelect: () => setKind(k) })), 'sep',
@@ -155,7 +166,7 @@ export default function Desk() {
               onRun: () => runBulk(approvable.map(h => h.id), { decision: { kind: 'approve' } }, `Approved ${approvable.length} items from your Desk`) },
             { label: 'Snooze to tomorrow', onRun: () => tomorrow && runBulk(picked.map(h => h.id), { snooze: { until: tomorrow.until, label: tomorrow.label } }, `Snoozed ${picked.length} items until tomorrow 08:00`) },
             { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
-            { label: 'Reject', onRun: () => runBulk(picked.filter(h => !h.options).map(h => h.id), { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${picked.length} items`) },
+            { label: 'Reject', onRun: () => { const ids = picked.filter(h => !h.options).map(h => h.id); runBulk(ids, { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${ids.length} items`) } },
           ]} />
           {GROUPS.filter(g => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(g.id)).map(g => {
             const rows = entries.filter(e => e.group === g.id)
@@ -172,7 +183,10 @@ export default function Desk() {
             )
           })}
 
-          {tab !== 'need' && !entries.some(e => e.group === tab) && (
+          {filtering && !entries.some(e => e.group === tab) && (
+            <div className="day-empty faint">No item matches this filter. <button className="link-btn" onClick={clearFilters}>Clear filters</button></div>
+          )}
+          {!filtering && tab !== 'need' && !entries.some(e => e.group === tab) && (
             <p className="day-empty faint">{tab === 'look' ? 'Nothing to look at right now. Signals from Iris and Echo land here.' : 'No good news yet today. Your agents post wins here as they happen.'}</p>
           )}
           {tab === 'need' && done.length > 0 && (
@@ -194,7 +208,7 @@ export default function Desk() {
               )}
             </section>
           )}
-          <div className="day-foot faint"><Kbd>↑</Kbd><Kbd>↓</Kbd> move · <Kbd>A</Kbd> approve · <Kbd>F</Kbd> full screen</div>
+          <div className="day-foot faint"><Kbd>↑</Kbd><Kbd>↓</Kbd> move{current?.h && !current.h.field && current.h.lane !== 'claire' && <> · <Kbd>A</Kbd> {current.h.options ? 'recommended option' : 'approve'}</>}{needCount > 0 && <> · <Kbd>F</Kbd> full screen</>}</div>
         </nav>
 
         <section className="day-pane card" aria-live="polite">
@@ -207,6 +221,7 @@ export default function Desk() {
                 <Detail key={current.h.id} h={current.h} position={position} onDiscuss={setThread} onSettled={() => setSelected(null)} />
                 <NextLink e={actionable.slice(actionable.indexOf(current) + 1).find(e => e.group === current.group)} onPick={setSelected} />
               </>
+            : filtering && !needCount ? <div className="day-empty faint">Nothing in Needs you matches this filter. <button className="link-btn" onClick={clearFilters}>Clear filters</button></div>
             : <AllClear />}
         </section>
 

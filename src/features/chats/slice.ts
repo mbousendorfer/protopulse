@@ -49,6 +49,7 @@ export type ChatsAction =
   | { type: 'chats/act'; id: string; msg: string; action: 'schedule' | 'discard' | 'shorter' | 'send' | 'addRule' | 'dismissRule' | 'startBrief' | 'boost' | 'decline'; text?: string }
   | { type: 'chats/read'; id: string }
   | { type: 'chats/delete'; id: string }
+  | { type: 'chats/restore'; chat: Chat; index: number }
 
 type Resolve = (s: State, id: string, d: Decision) => State
 
@@ -119,6 +120,11 @@ export function reduceChats(s: State, a: ChatsAction, resolve: Resolve): State {
       return setChat(s, a.id, c => ({ ...c, unread: 0 }))
     case 'chats/delete':
       return { ...s, chats: { list: s.chats.list.filter(c => c.id !== a.id) } }
+    case 'chats/restore': {
+      const list = [...s.chats.list]
+      list.splice(Math.min(a.index, list.length), 0, a.chat)
+      return { ...s, chats: { list } }
+    }
   }
 }
 

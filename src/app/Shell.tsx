@@ -5,6 +5,8 @@ import {
   Radar, Search, Send, Settings, Target, Undo2, X, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
+import { groupOf } from './reducer'
+import { inboxNeedsCount } from '../features/inbox/slice'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
 import { Btn, Kbd, Mark, Modal, Pop } from '../ui'
@@ -25,7 +27,7 @@ const DEPTS: { to: string; label: string; agent: AgentId; icon: ReactNode }[] = 
 
 const CRUMB: Record<string, string> = {
   '': 'Desk', focus: 'Focus', inbox: 'Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy',
-  agents: 'Agents', activity: 'Activity', playbook: 'Playbook', settings: 'Settings', onboarding: 'Onboarding',
+  agents: 'Agents', chats: 'Chats', activity: 'Activity', playbook: 'Playbook', settings: 'Settings', onboarding: 'Onboarding',
 }
 
 const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', a: '/agents', y: '/activity', b: '/playbook' }
@@ -44,7 +46,10 @@ export default function Shell() {
   const unread = s.chats.list.reduce((n, c) => n + c.unread, 0)
   const gPressed = useRef(0)
 
-  const open = s.handoffs.filter(h => !h.lane)
+  // Counts everywhere mean the same thing: cards in Needs you. Worth a look and Good news never badge.
+  const open = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need')
+  // The Inbox badge predicts the Inbox's own Needs you view (conversations), not Nova's Desk cards.
+  const inboxNeeds = inboxNeedsCount(s)
   const countFor = (agent: AgentId) => open.filter(h => h.agent === agent).length
   const urgentFor = (agent: AgentId) => open.some(h => h.agent === agent && h.urgency === 'urgent')
 
@@ -62,13 +67,14 @@ export default function Shell() {
       if (e.key === '?') { setHelp(true); return }
       if (e.key === '/') { e.preventDefault(); setCmd(true); return }
       if (loc.pathname === '/focus') return
-      if (e.key.toLowerCase() === 'g') { gPressed.current = Date.now(); return }
-      if (Date.now() - gPressed.current < 900 && GOTO[e.key.toLowerCase()]) { nav(GOTO[e.key.toLowerCase()]); gPressed.current = 0; return }
-      if (e.key.toLowerCase() === 'f' && loc.pathname === '/') { nav('/focus') }
+      if (e.key.toLowerCase() === 'g') { e.preventDefault(); gPressed.current = Date.now(); return }
+      if (Date.now() - gPressed.current < 900 && GOTO[e.key.toLowerCase()]) { e.preventDefault(); nav(GOTO[e.key.toLowerCase()]); gPressed.current = 0; return }
+      if (e.key.toLowerCase() === 'f' && loc.pathname === '/' && open.length) { e.preventDefault(); nav('/focus') }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [loc.pathname, nav])
+    // Capture phase: the shell sees G-then-key before the Desk's decision keys, which then ignore it.
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [loc.pathname, nav, open.length])
 
   const seg = loc.pathname.split('/')[1] ?? ''
   const sub = loc.pathname.split('/').slice(2).filter(Boolean)
@@ -101,7 +107,7 @@ export default function Shell() {
           {DEPTS.map(dp => {
             const ag = s.agents.find(a => a.id === dp.agent)!
             return (
-              <RailLink key={dp.to} to={dp.to} label={dp.label} count={countFor(dp.agent)} hot={urgentFor(dp.agent)}
+              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : countFor(dp.agent)} hot={urgentFor(dp.agent)}
                 icon={<Mark agent={dp.agent} state={ag.status === 'on' ? 'on' : 'paused'} />} />
             )
           })}
@@ -132,7 +138,11 @@ export default function Shell() {
           <Btn variant="ghost" icon size="sm" className="mobile-only" aria-label="Open menu" onClick={() => setMobileOpen(true)}><MenuIcon size={16} /></Btn>
           <div className="crumbs">
             <b>{CRUMB[seg] ?? seg}</b>
-            {sub.slice(0, 2).map(x => <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis" style={{ maxWidth: 200 }}>{decodeURIComponent(x).replace(/-/g, ' ')}</span></span>)}
+            {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
+              // Ids never show as crumbs; an agent id shows as the agent's name.
+              const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
+              return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis" style={{ maxWidth: 200 }}>{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
+            })}
           </div>
           <div className="spacer" />
           <button className="cmd-trigger" onClick={() => setCmd(true)}>
@@ -241,8 +251,10 @@ function Toasts() {
 const SHORTCUTS: [string, string][] = [
   ['⌘K or /', 'Ask or brief an agent'], ['F', 'Process the Desk in Focus'], ['G then D', 'Desk'], ['G then I', 'Inbox'], ['G then P', 'Publishing'],
   ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Playbook'],
-  ['In Focus: A', 'Approve'], ['In Focus: E', 'Edit (⌘↵ approves the edit)'], ['In Focus: R then 1–4', 'Reject with a reason'], ['In Focus: S', 'Snooze'],
-  ['In Focus: C', 'Ask Claire'], ['In Focus: J / K', 'Next / previous'], ['In Focus: Z', 'Undo the last decision'], ['?', 'This help'],
+  ['↑ / ↓ or J / K', 'Desk and Focus: next / previous card'], ['A', 'Desk and Focus: approve, or pick the recommended option'], ['1–9', 'Desk and Focus: pick an option'],
+  ['E', 'Desk and Focus: edit (⌘↵ approves the edit)'], ['R then 1–4', 'Desk and Focus: reject with a reason'], ['S then 1–4', 'Desk and Focus: snooze'],
+  ['T / N', 'Autonomy request: try for a week / not yet'], ['C', 'Desk and Focus: ask Claire'], ['Z', 'Focus: undo the last decision'],
+  ['Shift-click', 'Select a range of rows'], ['Esc', 'Step back, or clear the selection'], ['?', 'This help'],
 ]
 
 function ShortcutHelp({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {

@@ -41,7 +41,8 @@ export default function Focus() {
       const k = e.key.toLowerCase()
       if ((e.metaKey || e.ctrlKey) && k === 'z') { e.preventDefault(); undo(); return }
       if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (k === 'escape' && !document.querySelector('.detail-acts .kbd')?.textContent?.includes('⌘')) { nav('/'); return }
+      // Esc leaves Focus only when the card is idle; in Edit, Reject or Snooze it just steps back.
+      if (k === 'escape' && document.querySelector('.detail')?.getAttribute('data-mode') === 'idle') { nav('/'); return }
       if (k === 'j' || k === 'arrowdown') { e.preventDefault(); setCurrentId(queue[Math.min(queue.length - 1, idx + 1)]?.id) }
       if (k === 'k' || k === 'arrowup') { e.preventDefault(); setCurrentId(queue[Math.max(0, idx - 1)]?.id) }
       if (k === 'z') { e.preventDefault(); undo() }

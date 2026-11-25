@@ -18,7 +18,7 @@ export const REJECT_REASONS = ['Wrong info', 'Tone', 'Not allowed', 'Other']
 /** The routing slip: when, who, to whom, what. The signature line of every card. */
 export function Slip({ h }: { h: Handoff }) {
   const chain = h.chain?.length ? h.chain : [h.agent]
-  const verb = h.kind === 'news' ? 'has good news' : h.kind === 'alert' ? 'flags this' : h.kind === 'promotion' ? 'asks for more autonomy' : 'needs you'
+  const verb = h.kind === 'news' ? 'has good news' : h.kind === 'alert' ? 'flags this' : h.kind === 'promotion' ? (h.promote?.to === 'act' ? 'asks for more autonomy' : 'suggests stepping back') : 'needs you'
   return (
     <div className="slip">
       <span className="chain">{chain.map((a, i) => <Mark key={a + i} agent={a} />)}</span>

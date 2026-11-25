@@ -45,15 +45,16 @@ export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (
         <div className="acts row">
           <Thinking label={`Waiting on Claire · asked ${ago(h.claire!.askedAt, now)}`} />
           <span className="spacer" />
-          <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Thread</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/takeBack', id: h.id })}>Take it back</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Discuss</Btn>
         </div>
       ) : (
         <div className="acts">
           {h.kind === 'promotion' ? (
             <div className="row">
-              <Btn variant="primary" onClick={() => settle('Allowed', () => act.approve(h))}>{h.promote!.to === 'act' ? 'Allow' : 'OK'}</Btn>
+              <Btn variant="primary" onClick={() => settle('Allowed', () => act.approve(h))}>{h.promote!.to === 'act' ? 'Allow' : `Move to ${h.promote!.to === 'draft' ? 'Draft' : 'Suggest'}`}</Btn>
               {h.promote!.to === 'act' && <Btn onClick={() => settle('Trial for a week', () => act.trial(h))}>Try for a week</Btn>}
-              <Btn variant="ghost" onClick={() => settle(h.promote!.to === 'act' ? 'Not yet' : 'Kept on Act', () => act.reject(h, h.promote!.to === 'act' ? 'Not yet' : 'Keep on Act'))}>{h.promote!.to === 'act' ? 'Not yet' : 'Keep her on Act'}</Btn>
+              <Btn variant="ghost" onClick={() => settle(h.promote!.to === 'act' ? 'Not yet' : 'Kept on Act', () => act.reject(h, h.promote!.to === 'act' ? 'Not yet' : 'Keep on Act'))}>{h.promote!.to === 'act' ? 'Not yet' : 'Keep on Act'}</Btn>
               <span className="spacer" />
               <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Discuss</Btn>
             </div>

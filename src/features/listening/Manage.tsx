@@ -59,7 +59,7 @@ export default function ManageCompetitors() {
       {edit && <EditCompetitor w={edit} onClose={() => setEdit(null)} onSave={w => { d({ type: 'listening/watchSave', w }); setEdit(null) }} isNew={!s.listening.watch.some(x => x.id === edit.id)} />}
 
       <Modal open={!!removing} onOpenChange={o => !o && setRemoving(null)} title={`Stop watching ${removing?.name ?? ''}?`}
-        footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setRemoving(null)}>Keep watching</Btn><Btn variant="primary" onClick={() => { d({ type: 'listening/watchDelete', id: removing!.id }); setRemoving(null) }}>Remove</Btn></>}>
+        footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setRemoving(null)}>Keep watching</Btn><Btn variant="danger" onClick={() => { d({ type: 'listening/watchDelete', id: removing!.id }); setRemoving(null) }}>Remove</Btn></>}>
         <p className="muted">Echo stops raising their moves and they leave the benchmark. Past events stay in the history. Pausing keeps them in the list instead.</p>
       </Modal>
     </div>

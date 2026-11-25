@@ -18,6 +18,7 @@ export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
   | { type: 'core/bulk'; ids: string[]; decision?: Decision; snooze?: { until: number; label: string }; claire?: boolean; summary: string; agent: AgentId }
   | { type: 'core/snooze'; id: string; until: number; label: string }
+  | { type: 'core/takeBack'; id: string }
   | { type: 'core/askClaire'; id: string; note?: string }
   | { type: 'core/thread'; id: string; text: string }
   | { type: 'core/acceptRule'; id: string; msg: string }
@@ -80,6 +81,18 @@ function verb(d: Decision, h: Handoff): { text: string; status: 'approved' | 'ed
   }
 }
 
+/** Undo what a Desk decision changed outside the card: autonomy moves and Playbook rules added from it. */
+function reverseDecision(s: State, h: Handoff): State {
+  let next = s
+  if (h.kind === 'promotion' && h.promote) {
+    next = setAutonomy(next, h.agent, h.promote.action, h.promote.from, 'You undid this decision')
+    next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === h.promote!.action ? { ...x, trialUntil: undefined, trialFrom: undefined } : x) }) }
+  }
+  const drop = (r: { text: string; origin?: string }) =>
+    (!!h.proposal && r.text === h.proposal.text) || (h.kind === 'info' && r.text.startsWith(`${h.field?.label ?? h.topic}: `) && !!r.origin?.startsWith('Your answer'))
+  return { ...next, playbook: { ...next.playbook, rules: next.playbook.rules.filter(r => !drop(r)) } }
+}
+
 export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boolean; ms?: number } = {}): State {
   const h = s.handoffs.find(x => x.id === id)
   if (!h) return s
@@ -115,7 +128,7 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
   const v = verb(d, h)
   next = { ...next, desk: { done: [{ id: h.id, title: h.title, text: doneText(d, h), at: now(s), ms: opts.ms, h }, ...next.desk.done.filter(x => x.id !== h.id)] } }
   if (opts.quiet) return next
-  return pushLog(next, { agent: h.agent, text: v.text, status: v.status, reason: 'Your call from the Desk', link: h.link, undoMinutes: d.kind === 'reject' ? undefined : 10 })
+  return pushLog(next, { agent: h.agent, text: v.text, status: v.status, reason: 'Your call from the Desk', link: h.link, undoMinutes: d.kind === 'reject' ? undefined : 10, restore: [h] })
 }
 
 /** Short line shown on a done row. */
@@ -156,7 +169,8 @@ function fire(s: State, eventId?: string): State {
   if (agent.status !== 'on' && !eventId) return next
   const level = actionOf(next, agent.id, ev.handoff.action)?.autonomy
   if (!ev.always && level === 'act' && ev.auto) {
-    // Work done alone shows up in the Live feed and the journal, without interrupting.
+    // Work done alone shows up in the Live feed and the journal, without interrupting. Once is enough.
+    if (next.log.some(l => l.text === ev.auto!.text)) return next
     return pushLog(next, { agent: agent.id, text: ev.auto.text, reason: ev.auto.reason, status: 'done', undoMinutes: 10, link: ev.auto.link })
   }
   // New cards land in Your day quietly; only urgent ones interrupt with a toast.
@@ -288,7 +302,8 @@ function reduceCore(s: State, a: CoreAction): State {
       let next: State = { ...s, log: s.log.map(x => (x.id === a.id ? { ...x, status: 'undone' as const } : x)) }
       if (l.restore?.length) {
         const ids = new Set(l.restore.map(h => h.id))
-        next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
+        next = { ...next, handoffs: [...l.restore.map(h => ({ ...h, fresh: true, lane: undefined })), ...next.handoffs.filter(h => !ids.has(h.id))], desk: { done: next.desk.done.filter(x => !ids.has(x.id)) } }
+        for (const h of l.restore) next = reverseDecision(next, h)
       }
       return pushToast(next, { agent: l.agent, text: `Undone: ${l.text}` })
     }
@@ -409,6 +424,12 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/track':
       return track(s, a.kind, a.detail)
 
+    case 'core/takeBack': {
+      // Sam takes a card back from Claire's lane and decides himself.
+      const h = s.handoffs.find(x => x.id === a.id)
+      if (!h) return s
+      return pushLog(updateHandoff(s, a.id, { lane: undefined, claire: undefined }), { agent: h.agent, text: `You took back “${h.title}” from Claire`, status: 'done', reason: 'You decide it yourself' })
+    }
     case 'core/clearTracker':
       return { ...s, tester: [] }
 
@@ -418,7 +439,7 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/restore': {
       // Undo of a Desk decision: the card comes back, the journal line is marked undone.
       const lastLog = s.log.find(l => l.text.startsWith(a.handoff.title) && l.status !== 'undone')
-      const next = { ...s, desk: { done: s.desk.done.filter(x => x.id !== a.handoff.id) }, handoffs: [{ ...a.handoff, fresh: true, lane: undefined }, ...s.handoffs.filter(h => h.id !== a.handoff.id)] }
+      const next = reverseDecision({ ...s, desk: { done: s.desk.done.filter(x => x.id !== a.handoff.id) }, handoffs: [{ ...a.handoff, fresh: true, lane: undefined }, ...s.handoffs.filter(h => h.id !== a.handoff.id)] }, a.handoff)
       return lastLog ? { ...next, log: next.log.map(l => (l.id === lastLog.id ? { ...l, status: 'undone' as const } : l)) } : next
     }
   }

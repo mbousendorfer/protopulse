@@ -1,16 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { MessageSquarePlus, Trash2 } from 'lucide-react'
+import { MessageSquarePlus, Trash2, X } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { ago } from '../../app/time'
 import type { AgentId } from '../../app/types'
+import type { Chat } from './slice'
 import { Btn, Mark, PageHead } from '../../ui'
 import ChatThread from './Thread'
 import './chats.css'
 
 export default function ChatsPage() {
   const { s, d } = useStore()
+  const [removed, setRemoved] = useState<{ chat: Chat; index: number } | null>(null)
   const { id } = useParams()
   const nav = useNavigate()
   const now = useNow()
@@ -27,6 +29,13 @@ export default function ChatsPage() {
       </PageHead>
       <div className="chats-grid">
         <nav className="card chats-list" aria-label="Conversations">
+          {removed && (
+            <div className="pb-undo" role="status" style={{ margin: 8 }}>
+              <span className="ellipsis">Deleted “{removed.chat.title}”</span>
+              <Btn size="xs" onClick={() => { d({ type: 'chats/restore', ...removed }); nav(`/chats/${removed.chat.id}`); setRemoved(null) }}>Undo</Btn>
+              <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
+            </div>
+          )}
           {sorted.map(c => {
             const who = [...new Set(c.messages.filter(m => m.from !== 'you').map(m => m.from as AgentId))]
             const last = c.messages.filter(m => m.at <= now).slice(-1)[0]
@@ -47,7 +56,7 @@ export default function ChatsPage() {
             <>
               <div className="chats-head">
                 <h2 className="ellipsis">{chat.title}</h2>
-                <Btn size="sm" variant="ghost" onClick={() => { d({ type: 'chats/delete', id: chat.id }); nav('/chats') }}><Trash2 size={14} />Delete</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => { setRemoved({ chat, index: s.chats.list.indexOf(chat) }); d({ type: 'chats/delete', id: chat.id }); nav('/chats') }}><Trash2 size={14} />Delete</Btn>
               </div>
               <ChatThread key={chat.id} chat={chat} />
             </>

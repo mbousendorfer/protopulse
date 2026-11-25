@@ -107,8 +107,9 @@ function Calendar() {
     if (!p) return
     const t = new Date(p.at)
     const at = day + (t.getHours() * 60 + t.getMinutes()) * 60_000
-    if (at < now) { d({ type: 'core/toast', toast: { agent: 'atlas', text: 'That slot is in the past. Pick today or later.' } }); return }
-    d({ type: 'publishing/move', id, at })
+    // Dropped on today at an hour already gone: take the next half hour instead of refusing.
+    const HALF = 30 * 60_000
+    d({ type: 'publishing/move', id, at: at < now ? Math.ceil(now / HALF) * HALF : at })
   }
 
   return (
@@ -141,7 +142,7 @@ function Calendar() {
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
                 {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
-                {rec && !asked.includes(recKey) && (
+                {rec && !asked.includes(recKey) && !s.handoffs.some(h => h.topic === 'Empty slot' && h.preview?.type === 'post' && h.preview.network === rec) && (
                   <button className="cal-rec" onClick={() => { d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec }); setAsked(a => [...a, recKey]) }}>
                     <span className="row tight"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="faint">Recommended</span></span>
                     <span className="row tight"><Sparkles size={12} />Ask Atlas to fill</span>
@@ -247,7 +248,7 @@ function Drafts() {
             <li key={h.id} className="draft-row">
               <span className="draft-thumb">{h.preview.media ? <Photo name={h.preview.media} /> : <FileText size={16} />}</span>
               <div style={{ flex: 1, minWidth: 0 }}><div className="row tight"><Net n={h.preview.network} /><span className="mono faint">{h.preview.slot}</span>{h.lane === 'claire' && <Pill tone="signal">With Claire</Pill>}</div><p className="ellipsis">{h.title}</p></div>
-              <Link to="/" className="btn sm">Review on Desk</Link>
+              <Link to={`/?card=${h.id}`} className="btn sm">Review on Desk</Link>
             </li>
           ))}</ul>
         </section>

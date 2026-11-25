@@ -1,8 +1,9 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2, X } from 'lucide-react'
 import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
+import { groupOf } from '../../app/reducer'
 import { ago, DAY } from '../../app/time'
 import { AUTONOMY, AUTONOMY_COLUMN, AUTONOMY_LABEL } from '../../data/agents'
 import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs, Tip } from '../../ui'
@@ -32,7 +33,7 @@ export function Team() {
       <div className="team-grid">
         {s.agents.map(a => {
           const lv = (l: Autonomy) => a.actions.filter(x => x.autonomy === l).length
-          const pending = s.handoffs.filter(h => h.agent === a.id && !h.lane).length
+          const pending = s.handoffs.filter(h => h.agent === a.id && !h.lane && groupOf(h) === 'need').length
           const promo = s.handoffs.some(h => h.agent === a.id && h.kind === 'promotion')
           return (
             <article key={a.id} className="card agent-card">
@@ -55,19 +56,18 @@ export function Team() {
                 ]} />
               </div>
               <dl className="agent-stats">
-                <div><dt>Handled alone</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
+                <div><dt>Handled alone · 30 days</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
                 <div><dt>Raised to you</dt><dd className="num">{a.record.escalated}</dd></div>
-                <div><dt>Approved unchanged</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
-                <div><dt>Undone</dt><dd className="num">{a.record.undone}</dd></div>
+                <div><dt>Approved without changes</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
+                <div><dt>Undone by you</dt><dd className="num">{a.record.undone}</dd></div>
               </dl>
               <div className="row">
                 <Link to={`/agents/${a.id}`} className="btn sm">Open profile</Link>
-                {pending > 0 && <Link to="/" className="btn sm ghost">{pending} on your Desk</Link>}
+                {pending > 0 && <Link to="/" className="btn sm ghost">{pending} need you</Link>}
                 {promo && <Pill tone="signal">Asks for more autonomy</Pill>}
                 <span className="spacer" />
-                <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: a.status === 'on' ? 'paused' : 'on' })}>
-                  {a.status === 'on' ? <><Pause size={14} />Pause</> : <><Play size={14} />Resume</>}
-                </Btn>
+                {a.status === 'on' ? <PauseMenu id={a.id} />
+                  : <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
               </div>
             </article>
           )
@@ -102,6 +102,9 @@ export function AgentProfile() {
   const a = s.agents.find(x => x.id === id)
   const [params] = useSearchParams()
   const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'autonomy')
+  const [undoPreset, setUndoPreset] = useState<{ label: string; levels: [string, Autonomy][] } | null>(null)
+  // Same component for every agent: going from Echo's Alerts to Nova must not keep Echo's tab.
+  useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!a) return <div className="page"><Empty title="This agent doesn’t exist" action={<Link to="/agents" className="btn">Back to the team</Link>} /></div>
   const preset = presetOf(a)
 
@@ -113,14 +116,7 @@ export function AgentProfile() {
       <div style={{ flex: 1, minWidth: 0 }}>
       <PageHead title={a.name} lede={<>{a.dept} · {a.role}</>}>
         {a.status === 'on' ? <Pill tone="ok" dot>On shift · {a.shift}</Pill> : <Pill tone="caution" dot>Paused{a.pausedUntil ? ` until ${a.pausedUntil}` : ''}</Pill>}
-        {a.status === 'on' ? (
-          <Menu trigger={<Btn><Pause size={14} />Pause</Btn>} items={[
-            { label: 'Pause for 1 hour', onSelect: () => d({ type: 'core/agentStatus', agent: a.id, status: 'paused', until: 'in 1 hour' }) },
-            { label: 'Pause until tomorrow', onSelect: () => d({ type: 'core/agentStatus', agent: a.id, status: 'paused', until: 'tomorrow 08:00' }) },
-            { label: 'Pause until Monday', onSelect: () => d({ type: 'core/agentStatus', agent: a.id, status: 'paused', until: 'Monday' }) },
-            { label: 'Pause until I resume', onSelect: () => d({ type: 'core/agentStatus', agent: a.id, status: 'paused' }) },
-          ]} />
-        ) : <Btn variant="primary" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
+        {a.status === 'on' ? <PauseMenu id={a.id} big /> : <Btn variant="primary" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
       </PageHead>
       </div>
       </div>
@@ -139,9 +135,16 @@ export function AgentProfile() {
                 <h2 className="h2">How much can {a.name} do alone?</h2>
                 <p className="muted" style={{ maxWidth: '62ch' }}>A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
               </div>
-              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => p !== 'custom' && d({ type: 'core/preset', agent: a.id, preset: p })}
+              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: p, levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
             </div>
+            {undoPreset && (
+              <div className="pb-undo" role="status" style={{ marginTop: 12 }}>
+                <span>{a.name} is now {undoPreset.label}. Every unlocked action moved.</span>
+                <Btn size="xs" onClick={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }}>Undo</Btn>
+                <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setUndoPreset(null)}><X size={12} /></Btn>
+              </div>
+            )}
             <AutonomyBoard agent={a} />
           </section>
           <Promotions agent={a} />
@@ -233,6 +236,7 @@ function Guardrails({ agent }: { agent: Agent }) {
   const [adding, setAdding] = useState(false)
   const [label, setLabel] = useState('')
   const [value, setValue] = useState('')
+  const [removed, setRemoved] = useState<{ label: string; value: string } | null>(null)
   return (
     <section className="card">
       <div className="card-head"><h2>Guardrails</h2><span className="faint">Limits {agent.name} never crosses, whatever its autonomy.</span></div>
@@ -241,21 +245,28 @@ function Guardrails({ agent }: { agent: Agent }) {
           <li key={g.id} className="guard">
             <span className="muted">{g.label}</span>
             {editing === g.id ? (
-              <form className="row nowrap" onSubmit={e => { e.preventDefault(); d({ type: 'core/guardrail', agent: agent.id, id: g.id, value: v }); setEditing(null) }}>
+              <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (!v.trim()) return; d({ type: 'core/guardrail', agent: agent.id, id: g.id, value: v.trim() }); setEditing(null) }}>
                 <input className="input" autoFocus value={v} onChange={e => setV(e.target.value)} aria-label={g.label} style={{ width: 260 }} />
-                <Btn type="submit" size="sm" variant="primary">Save</Btn><Btn size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
+                <Btn type="submit" size="sm" variant="primary" disabled={!v.trim()}>Save</Btn><Btn size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
               </form>
             ) : (
               <>
                 <b>{g.value}</b>
                 <Btn size="xs" variant="ghost" onClick={() => { setEditing(g.id); setV(g.value) }} aria-label={`Edit ${g.label}`}><Pencil size={12} />Edit</Btn>
-                <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/guardrailDelete', agent: agent.id, id: g.id })} aria-label={`Remove ${g.label}`}><Trash2 size={12} /></Btn>
+                <Btn size="xs" variant="ghost" onClick={() => { setRemoved({ label: g.label, value: g.value }); d({ type: 'core/guardrailDelete', agent: agent.id, id: g.id }) }} aria-label={`Remove ${g.label}`}><Trash2 size={12} /></Btn>
               </>
             )}
           </li>
         ))}
       </ul>
-      <div className="card-body">
+      <div className="card-body stack">
+        {removed && (
+          <div className="pb-undo" role="status">
+            <span>Removed “{removed.label}: {removed.value}”</span>
+            <Btn size="xs" onClick={() => { d({ type: 'core/guardrailAdd', agent: agent.id, ...removed }); setRemoved(null) }}>Undo</Btn>
+            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
+          </div>
+        )}
         {adding ? (
           <form className="row" onSubmit={e => { e.preventDefault(); if (!label.trim() || !value.trim()) return; d({ type: 'core/guardrailAdd', agent: agent.id, label: label.trim(), value: value.trim() }); setAdding(false); setLabel(''); setValue('') }}>
             <input className="input" autoFocus placeholder="What it limits (e.g. Replies per hour)" value={label} onChange={e => setLabel(e.target.value)} aria-label="Guardrail" style={{ width: 280 }} />
@@ -289,6 +300,8 @@ function Escalation({ agent }: { agent: Agent }) {
   const [n, setN] = useState(cond.n ?? '')
   const [to, setTo] = useState<'sam' | 'claire'>('sam')
   const label = cond.n ? cond.label.replace('N', n || cond.n) : cond.label
+  const [removedRule, setRemovedRule] = useState<(typeof rules)[number] | null>(null)
+  const exists = rules.some(r => r.label === label)
   return (
     <section className="card">
       <div className="card-head"><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy. Shared with the Playbook.</span></div>
@@ -299,20 +312,27 @@ function Escalation({ agent }: { agent: Agent }) {
             <span className={e.on ? '' : 'faint'} style={{ flex: 1 }}>{e.label}</span>
             <Seg name={`esc-${agent.id}-${e.id}`} label={`Who decides: ${e.label}`} size="sm" value={e.to} onChange={v => d({ type: 'playbook/escalate', id: e.id, to: v })}
               options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-            <Btn size="xs" variant="ghost" aria-label={`Delete ${e.label}`} onClick={() => d({ type: 'playbook/escalateDelete', id: e.id })}><Trash2 size={12} /></Btn>
+            <Btn size="xs" variant="ghost" aria-label={`Delete ${e.label}`} onClick={() => { setRemovedRule(e); d({ type: 'playbook/escalateDelete', id: e.id }) }}><Trash2 size={12} /></Btn>
           </li>
         ))}
         {!rules.length && <li className="guard faint">No escalation rule yet. {agent.name} decides within its autonomy and guardrails.</li>}
       </ul>
       <div className="card-body">
+        {removedRule && (
+          <div className="pb-undo" role="status" style={{ marginBottom: 12 }}>
+            <span>Deleted “{removedRule.label}”</span>
+            <Btn size="xs" onClick={() => { d({ type: 'playbook/escalateAdd', rule: removedRule }); setRemovedRule(null) }}>Undo</Btn>
+            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemovedRule(null)}><X size={12} /></Btn>
+          </div>
+        )}
         <div className="section-title">Add a rule</div>
         <div className="row">
           <Menu align="start" trigger={<Btn size="sm">{cond.label.replace('N', '…')}<ChevronDown size={14} /></Btn>}
             items={CONDITIONS.map(c => ({ label: c.label.replace('N', '…'), hint: c.agents.includes(agent.id) ? 'Suggested' : undefined, onSelect: () => { setCond(c); setN(c.n ?? '') } }))} />
-          {cond.n && <input className="input" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" style={{ width: 90 }} />}
+          {cond.n && <input className="input" inputMode="numeric" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" style={{ width: 90 }} />}
           <span className="faint">goes to</span>
           <Seg name={`new-esc-${agent.id}`} label="Who decides" size="sm" value={to} onChange={setTo} options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-          <Btn size="sm" variant="primary" onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: [agent.id] } })}><Plus size={14} />Add “{label}”</Btn>
+          <Btn size="sm" variant="primary" disabled={exists} title={exists ? 'This rule already exists' : undefined} onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: [agent.id] } })}><Plus size={14} />Add “{label}”</Btn>
         </div>
       </div>
     </section>
@@ -379,8 +399,23 @@ function AgentActivity({ agent }: { agent: AgentId }) {
     <section className="card">
       <div className="card-head"><h2>Last 20 actions</h2><Link to={`/activity?agent=${agent}`} className="btn sm ghost">Full journal for this agent</Link></div>
       <ul className="rows hist">
+        {!items.length && <li className="faint">No activity yet.</li>}
         {items.map(l => <li key={l.id}><span style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined }}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
       </ul>
     </section>
+  )
+}
+
+/** Same pause choices on the team card and the profile. */
+function PauseMenu({ id, big }: { id: AgentId; big?: boolean }) {
+  const { d } = useStore()
+  const pause = (until?: string) => d({ type: 'core/agentStatus', agent: id, status: 'paused', until })
+  return (
+    <Menu align="end" trigger={<Btn size={big ? undefined : 'sm'} variant={big ? undefined : 'ghost'}><Pause size={14} />Pause<ChevronDown size={12} /></Btn>} items={[
+      { label: 'Pause for 1 hour', onSelect: () => pause('in 1 hour') },
+      { label: 'Pause until tomorrow', onSelect: () => pause('tomorrow 08:00') },
+      { label: 'Pause until Monday', onSelect: () => pause('Monday') },
+      { label: 'Pause until I resume', onSelect: () => pause() },
+    ]} />
   )
 }

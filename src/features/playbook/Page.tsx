@@ -1,12 +1,12 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Check, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react'
 import type { AgentId, PlaybookRule } from '../../app/types'
 import { useStore } from '../../app/store'
 import { ago } from '../../app/time'
 import { now } from '../../app/core'
 import { AGENTS, agentName } from '../../data/agents'
-import { PILLARS, checkMessage, voiceSample } from '../../data/playbook'
+import { checkMessage, voiceSample } from '../../data/playbook'
 import { Btn, Empty, Mark, PageHead, Pill, Seg, Switch, Tabs } from '../../ui'
 import { HBars } from '../../ui/charts'
 import './playbook.css'
@@ -15,7 +15,8 @@ type Tab = 'rules' | 'words' | 'facts' | 'voice' | 'escalation' | 'pillars'
 
 export default function PlaybookPage() {
   const { s } = useStore()
-  const [tab, setTab] = useState<Tab>('rules')
+  const [params] = useSearchParams()
+  const [tab, setTab] = useState<Tab>(() => (params.get('tab') as Tab) || 'rules')
   const rules = s.playbook.rules.filter(r => r.kind === 'do' || r.kind === 'dont')
   const facts = s.playbook.rules.filter(r => r.kind === 'fact')
   return (
@@ -298,13 +299,14 @@ function Escalation() {
 
 /* ---------- Pillars (read-only) ---------- */
 function Pillars() {
+  const { s } = useStore()
   return (
     <section className="card pad">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <div><h2 className="section-title" style={{ margin: 0 }}>Editorial pillars</h2><p className="faint">Target share of posts. Sage owns them and only you can change them.</p></div>
+        <div><h2 className="section-title" style={{ margin: 0 }}>Editorial pillars</h2><p className="faint">Target share of posts. Sage proposes changes in Strategy and you accept them there.</p></div>
         <Link to="/strategy/pillars" className="btn sm">Open in Strategy</Link>
       </div>
-      <HBars items={PILLARS.map(p => ({ label: p.name, value: p.share }))} format={v => `${v}%`} />
+      <HBars items={s.strategy.pillars.map(p => ({ label: p.name, value: p.target }))} format={v => `${v}%`} />
     </section>
   )
 }

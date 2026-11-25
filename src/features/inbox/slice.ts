@@ -30,6 +30,10 @@ export type InboxAction =
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
 /** Nova reply cards from the Desk that have no conversation yet show up in the Inbox as virtual conversations. */
+/** What waits on Sam in the Inbox. Shared by the Needs you view and the rail badge so they always agree. */
+export const NEEDS_YOU: Conversation['status'][] = ['draft', 'escalated', 'takeover']
+export const inboxNeedsCount = (s: State) => [...virtualConvs(s), ...s.inbox.convs].filter(c => NEEDS_YOU.includes(c.status)).length
+
 export function virtualConvs(s: State): Conversation[] {
   const known = new Set(s.inbox.convs.map(c => c.handoff).concat(s.inbox.convs.map(c => c.id)))
   // Same author + same message = same conversation, whatever card raised it.
@@ -150,7 +154,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
       const edited = a.text !== undefined && a.text !== plain(c.draft)
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
       next = settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved')
-      if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}`, undoMinutes: 10 })
+      if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return pushToast(next, { agent: 'nova', text: `Sent to ${c.author}${attachmentNote(c) ? `, with ${attachmentNote(c).toLowerCase()}` : ''}.` })
     }
     case 'inbox/send': {
@@ -159,7 +163,8 @@ export function reduceInbox(s0: State, a: InboxAction): State {
       return pushToast(next, { text: `Reply sent to ${c.author}.` })
     }
     case 'inbox/takeover': {
-      const next = patch(s, c.id, { status: 'takeover', unread: false })
+      // Assigned to Sam too, so it's under "Assigned to me" once he closes the panel.
+      const next = patch(s, c.id, { status: 'takeover', unread: false, assignee: 'sam' })
       return pushLog(next, { agent: 'nova', text: `You took over the conversation with ${c.author}. Nova stops replying there.`, status: 'done', link: `/inbox/${c.id}` })
     }
     case 'inbox/hide': {

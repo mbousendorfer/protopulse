@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
-import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
+import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert, X } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -27,7 +27,8 @@ export default function ListeningPage() {
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
   const tab: Tab = (['mentions', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
-  const openEvents = EVENTS.filter(e => eventState(s.listening.events[e.id], e) === null).length
+  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
+  const openEvents = EVENTS.filter(e => watched.has(e.competitor) && eventState(s.listening.events[e.id], e) === null).length
   return (
     <div className="page listening">
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
@@ -70,7 +71,7 @@ function Competitors({ view }: { view: 'events' | 'benchmark' }) {
     <div className="stack lg">
       <div className="row" style={{ justifyContent: 'space-between' }}>
         <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
-          items={[{ value: 'events', label: 'Events: react' }, { value: 'benchmark', label: 'Benchmark: learn' }]} />
+          items={[{ value: 'events', label: 'Events' }, { value: 'benchmark', label: 'Benchmark' }]} />
         <Link to="/listening/competitors/manage" className="btn sm"><Settings2 size={14} />Manage competitors<span className="faint num">{s.listening.watch.filter(w => w.tracking).length}</span></Link>
       </div>
       {view === 'events' ? <Events /> : <Benchmark />}
@@ -163,7 +164,6 @@ function EventView() {
             {e.moves.map((m, i) => (
               <li key={m.label}>
                 <button className={`choice ${i === 0 && m.kind !== 'none' ? 'rec' : ''}`} onClick={() => d({ type: 'listening/move', event: e.id, index: i })}>
-                  <span className="kbd">{i + 1}</span>
                   {m.kind !== 'none' && <Mark agent={m.agent} />}
                   <span className="move-label">{m.label}</span>
                   {i === 0 && m.kind !== 'none' && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}
@@ -182,8 +182,11 @@ function EventView() {
 function Benchmark() {
   const { s, d } = useStore()
   const [comp, setComp] = useState<'all' | CompetitorId>('all')
-  const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...COMPETITORS.map(c => ({ ...c, us: false }))]
-  const posts = TOP_POSTS.filter(p => comp === 'all' || p.competitor === comp)
+  // Only competitors Echo still watches: a removed or paused one leaves the benchmark, as the Manage page promises.
+  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
+  const tracked = COMPETITORS.filter(c => watched.has(c.id))
+  const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...tracked.map(c => ({ ...c, us: false }))]
+  const posts = TOP_POSTS.filter(p => watched.has(p.competitor) && (comp === 'all' || p.competitor === comp))
   return (
     <div className="stack lg">
       <section className="card">
@@ -239,7 +242,7 @@ function Benchmark() {
       <section className="card">
         <div className="card-head">
           <h2>Their top posts <span className="faint" style={{ fontWeight: 400 }}>· 30 days</span></h2>
-          <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...COMPETITORS.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+          <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...tracked.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
         </div>
         <ul className="top-posts">
           {posts.map(p => (
@@ -314,7 +317,8 @@ const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: '
 function Mentions() {
   const { s, d } = useStore()
   const now = useNow()
-  const [sent, setSent] = useState<'all' | Sentiment>('all')
+  const [params] = useSearchParams()
+  const [sent, setSent] = useState<'all' | Sentiment>(() => (params.get('sentiment') as Sentiment) || 'all')
   const [product, setProduct] = useState('all')
   const [risk, setRisk] = useState(false)
   const [hidden, setHidden] = useState(false)
@@ -398,7 +402,9 @@ function Mentions() {
         footer={open && <>
           <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Bring back</> : <><EyeOff size={14} />Hide</>}</Btn>
           <span className="spacer" />
-          <Btn onClick={() => run('atlas', {}, [open.id])}><Send size={14} />Hand to Atlas</Btn>
+          {s.handoffs.some(h => h.ref === `mention-post:${open.id}`) || s.listening.mentions[open.id] === 'handed'
+            ? <Btn disabled><Check size={14} />With Atlas</Btn>
+            : <Btn onClick={() => run('atlas', {}, [open.id])}><Send size={14} />Hand to Atlas</Btn>}
           <Btn variant="primary" disabled={s.listening.mentions[open.id] === 'replied'} onClick={() => run('nova', {}, [open.id])}><MessageSquareReply size={14} />{s.listening.mentions[open.id] === 'replied' ? 'Reply on your Desk' : 'Ask Nova to reply'}</Btn>
         </>}>
         {open && (
@@ -464,6 +470,7 @@ function Trends() {
 function Searches() {
   const { s, d } = useStore()
   const [edit, setEdit] = useState<Search | null>(null)
+  const [removed, setRemoved] = useState<Search | null>(null)
   const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
   return (
     <div className="stack">
@@ -487,7 +494,7 @@ function Searches() {
                     <span className="row nowrap tight" style={{ justifyContent: 'flex-end' }}>
                       <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
                       <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
-                      <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => d({ type: 'listening/searchDelete', id: x.id })}><Trash2 size={12} /></Btn>
+                      <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => { setRemoved(x); d({ type: 'listening/searchDelete', id: x.id }) }}><Trash2 size={12} /></Btn>
                     </span>
                   </td>
                 </tr>
@@ -495,6 +502,13 @@ function Searches() {
             </tbody>
           </table>
         </div>
+        {removed && (
+          <div className="pb-undo" role="status" style={{ margin: 12 }}>
+            <span>Deleted “{removed.name}”. Echo stopped tracking it.</span>
+            <Btn size="xs" onClick={() => { d({ type: 'listening/searchSave', search: removed }); setRemoved(null) }}>Undo</Btn>
+            <Btn size="xs" variant="ghost" icon aria-label="Dismiss" onClick={() => setRemoved(null)}><X size={12} /></Btn>
+          </div>
+        )}
         {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
       </section>
       <p className="faint" style={{ fontSize: 13 }}>Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
@@ -510,7 +524,7 @@ function SearchForm({ search, onClose }: { search: Search; onClose: () => void }
   const save = () => { if (valid) { d({ type: 'listening/searchSave', search: { ...v, name: v.name.trim() } }); onClose() } }
   return (
     <Modal open onOpenChange={o => !o && onClose()} title={search.id ? `Edit “${search.name}”` : 'New search'}
-      footer={<><Btn variant="primary" onClick={save} disabled={!valid}>{search.id ? 'Save' : 'Start tracking'}</Btn><Btn variant="ghost" onClick={onClose}>Cancel</Btn></>}>
+      footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={!valid}>{search.id ? 'Save' : 'Start tracking'}</Btn></>}>
       <form className="stack" onSubmit={e => { e.preventDefault(); save() }}>
         <div className="field"><label htmlFor="sn">Name</label><input id="sn" className="input" autoFocus value={v.name} onChange={e => setV({ ...v, name: e.target.value })} placeholder="Winter campaign" /></div>
         <div className="field"><label htmlFor="sk">Keywords</label><input id="sk" className="input" value={v.keywords} onChange={e => setV({ ...v, keywords: e.target.value })} placeholder="Storm Jacket, #fernwaywinter" /><span className="hint">Separate with commas. Echo matches any of them.</span></div>

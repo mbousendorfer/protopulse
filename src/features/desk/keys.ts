@@ -30,6 +30,8 @@ export function useDecisionKeys({ h, enabled, mode, setMode, draft, startEdit, f
         return
       }
       const t = e.target instanceof Element ? e.target : null
+      // A key the shell already used (G then A, F…) is never a decision.
+      if (e.defaultPrevented) return
       if (t?.closest('input, textarea, [role="dialog"], [role="menu"]') || e.metaKey || e.ctrlKey || e.altKey) return
       if (mode !== 'idle' && e.key === 'Escape') { e.preventDefault(); setMode('idle'); return }
       if (mode === 'reject' && /^[1-4]$/.test(k)) { const r = REJECT_REASONS[+k - 1]; finish('rejected', `Rejected · ${r}`, () => act.reject(h, r)); return }

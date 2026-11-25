@@ -2,10 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Command } from 'cmdk'
 import * as Dialog from '@radix-ui/react-dialog'
-import { ArrowLeft, ArrowRight, BookPlus, Bot, ChevronDown, CornerDownLeft, Focus, Keyboard, Pause, PenLine, Play, Target } from 'lucide-react'
+import { ArrowLeft, ArrowRight, BookPlus, Bot, Check, ChevronDown, CornerDownLeft, Focus, Keyboard, Pause, PenLine, Play, Target } from 'lucide-react'
 import type { AgentId } from '../../app/types'
 import type { State } from '../../app/state'
-import type { Action } from '../../app/reducer'
+import { groupOf, type Action } from '../../app/reducer'
 import { useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { AGENTS, agentName, NETWORK_LABEL } from '../../data/agents'
@@ -96,7 +96,7 @@ export default function CommandBar({ open, onOpenChange }: { open: boolean; onOp
                 </Command.Group>
                 <Command.Group heading="Actions">
                   <Command.Item value="process desk focus" onSelect={() => go('/focus')} className="cmdk-item"><Focus size={14} />Process the Desk in Focus<span className="hint">F</span></Command.Item>
-                  <Command.Item value="new post write compose" onSelect={() => go('/publishing?new=1')} className="cmdk-item"><PenLine size={14} />New post</Command.Item>
+                  <Command.Item value="new post write compose" onSelect={() => go('/publishing/new')} className="cmdk-item"><PenLine size={14} />New post</Command.Item>
                   <Command.Item value="new campaign brief strategy" onSelect={() => go('/strategy/new')} className="cmdk-item"><Target size={14} />New campaign brief</Command.Item>
                   <Command.Item value="keyboard shortcuts help" onSelect={() => { close(); setTimeout(() => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '?', bubbles: true })), 50) }} className="cmdk-item"><Keyboard size={14} />Keyboard shortcuts<span className="hint">?</span></Command.Item>
                   {s.agents.map(a => (
@@ -135,7 +135,7 @@ function AnswerView({ run, agentName: name, onReroute }: { run: Run; agentName: 
           <p>{words.slice(0, run.words).join(' ')}{run.phase === 'streaming' && <span className="caret" aria-hidden />}</p>
           {run.phase === 'done' && run.answer.visual && <div className="cmdk-visual">{run.answer.visual}</div>}
           {run.phase === 'done' && run.answer.sources && <p className="cmdk-sources faint">Sources: {run.answer.sources.join(' · ')}</p>}
-          {run.phase === 'done' && run.answer.ctas && <div className="row">{run.answer.ctas.map(c => <Btn key={c.label} size="sm" variant={c.primary ? 'primary' : 'secondary'} onClick={c.run}>{c.icon}{c.label}</Btn>)}</div>}
+          {run.phase === 'done' && run.answer.ctas && <Ctas key={run.answer.text} ctas={run.answer.ctas} />}
         </div>
       )}
     </div>
@@ -233,7 +233,7 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
         after: () => setTimeout(() => go(`/strategy/new?brief=${encodeURIComponent(i.brief)}&auto=1`), 600),
       }
     case 'needs': {
-      const open = s.handoffs.filter(h => !h.lane)
+      const open = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need')
       const urgent = open.filter(h => h.urgency === 'urgent')
       const claire = s.handoffs.filter(h => h.lane === 'claire').length
       return {
@@ -274,3 +274,15 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
   }
 }
 
+
+/** Answer buttons run once: after a click the button says it's done, so a second click can't add a duplicate card. */
+function Ctas({ ctas }: { ctas: NonNullable<Answer['ctas']> }) {
+  const [used, setUsed] = useState<string[]>([])
+  return (
+    <div className="row">
+      {ctas.map(c => used.includes(c.label)
+        ? <Btn key={c.label} size="sm" disabled><Check size={14} />Done</Btn>
+        : <Btn key={c.label} size="sm" variant={c.primary ? 'primary' : 'secondary'} onClick={() => { c.run(); setUsed(u => [...u, c.label]) }}>{c.icon}{c.label}</Btn>)}
+    </div>
+  )
+}

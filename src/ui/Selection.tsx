@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Btn } from './index'
 
 /**
- * Multi-select for any list. Shift-click selects a range, X toggles the focused row, Esc clears.
+ * Multi-select for any list. Shift-click selects a range, Esc clears.
  * The selection drops ids that leave the list, and resets when `resetKey` changes (view, filters).
  */
 export function useSelection(ids: string[], resetKey?: string) {
@@ -76,10 +76,12 @@ export function BulkBar({ count, noun = 'selected', actions, onClear }: { count:
     <div className="bulk-bar" role="toolbar" aria-label="Actions on the selection">
       <b className="num">{count} {noun}</b>
       {actions.map((a, i) => (
-        <Btn key={i} size="sm" variant={a.primary ? 'primary' : 'ghost'} disabled={a.disabled} onClick={a.onRun} title={a.note}>
+        <Btn key={i} size="sm" variant={a.primary ? 'primary' : 'ghost'} disabled={a.disabled} onClick={a.onRun}>
           {a.icon}{a.label}
         </Btn>
       ))}
+      {/* Why some items are skipped is said on screen, not in a tooltip. */}
+      {actions.filter(a => a.note).map((a, i) => <span key={`n${i}`} className="faint bulk-note">{a.note}</span>)}
       <span className="spacer" />
       <Btn size="sm" variant="ghost" onClick={onClear}>Cancel</Btn>
     </div>

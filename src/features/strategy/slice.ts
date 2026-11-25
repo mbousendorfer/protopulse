@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, Network } from '../../app/types'
-import { now, pushHandoff, pushLog, pushToast, uid } from '../../app/core'
+import { now, pushHandoff, pushLog, uid } from '../../app/core'
 import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, generatePlan, revisePlan, type Cadence, type Campaign, type Pillar, type Proposal } from '../../data/strategy'
 import { dayLabel } from '../../app/time'
 
@@ -54,8 +54,8 @@ function approveCampaign(s: State, id: string): State {
     }, '')
   }
   const byAgent = c.tasks.reduce<Record<string, number>>((m, t) => ({ ...m, [t.agent]: (m[t.agent] ?? 0) + 1 }), {})
-  next = pushLog(next, { agent: 'sage', text: `Launched ${c.name}: ${c.posts.length} posts to Atlas, ${Object.entries(byAgent).filter(([a]) => a !== 'atlas').map(([a, n]) => `${n} task${n > 1 ? 's' : ''} to ${a[0].toUpperCase() + a.slice(1)}`).join(', ')}`, status: 'approved', reason: 'You approved the campaign', undoMinutes: 30, link: `/strategy/campaigns/${id}` })
-  return pushToast(next, { agent: 'sage', text: `${c.name} approved. The team is on it.`, link: `/strategy/campaigns/${id}` })
+  next = pushLog(next, { agent: 'sage', text: `Launched ${c.name}: ${c.posts.length} posts to Atlas, ${Object.entries(byAgent).filter(([a]) => a !== 'atlas').map(([a, n]) => `${n} task${n > 1 ? 's' : ''} to ${a[0].toUpperCase() + a.slice(1)}`).join(', ')}`, status: 'approved', reason: 'You approved the campaign', link: `/strategy/campaigns/${id}` })
+  return next
 }
 
 export function reduceStrategy(s: State, a: StrategyAction): State {
@@ -70,7 +70,7 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       const c = campaign(s, a.id)
       if (!c) return s
       const v = revisePlan(c, a.feedback)
-      return pushToast(pushLog(updateCampaign(s, a.id, () => v), { agent: 'sage', text: `Revised ${c.name} (v${v.version}): ${v.diff?.length ?? 0} changes`, status: 'done', reason: `Your note: ${a.feedback}` }), { agent: 'sage', text: `Version ${v.version} of ${c.name} is ready` })
+      return pushLog(updateCampaign(s, a.id, () => v), { agent: 'sage', text: `Revised ${c.name} (v${v.version}): ${v.diff?.length ?? 0} changes`, status: 'done', reason: `Your note: ${a.feedback}` })
     }
     case 'strategy/discard': {
       const c = campaign(s, a.id)

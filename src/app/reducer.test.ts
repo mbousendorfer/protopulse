@@ -30,6 +30,16 @@ describe('core reducer', () => {
     expect(s.agents.find(a => a.id === 'nova')!.actions.find(x => x.id === 'nova-complaint')!.autonomy).toBe('draft')
   })
 
+  it('undoing a Desk decision brings the card back and reverses what it changed', () => {
+    let s = reducer(s0(), { type: 'core/resolve', id: 'h-promo-nova', decision: { kind: 'approve' } })
+    expect(s.agents.find(a => a.id === 'nova')!.actions.find(x => x.id === 'nova-complaint')!.autonomy).toBe('act')
+    const line = s.log.find(l => l.restore?.some(h => h.id === 'h-promo-nova'))!
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.handoffs.some(h => h.id === 'h-promo-nova')).toBe(true)
+    expect(s.desk.done.some(x => x.id === 'h-promo-nova')).toBe(false)
+    expect(s.agents.find(a => a.id === 'nova')!.actions.find(x => x.id === 'nova-complaint')!.autonomy).toBe('draft')
+  })
+
   it('undo only works inside the window', () => {
     const s = s0()
     const open = s.log.find(l => l.id === 'l-2')!

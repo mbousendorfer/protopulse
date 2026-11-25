@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { RefreshCw } from 'lucide-react'
+import { Check, RefreshCw } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { useTheme, type Theme } from '../../app/theme'
@@ -42,18 +42,18 @@ export default function SettingsPage() {
         { value: 'accounts', label: 'Connected accounts' }, { value: 'notifications', label: 'Notifications' }, { value: 'appearance', label: 'Appearance' },
         { value: 'profile', label: 'Profile' }, { value: 'approver', label: 'Approver' },
       ]} />
-      {tab === 'accounts' && <Accounts />}
-      {tab === 'notifications' && <Notifications />}
-      {tab === 'appearance' && <Appearance />}
-      {tab === 'profile' && <Profile />}
-      {tab === 'approver' && <Approver />}
+      {/* Tabs stay mounted (hidden) so a reconnect, a switch or an unsaved edit survives switching tabs. */}
+      <div hidden={tab !== 'accounts'}><Accounts /></div>
+      <div hidden={tab !== 'notifications'}><Notifications /></div>
+      <div hidden={tab !== 'appearance'}><Appearance /></div>
+      <div hidden={tab !== 'profile'}><Profile /></div>
+      <div hidden={tab !== 'approver'}><Approver /></div>
     </div>
   )
 }
 
 function Accounts() {
   const now = useNow()
-  const { d } = useStore()
   const [list, setList] = useState(ACCOUNTS)
   const [busy, setBusy] = useState<string | null>(null)
   const reconnect = (a: Account) => {
@@ -61,7 +61,6 @@ function Accounts() {
     setTimeout(() => {
       setList(l => l.map(x => (x.id === a.id ? { ...x, state: 'ok', syncedMin: 0, note: x.id === 'shop' ? x.note : undefined } : x)))
       setBusy(null)
-      d({ type: 'core/toast', toast: { text: `${a.name} reconnected. Agents can use it again.` } })
     }, 1400)
   }
   return (
@@ -93,7 +92,7 @@ function Notifications() {
   const [list, setList] = useState(NOTIFS)
   return (
     <section className="card">
-      <div className="card-head"><h2>In-app notifications</h2><span className="faint">Shown as toasts at the bottom right.</span></div>
+      <div className="card-head"><h2>In-app notifications</h2><span className="faint">What reaches the bell in the top bar.</span></div>
       <ul className="rows">
         {list.map(n => (
           <li key={n.id} className="set-row">
@@ -120,12 +119,12 @@ function Appearance() {
 }
 
 function Profile() {
-  const { d } = useStore()
+  const [saved, setSaved] = useState(false)
   const [name, setName] = useState('Sam Rivera')
   const [role, setRole] = useState('Social Media Lead')
   const [tz, setTz] = useState('cet')
   return (
-    <form className="card pad stack set-profile" onSubmit={e => { e.preventDefault(); d({ type: 'core/toast', toast: { text: 'Profile saved' } }) }}>
+    <form className="card pad stack set-profile" onSubmit={e => { e.preventDefault(); setSaved(true) }} onChange={() => setSaved(false)}>
       <div className="row nowrap"><span className="avatar lg">SR</span><div><b>{name}</b><div className="faint">sam@fernway.co</div></div></div>
       <div className="grid-2">
         <div className="field"><label htmlFor="p-name">Name</label><input id="p-name" className="input" value={name} onChange={e => setName(e.target.value)} /></div>
@@ -136,7 +135,7 @@ function Profile() {
         <Seg name="tz" label="Time zone" value={tz} onChange={setTz} options={[{ value: 'cet', label: 'Paris (CET)' }, { value: 'utc', label: 'London (UTC)' }, { value: 'est', label: 'New York (EST)' }]} />
         <span className="hint">Your morning brief arrives at 07:00 in this time zone.</span>
       </div>
-      <div className="row"><Btn type="submit" variant="primary">Save</Btn></div>
+      <div className="row"><Btn type="submit" variant="primary">Save</Btn>{saved && <span className="faint" role="status"><Check size={14} aria-hidden /> Saved</span>}</div>
     </form>
   )
 }
@@ -147,14 +146,14 @@ function Approver() {
     <section className="card">
       <div className="card-head">
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint" style={{ fontSize: 12 }}>Head of Brand · approves what you send her</span></div></div>
-        <Link to="/playbook" className="btn sm ghost">All escalation rules</Link>
+        <Link to="/playbook?tab=escalation" className="btn sm ghost">All escalation rules</Link>
       </div>
       <p className="card-body muted" style={{ paddingBottom: 0 }}>Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
       <ul className="rows">
         {s.playbook.escalate.map(e => (
           <li key={e.id} className="set-row">
-            <span>{e.label}</span>
-            <Switch checked={e.to === 'claire' && e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, to: on ? 'claire' : 'sam', on: true })} label={`${e.label} goes to Claire`} hideLabel />
+            <span>{e.label}{!e.on && <span className="faint"> · rule off in the Playbook</span>}</span>
+            <Switch checked={e.to === 'claire' && e.on} disabled={!e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, to: on ? 'claire' : 'sam', on: e.on })} label={`${e.label} goes to Claire`} hideLabel />
           </li>
         ))}
       </ul>

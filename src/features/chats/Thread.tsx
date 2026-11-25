@@ -106,6 +106,7 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
   const { d } = useStore()
   const nav = useNavigate()
   const [edit, setEdit] = useState<string | null>(null)
+  const [confirmBoost, setConfirmBoost] = useState(false)
   const act = (action: ActKind, text?: string) => d({ type: 'chats/act', id: chat.id, msg: m.id, action, text })
 
   switch (card.type) {
@@ -182,7 +183,10 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
       <div className="ccard">
         <p className="ctext">Boost “{card.post}…” with <b>€{card.amount}</b> for 3 days</p>
         {card.status === 'boosted' ? <span className="pill ok"><Check size={12} />Boost set up</span> : card.status === 'declined' ? <span className="pill">No boost</span> : (
-          <div className="row"><Btn size="sm" variant="primary" onClick={() => act('boost')}>Boost €{card.amount}</Btn><Btn size="sm" variant="ghost" onClick={() => act('decline')}>Not this one</Btn></div>
+          confirmBoost ? (
+          // Paid spend never goes out on one click.
+          <div className="row"><span className="faint">€{card.amount} of ad spend over 3 days. Sure?</span><Btn size="sm" variant="primary" onClick={() => { act('boost'); setConfirmBoost(false) }}>Confirm boost</Btn><Btn size="sm" variant="ghost" onClick={() => setConfirmBoost(false)}>Cancel</Btn></div>
+        ) : <div className="row"><Btn size="sm" variant="primary" onClick={() => setConfirmBoost(true)}>Boost €{card.amount}</Btn><Btn size="sm" variant="ghost" onClick={() => act('decline')}>Not this one</Btn></div>
         )}
       </div>
     )

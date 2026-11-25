@@ -58,7 +58,7 @@ export const HANDOFFS: Handoff[] = [
     context: 'All 4 videos posted since Thursday are under 2,000 views. Usual: 9,000.',
     why: 'Four posts in a row below the normal range. Likely cause: hooks longer than 3 seconds.',
     confidence: 68, at: T(7, 0), link: '/insights/anomalies',
-    options: [{ label: 'Ask Atlas to test 3-second hooks this week', recommended: true }, { label: 'Ignore for a week' }],
+    options: [{ label: 'Ask Atlas to test 3-second hooks this week', recommended: true }, { label: 'Snooze a week' }],
     preview: { type: 'metric', label: 'TikTok views per video', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8] },
   },
   {

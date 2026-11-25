@@ -41,7 +41,7 @@ export default function PlanReview() {
   )
   if (plan.status === 'rejected') return (
     <Empty icon={<AlertTriangle size={18} />} title="You rejected next week’s plan" body="Atlas will propose posts one by one on your Desk instead, or can start a new plan now."
-      action={<Btn variant="primary" onClick={() => d({ type: 'publishing/planRequest', text: 'Start over with a new plan' })}><RefreshCw size={14} />Ask Atlas for a new plan</Btn>} />
+      action={<Btn variant="primary" onClick={() => d({ type: 'publishing/planReset' })}><RefreshCw size={14} />Ask Atlas for a new plan</Btn>} />
   )
 
   return (

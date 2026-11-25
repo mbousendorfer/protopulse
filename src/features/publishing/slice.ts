@@ -27,6 +27,7 @@ export type PublishingAction =
   | { type: 'publishing/planApprove' }
   | { type: 'publishing/planReject' }
   | { type: 'publishing/planRequest'; text: string }
+  | { type: 'publishing/planReset' }
   | { type: 'publishing/askFill'; day: number; network: Network }
   | { type: 'publishing/claire'; post: Post }
   | { type: 'publishing/addToPlan'; post: Post }
@@ -92,7 +93,8 @@ function reworkPlan(s: State, request: string): State {
   const target = items.find(i => lower.includes(i.network)) ?? items.find(i => /short|hook|caption/.test(lower) && i.network === 'tiktok') ?? items.find(i => i.tag === 'Recycled')
   if (target) {
     const before = target.text
-    const after = /short|hook/.test(lower) ? before.split(/[.:]/)[0] + '.' : /emoji/.test(lower) ? before.replace(/\p{Extended_Pictographic}/gu, '').trim() : `${before.replace(/\.$/, '')}. (Reworked: ${request.trim().replace(/\.$/, '')}.)`
+    // Only rewrites Atlas knows how to do. Your note is never pasted into a caption that would be published.
+    const after = /short|hook/.test(lower) ? before.split(/[.:]/)[0] + '.' : /emoji/.test(lower) ? before.replace(/\p{Extended_Pictographic}/gu, '').trim() : before
     if (after !== before) { items = items.map(i => (i.id === target.id ? { ...i, text: after } : i)); changed.push(`${before} → ${after}`) }
   }
   return setPlan(s, { items, version: p.version + 1, diff: { added, removed, changed }, request, status: 'proposed' })
@@ -110,8 +112,9 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const p = s.publishing.posts.find(x => x.id === a.id)
       if (!p || p.at === a.at) return s
       const comment = slotComment(p.network, a.at)
-      const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: undefined }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
-      return pushToast(next, { agent: 'atlas', text: comment })
+      // Atlas's comment on the new slot stays on the post, not in a toast that vanishes.
+      const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: comment }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
+      return next
     }
     case 'publishing/delete': {
       const p = s.publishing.posts.find(x => x.id === a.id)
@@ -124,12 +127,15 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const n = s.publishing.plan.items.filter(i => i.included).length
       let next = approvePlan(s)
       next = s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(next, 'h-plan') : next
-      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call from Plan review', link: '/publishing', undoMinutes: 10 })
+      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call from Plan review', link: '/publishing' })
     }
     case 'publishing/planReject': {
       const next = setPlan(s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(s, 'h-plan') : s, { status: 'rejected' })
       return pushLog(next, { agent: 'atlas', text: 'Next week’s plan rejected. Atlas will propose posts one by one.', status: 'rejected', link: '/publishing/plan' })
     }
+    case 'publishing/planReset':
+      // A fresh proposal after a rejection: no fake note, no diff.
+      return setPlan(s, { status: 'proposed', request: undefined, diff: undefined, items: s.publishing.plan.items.map(i => ({ ...i, included: true })) })
     case 'publishing/planRequest': {
       const next = reworkPlan(s, a.text)
       const v = next.publishing.plan.version
@@ -160,9 +166,16 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     case 'publishing/addToPlan': {
       const d = new Date(a.post.at)
       const day = Math.max(0, Math.min(6, Math.floor((a.post.at - PLAN_MONDAY) / DAY)))
+      const landed = new Date(PLAN_MONDAY + day * DAY).toLocaleDateString('en-GB', { weekday: 'long' })
+      const moved = landed !== d.toLocaleDateString('en-GB', { weekday: 'long' }) ? ` The plan covers Mon 1 to Sun 7 Dec, so it goes on ${landed}.` : ''
+      // Plan already approved: schedule the post itself, don't reopen (and re-copy) the whole plan.
+      if (s.publishing.plan.status === 'approved') {
+        const at = new Date(PLAN_MONDAY + day * DAY).setHours(d.getHours(), d.getMinutes())
+        return pushToast(setPosts(s, [...s.publishing.posts, { ...a.post, at, status: 'scheduled' }]), { agent: 'atlas', text: `Scheduled for ${landed} ${hhmm(at)}, in the approved plan.${moved}`, link: '/publishing' })
+      }
       const item: PlanItem = { id: uid('n'), day, time: hhmm(a.post.at), network: a.post.network, text: a.post.text, media: a.post.media, tag: 'New', reason: 'Added by you from the composer.', pillar: a.post.pillar, included: true }
       const next = setPlan(s, { items: [...s.publishing.plan.items, item], status: 'proposed' })
-      return pushToast(next, { agent: 'atlas', text: `Added to next week’s plan (${d.toLocaleDateString('en-GB', { weekday: 'long' })}).`, link: '/publishing/plan' })
+      return pushToast(next, { agent: 'atlas', text: `Added to next week’s plan (${landed}).${moved}`, link: '/publishing/plan' })
     }
     case 'publishing/bulk':
       return bulk(s, a)

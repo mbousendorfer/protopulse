@@ -118,10 +118,10 @@ export function AutonomySeg({ name, value, locked, onChange, size }: { name: str
   )
 }
 
-export function Switch({ checked, onChange, label, hideLabel }: { checked: boolean; onChange: (v: boolean) => void; label: string; hideLabel?: boolean }) {
+export function Switch({ checked, onChange, label, hideLabel, disabled }: { checked: boolean; onChange: (v: boolean) => void; label: string; hideLabel?: boolean; disabled?: boolean }) {
   return (
     <label className="switch">
-      <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />
       <span className="track" aria-hidden />
       <span className={hideLabel ? 'sr-only' : ''}>{label}</span>
     </label>

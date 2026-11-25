@@ -5,7 +5,6 @@ import type { AgentId, Handoff } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { Spark } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
-import { useHandoffActions } from './parts'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, MIN, DEMO_START } from '../../app/time'
 import { agentName } from '../../data/agents'
@@ -14,7 +13,7 @@ import { BriefScene } from '../../ui/Illustrations'
 
 /* ---------- Morning brief: one line, the team at a glance, three highlights ---------- */
 const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: number) => string> = {
-  nova: (s, need) => `${142 + s.log.filter(l => l.agent === 'nova' && l.at > s.brief.since && l.status === 'done').length} conversations handled alone${need ? ` · ${need} drafts to check` : ''}`,
+  nova: (s, need) => `${142 + s.log.filter(l => l.agent === 'nova' && l.at > s.brief.since && l.status === 'done').length} conversations handled alone`,
   atlas: s => s.handoffs.some(h => h.id === 'h-plan') ? 'Next week’s plan is ready for you' : 'Next week is planned and scheduled',
   iris: s => { const n = s.handoffs.filter(h => h.agent === 'iris' && h.kind === 'alert' && !h.lane).length; return `${n || 'No'} ${n === 1 ? 'anomaly' : 'anomalies'} · weekly report written` },
   echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'} · 23 new mentions` },
@@ -24,7 +23,6 @@ const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: nu
 export function Brief({ onPick }: { onPick: (key: string) => void }) {
   const { s, d } = useStore()
   const nav = useNavigate()
-  const act = useHandoffActions()
   const now = useNow()
   const open = s.handoffs.filter(h => !h.lane)
   const since = s.brief.since
@@ -100,7 +98,7 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
                   <span className="hl-title">{h.title}</span>
                 </button>
                 <div className="hl-act">
-                  {rec >= 0 ? <Btn size="sm" onClick={() => act.option(h, rec)}>{shortLabel(h.options![rec].label)}</Btn>
+                  {rec >= 0 ? <Btn size="sm" onClick={() => onPick(`h:${h.id}`)}>Review</Btn>
                     : h.link ? <Btn size="sm" onClick={() => nav(h.link!)}>{p?.type === 'plan' ? 'Review the plan' : 'Open'}</Btn>
                     : <Btn size="sm" onClick={() => onPick(`h:${h.id}`)}>Open</Btn>}
                 </div>
@@ -113,8 +111,6 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
   )
 }
 
-/** Keep button labels short: "Counter-post by Atlas: “Built to last…”" → "Counter-post by Atlas". */
-const shortLabel = (l: string) => l.split(/[:(]/)[0].replace(/ this week$/, '').trim()
 
 /* ---------- Shift board: 24 h of agent signals ---------- */
 export function ShiftBoard() {

@@ -173,3 +173,15 @@
 .ib-need-more:hover { text-decoration: underline; text-underline-offset: 3px; }
 /* With a conversation open, the list is narrow: keep who and what, the panel carries the decision */
 .ib-layout.has-current .ib-need-acts .btn, .ib-layout.has-current .ib-need-head .faint, .ib-layout.has-current .ib-need-head .btn { display: none; }
+
+/* Narrow list (phone, or a list squeezed by the reading pane): the decision drops under the text so the message stays readable. */
+@media (max-width: 640px) {
+  .ib-need { grid-template-columns: 28px 32px minmax(0, 1fr); align-items: start; }
+  .ib-need-acts { grid-column: 3; justify-content: flex-start; }
+  .ib-need-them, .ib-need-line { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .ib-need-head .faint { display: none; }
+  .ib-need-more { padding-left: var(--s4); }
+}
+.ib-need-who { font-weight: 600; color: var(--ink); margin-right: 8px; text-decoration: none; }
+.ib-need-who:hover, .ib-need-who:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.ib-g-yours .ib-need-icon { background: var(--signal-wash); color: var(--action-ink); }

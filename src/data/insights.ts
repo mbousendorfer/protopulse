@@ -209,7 +209,7 @@ export type Anomaly = {
 export const ANOMALIES: Anomaly[] = [
   { id: 'an-tiktok', title: 'TikTok views per video down 38%', network: 'tiktok', metric: 'Views per video', value: '1,840', delta: '−38%', down: true, series: [8.2, 9.1, 10.4, 8.8, 9.6, 7.9, 9.3, 2.1, 1.9, 1.7, 1.8], detectedAt: T(6, 58),
     cause: 'All 4 videos since Thursday open with a 5 to 7 second intro before the product appears. Average watch time fell from 9.1 s to 3.4 s. Trailkind’s best videos hook in 2 seconds.', confidence: 68,
-    actions: ['Ask Atlas to test 3-second hooks this week', 'Ignore for a week'], open: true, handoff: 'h-tiktok' },
+    actions: ['Ask Atlas to test 3-second hooks this week', 'Snooze a week'], open: true, handoff: 'h-tiktok' },
   { id: 'an-storm', title: 'Storm Jacket carousel at 3× the usual engagement', network: 'instagram', metric: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], detectedAt: T(7, 6),
     cause: 'Saves drive it: 214 saves, mostly from people who never bought from Fernway. The rain test format works for cold-weather intent.', confidence: 74,
     actions: ['Boost €150 for 5 days', 'Ask Atlas for a follow-up carousel', 'No action'], open: true, handoff: 'h-boost' },
