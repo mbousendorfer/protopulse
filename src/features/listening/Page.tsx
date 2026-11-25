@@ -10,7 +10,7 @@ import {
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, pct, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -355,7 +355,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
     <div className="stack">
       <section className="card pad">
         <div className="faint caption">Sentiment of the last {all.length} mentions</div>
-        <StackBar h={10} parts={[
+        <StackBar h={10} format={all.length < 10 ? v => `${v}` : undefined} parts={[
           { label: 'Positive', value: count('positive'), color: 'var(--ok)' },
           { label: 'Neutral', value: count('neutral'), color: 'var(--ink-3)' },
           { label: 'Negative', value: count('negative'), color: 'var(--alert)' },
@@ -573,7 +573,7 @@ function SearchView() {
       </section>
       <dl className="grid-4 comp-stats">
         <div className="card pad stat"><dd><b className="num">{v.volume.toLocaleString('en-GB')}</b></dd><dt className="label">Mentions, 7 days{v.collecting ? ` · collecting ${Math.round(v.progress * 100)}%` : ''}</dt></div>
-        <div className="card pad stat"><dd><b className="num">{pct(c.negative, c.total)}</b></dd><dt className="label">Negative · latest {c.total} filed</dt></div>
+        <div className="card pad stat"><dd><b className="num">{share(c.negative, c.total)}</b></dd><dt className="label">Negative · latest {c.total} filed</dt></div>
         <div className="card pad stat"><dd><b className="num">{authors}</b></dd><dt className="label">Unique authors · latest {c.total}</dt></div>
         <div className="card pad stat"><dd><b className="num">{reach >= 1000 ? `${Math.round(reach / 1000)}k` : reach}</b></dd><dt className="label">Reach · latest {c.total}</dt></div>
       </dl>

@@ -61,7 +61,9 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
   Rouge → corrige, repousse, recommence.
 - `gh pr merge --squash --delete-branch` (Matt l'a autorisé le 25/11 pour les PR de la loop). Puis
   `git switch --detach origin/main` après fetch. Vérifie que le CI de main repasse vert au tick suivant.
-- Écris dans STATE le SHA de `origin/main` **d'avant** ton merge (ton propre commit est ignoré au tick suivant).
+- Écris dans STATE le SHA de `origin/main` **que tu as relu** (celui d'où la branche est partie), jamais le main du
+  moment du merge : d'autres PR arrivent pendant le tick et doivent être relues au suivant. Ton propre commit est
+  ignoré au tick suivant (sujet `UI next level:`).
 - `ScheduleWakeup` 300 s.
 
 ## Garde-fous
