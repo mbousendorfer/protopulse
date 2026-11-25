@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sage agent depth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ui-quality.html. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.list li { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.list li:first-child { border-top: 0; }
+.list li p { color: var(--ink-2); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Sage, strategy: agent depth</h1>
+  <p class="lede">Session of 25 November 2026. Strategy now drives the other agents: a one-line brief becomes a campaign built for its goal, product and season, every post lands in Atlas’s calendar, Nova labels its conversations, results come in with the days and Sage proposes real fixes when the trajectory drifts. Backlog: <code>design-plans/agent-depth/sage-backlog.md</code>, decisions: <code>sage-log.md</code>.</p>
+</header>
+
+<section>
+  <div class="tiles">
+    <div class="tile"><b>13</b><span>Sage PRs merged, incl. this closing one</span></div>
+    <div class="tile"><b>8 / 8</b><span>fixes listed in the prompt, done</span></div>
+    <div class="tile"><b>7 Go · 6 Later · 1 Drop</b><span>feature pitches; every Go built</span></div>
+    <div class="tile"><b>0 → 37</b><span>Strategy tests (slice, intents, generator)</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Parity, before and after</h2>
+  <p class="sub">Each capability answers the seven agentic-first questions in code; the PR body holds the grid.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Capability</th><th>Before</th><th>After</th><th>PR</th></tr></thead>
+    <tbody>
+<tr><td>Campaign → calendar</td><td>Only the first post went to Atlas, as a Desk card</td><td>Every post still to come lands in Atlas’s calendar (campaign, pillar, label), through Atlas’s <code>receivePosts</code>; Undo and Discard take them back</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/30">#30</a></td></tr>
+<tr><td>Guardrail “Active campaigns: 2 max”</td><td>Shown, never applied</td><td>Approve disabled with the reason; the Desk card comes back with it; reads the value Sam sets on Sage’s profile</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/30">#30</a></td></tr>
+<tr><td>Plan from Strategy</td><td>No Desk card when the brief was typed in Strategy</td><td>Same card as a brief from Echo or Atlas; Suggest / Draft / Act change what happens</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/30">#30</a></td></tr>
+<tr><td>Proposals, cadence, adjustments</td><td>Apply changed nothing; adjustments wired by id; no Undo</td><td>Each carries its effect (targets, post moves) and a real Undo; the Day 1 card sets the pillars it shows</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/46">#46</a></td></tr>
+<tr><td>Pillar and cadence actuals</td><td>Typed in the seed</td><td>Computed from Atlas’s posts (30 days, last 7 days)</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/39">#39</a></td></tr>
+<tr><td>Sage in Chat and ⌘K</td><td>Briefs only</td><td>“How is Trail Week doing?”, “Is Community behind?”, “Put more Community in the mix”, with the screens’ numbers</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/42">#42</a></td></tr>
+<tr><td>Complete brief</td><td>Text and budget; Sage guessed the rest</td><td>Optional details; Sage asks for the goal and the date when they’re missing; assumptions shown on briefs from other agents</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/57">#57</a></td></tr>
+<tr><td>Credible plan generator</td><td>The same 10 posts for any brief; a regex v2</td><td>Template by goal, product angles, season, networks from the cadence; v2 applies every request in the note</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/63">#63</a></td></tr>
+<tr><td>Live goals</td><td>Trail Week frozen on day 2</td><td>Results come in with the days; Sage proposes real moves or a new goal off 85–120% of trajectory (Draft, or alone on Act)</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/69">#69</a></td></tr>
+<tr><td>Editable pillars</td><td>Read-only</td><td>Sam reweights and describes; Sage checks the sum and the posts-a-week impact; Undo</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/79">#79</a></td></tr>
+<tr><td>Campaign recap</td><td>Seeded on Repair Friday only</td><td>Written by Sage at the end, a Desk card, the lesson as a proposal, and Iris’s full report behind “Full recap”</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/86">#86</a> closing PR</td></tr>
+<tr><td>Calendar moments (≈ Calendar notes)</td><td>None</td><td>4 moments raised 3 weeks before, added with ideas for Atlas, new action Plan for calendar moments</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/95">#95</a></td></tr>
+<tr><td>Campaign labels (≈ Labels)</td><td><code>labels</code> unused</td><td>Label on Atlas’s posts, and on conversations through Nova’s own Inbox rule; link to the filtered Inbox</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/100">#100</a></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>New campaign brief</h2>
+  <div class="pair">
+    <figure><img src="sage/brief-before.jpg" alt="New campaign brief before"><figcaption><b>Before</b> · a text box and a budget; any brief gave the same plan.</figcaption></figure>
+    <figure><img src="sage/brief-after.jpg" alt="New campaign brief after"><figcaption><b>After</b> · Sage stops on what’s missing (“What number says it worked?”) with one-click answers; More details holds product, date, goal, audience and networks.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Trail Week</h2>
+  <div class="pair">
+    <figure><img src="sage/campaign-before.jpg" alt="Trail Week before"><figcaption><b>Before</b> · plan vs actual frozen, adjustments without Undo, no link to the calendar or the Inbox.</figcaption></figure>
+    <figure><img src="sage/campaign-after.jpg" alt="Trail Week after"><figcaption><b>After</b> · the curve grows with the days, adjustments carry real moves, the Campaign label card counts Atlas’s posts and Nova’s 4 Trail Week conversations.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Pillars and cadence</h2>
+  <div class="pair">
+    <figure><img src="sage/pillars-before.jpg" alt="Pillars and cadence before"><figcaption><b>Before</b> · shares typed in the seed, proposals that changed nothing.</figcaption></figure>
+    <figure><img src="sage/pillars-after.jpg" alt="Pillars and cadence after"><figcaption><b>After</b> · shares computed from Atlas’s posts, Edit pillars with Sage’s check, proposals that apply with Undo.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Campaigns</h2>
+  <div class="pair">
+    <figure><img src="sage/campaigns-before.jpg" alt="Campaigns before"><figcaption><b>Before</b> · the list only.</figcaption></figure>
+    <figure><img src="sage/campaigns-after.jpg" alt="Campaigns after"><figcaption><b>After</b> · Moments ahead on top: four dates Sage raises 3 weeks before, each with its reason and ideas for Atlas.</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2>Checks</h2>
+  <ul class="check">
+    <li><span class="tag ok">Done</span><p><code>npm test</code> and <code>npm run build</code> green on every PR and on <code>main</code> after each merge; PR CI green before each merge.</p></li>
+    <li><span class="tag ok">Done</span><p>Each Sage action in its three levels: plans (Suggest card, Draft card, launched alone on Act), cadence and trajectory (card or applied alone), moments (card or added alone), all with Undo, under test.</p></li>
+    <li><span class="tag ok">Done</span><p>Guardrail applied (2 live campaigns), read from its editable value.</p></li>
+    <li><span class="tag ok">Done</span><p>1440 and 375 (no horizontal scroll on the five Strategy screens, emulated mobile), light and dark from tokens; campaign cards no longer force 380 px at 375.</p></li>
+    <li><span class="tag ok">Done</span><p>Contracts with others honoured both ways: Atlas’s <code>receivePosts</code>/<code>withdrawPosts</code> and <code>arriveIdeas</code>, Nova’s label and Inbox rule actions and <code>/inbox?label=</code>, Iris’s <code>writeCampaignReport</code>; Sage exposes <code>targetsOf</code>, <code>mixOf</code>, <code>lastWeekOf</code>, <code>themesOf</code>.</p></li>
+  </ul>
+</section>
+
+<section>
+  <h2>Still open</h2>
+  <ul class="list">
+    <li><h3>Moments in Atlas’s calendar</h3><p>Request <code>atlas-from-sage-calendar-themes.md</code>: <code>themesOf(s)</code> is exported; the band is Atlas’s to draw. Until then moments live in Strategy.</p></li>
+    <li><h3>Adding and renaming pillars</h3><p>Request <code>atlas-from-sage-open-pillars.md</code>: <code>Pillar</code> is a 4-name union keyed into Atlas’s and Juno’s tables. Reweighting and descriptions work today.</p></li>
+    <li><h3>Simulated campaign results</h3><p>Results drift toward a pace per campaign (<code>ponytail:</code> in the slice) until Iris exposes attribution per campaign.</p></li>
+    <li><h3>Later at pitch</h3><p>Tasks that move by themselves, monthly review on the 1st, campaign budget, campaign UTM. Dropped: Claire’s budget approval.</p></li>
+  </ul>
+</section>
+</main>
+</body>
+</html>
