@@ -9,7 +9,7 @@ import {
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
 import { clipPerf, netAverage } from '../insights/metrics'
-import { LANG_LABEL, NETWORK_FIT, buildVersions, type PostTags, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, trackRecord, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, NETWORK_FIT, buildVersions, translatedCaption, type PostTags, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, trackRecord, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -135,6 +135,12 @@ export const tagsFor = (s: State, c: Clip): PostTags => {
   return { labels: [c.pillar], ...(k ? { campaign: k.name, campaignId: k.id } : {}) }
 }
 
+/** Which language versions go out with a clip: all on Act; otherwise the approved ones, the rest wait. */
+export function langsOut(s: State, c: Clip): { out: Lang[]; wait: Lang[] } {
+  const review = levelOf(s, 'juno-dub') === 'act' ? [] : c.audio.review ?? []
+  return { out: c.audio.dubs.filter(l => !review.includes(l)), wait: c.audio.dubs.filter(l => review.includes(l)) }
+}
+
 /* ---------- Sending to Atlas ---------- */
 
 /** Ready clips become scheduled posts in Atlas's calendar. One journal line, one Undo. From the Desk, the Desk's own line undoes it. */
@@ -145,14 +151,33 @@ export function sendClips(s: State, ids: string[], by: 'you' | 'desk' | 'juno', 
   const t = now(s)
   let posts = s.publishing.posts
   const made: Record<string, string[]> = {}
-  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p'), clipLengthOf(c, trOf(s, c)), tagsFor(s, c)); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
+  const langsMade: Lang[] = []
+  const langsWait = new Set<Lang>()
+  for (const c of picked) {
+    const dur = clipLengthOf(c, trOf(s, c))
+    const tags = tagsFor(s, c)
+    let ps = clipPosts(c, posts, t, () => uid('p'), dur, tags)
+    // Language versions: on Act all of them; otherwise only the ones you approved (or made yourself).
+    const { out, wait } = langsOut(s, c)
+    for (const l of wait) langsWait.add(l)
+    for (const l of out) {
+      const text = translatedCaption(c, trOf(s, c), l)
+      const lp = clipPosts({ ...c, post: { ...c.post, text: Object.fromEntries(c.post.networks.map(n => [n, text])) } }, [...posts, ...ps], t, () => uid('p'), dur, { ...tags, labels: [...tags.labels, LANG_LABEL[l]] })
+      ps = [...ps, ...lp.map(p => ({ ...p, note: `${p.note} · ${LANG_LABEL[l]}` }))]
+      langsMade.push(l)
+    }
+    posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id)
+  }
   let next: State = { ...s, publishing: { ...s.publishing, posts } }
   next = patchClips(next, picked.map(c => c.id), c => ({ ...c, status: 'sent', posts: made[c.id], back: undefined, sentAt: t, sentFrom: by === 'desk' ? fromCard : undefined }))
   for (const c of picked) next = decided(next, c, c.edited ? 'modified' : 'as-is', { by })
   for (const id of new Set(picked.map(c => c.source))) next = syncCard(next, id)
   if (by === 'desk') return next
   const n = Object.values(made).flat().length
-  const text = (picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled.` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled.`) + heldText
+  const inLangs = [...new Set(langsMade)].map(l => LANG_LABEL[l])
+  const langText = inLangs.length ? ` ${inLangs.join(' and ')} version${inLangs.length > 1 ? 's' : ''} included.` : ''
+  const waitText = langsWait.size ? ` ${[...langsWait].map(l => LANG_LABEL[l]).join(' and ')} wait${langsWait.size > 1 ? '' : 's'} for your review.` : ''
+  const text = (picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled.` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled.`) + langText + waitText + heldText
   next = pushLog(next, { agent: 'juno', text, status: by === 'juno' ? 'done' : 'approved', reason: by === 'juno' ? 'Sending her best clips is set to Act' : 'You sent them from Video', undoMinutes: 10, clips: picked.map(c => c.id), link: '/publishing/calendar' })
   return by === 'you' ? notify(next, 'video', text, { undo: next.log[0].id, link: { to: '/publishing/calendar', label: 'Open the calendar' } }) : next
 }
