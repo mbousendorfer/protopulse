@@ -13,3 +13,7 @@
 - 25/11/2026 · Meilleur créneau · table `BEST_SLOT` d'Atlas en attendant Iris (`requests/iris-from-atlas-best-slots.md`) · recopier la heatmap d'Insights · un chiffre a un seul propriétaire (Iris)
 - 25/11/2026 · Échec de publication · carte `alert` mise dans Needs you (`group: 'need'`) · Worth a look (défaut des alertes) · un post en échec attend Sam, le badge Calendar dit « needs you »
 - 25/11/2026 · Copilote « 3 variants » · trois réécritures déterministes du texte (accroche-question par pilier, chiffre d'abord ou fait d'abord, version courte), Playbook appliqué et cité sous chaque variante · variantes rédigées à la main par sujet · marche pour n'importe quel texte du testeur, sans LLM
+- 25/11/2026 · Pitch B5 garde-fous appliqués · **Go** (pause pendant une alerte critique + plafond 3/réseau/jour partout)
+- 25/11/2026 · Pitch B2 To approve · **Go** (statut, réponse de Claire qui agit, commentaires, routage auto prix/promo)
+- 25/11/2026 · Pitch B1 composer par réseau · **Go, plus simple** (format + premier commentaire pré-remplis ; pas de specs TikTok/YouTube détaillées)
+- 25/11/2026 · Pitch B3 files · **Go, plus simple** (2 files fournies aux créneaux modifiables, remplies par Atlas ; pas de création de file)
