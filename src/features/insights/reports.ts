@@ -1,17 +1,15 @@
 // Iris writes her reports from the state: the morning brief every day at 07:00, the weekly report on Mondays.
 import type { State } from '../../app/state'
-import type { Handoff } from '../../app/types'
-import { actionOf, now, pushHandoff, pushLog } from '../../app/core'
+import { actionOf, pushHandoff, pushLog } from '../../app/core'
+import { groupOf } from '../../app/reducer'
 import { DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { REPORTS, type Cited, type Report } from '../../data/insights'
+import type { Cited, Report } from '../../data/insights'
 import { change, fmt, kpi, tiktokViews } from './metrics'
-import { anomalyList, patchInsights } from './slice'
+import { anomalyList, dayKey, patchInsights, reportList, shareWithClaire } from './slice'
 
-/** Seeded reports and the ones Iris wrote this session, newest first. */
-export const reportList = (s: State): Report[] => [...s.insights.reports, ...REPORTS].sort((a, b) => b.writtenAt - a.writtenAt)
+export { reportList, dayKey }
 
-export const dayKey = (t: number) => new Date(t).toDateString()
 const at7 = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 7, 0).getTime() }
 const short = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 const c = (n: string, source: string): Cited => ({ n, source })
@@ -20,16 +18,18 @@ const c = (n: string, source: string): Cited => ({ n, source })
 export function writeBrief(s: State, t: number): Report {
   const since = s.brief.since
   const alone = s.log.filter(l => l.at > since && l.at <= t && (l.status === 'done' || l.status === 'redone'))
-  const need = s.handoffs.filter(h => !h.lane).length
+  // Same counts as the Desk's brief (desk/widgets.tsx): handled overnight, and the cards that need Sam.
+  const handled = (s.phase === 'day1' ? 0 : 214) + s.log.filter(l => l.at > since && l.status === 'done').length
+  const need = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need').length
   const open = anomalyList(s).filter(a => a.open)
   const v = tiktokViews(), reach = kpi('reach')
   const top = open.slice(0, 2)
   return {
     id: `brief-${new Date(t).toISOString().slice(0, 10)}`, kind: 'brief', title: 'Morning brief', period: `Since ${short(since)}, ${new Date(since).toTimeString().slice(0, 5)}`, writtenAt: at7(t),
-    summary: `${alone.length ? `Your agents did ${alone.length} things on their own overnight.` : 'A quiet night.'} ${need} card${need === 1 ? '' : 's'} on your Desk, ${open.length} open anomal${open.length === 1 ? 'y' : 'ies'}.`,
+    summary: `Your agents handled ${handled} things while you were away. ${need} need you, and ${open.length} anomal${open.length === 1 ? 'y is' : 'ies are'} open.`,
     sections: [
       { heading: 'Overnight', paras: [[
-        'Your agents did ', c(`${alone.length} things`, `Activity · since ${short(since)}`), ' on their own', alone[0] ? `, the latest: “${alone[0].text}”` : '', '. ', c(`${need} cards`, 'Desk · now'), ' wait for you.',
+        'Your agents handled ', c(`${handled} things`, `Activity · since ${short(since)}`), ' on their own', alone[0] ? `, the latest: “${alone[0].text}”` : '', '. ', c(`${need} cards`, 'Desk · Needs you'), ' wait for you.',
       ]] },
       { heading: 'What moved', paras: [top.length ? [
         ...top.flatMap((a, i): Cited[] => [i ? ' ' : '', `${a.title}: `, c(a.value, `${NETWORK_LABEL[a.network]} · ${a.metric}`), ` (${a.delta}).`]),
@@ -58,17 +58,6 @@ export function writeWeekly(s: State, t: number): Report {
 
 /** Due once a day, after 07:00, when the day's brief isn't written yet. */
 export const reportsDue = (s: State, t: number) => s.phase !== 'day1' && dayKey(t) !== s.insights.briefDay && new Date(t).getHours() >= 7
-
-/** Share a report with Claire: it waits in her lane on the Desk until she has read it (Claire's engine answers). */
-export function shareWithClaire(s: State, r: Report, why: string): State {
-  const t = now(s)
-  const card: Omit<Handoff, 'at'> = {
-    id: `h-share-${r.id}`, agent: 'iris', kind: 'approval', urgency: 'week', topic: 'Weekly report', action: 'iris-report', ref: r.id,
-    title: `Claire is reading “${r.kind === 'brief' ? r.title : r.title}”`, context: r.summary, why, confidence: 90, link: `/insights/reports/${r.id}`,
-    lane: 'claire', claire: { askedAt: t, dueAt: t + 40_000 },
-  }
-  return pushHandoff(patchInsights(s, { shared: { ...s.insights.shared, [r.id]: { at: t } } }), card)
-}
 
 /**
  * Write the day's brief (and Monday's weekly report), following each action's level.

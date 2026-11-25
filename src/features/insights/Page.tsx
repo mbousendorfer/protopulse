@@ -7,7 +7,7 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, TIKTOK_VIEWS, dayLabels,
+  DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, TIKTOK_VIEWS, dayLabels,
   type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
@@ -15,6 +15,7 @@ import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, kpis as kpisOf } from './metrics'
 import { anomalyList, boostBudget } from './slice'
+import { reportList } from './reports'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -31,7 +32,7 @@ export default function InsightsPage() {
     <div className="page insights">
       <PageHead agent="iris" title="Insights" lede="Iris writes the story first. Dig into the numbers underneath whenever you want." />
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
-        { value: 'reports', label: 'Reports', count: REPORTS.length },
+        { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },
         { value: 'anomalies', label: 'Anomalies', count: openAnomalies },
       ]} />
@@ -65,7 +66,7 @@ function Reports() {
   const now = useNow()
   return (
     <div className="reports">
-      {REPORTS.map(r => {
+      {reportList(s).map(r => {
         const shared = s.insights.shared[r.id]
         return (
           <Link key={r.id} to={`/insights/reports/${r.id}`} className="card report-row">
@@ -77,7 +78,7 @@ function Reports() {
             </div>
             <div className="report-meta">
               <span className="mono faint">Written {ago(r.writtenAt, now)}</span>
-              {shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
+              {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
             </div>
           </Link>
         )
@@ -94,10 +95,12 @@ function ReportView() {
   const now = useNow(5000)
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const r = REPORTS.find(x => x.id === id)
+  const r = reportList(s).find(x => x.id === id)
   if (!r) return <Empty title="This report doesn’t exist" action={<Btn onClick={() => nav('/insights')}>All reports</Btn>} />
   const shared = s.insights.shared[r.id]
-  const seen = shared && now - shared.at > 45_000
+  // A card in Claire's lane means she hasn't read it yet; her engine answers on the Desk.
+  const reading = s.handoffs.find(h => h.agent === 'iris' && h.lane === 'claire' && (h.ref === r.id || (h.id === 'h-report' && r.id === 'w47')))
+  const deskCard = s.handoffs.find(h => h.agent === 'iris' && !h.lane && h.ref === r.id)
   const follow = s.insights.followUps.filter(f => f.report === r.id)
   const ask = (text: string) => { if (text.trim()) { d({ type: 'insights/ask', report: r.id, q: text.trim() }); setQ('') } }
 
@@ -113,6 +116,7 @@ function ReportView() {
             <h2>{sec.heading}</h2>
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
             {sec.chart === 'reach' && <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>}
+            {sec.chart === 'pillars' && <div className="report-chart"><HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} color="var(--a-iris)" /></div>}
             {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
           </section>
         ))}
@@ -122,11 +126,16 @@ function ReportView() {
       <aside className="report-side">
         <section className="card pad stack">
           <h2 className="side-title">Share</h2>
-          {shared ? (
+          {r.draft && deskCard ? (
             <>
-              <div className="row tight"><Check size={14} className="ok" /><span>Shared with Claire at {hhmm(shared.at)}</span></div>
-              {seen ? <div className="claire-seen"><Mark agent="claire" /><p>“{r.id === 'w47' ? 'Clear, thanks. Can we talk about the TikTok dip on Thursday?' : 'Thanks, read it.'}”</p></div>
-                : <span className="faint">Not opened yet</span>}
+              <p className="muted">Iris wrote this on Draft. It waits for you on the Desk.</p>
+              <Link to={`/?card=${deskCard.id}`} className="btn sm self-start">Review on Desk</Link>
+            </>
+          ) : shared || reading ? (
+            <>
+              <div className="row tight"><Check size={14} className="ok" /><span>Shared with Claire{shared ? ` ${dayLabel(shared.at, now)} at ${hhmm(shared.at)}` : ''}</span></div>
+              {shared?.reply ? <div className="claire-seen"><Mark agent="claire" /><p>“{shared.reply}”</p></div>
+                : reading ? <span className="faint">Claire hasn’t read it yet. Her answer will show here and on your Desk.</span> : null}
             </>
           ) : (
             <>
