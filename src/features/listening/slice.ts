@@ -398,8 +398,7 @@ function spikeMove(s: State, h: Handoff, index: number): State {
     if (agentOf(s, 'atlas').status === 'on') {
       next = { ...next, agents: next.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'paused' as const, pausedUntil: 'Claire’s statement is out' } : a)) }
       next = patch(next, { pausedAtlas: h.id })
-      const today = s.publishing.posts.filter(p => p.status === 'scheduled' && new Date(p.at).toDateString() === new Date(now(s)).toDateString()).length
-      next = pushLog(next, { agent: 'atlas', text: `Paused for the Storm Jacket spike. No new drafts or ideas until Claire’s statement is out${today ? `; ${today} post${today > 1 ? 's' : ''} already scheduled today ${today > 1 ? 'stay' : 'stays'} in the calendar` : ''}`, status: 'done', reason: 'Echo’s negative spike', link: '/publishing/calendar' })
+      next = pushLog(next, { agent: 'atlas', text: 'Paused for the Storm Jacket spike. No new drafts or ideas until Claire’s statement is out; Atlas pauses the next 24 hours of posts', status: 'done', reason: 'Echo’s negative spike', link: '/publishing/calendar' })
     }
     const t = now(next)
     return pushHandoff(next, {
