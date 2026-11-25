@@ -6,7 +6,9 @@ export type ConvType = 'comment' | 'dm' | 'mention' | 'review' | 'ad'
 export type Sentiment = 'positive' | 'neutral' | 'negative'
 
 export type Attachment = { id: string; kind: 'exchange' | 'refund' | 'code'; label: string; limit: string; removed?: boolean }
-export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean }
+export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean
+  /** The Desk card this reply settled, and the journal entry Nova wrote when she sent it alone: their Undo deletes it. */
+  card?: string; log?: string }
 
 export type Conversation = {
   id: string
@@ -32,7 +34,11 @@ export type Conversation = {
   labels?: string[]
   assignee?: Assignee
   reviewed?: boolean
+  /** Who reviewed it: Nova reviews what she settled alone, a person what they looked at. */
+  reviewedBy?: 'nova' | Assignee
   notes?: Note[]
+  /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
+  settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }
 
 export type Assignee = 'sam' | 'claire'
@@ -107,7 +113,7 @@ const AUTO: Q[] = [
 ]
 
 const fromQ = ([id, author, network, type, sentiment, at, q, a, extra]: Q): Conversation => ({
-  id, author, network, type, sentiment, at, status: 'auto',
+  id, author, network, type, sentiment, at, status: 'auto', reviewed: true, reviewedBy: 'nova',
   messages: [m('them', q, at - 2 * MIN), auto(a, at, id === 'c-tom' || id === 'c-ines' ? 10 : 0)],
   ...extra,
 })
@@ -127,7 +133,10 @@ const TEAM: Record<string, Partial<Conversation>> = {
 }
 
 /** Conversations saved before labels existed get the seeded team data once (labels is always set afterwards). */
-export const withTeam = (c: Conversation): Conversation => (c.labels !== undefined ? c : { ...c, labels: [], ...TEAM[c.id] })
+export const withTeam = (c: Conversation): Conversation => reviewedDefault(c.labels !== undefined ? c : { ...c, labels: [], ...TEAM[c.id] })
+/** Saved before review existed: what Nova settled alone (her replies, the spam she hid) counts as reviewed by her. */
+const reviewedDefault = (c: Conversation): Conversation =>
+  c.reviewed !== undefined || !(c.status === 'auto' || (c.status === 'hidden' && c.note?.includes('by Nova'))) ? c : { ...c, reviewed: true, reviewedBy: 'nova' }
 
 export const CONVERSATIONS: Conversation[] = ([
   // Drafts waiting for you
@@ -198,11 +207,11 @@ export const CONVERSATIONS: Conversation[] = ([
     note: 'Creator above 50k followers · always yours to decide.',
   },
   // Hidden by Nova
-  { id: 'c-spam1', author: '@free_followers_now', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 46), messages: [m('them', 'Boost your account 10k followers DM us!!', T(7, 46))], note: 'Spam · hidden by Nova' },
-  { id: 'c-spam2', author: '@crypto.gains.daily', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 44), messages: [m('them', 'I made €4,200 this week with this simple trick 👉 link in bio', T(7, 44))], note: 'Spam · hidden by Nova' },
-  { id: 'c-spam3', author: '@promo_dealz_88', network: 'tiktok', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(6, 2), messages: [m('them', 'cheap bags 90% off at dealz88 shop', T(6, 2))], note: 'Spam · hidden by Nova' },
-  { id: 'c-spam4', author: '@bestfollows.co', network: 'facebook', type: 'ad', status: 'hidden', sentiment: 'neutral', at: T(4, 30), messages: [m('them', 'Your page could get 5x more reach. Message us for a free audit.', T(4, 30))], note: 'Spam on an ad · hidden by Nova' },
-  { id: 'c-spam5', author: '@win.iphone.17', network: 'x', type: 'mention', status: 'hidden', sentiment: 'neutral', at: T(2, 12), messages: [m('them', '@fernway congrats you won an iPhone 17 claim here', T(2, 12))], note: 'Bot · hidden by Nova' },
+  { id: 'c-spam1', author: '@free_followers_now', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 46), messages: [m('them', 'Boost your account 10k followers DM us!!', T(7, 46))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
+  { id: 'c-spam2', author: '@crypto.gains.daily', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 44), messages: [m('them', 'I made €4,200 this week with this simple trick 👉 link in bio', T(7, 44))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
+  { id: 'c-spam3', author: '@promo_dealz_88', network: 'tiktok', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(6, 2), messages: [m('them', 'cheap bags 90% off at dealz88 shop', T(6, 2))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
+  { id: 'c-spam4', author: '@bestfollows.co', network: 'facebook', type: 'ad', status: 'hidden', sentiment: 'neutral', at: T(4, 30), messages: [m('them', 'Your page could get 5x more reach. Message us for a free audit.', T(4, 30))], note: 'Spam on an ad · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
+  { id: 'c-spam5', author: '@win.iphone.17', network: 'x', type: 'mention', status: 'hidden', sentiment: 'neutral', at: T(2, 12), messages: [m('them', '@fernway congrats you won an iPhone 17 claim here', T(2, 12))], note: 'Bot · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
   // Handled alone
   ...AUTO.map(fromQ),
 ] as Conversation[]).map(withTeam)
