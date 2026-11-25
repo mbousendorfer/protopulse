@@ -5,10 +5,10 @@ import { DAY, T } from '../../app/time'
 import { actionOf, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import type { Pillar } from '../../data/publishing'
 import {
-  BRAND_KIT, PHASES, PHASE_MS, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
+  BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, captionSlips, clipPosts, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, captionSlips, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -18,6 +18,8 @@ export type VideoState = {
   editor: { clip?: string; past: Clip[]; future: Clip[] }
   /** When each clip was first opened, for the tester log's time to decision. */
   opened: Record<string, number>
+  /** Signed releases of the people on screen who aren't staff (see PEOPLE). */
+  releases: Record<string, boolean>
 }
 
 /** On Act, Juno sends clips scoring at least this to Atlas herself. */
@@ -26,7 +28,7 @@ const ARRIVED = T(17, 52, -1)
 export function initialVideo(): VideoState {
   const sources: Source[] = [{ ...SOURCE_DEFS.repair, status: 'ready' }, { ...SOURCE_DEFS.live, status: 'ready' }]
   const clips = sources.flatMap(src => SEEDS[src.media].map(seed => clipFromSeed(seed, src, src.id === 'live' ? T(19, 10, -4) : ARRIVED)))
-  return { sources, clips, kit: structuredClone(BRAND_KIT), editor: { past: [], future: [] }, opened: {} }
+  return { sources, clips, kit: structuredClone(BRAND_KIT), editor: { past: [], future: [] }, opened: {}, releases: { ...RELEASES } }
 }
 
 export type VideoAction =
@@ -45,6 +47,7 @@ export type VideoAction =
   | { type: 'video/kit'; patch: Partial<BrandKit> }
   | { type: 'video/dub'; id: string; lang: Lang }
   | { type: 'video/approveDub'; id: string; lang: Lang }
+  | { type: 'video/release'; person: string; signed: boolean }
 
 /* ---------- Small setters ---------- */
 
@@ -73,23 +76,66 @@ const decided = (s: State, c: Clip, outcome: string, extra: Record<string, unkno
   return track(s, 'video/decision', { clip: c.id, outcome, ms: opened ? now(s) - opened : undefined, ...extra })
 }
 
+/* ---------- Guardrails ---------- */
+
+/** Clips per video per week (agents.ts, g4). */
+export const WEEKLY_QUOTA = 5
+const WEEK = 7 * DAY
+/** Clips of this video that went to Atlas in the last 7 days. */
+export const sentThisWeek = (s: State, source: string) =>
+  s.video.clips.filter(c => c.source === source && (c.status === 'sent' || c.status === 'published') && (c.sentAt ?? 0) > now(s) - WEEK).length
+
+/** People without a signed release who are on screen in this clip. */
+export function unreleased(s: State, c: Clip): string[] {
+  const src = sourceOf(s, c.source)
+  const spots = (src && ON_SCREEN[src.transcript]) ?? []
+  return [...new Set(spots.filter(p => !s.video.releases[p.who] && p.s < c.end && p.e > c.start).map(p => p.who))]
+}
+
+/** Why this clip can't go out on its own merits (release, length), or undefined. The weekly quota is per batch: see `sendClips`. */
+export function holdReason(s: State, c: Clip): string | undefined {
+  const who = unreleased(s, c)
+  if (who.length) return `${who.map(p => PEOPLE[p].name).join(' and ')} ${who.length > 1 ? 'are' : 'is'} on screen without a signed release`
+  const src = sourceOf(s, c.source)
+  if (!src) return undefined
+  const dur = clipLengthOf(c, TRANSCRIPT[src.transcript])
+  if (!c.post.networks.some(n => fitsLength(n, dur))) return `${Math.round(dur)} s is outside every chosen network’s length (${lengthSpec('tiktok').min}–${lengthSpec('tiktok').max} s, ${lengthSpec('linkedin').max} s on LinkedIn)`
+  return undefined
+}
+
+/** Which of these clips can go out now, best first, and why the others wait. */
+export function vetClips(s: State, picked: Clip[]): { go: Clip[]; held: { clip: Clip; why: string }[] } {
+  const held: { clip: Clip; why: string }[] = []
+  const ok: Clip[] = []
+  for (const c of picked) { const why = holdReason(s, c); if (why) held.push({ clip: c, why }); else ok.push(c) }
+  const go: Clip[] = []
+  for (const src of new Set(ok.map(c => c.source))) {
+    const left = Math.max(0, WEEKLY_QUOTA - sentThisWeek(s, src))
+    const mine = ok.filter(c => c.source === src).sort((a, b) => rescore(b, trOf(s, b)).total - rescore(a, trOf(s, a)).total)
+    go.push(...mine.slice(0, left))
+    for (const c of mine.slice(left)) held.push({ clip: c, why: `${WEEKLY_QUOTA} clips from this video already go out this week. Juno kept the best ones` })
+  }
+  return { go, held }
+}
+
 /* ---------- Sending to Atlas ---------- */
 
 /** Ready clips become scheduled posts in Atlas's calendar. One journal line, one Undo. From the Desk, the Desk's own line undoes it. */
 export function sendClips(s: State, ids: string[], by: 'you' | 'desk' | 'juno', fromCard?: string): State {
-  const picked = s.video.clips.filter(c => ids.includes(c.id) && (c.status === 'ready' || c.status === 'snoozed'))
-  if (!picked.length) return s
+  const { go: picked, held } = vetClips(s, s.video.clips.filter(c => ids.includes(c.id) && (c.status === 'ready' || c.status === 'snoozed')))
+  const heldText = held.length ? ` ${held.length === 1 ? `“${held[0].clip.title}” stays here: ${held[0].why}.` : `${held.length} stay here: ${[...new Set(held.map(h => h.why))].join('; ')}.`}` : ''
+  if (!picked.length) return held.length && by === 'you' ? notify(s, 'video', `Nothing sent.${heldText}`) : s
   const t = now(s)
   let posts = s.publishing.posts
   const made: Record<string, string[]> = {}
-  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p')); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
+  for (const c of picked) { const ps = clipPosts(c, posts, t, () => uid('p'), clipLengthOf(c, trOf(s, c))); posts = [...posts, ...ps]; made[c.id] = ps.map(p => p.id) }
   let next: State = { ...s, publishing: { ...s.publishing, posts } }
-  next = patchClips(next, picked.map(c => c.id), c => ({ ...c, status: 'sent', posts: made[c.id], back: undefined, sentFrom: by === 'desk' ? fromCard : undefined }))
+  next = patchClips(next, picked.map(c => c.id), c => ({ ...c, status: 'sent', posts: made[c.id], back: undefined, sentAt: t, sentFrom: by === 'desk' ? fromCard : undefined }))
   for (const c of picked) next = decided(next, c, c.edited ? 'modified' : 'as-is', { by })
   for (const id of new Set(picked.map(c => c.source))) next = syncCard(next, id)
   if (by === 'desk') return next
   const n = Object.values(made).flat().length
-  const text = picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled`
+  const text = (picked.length === 1 ? `Sent “${picked[0].title}” to Atlas: ${n} post${n > 1 ? 's' : ''} scheduled.` : `Sent ${picked.length} clips to Atlas: ${n} posts scheduled.`) + heldText
   next = pushLog(next, { agent: 'juno', text, status: by === 'juno' ? 'done' : 'approved', reason: by === 'juno' ? 'Sending her best clips is set to Act' : 'You sent them from Video', undoMinutes: 10, clips: picked.map(c => c.id), link: '/publishing/calendar' })
   return by === 'you' ? notify(next, 'video', text, { undo: next.log[0].id, link: { to: '/publishing/calendar', label: 'Open the calendar' } }) : next
 }
@@ -98,7 +144,7 @@ export function sendClips(s: State, ids: string[], by: 'you' | 'desk' | 'juno', 
 export function unsendClips(s: State, ids: string[]): State {
   const media = new Set(ids.map(id => `clip:${id}`))
   let next: State = { ...s, publishing: { ...s.publishing, posts: s.publishing.posts.filter(p => !(p.media && media.has(p.media) && p.status === 'scheduled')) } }
-  next = patchClips(next, ids, c => ({ ...c, status: 'ready', posts: undefined, sentFrom: undefined }))
+  next = patchClips(next, ids, c => ({ ...c, status: 'ready', posts: undefined, sentFrom: undefined, sentAt: undefined }))
   return next
 }
 
@@ -408,6 +454,12 @@ export function reduceVideo(s: State, a: VideoAction): State {
       if (!c || a.lang === 'en') return s
       const review = levelOf(s, 'juno-dub') === 'draft' ? [...new Set([...(c.audio.review ?? []), a.lang])] : c.audio.review
       return reduceVideo(s, { type: 'video/edit', id: a.id, patch: { audio: { ...c.audio, lang: a.lang, dubs: [...new Set([...c.audio.dubs, a.lang])], review } } })
+    }
+
+    case 'video/release': {
+      if (!PEOPLE[a.person]) return s
+      const next = setVideo(s, { releases: { ...s.video.releases, [a.person]: a.signed } })
+      return notify(track(next, 'video/release', { person: a.person, signed: a.signed }), 'video', a.signed ? `${PEOPLE[a.person].name}’s release is on file: clips showing ${PEOPLE[a.person].name} can go out` : `${PEOPLE[a.person].name}’s release is off file: clips showing ${PEOPLE[a.person].name} stay here`)
     }
 
     case 'video/approveDub': {

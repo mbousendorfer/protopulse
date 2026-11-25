@@ -76,6 +76,17 @@ export const MUSIC = [
   { id: 'upbeat', label: 'Summit push · upbeat', file: 'music/upbeat.m4a' },
 ]
 
+/** People on screen who aren't Fernway staff: they need a signed release before a clip shows them. */
+export const PEOPLE: Record<string, { name: string; role: string }> = {
+  hugo: { name: 'Hugo', role: 'a customer who walked the GR20 with Léa' },
+}
+/** Where they appear, by transcript, in source seconds. */
+export const ON_SCREEN: Record<string, { who: string; s: number; e: number }[]> = {
+  gr20: [{ who: 'hugo', s: 0, e: 6 }, { who: 'hugo', s: 100, e: 105 }],
+}
+/** Releases on file at the start: none for Hugo yet. */
+export const RELEASES: Record<string, boolean> = { hugo: false }
+
 /** Speech-to-text slips on product and Playbook words, by transcript and word index: what it heard instead. */
 export const MISHEARD: Record<string, Record<number, string>> = {
   repair: { 38: '28', 262: 'bridge' },
@@ -122,7 +133,7 @@ export const SEEDS: Record<string, ClipSeed[]> = {
       base: { hook: 70, flow: 82, value: 80, trend: 58 }, why: 'Satisfying process footage: watch-time is high on workshop videos.',
       evidence: [ev('71%', 'average watch-time on workshop videos', 'Insights', '/insights/explore')],
       networks: ['tiktok'], pillar: 'Repair & care', text: 'How we replace a strap, one stitch at a time.' },
-    { key: 'brands', from: 'most brands', to: 'came back', title: 'Most brands would sell you a new bag', hooks: ['Most brands would sell you a new bag.'], status: 'published', stats: { views: 48200, er: 7.1 },
+    { key: 'brands', from: 'most brands', to: 'ripped right', title: 'Most brands would sell you a new bag', hooks: ['Most brands would sell you a new bag.'], status: 'published', stats: { views: 48200, er: 7.1 },
       base: { hook: 84, flow: 70, value: 80, trend: 74 }, why: 'Contrarian line, then proof.',
       evidence: [ev('48.2k', 'views on TikTok since yesterday evening', 'Insights', '/insights/explore')],
       networks: ['tiktok'], pillar: 'Repair & care', text: 'Most brands would sell you a new bag. We fix yours.' },
@@ -132,7 +143,7 @@ export const SEEDS: Record<string, ClipSeed[]> = {
       base: { hook: 86, flow: 78, value: 86, trend: 66 }, why: 'A question, a surprising answer from the workshop lead, and a number. Works as a standalone tip.',
       evidence: [ev('4 to 1', 'broken zips for every torn strap in the workshop', 'Playbook facts', '/playbook'), ev('34%', 'of repair requests are zips', 'Inbox', '/inbox')],
       networks: ['tiktok', 'instagram', 'youtube', 'linkedin'], pillar: 'Gear that lasts', text: 'What breaks first on a backpack? Our workshop lead has the answer: zips, not fabric.' },
-    { key: 'second', from: 'from Tom', to: 'whoever owns it', title: 'The repair follows the bag', hooks: ['Bought it second-hand? We still repair it.', 'The repair follows the bag, not the receipt.'],
+    { key: 'second', from: 'from Tom', to: 'one more reason', title: 'The repair follows the bag', hooks: ['Bought it second-hand? We still repair it.', 'The repair follows the bag, not the receipt.'],
       base: { hook: 83, flow: 84, value: 88, trend: 71 }, why: 'Answers the question you get most in DMs, in Léo’s own words. Strong for comments and shares.',
       evidence: [ev('27', 'DMs asking about second-hand repairs this month', 'Inbox', '/inbox'), ev('+31%', 'second-hand outdoor gear searches', 'Listening', '/listening/trends')],
       networks: ['instagram', 'tiktok', 'facebook'], pillar: 'Community', text: 'Bought your Fernway second-hand? The repair follows the bag, not the receipt.' },
@@ -177,7 +188,7 @@ export function clipFromSeed(seed: ClipSeed, source: Source, arrivedAt: number, 
     base: seed.base, why: seed.why, evidence: seed.evidence, aspect: '9:16', frame: 'track', captions: { ...kit.captions }, broll: [], brand: { ...kit.brand },
     audio: { studio: false, lang: 'en', dubs: [] }, post: { networks: seed.networks, text: Object.fromEntries(seed.networks.map(n => [n, seed.text])) },
     pillar: seed.pillar, status: seed.status ?? 'ready', stats: seed.stats, arrivedAt,
-    posts: seed.status === 'sent' || seed.status === 'published' ? [`p-clip-${source.id}-${seed.key}`] : undefined,
+    posts: out ? [`p-clip-${source.id}-${seed.key}`] : undefined, sentAt: out ? arrivedAt : undefined,
   }
 }
 
