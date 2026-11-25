@@ -17,7 +17,7 @@
 | F5 | Rapport hebdo en Act | `onResolveInsights` marque w47 partagé (`slice.ts:124`), testé (`reducer.test.ts:223`) | Vérifier en navigateur ; garder le test | 2 | S | done (reports PR) |
 | F6 | Rapports réguliers | `REPORTS` constant (`data/insights.ts:21`) ; « Skip to tomorrow » écrit seulement une ligne de journal (`reducer.ts:425`) | Rapports en état ; au changement de jour, `tick` d'Iris écrit le brief du jour (et le rapport hebdo le lundi) depuis les sélecteurs | 3 | M | done (reports PR) |
 | F8 | — | Types `'pillars' \| 'trail'` déclarés jamais rendus (`data/insights.ts:7`) | Rendre `pillars` (utilisé par les rapports générés), retirer `trail` | 1 | S | done (reports PR) |
-| F9 | Période libre, tri, lignes cliquables (§6.4) | Périodes 7/30/90 seules, tri date/reach/ER/clics, lignes inertes (`Page.tsx:157-185`) | Période personnalisée (dates), tri réseau/pilier/auteur, ligne → panneau d'aperçu du post avec ses chiffres | 2 | M | todo |
+| F9 | Période libre, tri, lignes cliquables (§6.4) | Périodes 7/30/90 seules, tri date/reach/ER/clics, lignes inertes (`Page.tsx:157-185`) | Période personnalisée (dates), tri réseau/pilier/auteur, ligne → panneau d'aperçu du post avec ses chiffres | 2 | M | done (explore PR) |
 | F10 | Partage de rapport | « Seen » simulé par le temps (`Page.tsx:126`) | Le partage passe par le moteur de Claire (`CLAIRE['Weekly report']`, `core/heartbeat`) : sa réponse arrive dans le rapport | 2 | S | done (reports PR) |
 
 ## Features (pitch avant construction)
