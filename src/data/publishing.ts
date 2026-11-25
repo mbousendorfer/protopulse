@@ -2,7 +2,7 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 
 export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
-export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed'
+export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused'
 
 export type Post = {
   id: string

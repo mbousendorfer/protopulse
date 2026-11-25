@@ -7,7 +7,12 @@ import { Heatmap, HBars, LineChart } from '../../ui/charts'
 import { ALERT_CONDITIONS, ALERT_SUBJECTS, ALERT_UNITS, BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
 import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
 import { AlertsTable } from './alerts'
-import { onResolveInsights, onUndoInsights } from './slice'
+import { onResolveInsights, onUndoInsights, reduceInsights, writeReport } from './slice'
+import { DEFAULT_SECTIONS, parseEdits, parseRecipe, writeStudio } from './studio'
+import { now, uid } from '../../app/core'
+import type { State } from '../../app/state'
+import type { Network } from '../../app/types'
+import type { Recipe } from '../../data/insights'
 import { anomaliesDue, tickAnomalies } from './engine'
 import { reportsDue, tickReports } from './reports'
 import { SCRIPT } from './script'
@@ -18,10 +23,71 @@ declare module '../../data/command' {
     besttime: { network: SocialNet }
     compare: object
     performance: object
+    report: { days: number; networks: Network[]; audience: 'claire' | 'sam'; raw: string }
+    reportEdit: { raw: string }
   }
 }
 
 const SHORT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+/** A saved template named in the sentence wins; else the window, networks and reader Sam asked for. */
+function recipeFor(s: State, i: { days: number; networks: Network[]; audience: 'claire' | 'sam'; raw: string }): { recipe: Recipe; template?: string } {
+  const t = s.insights.templates.find(x => i.raw.includes(x.name.toLowerCase()))
+  return t ? { recipe: t.recipe, template: t.name } : { recipe: { days: i.days, networks: i.networks, audience: i.audience, sections: DEFAULT_SECTIONS } }
+}
+
+const report = defineIntent({
+  kind: 'report', owner: 'iris', order: 36,
+  parse: t => { const r = parseRecipe(t); return r ? { kind: 'report', ...r, raw: t } : undefined },
+  bar: (i, { s, d, go }) => {
+    const { recipe, template } = recipeFor(s, i)
+    const id = uid('r')
+    const r = writeStudio(s, recipe, id, now(s))
+    return {
+      text: `Written: “${r.title}”, ${r.period}${template ? `, from your template “${template}”` : ''}. ${r.sections.length} sections, every number sourced. Open it to move, shorten or drop sections, or tell me what to change.`,
+      sources: ['Insights › Explore', 'Insights › Anomalies'],
+      after: () => d({ type: 'insights/studio', id, recipe, via: 'You asked in the command bar' }),
+      ctas: [{ label: 'Open the report', primary: true, run: () => go(`/insights/reports/${id}`) }],
+    }
+  },
+  chat: (i, { s }) => {
+    const { recipe, template } = recipeFor(s, i)
+    const id = uid('r')
+    const r = writeStudio(s, recipe, id, now(s))
+    return {
+      replies: [{ from: 'iris', text: `Here it is${template ? `, from your template “${template}”` : ''}: ${r.sections.length} sections on ${r.period}. Tell me what to change, like “shorter” or “add the best times”.`, card: { type: 'list', items: [{ title: r.title, agent: 'iris', meta: r.period, link: `/insights/reports/${id}` }] } }],
+      effects: [st => writeReport(st, recipe, id, 'You asked in a chat')],
+    }
+  },
+})
+
+/** “Make the report shorter and add the top 3 posts”: edits the last report Sam asked for. */
+const reportEdit = defineIntent({
+  kind: 'reportEdit', owner: 'iris', order: 35,
+  parse: t => (/\breport\b/.test(t) && /\b(shorter|longer|add|remove|drop|move|cut|include)\b/.test(t) && !/\b(rule|post|reply|clip)\b/.test(t.replace(/top \d+ posts|top posts|best posts/, '')) ? { kind: 'reportEdit', raw: t } : undefined),
+  bar: (i, { s, d, go }) => {
+    const r = s.insights.reports.find(x => x.recipe)
+    if (!r) return { text: 'There’s no report you asked for yet. Ask me for one first, for example “a monthly report for Claire on Instagram”.' }
+    const { ops, said } = parseEdits(i.raw, r)
+    if (!ops.length) return { text: `I didn’t see what to change in “${r.title}”. I can make it shorter or longer, add, drop or move a section (results, top 3 posts, what didn’t work, best times, pillars, community).` }
+    return {
+      text: `Done in “${r.title}”: ${said.join(', ')}.`,
+      after: () => d({ type: 'insights/studioEdit', id: r.id, ops, said: said.join(', ') }),
+      ctas: [{ label: 'Open the report', primary: true, run: () => go(`/insights/reports/${r.id}`) }],
+    }
+  },
+  chat: (i, { s }) => {
+    const r = s.insights.reports.find(x => x.recipe)
+    if (!r) return { replies: [{ from: 'iris', text: 'There’s no report you asked for yet. Ask me for one first, for example “a monthly report for Claire on Instagram”.' }], effects: [] }
+    const { ops, said } = parseEdits(i.raw, r)
+    if (!ops.length) return { replies: [{ from: 'iris', text: 'I can make it shorter or longer, add, drop or move a section (results, top 3 posts, what didn’t work, best times, pillars, community).' }], effects: [] }
+    return {
+      replies: [{ from: 'iris', text: `Done: ${said.join(', ')}.`, card: { type: 'list', items: [{ title: r.title, agent: 'iris', meta: said.join(', '), link: `/insights/reports/${r.id}` }] } }],
+      effects: [st => reduceInsights(st, { type: 'insights/studioEdit', id: r.id, ops, said: said.join(', ') })],
+    }
+  },
+})
+
 
 const besttime = defineIntent({
   kind: 'besttime', owner: 'iris', order: 110,
@@ -129,7 +195,7 @@ const iris: AgentModule = {
   onUndo: onUndoInsights,
   due: (s, t) => anomaliesDue(s) || reportsDue(s, t),
   tick: (s, t) => tickAnomalies(reportsDue(s, t) ? tickReports(s, t) : s),
-  intents: [besttime, tiktok, compare, performance],
+  intents: [reportEdit, report, besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
 }

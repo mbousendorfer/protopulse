@@ -10,6 +10,7 @@ import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
 import { briefSage, targetsOf } from '../strategy/slice'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
+import { PAUSE_TOPIC, fitCap, overCap, resumeAll } from './guards'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -67,6 +68,7 @@ export type PublishingAction =
   | { type: 'publishing/ideaToSage'; id: string }
   | { type: 'publishing/upload'; media: Media; post?: string }
   | { type: 'publishing/retry'; id: string; mode: Retry }
+  | { type: 'publishing/resume'; ids: string[] }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -105,7 +107,8 @@ export function parseSlot(slot: string, base: number): number {
 
 function approvePlan(s: State): State {
   const included = s.publishing.plan.items.filter(i => i.included)
-  const posts: Post[] = included.map(i => ({ id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined }))
+  const posts: Post[] = []
+  for (const i of included) posts.push(fitCap([...s.publishing.posts, ...posts], { id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined }))
   let next = setPlan(setPosts(s, [...s.publishing.posts, ...posts]), { status: 'approved' })
   next = notify(next, 'publishing', `${posts.length} posts scheduled for the week of 1 December. Atlas takes it from here.`)
   return next
@@ -145,6 +148,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     case 'publishing/move': {
       const p = s.publishing.posts.find(x => x.id === a.id)
       if (!p || p.at === a.at) return s
+      if (overCap(s.publishing.posts, { ...p, at: a.at })) return notify(s, 'publishing', `${NET[p.network] ?? p.network} already has 3 posts on ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })}. Atlas keeps it at 3 a day: pick another day.`)
       const comment = slotComment(p.network, a.at)
       // Atlas's comment on the new slot stays on the post, not in a toast that vanishes.
       const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: comment }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing/calendar', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
@@ -230,6 +234,8 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const label = RETRY_OPTIONS.find(o => o.mode === a.mode)!.label
       return pushLog(next, { agent: 'atlas', text: `${label}: “${p.text.slice(0, 48)}…”`, status: 'approved', reason: 'Your call from the calendar', link: `/publishing/calendar?post=${p.id}` })
     }
+    case 'publishing/resume':
+      return resumeAll(s, 'You resumed it', a.ids)
     case 'publishing/restore': {
       const u = s.publishing.undo
       if (!u) return s
@@ -281,8 +287,17 @@ function bulk(s: State, a: Extract<PublishingAction, { type: 'publishing/bulk' }
       break
     case 'reschedule': {
       const move = (p: Post) => (a.at !== undefined ? a.at : p.at + (a.shiftDays ?? 0) * DAY)
-      next = setPosts(s, s.publishing.posts.map(p => (a.ids.includes(p.id) && p.status !== 'published' ? note({ ...p, at: move(p) }, t, `Moved from ${day(p.at)} to ${day(move(p))}`) : p)))
-      label = a.at !== undefined ? `${many('moved')} to ${day(a.at)}` : `${many('moved')} ${Math.abs(a.shiftDays ?? 0)} day${Math.abs(a.shiftDays ?? 0) > 1 ? 's' : ''} ${(a.shiftDays ?? 0) > 0 ? 'later' : 'earlier'}`
+      // One at a time, so the 3-a-day cap counts the posts already moved.
+      let posts = s.publishing.posts
+      let kept = 0
+      for (const p of picked) {
+        if (p.status === 'published') continue
+        if (overCap(posts, { ...p, at: move(p) })) { kept++; continue }
+        posts = posts.map(x => (x.id === p.id ? note({ ...x, at: move(p) }, t, `Moved from ${day(p.at)} to ${day(move(p))}`) : x))
+      }
+      next = setPosts(s, posts)
+      label = (a.at !== undefined ? `${many('moved')} to ${day(a.at)}` : `${many('moved')} ${Math.abs(a.shiftDays ?? 0)} day${Math.abs(a.shiftDays ?? 0) > 1 ? 's' : ''} ${(a.shiftDays ?? 0) > 0 ? 'later' : 'earlier'}`)
+        + (kept ? `; ${kept} kept in place (3 posts a day per network)` : '')
       break
     }
     case 'duplicate': {
@@ -378,6 +393,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     if (d.kind === 'reject') return reduceIdeas(s, { type: 'publishing/ideaDismiss', id: idea.id, reason: d.reason ?? 'Not timely' }, true)
     return s
   }
+  if (h.topic === PAUSE_TOPIC) return d.kind === 'option' && d.index === 1 ? resumeAll(s, 'You resumed them from the Desk') : s
   if (h.topic === 'Better slot' && h.ref && h.preview?.type === 'post') {
     const p = s.publishing.posts.find(x => x.id === h.ref)
     if (!p || !ok) return s
@@ -410,7 +426,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
     // The card's pillar and campaign follow the post. Trail stories stays the default for cards that don't say.
-    const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id }
+    const post = fitCap(s.publishing.posts, { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id })
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s
