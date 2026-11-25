@@ -81,18 +81,23 @@ Planning : 24/7. Activité type : « Watching 8 inboxes ».
 Garde-fous : max 200 réponses publiques par jour · aucune réponse LinkedIn entre 23:00 et 07:00 · remboursements cumulés ≤ €300 par jour · escalade obligatoire : blessure, avocat, journaliste, créateur > 50k abonnés.
 
 ### Atlas — Publishing
-Planning : lun.–ven., prépare la semaine suivante le jeudi. Activité type : « Reworking Friday's reel caption ».
+Planning : lun.–ven., prépare la semaine suivante le jeudi. Activité type : « Reworking Friday's reel caption ». Registre : `src/features/publishing/agent.tsx` et `script.ts`.
 
-| Action | Risque | Cran | Verrou |
-|---|---|---|---|
-| Build next week's plan | risky | Draft | |
-| Move a post to a better slot (same day) | safe | Act | |
-| Recycle a top post (rewritten) | risky | Draft | |
-| Publish trend posts | risky | Suggest | |
-| Fill a slot left empty | risky | Draft | |
-| Publish anything mentioning a competitor | destructive | Suggest | 🔒 |
+| Action | Risque | Cran | Verrou | Ce que fait Act |
+|---|---|---|---|---|
+| Build next week's plan | risky | Draft | | approuve le plan, programme la semaine ; Undo retire les posts |
+| Move a post to a better slot (same day) | safe | Act | | déplace dans la journée vers le meilleur créneau (heure d'Iris) ; aussi les posts d'un jour calme |
+| Recycle a top post (rewritten) | risky | Draft | | via Ideas |
+| Publish trend posts | risky | Suggest | | via Ideas |
+| Fill a slot left empty | risky | Draft | | remplit les créneaux et les files, pose un visuel de Media, échange un visuel dont la licence finit |
+| Retry a failed post with a safe fix | safe | Draft | | republie avec le lien simple après un refus de X |
+| Publish anything mentioning a competitor | destructive | Suggest | 🔒 | — |
 
-Garde-fous : max 3 posts par réseau et par jour · respecte les piliers et la cadence de Strategy · jamais de photo de banque d'images · se met en pause pendant une alerte critique.
+Suggest : la carte attend dans Worth a look ; Draft : carte dans Needs you (les cartes post se groupent en lot) ; Act : Atlas fait, une ligne au journal, Undo 30 min qui restaure l'état (instantané par carte `byCard`).
+
+Garde-fous **appliqués** : max 3 posts par profil et par jour partout (composer, plan, Desk, glisser-déposer, report groupé) · piliers et cadence lus chez Sage (`targetsOf`) · jamais de photo de banque d'images ni de licence échue · pendant une alerte critique d'Echo ou d'Iris, les posts des 24 h suivantes passent **Paused** (carte, reprise seule à la fin) · un jour noté « quiet day » reste vide · avec l'escalade « Price changes and promo codes », tout post d'Atlas qui cite un prix va à Claire.
+
+Relais : lit le meilleur créneau chez Iris (`bestTime`), les piliers et temps forts chez Sage (`targetsOf`, `themesOf`), les concurrents chez Echo (`listening.watch`), les versions de clip chez Juno (`versionOf`). Expose `receivePosts`/`withdrawPosts` (Sage), `holdToday`/`releaseToday` (Echo), publie à l'heure (`publishDue`) pour Juno et Iris, et `ACCOUNTS` (profils).
 
 **Idées (Publishing › Ideas).** Atlas cherche en continu quoi publier à partir de ce qui a marché (Iris), de ce qui monte (Echo), de la marque (Playbook, Strategy) et des trous du calendrier. Une idée est toujours en Suggest ; la rédaction suit le cran de l'action concernée (`atlas-trend`, `atlas-recycle`, `atlas-fill`) ; sur Act, Atlas programme lui-même et le journal garde un Undo réel. Jamais plus de 8 idées ouvertes : une idée plus forte ou urgente remplace la plus faible non rédigée, les idées à fenêtre expirent seules (« Expired: the #GR20 conversation dropped 40% »). Rien qui nomme un concurrent, jamais le Ridge 40L, jamais de stock (brief visuel à la place).
 
@@ -240,7 +245,7 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 
 ### 6.3 Publishing — Atlas
 
-Onglets : **Calendar** · **Plan review** · **Drafts** · **Media**. Bouton « New post » partout.
+Onglets : **Ideas** · **Calendar** · **Plan review** · **Drafts** · **Queues** · **Media**. Bouton « New post » partout.
 
 - **Ideas** (premier onglet et page d'arrivée de Publishing : `/publishing` ; le calendrier est à `/publishing/calendar`) : une phrase d'Atlas qui résume (« 7 ideas this week, 2 ready to schedule. Community is behind target, so 3 of them are Community. »), puis **Ready to review** (brouillons complets), **New ideas** (l'angle et la preuve), **Series** (3 à 5 posts : teaser, preuve, voix client, appel).
   - trois niveaux pour rester lisible : **la liste** (une ligne par idée : titre, la preuve la plus forte avec son chiffre, réseaux, créneau, délai s'il y en a un, confiance), **le volet** (pourquoi et toutes les sources, l'aperçu, un seul champ pour réorienter), **à la demande** (modifier la légende, changer le créneau, variantes, historique) ;
@@ -254,21 +259,15 @@ Onglets : **Calendar** · **Plan review** · **Drafts** · **Media**. Bouton « 
   - le badge de l'onglet compte les idées prêtes à relire, pas le total.
 - Les cases vides recommandées du calendrier montrent l'idée « gap » d'Atlas (« Idea from Atlas · Review the idea »), ou « Ask Atlas for an idea » qui en crée une.
 
-- **Calendar** : vue semaine (par défaut) et mois. Chaque post : réseau, heure, vignette, statut (`Scheduled` · `Published` · `Draft` · `Needs you` · `Failed`), auteur (Atlas ou Sam), campagne et pilier. Glisser-déposer pour déplacer (Atlas commente : « 18:30 gets 2.1× the reach on Fridays »). Les créneaux recommandés vides sont marqués en pointillé avec « Ask Atlas to fill ».
-- **Plan review** (validation d'un plan, pas d'items) :
-  - en-tête : « Next week · 14 posts · 5 networks », répartition par pilier et par réseau vs la cadence cible de Sage, posts recyclés, posts de tendance, posts de campagne ;
-  - vue semaine avec une case à cocher par post, et pour chaque post la raison de sa présence (« Recycled: 210k views on TikTok in October ») ;
-  - résumé de ce qui change si on décoche (« Instagram drops below cadence: 4 of 5 posts ») ;
-  - **Approve plan (12 of 14)** · **Request changes** (champ libre → Atlas renvoie une v2 avec un diff : ajoutés, retirés, modifiés) · **Reject**.
-- **Éditeur de post** (panneau large) :
-  - sélection des comptes, texte commun puis variantes par réseau ;
-  - **aperçu fidèle** par réseau (Instagram feed/reel, TikTok, LinkedIn, Facebook, X, YouTube Shorts) ;
-  - **Atlas copilote** dans l'éditeur : 3 variantes proposées (hook, ton), « Shorten », « Adapt for LinkedIn », meilleur créneau suggéré avec la raison ;
-  - **vérification Playbook en direct** : mots interdits soulignés, règles respectées cochées, longueur par réseau ;
-  - médias depuis la médiathèque ;
-  - actions : Schedule · Add to plan · Save draft · Send to Claire.
-- **Drafts** : brouillons d'Atlas et de Sam, filtrables.
-- **Media** : médiathèque de marque (~30 photos produits et lifestyle, tags, droits, utilisations passées). Atlas signale les visuels manquants.
+- **Calendar** : semaine (par défaut), mois, liste. Statuts : `Scheduled` · `Published` · `Draft` · `Needs you` · `To approve` · `Paused` · `Failed`. Popover **Filters** (statut, label, campagne, pilier, auteur, profil). Notes de jour (« Trail Week starts » ; « quiet day » = Atlas n'y programme rien et déplace ce qui y est) et temps forts de Sage. Glisser-déposer vers un autre jour (Atlas commente le créneau, refuse un 4e post du profil). Badge needs-you = posts en échec.
+- **Aperçu d'un post** (panneau) : aperçu fidèle (profil, format, premier commentaire, lien), statut, profil, labels éditables, format, lien suivi et UTM, **Results** d'un post publié face à la médiane du réseau avec « Recycle it », **Comments** (Atlas, Claire, vous), historique. Bloc **Failed** avec **Retry now** / Publish without the link / Skip ; bloc **Paused** avec Resume.
+- **Plan review** : en-tête et cadence vs Sage, une case par post avec sa raison, **Approve plan (12 of 14)** · **Request changes** (v2 avec diff) · **Reject** puis « Ask Atlas for a new plan » (un vrai v2 : posts d'Atlas remplacés, Trail Week gardé).
+- **Éditeur de post** : profils (dont **Instagram · Fernway Repair**) et **groupes** ; Atlas suggère Fernway Repair pour le pilier Repair & care ; texte commun puis variantes ; **Link** (UTM et lien court par Atlas, lien simple sur X, premier commentaire sur Instagram) ; **Per network** : format et premier commentaire pré-remplis ; visuel depuis Media (uploads compris) ; meilleur créneau d'Iris ; plafond de 3 signalé avec un jour proposé ; copilote (3 variantes construites depuis le texte, le pilier et le Playbook ; Shorten ; Adapt for LinkedIn) ; Playbook check live ; Schedule · Add to plan · Save draft · Ask Claire.
+- **Drafts** : brouillons d'Atlas et de Sam, filtrables ; cartes en attente sur le Desk.
+- **Queues** : « Tuesday tips » (LinkedIn, mar. 08:30) et « Sunday repair » (Fernway Repair, dim. 11:00), créneaux modifiables, deux semaines à venir ; Atlas les remplit (Draft : à approuver ; Act : programmés).
+- **Media** : médiathèque (30 photos + uploads), recherche, tags éditables (Atlas tague les uploads), **Upload** ; bandeaux « Atlas needs a visual » (par post en attente) et « licence ends » avec un remplaçant.
+- ⌘K / Chat : « Write a TikTok post about… », « Send Friday's post to Claire for approval », « Add a first comment with the size guide link », « Fill next week's Tips slots ».
+- ⇧D : recycle, empty slot, better slot, queues, X rejected a post, ideas, rule proposal.
 
 ### 6.4 Insights — Iris
 
@@ -452,7 +451,7 @@ Caché, pour l'animateur du test.
 Un module de données par domaine, typé. Toutes les dates sont relatives au « maintenant » de l'app. Volumes minimum :
 - 18 remontées initiales sur le Desk couvrant les 5 agents et tous les types, dont 3 « Good news » ;
 - 40 conversations Inbox + 15 contacts avec commandes ;
-- 30 posts dans le calendrier de la semaine courante et passée, 14 dans le plan proposé, 30 médias ;
+- Publishing : 34 posts (semaines passée et courante, dont 3 sur Fernway Repair, 3 brouillons), 14 items de plan + 14 d'un plan v2, 30 médias (1 licence de créateur qui finit en décembre), 2 files (8 textes), 1 note de calendrier, 7 profils dont Fernway Repair ;
 - 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
 - 4 concurrents (chiffres par réseau), 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions (+ 27 du pic), 5 tags à règle, 5 fiches créateurs, 8 tendances, 12 recherches, 3 règles d'alerte ;
 - 3 campagnes (1 live, 1 terminée, 1 à valider), 4 piliers, 6 cibles de cadence, 3 propositions, 4 temps forts ;
