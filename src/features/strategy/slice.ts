@@ -22,6 +22,7 @@ export type StrategyAction =
   | { type: 'strategy/proposal'; id: string; accept: boolean }
   | { type: 'strategy/reopen'; id: string; adj?: string }
   | { type: 'strategy/cadence'; network: Network; target: number }
+  | { type: 'strategy/propose'; proposal: Proposal }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
 const campaign = (s: State, id: string) => s.strategy.campaigns.find(c => c.id === id)
@@ -224,6 +225,10 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
     }
+    case 'strategy/propose': {
+      if (s.strategy.proposals.some(p => p.text === a.proposal.text && p.status === 'proposed')) return s
+      return pushLog(patch(s, { proposals: [a.proposal, ...s.strategy.proposals] }), { agent: 'sage', text: `Proposed: ${a.proposal.text}`, status: 'done', reason: 'You asked for it', link: '/strategy/pillars' })
+    }
     case 'strategy/cadence': {
       const c = s.strategy.cadence.find(x => x.network === a.network)
       const target = Math.max(0, a.target)
@@ -308,4 +313,55 @@ export function onResolveStrategy(s: State, h: Handoff, d: Decision): State {
     if (d.kind === 'reject') return { ...patch(s, { campaigns: s.strategy.campaigns.filter(c => c.id !== h.ref) }) }
   }
   return s
+}
+
+/* ---------- What Sage says in Chat and ⌘K (numbers read from the state, the same as the screens) ---------- */
+
+const fmtN = (c: Campaign, v: number) => (c.goal.label.includes('€') ? `€${v.toLocaleString('en-GB')}` : v.toLocaleString('en-GB'))
+const unit = (c: Campaign) => c.goal.label.replace(' (€)', '')
+
+/** The campaign a question names, or the live one. */
+export function findCampaign(s: State, name?: string): Campaign | undefined {
+  const q = name?.toLowerCase().replace(/\b(the|campaign)\b/g, '').trim()
+  const named = q ? s.strategy.campaigns.find(c => c.name.toLowerCase().includes(q) || q.includes(c.name.toLowerCase().split(' ').slice(0, 2).join(' '))) : undefined
+  return named ?? s.strategy.campaigns.find(c => c.status === 'live') ?? s.strategy.campaigns[0]
+}
+
+/** How a campaign is doing, in one sentence, with the numbers the campaign page shows. */
+export function campaignStatus(s: State, c: Campaign, t = now(s)): { text: string; pct: number; trajectory?: number } {
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  if (c.status === 'review') return { pct, text: `${c.name} is a plan waiting for your approval: goal ${fmtN(c, c.goal.target)} ${unit(c)}, ${c.posts.length} posts from ${dateLabel(c.start)}.${launchBlock(s, c) ? ` ${launchBlock(s, c)}` : ''}` }
+  if (c.status === 'done') return { pct, text: `${c.name} is over: ${fmtN(c, c.goal.current)} ${unit(c)} against a goal of ${fmtN(c, c.goal.target)}, ${pct}% of goal.` }
+  const days = Math.ceil((c.end - c.start) / DAY)
+  const day = Math.min(days, Math.max(1, Math.ceil((t - c.start) / DAY)))
+  const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
+  const trajectory = expected > 0 ? Math.round((c.goal.current / expected) * 100) : undefined
+  const left = c.posts.filter(p => !p.published && slotOf(c, p) > t).sort((a, b) => a.day - b.day)
+  const open = c.adjustments.filter(a => a.status === 'proposed').length
+  return {
+    pct, trajectory,
+    text: `${c.name}: ${fmtN(c, c.goal.current)} of ${fmtN(c, c.goal.target)} ${unit(c)} on day ${day} of ${days}, ${pct}% of goal${trajectory ? ` and ${trajectory}% of the trajectory (${fmtN(c, expected)} expected by now)` : ''}. ${left.length} post${left.length === 1 ? '' : 's'} to go${left[0] ? `, next “${left[0].title}” on ${dateLabel(slotOf(c, left[0]))}` : ''}.${open ? ` I have ${open} adjustment${open > 1 ? 's' : ''} waiting for you.` : ''}`,
+  }
+}
+
+/** Every pillar against its target, the furthest behind first. */
+export function pillarStatus(s: State, t = now(s)) {
+  const mix = mixOf(s, t)
+  return s.strategy.pillars.map(p => ({ name: p.name, target: p.target, actual: mix[p.name] ?? 0, gap: (mix[p.name] ?? 0) - p.target })).sort((a, b) => a.gap - b.gap)
+}
+
+/** “More Community”: +5 points to that pillar, taken from the one furthest above its target (or the reverse for “less”). */
+export function pillarProposal(s: State, pillar: string, more: boolean): Proposal | undefined {
+  const rows = pillarStatus(s)
+  const me = rows.find(r => r.name.toLowerCase() === pillar.toLowerCase())
+  if (!me) return
+  const other = more ? [...rows].reverse().find(r => r.name !== me.name && r.target >= 5) : rows.find(r => r.name !== me.name)
+  if (!other || (!more && me.target < 5)) return
+  const d = more ? 5 : -5
+  const change: TargetsChange = { pillars: { [me.name]: me.target + d, [other.name]: other.target - d } }
+  return {
+    id: uid('pr'), status: 'proposed', change,
+    text: `${more ? 'Raise' : 'Lower'} ${me.name} from ${me.target}% to ${me.target + d}% of posts, ${other.name} from ${other.target}% to ${other.target - d}%`,
+    why: `${me.name} is at ${me.actual}% of posts against ${me.target}%; ${other.name} is at ${other.actual}% against ${other.target}%. Last 30 days.`,
+  }
 }
