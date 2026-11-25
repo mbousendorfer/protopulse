@@ -2,6 +2,8 @@ import type { ScriptEvent } from '../../data/script'
 import { agentOf } from '../../app/core'
 import { actOn, ideaScript } from './slice'
 import { PLAIN_LINK, failXPost, retriesAlone } from './failures'
+import { betterSlots, movesAlone, slotCard } from './slots'
+import { hhmm } from '../../app/time'
 
 /** Atlas's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
@@ -20,6 +22,17 @@ export const SCRIPT: ScriptEvent[] = [
       why: 'Filling empty slots is set to Draft.', confidence: 81, link: '/publishing/calendar',
       preview: { type: 'post', network: 'instagram', slot: 'Sat 29, 10:00', media: 'lake', text: ['Sunrise at Lac Blanc by @julien_trail. Ridge 28L, 4:30 alarm, zero regrets.'] } },
     auto: { text: 'Filled Saturday 10:00 on Instagram with @julien_trail’s Lac Blanc photo', reason: 'Empty slots, set to Act', link: '/publishing/calendar' },
+  },
+  {
+    // A post sits far from its network's best hour: Atlas moves it within the day (Act), or asks (Draft), or points it out (Suggest).
+    id: 'ev-slot', order: 130, label: 'Atlas · a better slot, same day', agent: 'atlas', tag: 'slot',
+    run: (s, manual) => {
+      if (!manual && agentOf(s, 'atlas').status !== 'on') return s
+      const m = betterSlots(s)[0]
+      if (!m) return s
+      const next = slotCard(s, m)
+      return movesAlone(next) ? actOn(next, next.handoffs[0], `Moved “${m.post.text.length > 44 ? `${m.post.text.slice(0, 40)}…` : m.post.text}” from ${hhmm(m.post.at)} to ${hhmm(m.at)}`, m.reason) : next
+    },
   },
   { id: 'ev-idea-gap', order: 160, label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', ...ideaScript({ origin: 'gap', agent: 'atlas' }) },
   {
