@@ -77,3 +77,9 @@
 .in-post-stats div { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
 .in-post-stats dt { color: var(--ink-2); font-size: var(--t-sm); }
 .in-post-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
+/* Report Studio: ask Iris for a report, then change it section by section. */
+.in-studio-ask .input { min-width: 0; }
+.in-templates { flex-wrap: wrap; }
+.in-sec-head { align-items: baseline; }
+.in-sec-tools { flex-shrink: 0; }
+.in-studio-edit { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); }
