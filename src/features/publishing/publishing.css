@@ -245,7 +245,10 @@
 .idea-panel { position: sticky; top: calc(var(--topbar) + var(--s4)); max-height: calc(100vh - 232px); min-height: 520px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: sheet-in var(--slow) var(--ease); }
 .idea-panel-head { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); }
 .idea-panel-head h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }
-.idea-panel-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.idea-panel-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; }
+/* The app's scrollbar thumb is bordered with the page colour; inside a card that border shows as a grey track. */
+.idea-panel ::-webkit-scrollbar { width: 8px; height: 8px; }
+.idea-panel ::-webkit-scrollbar-thumb { border-color: transparent; background-clip: padding-box; border-width: 2px; }
 .idea-panel-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s4); padding: var(--s3) var(--s4); border-top: 1px solid var(--line); }
 .idea-state { padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); }
 .idea-state p { display: flex; align-items: center; gap: 6px; }
@@ -255,11 +258,11 @@
 
 .idea-why { background: var(--a-atlas-wash); }
 .idea-say { color: var(--ink); line-height: 1.55; }
-.idea-evidence { list-style: none; margin: var(--s4) 0 0; padding: 0; display: grid; gap: var(--s2); }
-.idea-evidence li { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: var(--s3); align-items: baseline; background: var(--panel); border-radius: var(--r-ctl); padding: var(--s2) var(--s3); }
-.idea-evidence .v { font-size: var(--t-xl); font-weight: 600; letter-spacing: -0.01em; color: var(--ink); overflow-wrap: anywhere; }
-.idea-evidence .v svg { color: var(--ink-2); vertical-align: middle; }
-.idea-evidence .l { font-size: var(--t-sm); color: var(--ink); }
+/* Evidence: a plain list. The figure leads in bold, the measure is named, the source is a link at the end. */
+.idea-evidence { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
+.idea-evidence li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: var(--s2); align-items: baseline; }
+.idea-evidence li > svg { color: var(--ink-2); align-self: start; margin-top: 3px; }
+.idea-evidence b { font-weight: 600; }
 .idea-evidence a { font-size: var(--t-sm); color: var(--action-ink); text-decoration: none; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
 .idea-evidence a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .idea-why-foot { margin-top: var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
@@ -292,14 +295,15 @@
 
 .idea-dock { background: var(--sunk); border-top: 1px solid var(--line); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
 .idea-dock .idea-zone-title { margin: 0; font-size: var(--t-sm); }
+.idea-dock .idea-zone-title .mark { width: 20px; height: 20px; }
 .idea-bubble { display: flex; gap: var(--s2); align-items: flex-start; }
 .idea-bubble p { background: var(--panel); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; padding: 6px var(--s3); font-size: var(--t-sm); }
 .idea-dock .idea-rule { margin: 0; }
-.idea-ask { display: flex; gap: var(--s2); }
-.idea-ask .input { flex: 1; min-width: 0; background: var(--panel); }
-.idea-dock .filters { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
-.idea-dock .filter { flex: none; background: var(--panel); }
-.idea-history { border-top: 1px solid var(--line); padding-top: var(--s3); }
+.idea-ask { display: flex; gap: var(--s2); align-items: center; }
+.idea-ask .input { flex: 1; min-width: 0; height: 34px; background: var(--panel); }
+.idea-dock .filters { flex-wrap: wrap; gap: 6px; }
+.idea-dock .filter { background: var(--panel); }
+.idea-history { border-top: 1px solid var(--line); padding: var(--s3) var(--s5); }
 .idea-history summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); }
 .idea-history summary::-webkit-details-marker { display: none; }
 .idea-history[open] summary svg { transform: rotate(90deg); }

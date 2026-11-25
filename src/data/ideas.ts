@@ -99,12 +99,12 @@ export const srcTrend = (id: string): IdeaSource => {
   return { type: 'listening', agent: 'echo', label: `“${name}” trend`, proof: `${t.growth}, ${t.fit.toLowerCase()} fit`, link: '/listening/trends', value, measure: `growth of “${name}” ${rest}${rest ? ', ' : ''}${t.fit.toLowerCase()} fit with Fernway` }
 }
 export const srcLesson = (id: string, label: string): IdeaSource =>
-  ({ type: 'listening', agent: 'echo', label, proof: lesson(id).evidence, link: '/listening/competitors/benchmark', value: lesson(id).evidence.match(/[+−-]?\d[\d.,]*\s?[%×]?/)?.[0].trim(), measure: lesson(id).evidence })
+  ({ type: 'listening', agent: 'echo', label, proof: lesson(id).evidence, link: '/listening/competitors/benchmark', measure: lesson(id).evidence })
 export const srcMention = (author: string): IdeaSource => {
   const m = mention(author)
   return { type: 'listening', agent: 'echo', label: m.author, proof: `“${m.text}”, ${k(m.reach)} reach`, link: '/listening/mentions', value: k(m.reach), measure: `people reached by ${m.author}: “${m.text}”` }
 }
-export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/playbook', measure: `${label}: ${fact(id).text}` })
+export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/playbook', measure: fact(id).text })
 export const srcPillar = (p: string, target: number): IdeaSource => {
   const x = pillar(p)
   return { type: 'analytics', agent: 'iris', label: `${p} pillar`, proof: `${x.share}% of posts vs ${target}% target, ${x.saves}% saves`, link: '/strategy/pillars', value: `${x.share}%`, measure: `of your posts are ${p}, target ${target}%. It has your best saves rate (${x.saves}%)` }
