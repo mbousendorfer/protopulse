@@ -2,37 +2,42 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
-  ListChecks, MessageSquareText, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  ListChecks, MessageSquareText, Users, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
+import { CONTACTS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { dur, NEEDS_YOU, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
+import { dur, NEEDS_YOU, needsYou, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { SavedSheet } from './SavedSheet'
 import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
 
-type View = 'needs' | 'review' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
+type View = 'needs' | 'review' | 'leo' | 'yanis' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
+/** Views that are one person's work. */
+const PEOPLE: Partial<Record<View, Assignee>> = { mine: 'sam', claire: 'claire', leo: 'leo', yanis: 'yanis' }
 const DAY_START = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
 const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; count?: (c: Conversation) => boolean; saved?: boolean }[] = [
   // Needs you = what waits on Sam, then what waits on Claire at the bottom (not counted: it doesn't need him). A conversation Sam took over stays here until he replies.
-  { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) || c.status === 'claire', count: c => NEEDS_YOU.includes(c.status) },
+  { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) || c.status === 'claire', count: needsYou },
   // Agorapulse's core status: not looked at by anyone yet. Nova reviews what she settles alone.
   { id: 'review', label: 'To review', match: c => !c.reviewed },
   { id: 'drafts', label: 'Nova’s drafts', match: c => c.status === 'draft' },
   { id: 'handled', label: 'Handled by Nova', match: c => c.status === 'auto' },
   { id: 'hidden', label: 'Hidden', match: c => c.status === 'hidden' },
   { id: 'all', label: 'All', match: () => true },
-  { id: 'mine', label: 'Assigned to me', match: c => c.assignee === 'sam', saved: true },
-  { id: 'claire', label: 'Assigned to Claire', match: c => c.assignee === 'claire', saved: true },
+  // The team: one view per person (listed under Team, not Saved views).
+  { id: 'mine', label: 'You', match: c => c.assignee === 'sam' },
+  { id: 'claire', label: 'Claire Dubois', match: c => c.assignee === 'claire' },
+  { id: 'leo', label: 'Léo Marchand', match: c => c.assignee === 'leo' },
+  { id: 'yanis', label: 'Yanis Haddad', match: c => c.assignee === 'yanis' },
   { id: 'negative', label: 'Negative today', match: (c, now) => c.sentiment === 'negative' && c.at >= DAY_START(now), saved: true },
 ]
 
@@ -61,7 +66,14 @@ export function SentimentTag({ s }: { s: Sentiment }) {
 }
 function AssigneeFace({ who, size = 24 }: { who?: Assignee; size?: 16 | 24 }) {
   if (!who) return null
-  return who === 'claire' ? <span title="Assigned to Claire"><Mark agent="claire" /></span> : <span title="Assigned to you"><SocialAvatar name="Sam Rivera" size={size === 16 ? 16 : 24} /></span>
+  return who === 'claire' ? <span title="Assigned to Claire"><Mark agent="claire" /></span> : <span title={who === 'sam' ? 'Assigned to you' : `Assigned to ${ROSTER[who].name}`}><SocialAvatar name={ROSTER[who].name} size={size === 16 ? 16 : 24} /></span>
+}
+/** The status, said with the right person: "Léo replied", "Yanis is replying". */
+function statusOf(c: Conversation) {
+  const by = [...c.messages].reverse().find(m => m.from === 'you')?.by
+  if (c.status === 'you' && by && by !== 'sam') return { ...STATUS.you, label: `${ROSTER[by].short} replied` }
+  if (c.status === 'takeover' && c.assignee && c.assignee !== 'sam') return { ...STATUS.takeover, label: `${ROSTER[c.assignee].short} is replying` }
+  return STATUS[c.status]
 }
 const lastText = (c: Conversation) => c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
 
@@ -151,7 +163,15 @@ export default function InboxPage() {
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
-          {VIEWS.filter(x => !x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => (x.count ?? (y => x.match(y, now)))(c)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
+          {VIEWS.filter(x => !x.saved && !PEOPLE[x.id]).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => (x.count ?? (y => x.match(y, now)))(c)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
+          <span className="ib-side-title">Team</span>
+          {VIEWS.filter(x => PEOPLE[x.id]).map(x => {
+            const who = PEOPLE[x.id]!
+            const mine = all.filter(c => c.assignee === who && waitingOn(c))
+            const over = mine.filter(c => waitOf(s, c, now)?.over).length
+            return <ViewBtn key={x.id} on={view === x.id && !label} n={mine.length} onClick={() => { setView(x.id); setLabel(null) }}
+              label={<><AssigneeFace who={who} size={16} /><span className="ellipsis">{x.label}</span>{over > 0 && <span className="ib-over">{over} over</span>}</>} />
+          })}
           <span className="ib-side-title">Saved views</span>
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">Labels</span>
@@ -222,7 +242,7 @@ export default function InboxPage() {
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
                   <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
+                  <div className="ib-cell-status"><Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
                   <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
@@ -240,19 +260,20 @@ export default function InboxPage() {
 }
 
 /** What Nova needs from you, in three kinds: send what she is sure of, check the passage she doubts, decide what she never answers. */
-type Need = 'ready' | 'check' | 'call' | 'yours' | 'claire'
+type Need = 'ready' | 'check' | 'call' | 'yours' | 'claire' | 'team'
 const flagsOf = (c: Conversation) => (c.draft ?? []).filter((x): x is Exclude<typeof x, string> => typeof x !== 'string')
 const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-const needOf = (c: Conversation): Need => c.status === 'claire' ? 'claire' : c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
+const needOf = (c: Conversation): Need => c.assignee && TEAMMATES.includes(c.assignee) && c.status !== 'claire' ? 'team' : c.status === 'claire' ? 'claire' : c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
 const NEEDS: { id: Need; title: string; hint: string }[] = [
   { id: 'ready', title: 'Ready to send', hint: 'Nova is sure of the facts and the tone.' },
   { id: 'check', title: 'One passage to check', hint: 'Nova marked what she is unsure about.' },
   { id: 'call', title: 'Your call', hint: 'Locked topics Nova never answers herself.' },
   { id: 'yours', title: 'You’re replying', hint: 'You took these over. Nova stays out.' },
   { id: 'claire', title: 'Waiting on Claire', hint: 'You asked her. Nothing to do until she answers.' },
+  { id: 'team', title: 'With your team', hint: 'Assigned to Léo or Yanis. They answer; you don’t have to.' },
 ]
 
-const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand, claire: UserRound }
+const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand, claire: UserRound, team: Users }
 const SHOWN = 3
 
 function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string, edit?: boolean) => void }) {
@@ -272,7 +293,7 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
             <header className="ib-need-head">
               <span className="ib-need-icon" aria-hidden><I size={14} /></span>
               <h3>{g.title}</h3>
-              {g.id === 'claire' ? <span className="num faint">{rows.length}</span> : <CountBadge n={rows.length} />}
+              {g.id === 'claire' || g.id === 'team' ? <span className="num faint">{rows.length}</span> : <CountBadge n={rows.length} />}
               <span className="faint">{g.hint}</span>
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
@@ -315,13 +336,14 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
         })()}
         {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
         {need === 'claire' && <ClaireLine c={c} />}
+        {need === 'team' && <p className="ib-need-line"><span className="ib-need-by">{ROSTER[c.assignee!].short}</span>{c.draft?.length ? 'Has Nova’s draft and will send it.' : `Is replying. ${ROSTER[c.assignee!].role.split(' · ')[0]}.`}</p>}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
         <WaitTag c={c} fallback />
         {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn></>}
         {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn></>}
         {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
-        {need === 'claire' && <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>}
+        {(need === 'claire' || need === 'team') && <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>}
         {need === 'call' && <>
           <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
             { label: 'I’ll reply myself', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
@@ -359,7 +381,8 @@ function ViewBtn({ on, label, n, onClick }: { on: boolean; label: ReactNode; n: 
 
 const assignItems = (go: (v?: Assignee) => void): MenuItem[] => [
   { label: 'Me', icon: <SocialAvatar name="Sam Rivera" size={16} />, onSelect: () => go('sam') },
-  { label: 'Claire', icon: <Mark agent="claire" />, onSelect: () => go('claire') },
+  { label: 'Claire', icon: <Mark agent="claire" />, hint: 'Approves', onSelect: () => go('claire') },
+  ...TEAMMATES.map(k => ({ label: ROSTER[k].short, icon: <SocialAvatar name={ROSTER[k].name} size={16} />, hint: ROSTER[k].role.split(' · ')[0], onSelect: () => go(k) })),
   'sep',
   { label: 'Nobody', onSelect: () => go(undefined) },
 ]
@@ -419,12 +442,12 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
           <h2 className="ellipsis">{c.author}</h2>
           <div className="row tight"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} /><span className="faint">on {NETWORK_LABEL[c.network]} · {ago(c.at, now)}</span></div>
         </div>
-        <Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>
+        <Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill>
         <Btn variant="ghost" icon size="sm" aria-label="Close the conversation" title="Close (Esc)" onClick={onClose}><X size={16} /></Btn>
       </header>
 
       <div className="ib-panel-tools">
-        <Menu align="start" trigger={<Btn size="sm" variant="ghost">{c.assignee ? <><AssigneeFace who={c.assignee} size={16} />{c.assignee === 'claire' ? 'Claire' : 'You'}</> : <><UserRound size={14} />Assign</>}<ChevronDown size={12} /></Btn>}
+        <Menu align="start" trigger={<Btn size="sm" variant="ghost">{c.assignee ? <><AssigneeFace who={c.assignee} size={16} />{ROSTER[c.assignee].short}</> : <><UserRound size={14} />Assign</>}<ChevronDown size={12} /></Btn>}
           items={assignItems(v => one({ op: 'assign', value: v }))} />
         <Menu align="start" trigger={<Btn size="sm" variant="ghost">{SENT[c.sentiment]}<ChevronDown size={12} /></Btn>}
           items={(Object.keys(SENT) as Sentiment[]).map(x => ({ label: SENT[x], onSelect: () => one({ op: 'sentiment', value: x }) }))} />
@@ -463,10 +486,10 @@ function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversatio
               </div>
             ) : (
               <div key={x.m.id} className={`ib-msg ${x.m.from} ${x.m.undone ? 'undone' : ''}`}>
-                {x.m.from === 'nova' ? <Mark agent="nova" /> : x.m.from === 'you' ? <SocialAvatar name="Sam Rivera" size={24} /> : <SocialAvatar name={c.author} network={c.network} size={24} />}
+                {x.m.from === 'nova' ? <Mark agent="nova" /> : x.m.from === 'you' ? <SocialAvatar name={ROSTER[x.m.by ?? 'sam'].name} size={24} /> : <SocialAvatar name={c.author} network={c.network} size={24} />}
                 <div className="bubble">
                   <div className="meta">
-                    <b>{x.m.from === 'them' ? c.author : x.m.from === 'you' ? 'You' : x.m.auto ? 'Nova · auto' : 'Nova · approved by you'}</b>
+                    <b>{x.m.from === 'them' ? c.author : x.m.from === 'you' ? (x.m.by && x.m.by !== 'sam' ? ROSTER[x.m.by].name : 'You') : x.m.auto ? 'Nova · auto' : 'Nova · approved by you'}</b>
                     <span className="mono faint">{hhmm(x.m.at)}</span>
                   </div>
                   <p>{x.m.text}</p>

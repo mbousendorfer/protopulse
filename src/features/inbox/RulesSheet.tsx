@@ -5,7 +5,7 @@ import type { Network } from '../../app/types'
 import { useStore } from '../../app/store'
 import { actionOf } from '../../app/core'
 import { AUTONOMY_LABEL, NETWORK_LABEL } from '../../data/agents'
-import { withTeam, type ConvType, type Sentiment } from '../../data/inbox'
+import { ROSTER, withTeam, type Assignee, type ConvType, type Sentiment } from '../../data/inbox'
 import { Btn, Menu, Net, Seg, Sheet, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
 import { dur, suggestedCount } from './slice'
@@ -84,7 +84,7 @@ function RuleForm({ rule, labels, onDone }: { rule?: InboxRule; labels: string[]
   const [type, setType] = useState<ConvType | undefined>(rule?.type)
   const [op, setOp] = useState<RuleOp['op']>(rule?.then.op ?? 'label')
   const [label, setLabel] = useState(rule?.then.op === 'label' ? rule.then.value : labels[0] ?? '')
-  const [who, setWho] = useState<'sam' | 'claire'>(rule?.then.op === 'assign' ? rule.then.value : 'claire')
+  const [who, setWho] = useState<Assignee>(rule?.then.op === 'assign' ? rule.then.value : 'claire')
   const [mood, setMood] = useState<Sentiment>(rule?.then.op === 'sentiment' ? rule.then.value : 'negative')
   const [now, setNow] = useState(true)
   const [fresh, setFresh] = useState(false)
@@ -118,7 +118,8 @@ function RuleForm({ rule, labels, onDone }: { rule?: InboxRule; labels: string[]
           ? <input className="input w-180" autoFocus value={label} onChange={e => setLabel(e.target.value)} placeholder="New label" aria-label="New label" />
           : <Menu align="start" trigger={<Btn size="sm" variant="ghost">{label || 'Pick a label'}<ChevronDown size={12} /></Btn>}
               items={[...labels.map(l => ({ label: l, onSelect: () => setLabel(l) })), 'sep', { label: 'New label…', icon: <Plus size={14} />, onSelect: () => { setFresh(true); setLabel('') } }]} />)}
-        {op === 'assign' && <Seg name="ib-rule-who" size="sm" label="Assign to" value={who} onChange={setWho} options={[{ value: 'claire', label: 'Claire' }, { value: 'sam', label: 'Me' }]} />}
+        {op === 'assign' && <Menu align="start" trigger={<Btn size="sm" variant="ghost">{ROSTER[who].name}<ChevronDown size={12} /></Btn>}
+          items={(Object.keys(ROSTER) as Assignee[]).map(k => ({ label: ROSTER[k].name, hint: ROSTER[k].role, onSelect: () => setWho(k) }))} />}
         {op === 'sentiment' && <Seg name="ib-rule-mood" size="sm" label="Sentiment" value={mood} onChange={setMood} options={[{ value: 'positive', label: 'Positive' }, { value: 'neutral', label: 'Neutral' }, { value: 'negative', label: 'Negative' }]} />}
       </div>
       {!rule && fits > 0 && <Switch checked={now} onChange={setNow} label={`Also apply it to the ${fits} conversation${fits > 1 ? 's' : ''} that match now`} />}

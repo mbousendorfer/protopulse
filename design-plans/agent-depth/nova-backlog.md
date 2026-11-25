@@ -27,7 +27,7 @@
 | Review / To review / Review all | `reviewed` existe (`data/inbox.ts:35`, bouton panneau `Page.tsx:378`), pas de vue To review, Nova ne marque rien revu | Vues To review / Reviewed ; Nova marque revu ce qu'elle a traité en Act ; « Review all » groupé | 3 | M | done (PR Review) |
 | Saved replies | absent | Bibliothèque ; Nova choisit et adapte la plus proche et la cite en source ; « Save as reply » depuis une réponse envoyée ; ⌘K « Reply to Léa with the exchange saved reply » | 3 | M | done (PR Saved replies) |
 | SLA / temps de réponse | absent | Délai qui court par conversation, seuils par type (DM 1 h, avis 24 h), tri « Waiting longest », Nova remonte avant dépassement ; chiffres exposés pour Iris | 3 | M | done (PR SLA) |
-| Équipe et assignation | `Assignee = 'sam' \| 'claire'` (`data/inbox.ts:39`) | Roster (Sam, Claire + 2 coéquipiers) ; Nova assigne par règle ; vue charge par personne | 2 | M | todo |
+| Équipe et assignation | `Assignee = 'sam' \| 'claire'` (`data/inbox.ts:39`) | Roster (Sam, Claire + 2 coéquipiers) ; Nova assigne par règle ; vue charge par personne | 2 | M | done (PR Team) |
 | CRM contacts | onglet Contact en lecture seule (`Page.tsx:494`) | Liste de contacts, fiche éditable (tags, notes datées), timeline ; Nova crée la fiche d'un nouveau contact | 2 | L | later — réponse au pitch |
 | Labels (gérer, renommer, supprimer) | création seule (`Page.tsx:317`) | Gestion dans la barre latérale ; Nova étiquette à l'arrivée ; labels lus par Iris | 2 | S | todo |
 | Modération : supprimer, bannir, spam, liker, répondre en privé | Hide seulement | Nova le fait en Act sur spam et bots ; chaque action dit avant si elle est réversible | 2 | M | todo |
