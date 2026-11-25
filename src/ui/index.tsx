@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from 'react'
 import * as DM from '@radix-ui/react-dropdown-menu'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Tooltip from '@radix-ui/react-tooltip'
@@ -111,10 +111,25 @@ export function Seg<T extends string>({ name, value, options, onChange, size, la
   )
 }
 
-export function AutonomySeg({ name, value, locked, onChange, size }: { name: string; value: Autonomy; locked?: boolean; onChange: (v: Autonomy) => void; size?: 'sm' }) {
+/** Suggest ─ Draft ─ Act. The track fills up to the chosen level in the agent's colour: more fill, more autonomy.
+ *  Native radios, so arrow keys and screen readers work. No onChange = read-only. */
+export function AutonomyScale({ name, value, agent, onChange, label = 'Autonomy' }: { name: string; value: Autonomy; agent: AgentId; onChange?: (v: Autonomy) => void; label?: string }) {
+  const at = AUTONOMY.indexOf(value)
+  const tone = { '--tone': `var(--a-${agent})` } as CSSProperties
+  if (!onChange) return (
+    <div className={`ascale ro lv-${value}`} style={tone} role="img" aria-label={`${label}: ${AUTONOMY_LABEL[value]}`}>
+      {AUTONOMY.map((l, i) => <span key={l} className={`${i <= at ? 'on' : ''} ${i === at ? 'cur' : ''}`} aria-hidden><i />{AUTONOMY_LABEL[l]}</span>)}
+    </div>
+  )
   return (
-    <Seg name={name} value={value} size={size} label="Autonomy" onChange={onChange}
-      options={AUTONOMY.map(a => ({ value: a, label: AUTONOMY_LABEL[a], disabled: locked && a !== 'suggest' }))} />
+    <div className={`ascale lv-${value}`} style={tone} role="radiogroup" aria-label={label}>
+      {AUTONOMY.map((l, i) => (
+        <label key={l} className={`${i <= at ? 'on' : ''} ${i === at ? 'cur' : ''}`}>
+          <input type="radio" name={name} value={l} checked={value === l} onChange={() => onChange(l)} />
+          <span><i aria-hidden />{AUTONOMY_LABEL[l]}</span>
+        </label>
+      ))}
+    </div>
   )
 }
 

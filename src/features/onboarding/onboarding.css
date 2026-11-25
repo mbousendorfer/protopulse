@@ -32,8 +32,9 @@
 .onb-agent h2 { font-size: var(--t-lg); font-weight: 600; }
 .onb-auto { display: flex; flex-direction: column; gap: var(--s3); }
 .onb-auto b { font-weight: 600; }
-.onb-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); font-size: var(--t-sm); }
-.onb-levels ul { margin-top: 4px; display: flex; flex-direction: column; gap: 2px; color: var(--ink-2); }
+.onb-auto .preset-says { margin-top: 0; }
+.onb-auto .aset-sum { margin-top: 0; }
+.onb-actions summary { cursor: pointer; font-size: var(--t-md); font-weight: 500; color: var(--action-ink); width: max-content; }
 .onb-recap { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3) var(--s6); margin: 0; }
 .onb-recap div { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
 .onb-recap dt { color: var(--ink-2); }
@@ -43,6 +44,6 @@
   .onb-body { grid-template-columns: minmax(0, 1fr); gap: var(--s5); padding: var(--s5) var(--s4) var(--s8); }
   .onb-steps { position: static; }
   .onb-steps ol { display: none; }
-  .onb-team, .onb-levels, .onb-recap { grid-template-columns: minmax(0, 1fr); }
+  .onb-team, .onb-recap { grid-template-columns: minmax(0, 1fr); }
   .onb-step h1 { font-size: var(--t-2xl); }
 }
