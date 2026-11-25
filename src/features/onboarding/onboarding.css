@@ -114,8 +114,8 @@
 .onb-prop-text:hover { color: var(--action-ink); }
 .onb-prop .input { height: 30px; }
 .onb-proof { font-size: var(--t-sm); color: var(--ink-2); margin-top: 2px; }
-.onb-sample { margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--a-nova-wash); }
-.onb-sample-by { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--a-nova-ink); margin-bottom: 4px; }
+.onb-sample { margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); }
+.onb-sample-by { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--ink); margin-bottom: 4px; }
 
 /* ---------- Team ---------- */
 .onb-team li { display: flex; gap: var(--s4); align-items: flex-start; padding: var(--s4); }
@@ -154,10 +154,9 @@
 .onb-replies li { display: flex; flex-direction: column; gap: 6px; }
 .onb-q { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .onb-q b { font-weight: 600; }
-.onb-a, .onb-post { padding: var(--s2) var(--s3); border-radius: var(--r-ctl); background: var(--a-nova-wash); margin-left: 24px; }
-.onb-post { background: var(--a-atlas-wash); margin-left: 0; }
-.onb-a-by { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-sm); font-weight: 600; color: var(--a-nova-ink); }
-.onb-post .onb-a-by { color: var(--a-atlas-ink); }
+.onb-a, .onb-post { padding: var(--s2) var(--s3); border-radius: var(--r-ctl); background: var(--sunk); box-shadow: inset 0 0 0 1px var(--line); margin-left: 24px; }
+.onb-post { margin-left: 0; }
+.onb-a-by { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-sm); font-weight: 600; color: var(--ink); }
 .onb-sources, .onb-where { font-size: var(--t-sm); color: var(--ink-2); }
 .onb-metric { display: flex; align-items: baseline; gap: var(--s2); }
 .onb-metric b { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; }
