@@ -84,3 +84,6 @@
   .delegate { grid-template-columns: minmax(0, 1fr); }
   .tl-phase span { display: none; }
 }
+.launch-block { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink-2); max-width: 72ch; }
+.launch-block svg { flex: none; margin-top: 3px; }
+.section-link { margin-left: auto; font-weight: 400; font-size: var(--t-sm); }
