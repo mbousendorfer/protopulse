@@ -10,7 +10,7 @@ import {
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { inSearch, searchLive, searchMentions, searchRead, moodCount, pct, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, pct, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -20,14 +20,14 @@ import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 
 
-type Tab = 'competitors' | 'mentions' | 'trends' | 'searches'
+type Tab = 'competitors' | 'mentions' | 'creators' | 'trends' | 'searches'
 
 export default function ListeningPage() {
   const loc = useLocation()
   const nav = useNavigate()
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
-  const tab: Tab = (['mentions', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
+  const tab: Tab = (['mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
   const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
   const openEvents = eventsOf(s).filter(e => watched.has(e.competitor) && eventState(s.listening.events[e.id], e) === null).length
   return (
@@ -36,6 +36,7 @@ export default function ListeningPage() {
       <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
         { value: 'competitors', label: 'Competitors', count: openEvents },
         { value: 'mentions', label: 'Mentions', count: visibleMentions(s).length },
+        { value: 'creators', label: 'Creators', count: creatorsOf(s).filter(c => c.fit && !s.listening.creators[c.handle]).length },
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
       ]} />
@@ -48,6 +49,7 @@ export default function ListeningPage() {
         <Route path="competitors/profile/:cid" element={<Profile />} />
         <Route path="competitors/:id" element={<EventView />} />
         <Route path="mentions" element={<Mentions />} />
+        <Route path="creators" element={<Creators />} />
         <Route path="trends" element={<Trends />} />
         <Route path="searches" element={<Searches />} />
         <Route path="searches/:sid" element={<SearchView />} />
@@ -576,6 +578,71 @@ function SearchView() {
         <div className="card pad stat"><dd><b className="num">{reach >= 1000 ? `${Math.round(reach / 1000)}k` : reach}</b></dd><dt className="label">Reach · latest {c.total}</dt></div>
       </dl>
       {ms.length ? <Mentions scope={m => inSearch(x, m)} /> : <Empty title={v.collecting ? 'Echo is still collecting' : 'Nothing caught yet'} body={v.collecting ? 'Mentions show up here as Echo reads the last 7 days.' : 'Echo files every new match here, at most 15 minutes after it’s posted.'} />}
+    </div>
+  )
+}
+
+/* ---------- Creators ---------- */
+const CREATOR_STATUS = { listed: 'Shortlisted', proposed: 'DM on your Desk', contacted: 'Contacted' } as const
+
+function Creators() {
+  const { s, d } = useStore()
+  const [params, setParams] = useSearchParams()
+  const list = creatorsOf(s)
+  const fits = list.filter(c => c.fit && !s.listening.creators[c.handle])
+  const open = list.find(c => c.handle === params.get('c'))
+  const pick = (c?: Creator) => setParams(c ? { c: c.handle } : {})
+  return (
+    <div className="stack">
+      <section className="card pad echo-read">
+        <Mark agent="echo" />
+        <div><div className="section-title mb-1">Echo’s read</div>
+          <p>{fits.length ? `${fits.length} creator${fits.length > 1 ? 's' : ''} worth a collab: ${fits.map(c => c.handle).join(' and ')}. Positive about Fernway, unpaid, ${COLLAB_MIN_REACH / 1000}k people or more.` : 'No new creator worth a collab. Echo tells you when one shows up.'}</p></div>
+      </section>
+      <section className="card">
+        <div className="card-head"><h2>{list.length} creators talk about Fernway</h2><span className="faint">Authors reaching {CREATOR_MIN_REACH.toLocaleString('en-GB')} people or more</span></div>
+        <ul className="rows">
+          {list.map(c => {
+            const st = s.listening.creators[c.handle]
+            return (
+              <li key={c.handle} className="ls-creator">
+                <button type="button" className="ls-creator-main" onClick={() => pick(c)}>
+                  <SocialAvatar name={c.handle} network={MENTION_NET[c.network]} size={32} />
+                  <span className="ls-creator-text">
+                    <span className="row tight"><b>{c.handle}</b><span className="faint">{c.name}</span></span>
+                    <span className="faint t-sm">{c.followers.toLocaleString('en-GB')} people · {c.mentions.length} mention{c.mentions.length > 1 ? 's' : ''} · <span className={`ls-mood ${c.mood}`}>{SENT_LABEL[c.mood]}</span>{c.also.length ? ` · also mentions ${c.also.map(a => a.competitor).join(', ')}` : ''}</span>
+                    <span className="t-sm">{c.fitWhy}</span>
+                  </span>
+                </button>
+                <div className="row nowrap">
+                  {st ? <Pill tone={st === 'contacted' ? 'ok' : 'signal'}>{CREATOR_STATUS[st]}</Pill> : !c.signed && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
+                  {c.fit && st !== 'proposed' && st !== 'contacted' && <Btn size="xs" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'propose' })}><Mark agent="nova" />Propose a collab</Btn>}
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
+      <Sheet open={!!open} onOpenChange={o => !o && pick()} title={open ? `${open.handle} · ${open.name}` : ''}
+        footer={open && <>
+          {s.listening.creators[open.handle] === 'listed' && <Btn variant="ghost" onClick={() => d({ type: 'listening/creator', handle: open.handle, op: 'unlist' })}>Remove from shortlist</Btn>}
+          <span className="spacer" />
+          {open.fit && !['proposed', 'contacted'].includes(s.listening.creators[open.handle] ?? '') && <Btn variant="primary" onClick={() => d({ type: 'listening/creator', handle: open.handle, op: 'propose' })}><MessageSquareReply size={14} />Propose a collab</Btn>}
+        </>}>
+        {open && (
+          <div className="stack">
+            <dl className="ls-facts">
+              <div><dt>Audience</dt><dd className="num">{open.followers.toLocaleString('en-GB')} people on {open.network}</dd></div>
+              <div><dt>Sentiment</dt><dd><span className={`ls-mood ${open.mood}`}>{SENT_LABEL[open.mood]}</span></dd></div>
+              <div><dt>Also mentions</dt><dd>{open.also.length ? open.also.map(a => `${a.competitor} (${a.n})`).join(', ') : 'No competitor'}</dd></div>
+              <div><dt>Echo’s call</dt><dd>{open.fitWhy}</dd></div>
+            </dl>
+            {open.history.length > 0 && <><div className="section-title">History</div><ul className="stack">{open.history.map(h => <li key={h} className="muted">{h}</li>)}</ul></>}
+            <div className="section-title">Their mentions of Fernway</div>
+            {open.mentions.map(m => <blockquote key={m.id} className="ls-quote">{m.text}</blockquote>)}
+          </div>
+        )}
+      </Sheet>
     </div>
   )
 }
