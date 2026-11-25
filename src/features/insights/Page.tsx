@@ -14,6 +14,7 @@ import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Sheet,
 import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
+import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
 import './insights.css'
@@ -175,6 +176,11 @@ const startOf = (t: number) => { const d = new Date(t); return new Date(d.getFul
 const fromIso = (v: string) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime() }
 
 function Explore() {
+  const { s } = useStore()
+  // Pillars: the top engagement rate is the one to read, against the share Sage targets for it.
+  const targets = targetsOf(s).pillars
+  const topPillar = PILLAR_PERF.reduce((a, b) => (b.er > a.er ? b : a))
+  const topTarget = targets.find(t => t.name === topPillar.pillar)?.target
   const now = useNow()
   const today = startOf(now)
   const [choice, setChoice] = useState<PeriodChoice>('7')
@@ -252,12 +258,22 @@ function Explore() {
           <p className="muted heat-note">Best window{net === 'all' ? '' : ` on ${NETWORK_LABEL[net]}`}: <b>{best.dayName} {best.window}</b>, {best.lift}× the median reach. {net === 'all' ? `Instagram brings most of your reach; Atlas posts there at ${ig.time}.` : `Atlas posts at ${best.time}, inside it.`}</p>
         </section>
         <section className="card pad">
-          <div className="section-title">By pillar <span className="faint">· engagement rate, 30 days</span></div>
-          <HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} highlight="Community" color="var(--a-iris)" />
+          <div className="section-title">By pillar <span className="faint">· 30 days</span></div>
           <table className="table pillar-table">
-            <thead><tr><th>Pillar</th><th className="r">Share of posts</th><th className="r">Saves rate</th></tr></thead>
-            <tbody>{PILLAR_PERF.map(p => <tr key={p.pillar}><td>{p.pillar}</td><td className="r">{p.share}%</td><td className="r">{p.saves}%</td></tr>)}</tbody>
+            <thead><tr><th>Pillar</th><th>Engagement rate</th><th className="r">Share · target</th><th className="r">Saves rate</th></tr></thead>
+            <tbody>{PILLAR_PERF.map(p => {
+              const t = targets.find(x => x.name === p.pillar)?.target
+              return (
+                <tr key={p.pillar} className={p === topPillar ? 'best' : undefined}>
+                  <td>{p.pillar}</td>
+                  <td><span className="pillar-er"><span className="track"><i style={{ width: `${(p.er / topPillar.er) * 100}%` }} /></span><b className="num">{p.er.toFixed(1)}%</b></span></td>
+                  <td className="r num">{p.share}%{t !== undefined && <span className="faint"> · {t}%</span>}</td>
+                  <td className="r num">{p.saves}%</td>
+                </tr>
+              )
+            })}</tbody>
           </table>
+          <p className="muted heat-note"><b>{topPillar.pillar}</b> engages best ({topPillar.er.toFixed(1)}%){topTarget !== undefined && topPillar.share < topTarget ? `, yet makes ${topPillar.share}% of posts for a ${topTarget}% target.` : '.'}</p>
         </section>
       </div>
 

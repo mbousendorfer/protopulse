@@ -3,7 +3,7 @@ import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
 import { DEMO_START, hhmm, MIN } from '../../app/time'
 import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
-import { activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
+import { competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -41,6 +41,8 @@ export type ListeningState = {
   hits: Record<string, string[]>
   /** Last time Echo checked her alert rules. */
   checkedAt?: number
+  /** Events Echo raised on competitors you added. */
+  customEvents: CompEvent[]
 }
 
 const ALERTS: Alert[] = [
@@ -51,7 +53,7 @@ const ALERTS: Alert[] = [
 
 export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
   // The press mention on “PFAS rainwear” came in overnight: Echo already raised it (Nova's PFAS card).
-  fired: { la3: DEMO_START }, hits: {} })
+  fired: { la3: DEMO_START }, hits: {}, customEvents: [] })
 
 export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
@@ -139,9 +141,9 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
     case 'listening/watchSave': {
       const exists = s.listening.watch.some(w => w.id === a.w.id)
       if (!exists && a.w.tracking && watchedCount(s) >= competitorCap(s)) return capped(s, `Echo already watches ${competitorCap(s)} competitors, your cap. Pause one first, or raise the cap in Echo’s guardrails.`)
-      const watch = exists ? s.listening.watch.map(w => (w.id === a.w.id ? a.w : w)) : [...s.listening.watch, a.w]
+      const watch = exists ? s.listening.watch.map(w => (w.id === a.w.id ? a.w : w)) : [...s.listening.watch, { ...a.w, since: now(s) }]
       const next = { ...s, listening: { ...s.listening, watch } }
-      return exists ? next : notify(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), 'listening', `Echo is watching ${a.w.name}. First events within the hour, benchmark after 7 days.`)
+      return exists ? next : notify(pushLog(next, { agent: 'echo', text: `Started watching ${a.w.name} on ${a.w.accounts.length} account${a.w.accounts.length > 1 ? 's' : ''}`, status: 'done', reason: 'You added a competitor' }), 'listening', `Echo is reading ${a.w.name}’s last 30 days. Benchmark in about 10 minutes, first events within the hour.`)
     }
     case 'listening/watchToggle': {
       const w = s.listening.watch.find(x => x.id === a.id)!
@@ -154,11 +156,11 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return pushLog({ ...s, listening: { ...s.listening, watch: s.listening.watch.filter(x => x.id !== a.id) } }, { agent: 'echo', text: `Stopped watching ${w.name} and removed it`, status: 'done', reason: 'You changed the competitor list' })
     }
     case 'listening/move': {
-      const ev = EVENTS.find(e => e.id === a.event)
+      const ev = eventsOf(s).find(e => e.id === a.event)
       const move = ev?.moves[a.index]
       if (!ev || !move) return s
       // The event is settled here: every Desk card about it goes too.
-      const next = { ...s, handoffs: s.handoffs.filter(h => !(h.topic === 'Competitor' && EVENT_OF(h)?.id === ev.id)) }
+      const next = { ...s, handoffs: s.handoffs.filter(h => !(h.topic === 'Competitor' && EVENT_OF(s, h)?.id === ev.id)) }
       return applyMove(next, ev, move)
     }
     case 'listening/lesson': {
@@ -288,7 +290,9 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
   }
 }
 
-const EVENT_OF = (h: Handoff): CompEvent | undefined => {
+const EVENT_OF = (s: State, h: Handoff): CompEvent | undefined => {
+  const own = h.ref ? s.listening.customEvents.find(e => e.id === h.ref) : undefined
+  if (own) return own
   if (h.id === 'h-peakline' || /Peakline cut/.test(h.title)) return EVENTS.find(e => e.id === 'e-peak-price')
   if (/Trailkind/.test(h.title)) return EVENTS.find(e => e.id === 'e-trail-viral')
   if (/Norrø/.test(h.title)) return EVENTS.find(e => e.id === 'e-norro-repair')
@@ -308,7 +312,7 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
   if (h.ref === SPIKE_REPLIES && d.kind === 'approve') return markSpikeReplied(s, true)
   if (h.ref?.startsWith('alert:') && d.kind === 'option' && d.index === 0) return mentionsBulk(s, { type: 'listening/mentions', ids: s.listening.hits[h.ref.slice('alert:'.length)] ?? [], op: 'nova' })
   if (h.topic === 'Competitor') {
-    const ev = EVENT_OF(h)
+    const ev = EVENT_OF(s, h)
     if (!ev) return s
     if (d.kind === 'reject') return setEvent(s, ev.id, { status: 'dismissed', move: 'Dismissed from the Desk', result: 'Dismissed. Echo keeps watching.' })
     if (d.kind !== 'option') return s
@@ -439,8 +443,27 @@ export function onUndoListening(s: State, entry: LogEntry): State {
 /** Every minute Echo checks her alert rules; two hours after “Monitor”, she reports what the thread did. */
 export const listeningDue = (s: State, t: number) => t >= (s.listening.checkedAt ?? 0) + MIN || (!!s.listening.watchSpike && s.listening.watchSpike.until <= t)
 export function tickListening(s: State, t: number): State {
-  const checked = t >= (s.listening.checkedAt ?? 0) + MIN ? checkAlerts(patch(s, { checkedAt: t })) : s
+  const checked = t >= (s.listening.checkedAt ?? 0) + MIN ? newcomers(checkAlerts(patch(s, { checkedAt: t })), t) : s
   return watchTick(checked, t)
+}
+
+/** A competitor you added gets its first event within the hour, raised as Echo's level on competitor events says. */
+function newcomers(s: State, t: number): State {
+  let next = s
+  for (const w of s.listening.watch) {
+    if (!w.custom || !w.tracking || t < w.since + FIRST_EVENT_MS || next.listening.customEvents.some(e => e.competitor === w.id)) continue
+    const ev = firstEvent(w, t)
+    next = patch(next, { customEvents: [ev, ...next.listening.customEvents] })
+    const level = actionOf(next, 'echo', 'echo-events')?.autonomy ?? 'act'
+    next = level === 'suggest'
+      ? pushLog(next, { agent: 'echo', text: `First move spotted at ${w.name}: ${ev.title}. In this week’s digest.`, status: 'done', reason: 'Competitor events, set to Suggest', link: `/listening/competitors/${ev.id}` })
+      : pushHandoff(next, {
+        agent: 'echo', kind: 'decision', urgency: 'week', topic: 'Competitor', action: 'echo-counter', ref: ev.id,
+        title: ev.title, context: ev.proof.text, why: `First event since you added ${competitorName(next, w.id)}. ${ev.impactWhy}`, confidence: 66, link: `/listening/competitors/${ev.id}`,
+        options: ev.moves.map((m, i) => ({ label: m.label, recommended: i === 0 })),
+      })
+  }
+  return next
 }
 function watchTick(s: State, t: number): State {
   const w = s.listening.watchSpike
