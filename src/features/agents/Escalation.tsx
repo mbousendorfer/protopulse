@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, Trash2 } from 'lucide-react'
 import type { AgentId } from '../../app/types'
 import { useStore } from '../../app/store'
 import { AGENTS, agentName } from '../../data/agents'
@@ -72,7 +72,7 @@ export default function Escalation() {
             {cond.n && <input className="input pb-n" inputMode="numeric" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" />}
             <span className="faint">goes to</span>
             <Seg name="new-esc" label="Who decides" size="sm" value={to} onChange={setTo} options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-            <Btn size="sm" variant="primary" disabled={exists} title={exists ? 'This rule already exists' : undefined} onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: cond.agents } })}><Plus size={14} />Add “{label}”</Btn>
+            <Btn size="sm" variant="primary" disabled={exists} title={exists ? 'This rule already exists' : undefined} onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: cond.agents } })}>Add</Btn>
             {exists && <span className="caption">Already in the list.</span>}
           </div>
         ) : <p className="faint">No ready-made condition for {agent === 'all' ? 'this agent' : agentName(agent)} yet.</p>}
