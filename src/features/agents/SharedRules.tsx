@@ -1,65 +1,79 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check, ChevronDown, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react'
-import type { AgentId, PlaybookRule } from '../../app/types'
+import { BookOpen, Check, Pencil, Plus, Search, Sparkles, Trash2, X } from 'lucide-react'
+import type { Agent, AgentId, PlaybookRule } from '../../app/types'
 import { useStore } from '../../app/store'
 import { ago } from '../../app/time'
 import { now } from '../../app/core'
 import { AGENTS, agentName } from '../../data/agents'
 import { checkMessage, voiceSample } from '../../data/playbook'
-import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Switch, Tabs } from '../../ui'
+import { Btn, Empty, Mark, Pill, Seg, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
-import { HBars } from '../../ui/charts'
-import './playbook.css'
+import { appliesTo, proposalsFor, rulesFor, scopeLabel, type ScopedRule } from './rules'
+import './rules.css'
 
-type Tab = 'rules' | 'words' | 'facts' | 'voice' | 'escalation' | 'pillars'
+const TEAM = AGENTS.map(a => a.id)
 
-export default function PlaybookPage() {
+type Section = 'rules' | 'facts' | 'words' | 'voice'
+const SECTIONS: Section[] = ['rules', 'facts', 'words', 'voice']
+
+/** Agents › Shared rules: the Playbook, everything every agent knows and how it speaks. */
+export default function SharedRules() {
   const { s } = useStore()
-  const [params] = useSearchParams()
-  const [tab, setTab] = useState<Tab>(() => (params.get('tab') as Tab) || 'rules')
+  const [params, setParams] = useSearchParams()
+  const q = params.get('section') as Section
+  const section: Section = SECTIONS.includes(q) ? q : 'rules'
   const rules = s.playbook.rules.filter(r => r.kind === 'do' || r.kind === 'dont')
   const facts = s.playbook.rules.filter(r => r.kind === 'fact')
   return (
-    <div className="page">
-      <PageHead title="Playbook" lede="What your agents know about Fernway and how they speak. Every draft shows the rules it followed. Edit anything here and every agent picks it up at once." />
+    <>
+      <p className="muted pb-lede">Your Playbook: what every agent knows about Fernway and how it speaks. Edit anything here and every agent picks it up at once.</p>
       <Proposals />
       <TryMessage />
-      <Tabs value={tab} onChange={setTab} items={[
-        { value: 'rules', label: 'Rules', count: rules.length },
-        { value: 'words', label: 'Words', count: s.playbook.banned.length + s.playbook.preferred.length },
-        { value: 'facts', label: 'Facts', count: facts.length },
-        { value: 'voice', label: 'Voice' },
-        { value: 'escalation', label: 'Escalation', count: s.playbook.escalate.filter(e => e.on).length },
-        { value: 'pillars', label: 'Pillars' },
-      ]} />
-      {tab === 'rules' && <RuleList items={rules} kinds />}
-      {tab === 'facts' && <RuleList items={facts} />}
-      {tab === 'words' && <Words />}
-      {tab === 'voice' && <VoicePanel />}
-      {tab === 'escalation' && <Escalation />}
-      {tab === 'pillars' && <Pillars />}
+      <div className="row mb-3">
+        <Seg name="pb-section" label="Section" value={section} onChange={v => setParams(v === 'rules' ? {} : { section: v }, { replace: true })}
+          options={[{ value: 'rules', label: 'Rules' }, { value: 'facts', label: 'Facts' }, { value: 'words', label: 'Words' }, { value: 'voice', label: 'Voice' }]} />
+      </div>
+      {section === 'rules' && <RuleList items={rules} kinds />}
+      {section === 'facts' && <RuleList items={facts} />}
+      {section === 'words' && <Words />}
+      {section === 'voice' && <VoicePanel />}
+    </>
+  )
+}
+
+/** Agent profile › Rules: every rule and fact this agent applies, with who else follows each one. */
+export function AgentRules({ agent }: { agent: Agent }) {
+  const { s } = useStore()
+  const mine = rulesFor(s.playbook.rules, agent.id, TEAM)
+  return (
+    <div className="stack lg">
+      <Proposals agent={agent.id} />
+      <RuleList items={mine.rules} kinds agent={agent} />
+      <RuleList items={mine.facts} agent={agent} />
+      <p className="row tight pb-also"><BookOpen size={14} aria-hidden /><span>Also follows the brand voice and words.</span><Link to="/agents/rules?section=voice">Open shared rules</Link></p>
     </div>
   )
 }
 
 /* ---------- Proposed by agents (Desk cards with a rule proposal) ---------- */
-function Proposals() {
+function Proposals({ agent }: { agent?: AgentId }) {
   const { s, d } = useStore()
-  const items = s.handoffs.filter(h => h.proposal && !h.lane)
+  const items = agent ? proposalsFor(s.handoffs, agent) : s.handoffs.filter(h => h.proposal && !h.lane)
   if (!items.length) return null
   return (
     <section className="card pb-proposals" aria-labelledby="pb-prop">
-      <div className="card-head"><h2 id="pb-prop" className="row tight"><Sparkles size={14} aria-hidden />Proposed by your agents <span className="faint num">{items.length}</span></h2></div>
+      <div className="card-head"><h2 id="pb-prop" className="row tight"><Sparkles size={14} aria-hidden />{agent ? `Proposed for ${agentName(agent)}` : 'Proposed by your agents'} <span className="faint num">{items.length}</span></h2></div>
       <ul className="rows">
-        {items.map(h => (
+        {items.map((h, i) => (
           <li key={h.id} className="pb-prop">
             <Mark agent={h.agent} />
             <div className="grow">
               <b>“{h.proposal!.text}”</b>
               <p className="muted">{h.context} <span className="faint">· for {h.proposal!.agents.map(agentName).join(' and ')}</span></p>
             </div>
-            <Btn size="sm" variant="primary" onClick={() => d({ type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })}><Plus size={14} />Add</Btn>
+            {/* One orange button per zone: the first proposal's. */}
+            <Btn size="sm" variant={i === 0 ? 'primary' : undefined} onClick={() => d({ type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })}><Plus size={14} />Add</Btn>
             <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/resolve', id: h.id, decision: { kind: 'reject', reason: 'Not a rule' } })}>Dismiss</Btn>
           </li>
         ))}
@@ -112,42 +126,48 @@ function TryMessage() {
 }
 
 /* ---------- Rules and facts ---------- */
-function RuleList({ items, kinds }: { items: PlaybookRule[]; kinds?: boolean }) {
+/** One list for Shared rules (every rule, filter by agent) and for an agent's Rules tab (`agent` set: its rules, with their scope). */
+function RuleList({ items, kinds, agent }: { items: PlaybookRule[] | ScopedRule[]; kinds?: boolean; agent?: Agent }) {
   const { s, d } = useStore()
-  const [agent, setAgent] = useState<'all' | AgentId>('all')
+  const [filter, setFilter] = useState<'all' | AgentId>('all')
   const [q, setQ] = useState('')
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  const [adding, setAdding] = useState(false)
   const [deleted, setDeleted] = useState<{ rule: PlaybookRule; index: number } | null>(null)
   const t = now(s)
-  const shown = items.filter(r => (agent === 'all' || r.agents.includes(agent)) && r.text.toLowerCase().includes(q.toLowerCase()))
+  const rows: ScopedRule[] = items.map(x => ('rule' in x ? x : { rule: x, scope: { kind: 'all' } }))
+  const shown = agent ? rows : rows.filter(({ rule: r }) => (filter === 'all' || r.agents.includes(filter)) && r.text.toLowerCase().includes(q.toLowerCase()))
   const del = (r: PlaybookRule) => { setDeleted({ rule: r, index: s.playbook.rules.indexOf(r) }); d({ type: 'playbook/deleteRule', id: r.id }) }
+  const noun = kinds ? 'rule' : 'fact'
 
-  return (
-    <div className="stack">
-      <div className="row">
-        <div className="pb-search"><Search size={14} aria-hidden /><input className="input" placeholder={kinds ? 'Search rules' : 'Search facts'} value={q} onChange={e => setQ(e.target.value)} aria-label="Search" /></div>
-        <Seg name={`pb-agent-${kinds ? 'r' : 'f'}`} label="Agent" size="sm" value={agent} onChange={setAgent} options={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: a.name }))]} />
-      </div>
-      {deleted && (
-        <UndoBar onUndo={() => { d({ type: 'playbook/restoreRule', rule: deleted.rule, index: deleted.index }); setDeleted(null) }} onDismiss={() => setDeleted(null)}>Deleted “{deleted.rule.text}”</UndoBar>
-      )}
-      <AddRule kinds={!!kinds} />
-      <ul className="card rows pb-rules">
-        {!shown.length && <li><Empty title={q ? 'Nothing matches this search' : 'No rule for this agent yet'} /></li>}
-        {shown.map(r => (
+  const undo = deleted && (
+    <UndoBar onUndo={() => { d({ type: 'playbook/restoreRule', rule: deleted.rule, index: deleted.index }); setDeleted(null) }} onDismiss={() => setDeleted(null)}>Deleted “{deleted.rule.text}”</UndoBar>
+  )
+  const list = (
+    <ul className={agent ? 'rows pb-rules' : 'card rows pb-rules'}>
+      {!shown.length && <li><Empty title={q ? 'Nothing matches this search' : agent ? `No ${noun} for ${agent.name} yet` : `No ${noun} for this agent yet`} /></li>}
+      {shown.map(({ rule: r, scope }) => {
+        const others = scope.kind === 'some' ? scope.others.map(agentName).join(' and ') : scope.kind === 'all' ? 'every agent' : ''
+        return (
           <li key={r.id} className={`pb-rule ${r.paused ? 'paused' : ''}`}>
             {kinds && <span className={`pb-kind ${r.kind}`}>{r.kind === 'do' ? 'Do' : 'Don’t'}</span>}
             <div className="pb-rule-body">
               {editing === r.id ? (
-                <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (draft.trim()) d({ type: 'playbook/editRule', id: r.id, text: draft.trim() }); setEditing(null) }}>
-                  <input className="input" autoFocus value={draft} onChange={e => setDraft(e.target.value)} aria-label="Rule text" />
-                  <Btn size="sm" variant="primary" type="submit">Save</Btn>
-                  <Btn size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
-                </form>
+                <>
+                  <form className="row nowrap" onSubmit={e => { e.preventDefault(); if (draft.trim()) d({ type: 'playbook/editRule', id: r.id, text: draft.trim() }); setEditing(null) }}>
+                    <input className="input" autoFocus value={draft} onChange={e => setDraft(e.target.value)} aria-label={kinds ? 'Rule text' : 'Fact text'} aria-describedby={agent && others ? `pb-scope-${r.id}` : undefined} />
+                    <Btn size="sm" variant="primary" type="submit">Save</Btn>
+                    <Btn size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Btn>
+                  </form>
+                  {agent && others && <p className="caption" id={`pb-scope-${r.id}`}>Shared with {others}: saving changes it for {scope.kind === 'all' ? 'them' : others} too.</p>}
+                </>
               ) : <p className="pb-text">{r.text}</p>}
               <div className="pb-meta">
-                <span className="row tight">{r.agents.map(a => <Mark key={a} agent={a} />)}</span>
+                <span className="row tight">
+                  {r.agents.map(a => <Mark key={a} agent={a} />)}
+                  <span>{agent ? scopeLabel(scope, agent.name, agentName) : appliesTo(r.agents, TEAM, agentName)}</span>
+                </span>
                 <span>Used {r.uses} times in 30 days</span>
                 <span className="faint">{r.origin}{r.addedAt > t - 86_400_000 * 2 ? ` · ${ago(r.addedAt, t)}` : ''}</span>
                 {r.paused && <Pill tone="caution">Paused</Pill>}
@@ -159,27 +179,54 @@ function RuleList({ items, kinds }: { items: PlaybookRule[]; kinds?: boolean }) 
               <Btn size="xs" variant="ghost" icon aria-label={`Delete “${r.text}”`} onClick={() => del(r)}><Trash2 size={13} /></Btn>
             </div>
           </li>
-        ))}
-      </ul>
+        )
+      })}
+    </ul>
+  )
+
+  if (agent) return (
+    <section className="card">
+      <div className="card-head pb-card-head">
+        <div>
+          <h2>{kinds ? `Rules ${agent.name} follows` : `Facts ${agent.name} cites`} <span className="faint num">{rows.length}</span></h2>
+          <span className="faint">{kinds ? 'A shared rule changes for every agent that follows it.' : `Products, prices and policies ${agent.name} quotes.`}</span>
+        </div>
+        {!adding && <Btn size="sm" onClick={() => setAdding(true)}><Plus size={14} />{kinds ? `Add a rule for ${agent.name}` : `Add a fact for ${agent.name}`}</Btn>}
+      </div>
+      {adding && <div className="card-body"><AddRule kinds={!!kinds} agent={agent} onClose={() => setAdding(false)} /></div>}
+      {list}
+      {undo && <div className="card-body">{undo}</div>}
+    </section>
+  )
+
+  return (
+    <div className="stack">
+      <div className="row">
+        <div className="pb-search"><Search size={14} aria-hidden /><input className="input" placeholder={kinds ? 'Search rules' : 'Search facts'} value={q} onChange={e => setQ(e.target.value)} aria-label="Search" /></div>
+        <Seg name={`pb-agent-${kinds ? 'r' : 'f'}`} label="Agent" size="sm" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: a.name }))]} />
+      </div>
+      {undo}
+      {adding ? <AddRule kinds={!!kinds} onClose={() => setAdding(false)} /> : <Btn className="self-start" onClick={() => setAdding(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>}
+      {list}
     </div>
   )
 }
 
-function AddRule({ kinds }: { kinds: boolean }) {
+/** With `agent`, the rule is for that agent alone; sharing it is done in Shared rules. */
+function AddRule({ kinds, agent, onClose }: { kinds: boolean; agent?: Agent; onClose: () => void }) {
   const { s, d } = useStore()
-  const [open, setOpen] = useState(false)
   const [kind, setKind] = useState<'do' | 'dont'>('do')
   const [text, setText] = useState('')
-  const [agents, setAgents] = useState<AgentId[]>(['nova', 'atlas'])
-  if (!open) return <Btn className="self-start" onClick={() => setOpen(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>
+  const [picked, setPicked] = useState<AgentId[]>(['nova', 'atlas'])
+  const agents = agent ? [agent.id] : picked
   const dup = s.playbook.rules.some(r => r.text.toLowerCase() === text.trim().toLowerCase())
   const submit = () => {
     if (!text.trim() || !agents.length || dup) return
     d({ type: 'playbook/addRule', kind: kinds ? kind : 'fact', text: text.trim(), agents, origin: 'Added by you' })
-    setText(''); setOpen(false)
+    setText(''); onClose()
   }
   return (
-    <form className="card pad pb-add" onSubmit={e => { e.preventDefault(); submit() }}>
+    <form className={agent ? 'pb-add' : 'card pad pb-add'} onSubmit={e => { e.preventDefault(); submit() }}>
       <div className="row">
         {kinds && <Seg name="new-kind" label="Kind" size="sm" value={kind} onChange={setKind} options={[{ value: 'do', label: 'Do' }, { value: 'dont', label: 'Don’t' }]} />}
         <input className="input grow" autoFocus value={text} onChange={e => setText(e.target.value)} aria-describedby={dup ? 'pb-dup' : undefined}
@@ -187,12 +234,18 @@ function AddRule({ kinds }: { kinds: boolean }) {
       </div>
       {dup && <p className="caption" id="pb-dup">Already in the Playbook.</p>}
       <div className="row">
-        <span className="faint">Applies to</span>
-        {AGENTS.map(a => (
-          <button type="button" key={a.id} className="filter" aria-pressed={agents.includes(a.id)} onClick={() => setAgents(x => x.includes(a.id) ? x.filter(y => y !== a.id) : [...x, a.id])}>{a.name}</button>
-        ))}
+        {agent ? (
+          <span className="faint">For {agent.name} only. To share it with other agents, add it in <Link to={`/agents/rules${kinds ? '' : '?section=facts'}`}>Shared rules</Link>.</span>
+        ) : (
+          <>
+            <span className="faint">Applies to</span>
+            {AGENTS.map(a => (
+              <button type="button" key={a.id} className="filter" aria-pressed={picked.includes(a.id)} onClick={() => setPicked(x => x.includes(a.id) ? x.filter(y => y !== a.id) : [...x, a.id])}>{a.name}</button>
+            ))}
+          </>
+        )}
         <span className="spacer" />
-        <Btn variant="ghost" onClick={() => setOpen(false)}>Cancel</Btn>
+        <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
         <Btn variant="primary" type="submit" disabled={!text.trim() || !agents.length || dup}>Add</Btn>
       </div>
     </form>
@@ -270,78 +323,5 @@ function VoicePanel() {
         </div>
       </section>
     </div>
-  )
-}
-
-/* ---------- Escalation ---------- */
-/** Ready-made escalation conditions. "N" is replaced by the number the user types. */
-const CONDITIONS: { id: string; label: string; n?: string; agents: AgentId[] }[] = [
-  { id: 'injury', label: 'Injury, safety or product recall', agents: ['nova', 'echo'] },
-  { id: 'press', label: 'Journalists and press', agents: ['nova', 'echo'] },
-  { id: 'legal', label: 'Lawyers and legal threats', agents: ['nova'] },
-  { id: 'creator', label: 'Creators above N followers', n: '50k', agents: ['nova', 'echo'] },
-  { id: 'refund', label: 'Refunds above €N', n: '150', agents: ['nova'] },
-  { id: 'spike', label: 'More than N negative mentions in an hour', n: '20', agents: ['echo'] },
-  { id: 'competitor', label: 'Anything that names a competitor', agents: ['atlas', 'echo'] },
-  { id: 'budget', label: 'Spending above €N', n: '100', agents: ['iris', 'sage'] },
-  { id: 'drop', label: 'A metric dropping more than N% in a week', n: '30', agents: ['iris'] },
-]
-
-/** The one place to edit escalation. Agent profiles and Settings › Approver show it and link here. */
-function Escalation() {
-  const { s, d } = useStore()
-  const labelOf = (c: (typeof CONDITIONS)[number], v = c.n) => (c.n ? c.label.replace('N', v || c.n) : c.label)
-  const [cond, setCond] = useState(() => CONDITIONS.find(c => !s.playbook.escalate.some(r => r.label === labelOf(c))) ?? CONDITIONS[0])
-  const [n, setN] = useState(cond.n ?? '')
-  const [to, setTo] = useState<'sam' | 'claire'>('sam')
-  const [removed, setRemoved] = useState<(typeof s.playbook.escalate)[number] | null>(null)
-  const label = labelOf(cond, n)
-  const exists = s.playbook.escalate.some(r => r.label === label)
-  return (
-    <section className="card">
-      <div className="card-head"><h2>Always raised to a person</h2><span className="faint">Whatever the autonomy, these topics never go out without a human.</span></div>
-      <ul className="rows">
-        {s.playbook.escalate.map(e => (
-          <li key={e.id} className={`pb-esc ${e.on ? '' : 'off'}`}>
-            <Switch checked={e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, on })} label={e.label} hideLabel />
-            <div className="grow">
-              <b>{e.label}</b>
-              <div className="faint t-xs">Watched by {e.agents.map(agentName).join(' and ')}</div>
-            </div>
-            <Seg name={`esc-${e.id}`} label={`Who decides: ${e.label}`} size="sm" value={e.to} onChange={to => d({ type: 'playbook/escalate', id: e.id, to })}
-              options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-            <Btn size="xs" variant="ghost" icon aria-label={`Delete ${e.label}`} onClick={() => { setRemoved(e); d({ type: 'playbook/escalateDelete', id: e.id }) }}><Trash2 size={12} /></Btn>
-          </li>
-        ))}
-      </ul>
-      <div className="card-body">
-        {removed && (
-          <UndoBar className="mb-3" onUndo={() => { d({ type: 'playbook/escalateAdd', rule: removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.label}”</UndoBar>
-        )}
-        <div className="section-title">Add a rule</div>
-        <div className="row">
-          <Menu align="start" trigger={<Btn size="sm">{cond.label.replace('N', '…')}<ChevronDown size={14} /></Btn>}
-            items={CONDITIONS.map(c => ({ label: c.label.replace('N', '…'), hint: c.agents.map(agentName).join(', '), onSelect: () => { setCond(c); setN(c.n ?? '') } }))} />
-          {cond.n && <input className="input pb-n" inputMode="numeric" value={n} onChange={e => setN(e.target.value)} aria-label="Threshold" />}
-          <span className="faint">goes to</span>
-          <Seg name="new-esc" label="Who decides" size="sm" value={to} onChange={setTo} options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
-          <Btn size="sm" variant="primary" disabled={exists} title={exists ? 'This rule already exists' : undefined} onClick={() => d({ type: 'playbook/escalateAdd', rule: { id: `e-${Date.now().toString(36)}`, label, to, on: true, agents: cond.agents } })}><Plus size={14} />Add “{label}”</Btn>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ---------- Pillars (read-only) ---------- */
-function Pillars() {
-  const { s } = useStore()
-  return (
-    <section className="card pad">
-      <div className="row between mb-3">
-        <div><h2 className="section-title flush">Editorial pillars</h2><p className="faint">Target share of posts. Sage proposes changes in Strategy and you accept them there.</p></div>
-        <Link to="/strategy/pillars" className="btn sm">Open in Strategy</Link>
-      </div>
-      <HBars items={s.strategy.pillars.map(p => ({ label: p.name, value: p.target }))} format={v => `${v}%`} />
-    </section>
   )
 }

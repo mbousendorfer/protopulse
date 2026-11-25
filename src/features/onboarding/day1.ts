@@ -194,7 +194,7 @@ export function checklist(s: State, now: number): CheckItem[] {
   items.push({
     id: 'playbook', label: 'Check what Protopulse learned', done: st.seen.includes('/playbook'),
     detail: `${s.playbook.rules.filter(r => r.kind !== 'fact').length} rules and ${s.playbook.rules.filter(r => r.kind === 'fact').length} facts every agent follows`,
-    action: { label: 'Open the Playbook', to: '/playbook' },
+    action: { label: 'Open Shared rules', to: '/agents/rules' },
   })
   items.push({
     id: 'agents', label: 'See what each agent can do alone', done: st.seen.includes('/agents'),

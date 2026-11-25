@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ChevronDown, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -8,19 +8,42 @@ import { ago } from '../../app/time'
 import { AUTONOMY_LABEL, PRESET_LABEL } from '../../data/agents'
 import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs } from '../../ui'
 import { AutonomyList, AutonomySummary, PRESET_SAYS, presetDelta, presetOf } from './autonomy'
-import { Notice, UndoBar } from '../../ui/Feedback'
+import { AgentRules } from './SharedRules'
+import { proposalsFor } from './rules'
+import { CountBadge, Notice, UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AlertsTable } from '../insights/alerts'
 import { AgentScene } from '../../ui/Illustrations'
 
-/* ---------- Team ---------- */
+/* ---------- Agents: Team · Shared rules · Escalation ---------- */
+type Section = 'team' | 'rules' | 'escalation'
+const SECTION_PATH: Record<Section, string> = { team: '/agents', rules: '/agents/rules', escalation: '/agents/escalation' }
+
+export function AgentsLayout() {
+  const { s } = useStore()
+  const nav = useNavigate()
+  const seg = useLocation().pathname.split('/')[2]
+  const section: Section = seg === 'rules' || seg === 'escalation' ? seg : 'team'
+  // A count on a tab means "needs you": rule proposals only.
+  const proposals = s.handoffs.filter(h => h.proposal && !h.lane).length
+  return (
+    <div className="page">
+      <PageHead title="Agents" lede="Your team, the rules they share, and what they always hand to a person." />
+      <Tabs value={section} onChange={v => nav(SECTION_PATH[v])} items={[
+        { value: 'team', label: 'Team' },
+        { value: 'rules', label: <>Shared rules{proposals > 0 && <CountBadge n={proposals} needs label={`${proposals} rule proposal${proposals > 1 ? 's' : ''} need you`} />}</> },
+        { value: 'escalation', label: 'Escalation' },
+      ]} />
+      <Outlet />
+    </div>
+  )
+}
+
 export function Team() {
   const { s, d } = useStore()
   return (
-    <div className="page">
-      <PageHead title="Agents" lede="Your team. Each agent works within the autonomy and guardrails you set, and asks for more when it has earned it." />
-      <div className="team-grid">
+    <div className="team-grid">
         {s.agents.map(a => {
           const lv = (l: Autonomy) => a.actions.filter(x => x.autonomy === l).length
           const pending = s.handoffs.filter(h => h.agent === a.id && !h.lane && groupOf(h) === 'need').length
@@ -62,13 +85,12 @@ export function Team() {
             </article>
           )
         })}
-      </div>
     </div>
   )
 }
 
 /* ---------- Profile ---------- */
-type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'alerts' | 'record' | 'activity'
+type Tab = 'autonomy' | 'guardrails' | 'rules' | 'escalation' | 'alerts' | 'record' | 'activity'
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
@@ -94,9 +116,11 @@ export function AgentProfile() {
   const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'autonomy')
   const [undoPreset, setUndoPreset] = useState<{ label: string; delta: string; levels: [string, Autonomy][] } | null>(null)
   // Same component for every agent: going from Echo's Alerts to Nova must not keep Echo's tab.
-  useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A link to another tab of the same agent (a Desk card to ?tab=rules) moves the tab too.
+  useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id, params.get('tab')]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!a) return <div className="page"><Empty title="This agent doesn’t exist" action={<Link to="/agents" className="btn">Back to the team</Link>} /></div>
   const preset = presetOf(a)
+  const proposals = proposalsFor(s.handoffs, a.id).length
 
   return (
     <div className="page">
@@ -112,7 +136,9 @@ export function AgentProfile() {
       </div>
 
       <Tabs value={tab} onChange={setTab} items={[
-        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length }, { value: 'escalation', label: 'Escalation', count: s.playbook.escalate.filter(e => e.agents.includes(a.id) && e.on).length },
+        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length },
+        { value: 'rules', label: <>Rules{proposals > 0 && <CountBadge n={proposals} needs label={`${proposals} rule proposal${proposals > 1 ? 's' : ''} need you`} />}</> },
+        { value: 'escalation', label: 'Escalation' },
         ...(a.id === 'iris' || a.id === 'echo' ? [{ value: 'alerts' as Tab, label: 'Alerts', count: (a.id === 'iris' ? s.insights.alerts : s.listening.alerts).filter(x => x.on).length }] : []),
         { value: 'record', label: 'Track record' }, { value: 'activity', label: 'Activity' },
       ]} />
@@ -139,6 +165,7 @@ export function AgentProfile() {
         </div>
       )}
       {tab === 'guardrails' && <Guardrails agent={a} />}
+      {tab === 'rules' && <AgentRules agent={a} />}
       {tab === 'escalation' && <Escalation agent={a} />}
       {tab === 'alerts' && <AgentAlerts agent={a.id} />}
       {tab === 'record' && <Record agent={a} />}
@@ -214,7 +241,7 @@ function Guardrails({ agent }: { agent: Agent }) {
   )
 }
 
-/** Read-only here: escalation is edited in the Playbook, one place for every agent. */
+/** Read-only here: escalation is edited in Agents › Escalation, one place for every agent. */
 function Escalation({ agent }: { agent: Agent }) {
   const { s } = useStore()
   const rules = s.playbook.escalate.filter(e => e.agents.includes(agent.id))
@@ -222,7 +249,7 @@ function Escalation({ agent }: { agent: Agent }) {
     <section className="card">
       <div className="card-head">
         <div><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy.</span></div>
-        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
+        <Link to={`/agents/escalation?agent=${agent.id}`} className="btn sm ghost">Edit in Escalation</Link>
       </div>
       <ul className="rows">
         {rules.map(e => (

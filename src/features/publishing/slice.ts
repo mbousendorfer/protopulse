@@ -408,7 +408,7 @@ export function reduceIdeas(s: State, a: IdeaAct, fromDesk = false): State {
       let next = patchIdea(s, a.id, i => ({ ...i, proposal: undefined }))
       if (!a.accept) return { ...next, publishing: { ...next.publishing, learned: { ...next.publishing.learned, [`no:${p.key}`]: 1 } } }
       next = addRule(next, { kind: 'do', text: p.text, agents: ['atlas'], origin: LEARNED_ORIGIN })
-      return pushLog(next, { agent: 'atlas', text: `New Playbook rule: “${p.text}”`, status: 'approved', reason: 'You redirected two ideas the same way', rule: p.text, link: '/playbook' })
+      return pushLog(next, { agent: 'atlas', text: `New Playbook rule: “${p.text}”`, status: 'approved', reason: 'You redirected two ideas the same way', rule: p.text, link: '/agents/atlas?tab=rules' })
     }
     case 'publishing/ideaToPlan': {
       if (!idea || !isOpen(idea)) return s
@@ -491,7 +491,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
     for (const i of added.filter(x => x.status !== 'scheduled')) next = pushLog(next, { agent: 'atlas', text: `New idea${from}: “${i.title}”`, status: 'done', reason: i.sources[0] ? `${i.sources[0].label}: ${i.sources[0].proof}` : undefined, link: `/publishing/ideas/${i.id}` })
     for (const i of held) next = pushLog(next, { agent: 'atlas', text: `Held back “${i.title}”: 8 ideas are already open`, status: 'done', reason: 'Atlas never keeps more than 8 ideas open', link: '/publishing/ideas' })
   }
-  if (byRule.length) next = pushLog(next, { agent: 'atlas', text: `Following your rule, held back ${byRule.length} idea${byRule.length > 1 ? 's' : ''}: ${byRule.map(x => `“${x.seed.title}”`).join(', ')}`, rule: byRule[0].rule, status: 'done', link: '/playbook' })
+  if (byRule.length) next = pushLog(next, { agent: 'atlas', text: `Following your rule, held back ${byRule.length} idea${byRule.length > 1 ? 's' : ''}: ${byRule.map(x => `“${x.seed.title}”`).join(', ')}`, rule: byRule[0].rule, status: 'done', link: '/agents/atlas?tab=rules' })
   return next
 }
 

@@ -5,6 +5,7 @@ import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { useTheme, type Theme } from '../../app/theme'
 import { ago, MIN } from '../../app/time'
+import { agentName } from '../../data/agents'
 import { Btn, Net, PageHead, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import './settings.css'
 
@@ -145,23 +146,25 @@ function Profile() {
   )
 }
 
+/** A read-only summary: escalation is edited in Agents › Escalation. */
 function Approver() {
   const { s } = useStore()
+  const on = s.playbook.escalate.filter(e => e.on)
+  const claire = on.filter(e => e.to === 'claire')
+  const toYou = on.length - claire.length
+  const off = s.playbook.escalate.length - on.length
   return (
     <section className="card">
       <div className="card-head">
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
-        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
+        <Link to="/agents/escalation" className="btn sm ghost">Edit in Escalation</Link>
       </div>
       <p className="card-body muted pb-0">Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
       <ul className="rows">
-        {s.playbook.escalate.map(e => (
-          <li key={e.id} className="set-row">
-            <span>{e.label}</span>
-            <span className="faint">{!e.on ? 'Off' : e.to === 'claire' ? 'Goes to Claire' : 'Goes to you'}</span>
-          </li>
-        ))}
+        {claire.map(e => <li key={e.id} className="set-row"><span>{e.label}</span><span className="faint">Watched by {e.agents.map(agentName).join(' and ')}</span></li>)}
+        {!claire.length && <li className="set-row faint">Nothing goes to Claire yet.</li>}
       </ul>
+      <p className="card-body faint">{toYou} other topic{toYou === 1 ? '' : 's'} come{toYou === 1 ? 's' : ''} to you{off ? `, ${off} ${off === 1 ? 'is' : 'are'} off` : ''}.</p>
     </section>
   )
 }

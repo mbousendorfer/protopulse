@@ -130,9 +130,9 @@ Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes act
 
 ## 5. Shell et navigation
 
-- **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents, Activity, Playbook ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
+- **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents (onglets Team · Shared rules · Escalation), Activity ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
 - **Barre supérieure** : fil d'Ariane, **barre de commande** (« Ask or brief an agent… » · ⌘K), état de Claire (« Claire · usually replies in ~1 min »), centre de notifications.
-- **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/A/Y pour naviguer · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
+- **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/A/Y pour naviguer, G puis B pour Agents › Shared rules · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
 - **Toasts** seulement pour les urgences et pour confirmer tes propres actions (avec Undo). Le travail des agents en arrière-plan arrive en silence dans la liste et le fil Live.
 
 ---
@@ -270,16 +270,20 @@ Onglets : **Campaigns** · **Pillars & cadence**.
 
 ### 6.7 Agents
 
-- **Équipe** : 5 cartes. Monogramme, nom, département, statut, activité en cours, planning, **jauge d'autonomie** (combien d'actions en Act / Draft / Suggest), track record sur 30 jours (handled alone, escalated, approved unchanged %, undone), bouton Pause/Resume.
-- **Fiche agent** :
+Une seule entrée du rail, trois onglets : **Team** (`/agents`), **Shared rules** (`/agents/rules`, §6.9) et **Escalation** (`/agents/escalation`). Le seul compteur d'onglet est celui de Shared rules : les règles proposées par les agents, qui attendent Sam. Les anciennes adresses `/playbook…` redirigent (`?tab=words|facts|voice` vers la section de Shared rules, `?tab=escalation` vers Escalation, `?tab=pillars` vers Strategy › Pillars).
+
+- **Équipe** (onglet Team) : 5 cartes. Monogramme, nom, département, statut, activité en cours, planning, **jauge d'autonomie** (combien d'actions en Act / Draft / Suggest), track record sur 30 jours (handled alone, escalated, approved unchanged %, undone), bouton Pause/Resume.
+- **Fiche agent** (`/agents/:id`, onglets Autonomy · Guardrails · Rules · Escalation · Alerts pour Iris et Echo · Track record · Activity) :
   - **Autonomy** (pattern *autonomy-dial*) : un réglage global (**Cautious** / **Balanced** / **Autonomous**, **Custom** dès qu'une action est réglée à la main) qui déplace les actions non verrouillées selon leur risque, avec Undo ; une phrase explique le preset et une seule ligne donne le volume (« 275 of 303 messages a week run on their own »). En dessous, une liste dense, une ligne par action, groupée par risque (**Low risk** · **Medium risk** · **Always you**) : icône teintée à la couleur de l'agent, nom, et un contrôle segmenté **Suggest · Draft · Act** dont le cran choisi prend la couleur de l'agent. Le détail est à la demande (chevron) : l'exemple Fernway, ce que produit chacun des trois crans (le cran actuel teinté), le volume et le taux d'approbation sans modification. Après un changement, une ligne sous l'action dit ce qui se passe désormais. Les actions 🔒 sont dans **Always you**, sans contrôle, avec la raison.
   - Effet immédiat et visible : passer une action en Act fait quitter le Desk aux remontées concernées, qui deviennent des entrées du journal (« Handled on its own after you switched to Act »).
   - **Promotion history** : demandes passées, acceptées ou refusées, rétrogradations.
   - **Guardrails** : éditables (plafonds, horaires, sujets toujours remontés).
+  - **Rules** : toutes les règles et tous les faits du Playbook que l'agent applique, chacun avec sa portée écrite (« Nova only », « Shared with Atlas », « Shared · all agents »), en pause, modifiables et supprimables sur place (Undo) ; modifier une règle partagée dit pour qui d'autre elle change. « Add a rule for Nova » ajoute une règle pour cet agent seul. Les règles proposées qui le concernent s'affichent en tête ; le compteur de l'onglet est leur nombre. Une ligne « Also follows the brand voice and words » mène à Shared rules.
+  - **Escalation** : en lecture, les règles que l'agent surveille, avec « Edit in Escalation » (liste filtrée sur l'agent).
   - **Track record** : graphe des 30 derniers jours, taux d'approbation sans modification par action, dernières annulations.
   - **Recent activity** : les 20 dernières actions.
 - **Alerts** (Iris et Echo) : règles éditables (métrique ou recherche, condition, seuil, vers le Desk ou Claire, actif ou non).
-- **Garde-fous** ajoutables, modifiables, supprimables. **Escalation** : règles structurées à partir de conditions prêtes à l'emploi (blessure ou sécurité, presse, menace juridique, créateur au-delà de N abonnés, remboursement au-delà de N €, plus de N mentions négatives par heure, mention d'un concurrent, dépense au-delà de N €, métrique en baisse de plus de N %), envoyées à Sam ou à Claire, activables et supprimables ; ce sont les mêmes règles que l'onglet Escalation du Playbook.
+- **Garde-fous** ajoutables, modifiables, supprimables. **Escalation** : règles structurées à partir de conditions prêtes à l'emploi (blessure ou sécurité, presse, menace juridique, créateur au-delà de N abonnés, remboursement au-delà de N €, plus de N mentions négatives par heure, mention d'un concurrent, dépense au-delà de N €, métrique en baisse de plus de N %), envoyées à Sam ou à Claire, activables et supprimables ; elles s'éditent à un seul endroit, l'onglet **Escalation** d'Agents : une liste filtrable par agent, où l'on choisit qui décide (You ou Claire), ajoute, active et supprime (Undo). La fiche agent et Settings › Approver la montrent en lecture avec un lien.
 - **Demandes de promotion** (pattern *permission-request*) : un agent qui le mérite remonte une carte **Promotion request** sur le Desk : « Nova wants to answer complaints on her own. You approved 46 of her last 50 complaint replies without changes. » Preuves dépliables (les 50 réponses, les 4 modifiées avec le diff). Choix : **Allow** · **Try for a week** (revient automatiquement en Draft après 7 jours, avec un bilan) · **Not yet**.
 - **Rétrogradation** : après 2 annulations sur la même action en 24 h, l'agent propose lui-même : « You undid 2 of my shipping refunds today. I'll go back to drafting them until you say otherwise. » Choix : OK · Keep me on Act.
 
@@ -287,11 +291,11 @@ Onglets : **Campaigns** · **Pillars & cadence**.
 
 Journal complet des agents (pattern *agent-ledger*) : horodatage, agent, action, objet (lien), raison, règle appliquée, statut (`Done` · `Approved by you` · `Edited by you` · `Rejected` · `Undone` · `Redone`), Undo/Redo tant que c'est réversible, avec le temps restant. Filtres : agent, statut, réversible seulement, période. Groupement par jour. Une ligne s'ouvre sur le détail (avant/après, sources). Données : ~120 entrées sur 3 jours.
 
-### 6.9 Playbook
+### 6.9 Playbook (Agents › Shared rules)
 
-La mémoire de marque, visible et éditable (pattern *memory-panel*).
+La mémoire de marque, visible et éditable (pattern *memory-panel*). « Playbook » reste le nom de l'ensemble des règles (« Add to Playbook », « Playbook check ») ; l'écran qui les montre est l'onglet **Shared rules** d'Agents. Ce qui vaut pour un seul agent se lit aussi dans l'onglet Rules de sa fiche (§6.7).
 
-- Sections : **Voice** (curseurs : warm ↔ neutral, playful ↔ serious, short ↔ detailed, avec un exemple de phrase qui change en direct) · **Rules** (do / don't, avec les agents qui les appliquent et leur nombre d'utilisations sur 30 jours) · **Words** (interdits et préférés) · **Facts** (produits, prix, politiques de retour et garantie, horaires du support : ce que Nova cite) · **Escalation** (ce qui remonte toujours à Sam, ce qui remonte à Claire) · **Pillars** (lecture seule, lien vers Strategy).
+- Sections (contrôle segmenté, `?section=`) : **Rules** (do / don't, avec en texte les agents qui les appliquent et leur nombre d'utilisations sur 30 jours, filtre par agent) · **Facts** (produits, prix, politiques de retour et garantie, horaires du support : ce que Nova cite) · **Words** (interdits et préférés) · **Voice** (curseurs : warm ↔ neutral, playful ↔ serious, short ↔ detailed, avec un exemple de phrase qui change en direct). L'escalade a son propre onglet (§6.7) ; les piliers ne vivent que dans Strategy.
 - Chaque règle : texte, origine (« Added by you » · « Learned from your edit on Nov 18 » · « Onboarding »), agents concernés, utilisations, **Pause** et **Delete** avec Undo.
 - **Règles proposées** par les agents, repérées dans les corrections de Sam : « You removed emojis from 9 of my last 10 LinkedIn drafts. Make it a rule? » → Add · Dismiss.
 - Test en direct : un champ « Try a message » où Sam colle un texte et voit quelles règles il enfreint.
@@ -331,7 +335,7 @@ Objectif : en moins de 3 minutes, l'utilisateur voit ses agents travailler sur *
 
 ### 6.12 Settings
 
-Comptes connectés (état, dernière synchro, reconnecter) · notifications in-app (quels types déclenchent un toast) · profil de Sam · Claire comme valideuse (sujets qui lui vont). Rien de plus.
+Comptes connectés (état, dernière synchro, reconnecter) · notifications in-app (quels types déclenchent un toast) · profil de Sam · Claire comme valideuse : résumé en lecture des sujets qui lui vont, lien « Edit in Escalation » (§6.7). Rien de plus.
 
 ---
 
@@ -438,7 +442,7 @@ Un outil où l'on retrouve une équipe sympathique, pas un cockpit. Clair par d�
 | Réponses d'Iris sourcées | `cited-answer`, `ai-answer` |
 | Phase de réflexion | `thinking-loader` |
 | Barre de commande et routage | `command-menu`, `agent-router` |
-| Playbook | `memory-panel` |
+| Playbook (Agents › Shared rules) | `memory-panel` |
 | Répartition des tâches de campagne | `delegate-board`, `agent-plan` |
 | Suivi de campagne | `plan-vs-actual`, `kpi-chart` |
 | KPI et graphes | `stat-card`, `trend-chart`, `change-summary`, `breakdown-chart` |
