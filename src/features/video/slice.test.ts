@@ -265,3 +265,13 @@ test('versions follow the reframe level: built on Act and Draft, not on Suggest'
   expect(cut('draft').every(c => c.versions)).toBe(true)
   expect(cut('suggest').every(c => !c.versions)).toBe(true)
 })
+
+test('posts carry the pillar label, and Sage’s running campaign when it already has posts of that pillar', () => {
+  let s = run(initialState(), { type: 'video/send', ids: ['clip-live-zips', 'clip-repair-strap'] })
+  const zips = s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips')
+  expect(zips.every(p => p.labels?.[0] === 'Gear that lasts' && p.campaign === 'Trail Week' && p.campaignId === 'trail-week')).toBe(true)
+  const strap = s.publishing.posts.filter(p => p.media === 'clip:clip-repair-strap')
+  expect(strap.every(p => p.labels?.[0] === 'Repair & care' && !p.campaign)).toBe(true)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.some(p => p.media === 'clip:clip-live-zips')).toBe(false)
+})

@@ -3,6 +3,7 @@ import { agentOf } from '../../app/core'
 import { actOn, ideaScript } from './slice'
 import { PLAIN_LINK, failXPost, retriesAlone } from './failures'
 import { betterSlots, movesAlone, slotCard } from './slots'
+import { canFill, fillQueues } from './queues'
 import { hhmm } from '../../app/time'
 
 /** Atlas's scripted events. `order` places each one in the shared feed (see the registry). */
@@ -33,6 +34,11 @@ export const SCRIPT: ScriptEvent[] = [
       const next = slotCard(s, m)
       return movesAlone(next) ? actOn(next, next.handoffs[0], `Moved “${m.post.text.length > 44 ? `${m.post.text.slice(0, 40)}…` : m.post.text}” from ${hhmm(m.post.at)} to ${hhmm(m.at)}`, m.reason) : next
     },
+  },
+  {
+    // Atlas keeps the queues filled two weeks ahead: scheduled on Act, on the Desk otherwise.
+    id: 'ev-queue', order: 170, label: 'Atlas · fill the queues for the next 2 weeks', agent: 'atlas', tag: 'queue',
+    run: (s, manual) => (canFill(s, manual) ? fillQueues(s, { why: 'Atlas keeps the queues filled two weeks ahead.' }) : s),
   },
   { id: 'ev-idea-gap', order: 160, label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', ...ideaScript({ origin: 'gap', agent: 'atlas' }) },
   {
