@@ -11,7 +11,7 @@
   .brief-scene { display: none; }
 }
 
-.all-clear-scene { width: 220px; max-width: 100%; animation: pop 420ms var(--ease); }
+.all-clear-scene { width: 220px; max-width: 100%; animation: pop var(--slow) var(--ease); }
 .onb-scene { max-width: 320px; margin-bottom: var(--s4); }
 .onb-agent .agent-scene { max-width: 180px; margin-bottom: var(--s3); }
 .profile-scene { width: 220px; flex: none; }

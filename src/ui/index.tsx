@@ -258,5 +258,5 @@ export function Empty({ icon, title, body, action, scene }: { icon?: ReactNode; 
 }
 
 export const Thinking = ({ label }: { label: string }) => (
-  <span className="thinking" role="status"><span className="spin" aria-hidden /><span className="shimmer">{label}</span></span>
+  <span className="thinking" role="status"><span className="spin" aria-hidden /><span>{label}</span></span>
 )

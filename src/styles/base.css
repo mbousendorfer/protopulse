@@ -56,7 +56,6 @@ img { display: block; max-width: 100%; }
   position: sticky; top: 0; height: 100vh; overflow-y: auto; overflow-x: hidden;
   background: var(--deck); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; padding: var(--s3) var(--s2);
-  transition: width var(--base) var(--ease);
 }
 .rail-brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; }
 .rail-brand .logo { width: 26px; height: 26px; border-radius: 7px; background: var(--ink); display: grid; place-items: center; flex: none; }
@@ -94,7 +93,10 @@ img { display: block; max-width: 100%; }
 .cmd-trigger:hover { border-color: var(--line-loud); color: var(--ink-2); }
 .cmd-trigger span:first-of-type { flex: 1; }
 .content { padding: var(--s6) var(--s8) 80px; flex: 1; min-width: 0; }
-.page { max-width: 1320px; margin: 0 auto; }
+.page { max-width: 1320px; margin: 0 auto; animation: settle var(--base) var(--ease); }
+/* A new page or tab fades up 4 px: transform and opacity only, under 250 ms. */
+.tabs + *, .day-tabs ~ .day-list { animation: settle var(--base) var(--ease); }
+@keyframes settle { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .page.narrow { max-width: 960px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s4); margin-bottom: var(--s5); flex-wrap: wrap; }
 .page-head h1 { font-size: var(--t-2xl); font-weight: 600; }
@@ -230,6 +232,9 @@ a.card:hover, .card.hoverable:hover { border-color: var(--signal); }
 .filters { display: flex; gap: 4px; flex-wrap: wrap; }
 .filter { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line-strong); background: transparent; font-size: var(--t-sm); font-weight: 500; color: var(--ink-2); display: inline-flex; align-items: center; gap: 6px; }
 .filter:hover { color: var(--ink); border-color: var(--line-loud); }
+/* Micro-feedback: every pressable chip gives under the finger, like a button. */
+.filter, .seg span, .select-btn { transition: transform var(--fast) var(--ease), border-color var(--fast) var(--ease), background-color var(--fast) var(--ease), color var(--fast) var(--ease); }
+.filter:active, .seg label:active span, .select-btn:active { transform: scale(0.97); }
 .filter[aria-pressed='true'] { background: var(--brand-soft); border-color: var(--signal-edge); color: var(--signal-hover); }
 .filter .count { font: 500 var(--t-xs) var(--mono); }
 
@@ -298,12 +303,9 @@ button.menu-item { width: 100%; border: 0; background: none; text-align: left; }
 .empty p { color: var(--ink-2); max-width: 46ch; }
 .empty .glyph { width: 40px; height: 40px; border-radius: var(--r-ctl); background: var(--lift); display: grid; place-items: center; color: var(--ink-2); margin-bottom: var(--s2); }
 
-.skeleton { background: linear-gradient(90deg, var(--lift) 25%, var(--lift-2) 50%, var(--lift) 75%); background-size: 200% 100%; animation: sheen 1.4s linear infinite; border-radius: 4px; }
-@keyframes sheen { to { background-position: -200% 0; } }
 .thinking { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-2); font-size: var(--t-md); }
 .thinking .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--signal); animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.shimmer { background: linear-gradient(90deg, var(--ink-3), var(--ink), var(--ink-3)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 1.6s linear infinite; }
 
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s4); }

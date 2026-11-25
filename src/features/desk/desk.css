@@ -39,7 +39,7 @@
 
 /* Handoff card */
 .handoff { padding: var(--s4); transition: border-color var(--fast) var(--ease); }
-.handoff.fresh { animation: arrive 420ms var(--ease); }
+.handoff.fresh { animation: arrive var(--slow) var(--ease); }
 @keyframes arrive { from { opacity: 0.2; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 .handoff-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s2); }
 .slip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--ink-2); font-size: var(--t-sm); }
@@ -76,10 +76,12 @@
 .claire-note p { color: var(--ink); }
 
 /* Side column */
-.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); animation: pulse 2.2s infinite; display: inline-block; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--ok-pulse); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+.live-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
+/* Ambient "live" ring: a slow loop by nature, drawn with transform and opacity only. */
+.live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--ok); animation: pulse 2.2s var(--ease) infinite; }
+@keyframes pulse { from { transform: scale(1); opacity: 0.5; } 70%, to { transform: scale(2.6); opacity: 0; } }
 .feed { padding: 4px var(--s4) var(--s2); }
-.feed li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; animation: arrive 360ms var(--ease); }
+.feed li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; animation: arrive var(--slow) var(--ease); }
 .feed li:first-child { border-top: 0; }
 .feed p { font-size: var(--t-md); line-height: 1.4; }
 .feed li.undone p { color: var(--ink-3); text-decoration: line-through; }

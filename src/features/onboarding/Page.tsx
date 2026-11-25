@@ -77,7 +77,7 @@ export default function OnboardingPage() {
 
       <div className="onb-body">
         <nav className="onb-steps" aria-label="Setup steps">
-          <div className="onb-progress"><span className="num">{step + 1} of {STEPS.length}</span><span className="bar"><i style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} /></span></div>
+          <div className="onb-progress"><span className="num">{step + 1} of {STEPS.length}</span><span className="bar"><i style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }} /></span></div>
           <ol>
             {STEPS.map((label, i) => (
               <li key={label} className={i === step ? 'current' : i < step ? 'done' : ''}>
@@ -165,7 +165,7 @@ function Playbook({ kept, setKept }: { kept: Record<string, { keep: boolean; tex
       {phase === 'reading' && (
         <div className="card pad onb-reading" role="status">
           <Thinking label={READ_PHASES[Math.min(READ_PHASES.length - 1, Math.floor(pct / 20))]} />
-          <span className="bar"><i style={{ width: `${pct}%` }} /></span>
+          <span className="bar"><i style={{ transform: `scaleX(${pct / 100})` }} /></span>
           <span className="faint num">{Math.round(pct * 2)} of 200 posts</span>
         </div>
       )}

@@ -6,7 +6,7 @@ import { uid } from '../../app/core'
 import { ago } from '../../app/time'
 import type { AgentId } from '../../app/types'
 import type { Chat } from './slice'
-import { Btn, Mark, PageHead } from '../../ui'
+import { Btn, Empty, Mark, PageHead } from '../../ui'
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import ChatThread from './Thread'
 import './chats.css'
@@ -57,7 +57,7 @@ export default function ChatsPage() {
               </div>
               <ChatThread key={chat.id} chat={chat} />
             </>
-          ) : <div className="empty"><h3>No conversation yet</h3><Btn variant="primary" onClick={start}>Start one</Btn></div>}
+          ) : <Empty scene="quiet" title="No conversation yet" body="Ask any agent a question, or brief one on a piece of work." action={<Btn variant="primary" onClick={start}>Start one</Btn>} />}
         </section>
       </div>
     </div>

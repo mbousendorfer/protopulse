@@ -12,7 +12,7 @@
 .day-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border-radius: var(--r-ctl); border: 0; background: none; text-align: left; color: var(--ink); transition: background-color var(--fast) var(--ease); }
 .day-row:hover { background: var(--row-hover); }
 .day-row.active { background: var(--brand-soft); }
-.day-row.fresh { animation: arrive 420ms var(--ease); }
+.day-row.fresh { animation: arrive var(--slow) var(--ease); }
 .day-row .txt { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.35; }
 .day-row .txt > :first-child { font-weight: 500; }
 .day-row .txt .faint { font-size: var(--t-sm); }
@@ -25,9 +25,8 @@
 .day-pane { padding: var(--s6) var(--s8); min-height: 520px; }
 .detail { position: relative; display: flex; flex-direction: column; transition: opacity var(--base) var(--ease), transform var(--base) var(--ease); }
 .detail.leaving { opacity: 0.35; transform: translateX(10px); }
-.detail > * { animation: rise 320ms var(--ease) both; }
-.detail > *:nth-child(2) { animation-delay: 30ms; } .detail > *:nth-child(3) { animation-delay: 60ms; } .detail > *:nth-child(4) { animation-delay: 90ms; }
-.detail > *:nth-child(5) { animation-delay: 120ms; } .detail > *:nth-child(n+6) { animation-delay: 150ms; }
+.detail > * { animation: rise var(--base) var(--ease) both; }
+.detail > *:nth-child(2) { animation-delay: 20ms; } .detail > *:nth-child(3) { animation-delay: 40ms; } .detail > *:nth-child(n+4) { animation-delay: 60ms; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .detail-title { font-size: var(--t-2xl); font-weight: 600; line-height: 1.3; margin-top: var(--s1); }
 .detail.big .detail-title { font-size: var(--t-3xl); }
@@ -58,7 +57,7 @@
 .dimmed { opacity: 0.5; pointer-events: none; }
 .all-clear { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--s3); padding: var(--s10) var(--s4); }
 .all-clear h2 { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.02em; }
-.all-clear .glyph { width: 52px; height: 52px; border-radius: var(--r-ctl); background: var(--ok-wash); color: var(--ok); display: grid; place-items: center; animation: pop 420ms var(--ease); }
+.all-clear .glyph { width: 52px; height: 52px; border-radius: var(--r-ctl); background: var(--ok-wash); color: var(--ok); display: grid; place-items: center; animation: pop var(--slow) var(--ease); }
 @keyframes pop { from { transform: scale(0.8); opacity: 0; } to { transform: none; opacity: 1; } }
 .clear-stats { display: flex; gap: var(--s8); margin: var(--s3) 0; flex-wrap: wrap; justify-content: center; }
 .clear-stats div { display: flex; flex-direction: column-reverse; }
