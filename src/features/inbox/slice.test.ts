@@ -199,3 +199,27 @@ describe('rules learned from Sam’s labels', () => {
     expect(s.handoffs.some(x => x.inboxRule)).toBe(false)
   })
 })
+
+describe('saved replies', () => {
+  it('⌘K “reply to Léa with the exchange saved reply” makes it her draft; sending it counts a use', async () => {
+    const { parse } = await import('../../data/command')
+    expect(parse('reply to léa with the exchange saved reply').intent).toMatchObject({ kind: 'reply', name: 'léa', saved: 'the exchange saved reply' })
+    const { savedNamed } = await import('./saved')
+    let s = initialState()
+    const r = savedNamed(s.inbox.saved, 'the exchange saved reply')!
+    expect(r.id).toBe('sr-exchange')
+    s = reducer(s, { type: 'inbox/savedUse', id: 'c-lea', saved: r.id })
+    expect(conv(s, 'c-lea').draft).toEqual(['Léa, sorry about that. We’re sending you a replacement today by express, no need to send the old one back first. Details in your DMs.'])
+    s = reducer(s, { type: 'inbox/approve', id: 'c-lea' })
+    expect(s.inbox.saved.find(x => x.id === 'sr-exchange')!.uses).toBe(32)
+  })
+
+  it('a reply typed from a saved one counts it; Save as reply keeps {name}', async () => {
+    const { toTemplate } = await import('./saved')
+    let s = reducer(initialState(), { type: 'inbox/send', id: 'c-tom', text: 'Tom, you have 30 days…', saved: 'sr-returns' })
+    expect(s.inbox.saved.find(x => x.id === 'sr-returns')!.uses).toBe(23)
+    expect(toTemplate('Thanks Tom, enjoy it', conv(s, 'c-tom'))).toBe('Thanks {name}, enjoy it')
+    s = reducer(s, { type: 'inbox/savedAdd', name: 'Enjoy', text: 'Thanks {name}, enjoy it' })
+    expect(s.inbox.saved.slice(-1)[0]).toMatchObject({ name: 'Enjoy', by: 'you', uses: 0 })
+  })
+})
