@@ -19,10 +19,10 @@ import './command.css'
 type Answer = { text: string; visual?: ReactNode; sources?: string[]; ctas?: { label: string; icon?: ReactNode; primary?: boolean; run: () => void }[]; after?: () => void }
 type Run = { query: string; intent: Intent; agent: AgentId; phase: 'thinking' | 'streaming' | 'done'; words: number; answer: Answer }
 
-const PAGES: { label: string; to: string }[] = [
+const PAGES: { label: string; to: string; keywords?: string[] }[] = [
   { label: 'Desk', to: '/' }, { label: 'Inbox', to: '/inbox' }, { label: 'Publishing', to: '/publishing' }, { label: 'Insights', to: '/insights' },
   { label: 'Listening', to: '/listening' }, { label: 'Strategy', to: '/strategy' }, { label: 'Agents', to: '/agents' }, { label: 'Activity', to: '/activity' },
-  { label: 'Shared rules', to: '/agents/rules' }, { label: 'Escalation', to: '/agents/escalation' }, { label: 'Settings', to: '/settings' },
+  { label: 'Shared rules', to: '/agents/rules', keywords: ['Playbook'] }, { label: 'Escalation', to: '/agents/escalation' }, { label: 'Settings', to: '/settings' },
 ]
 
 export default function CommandBar({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void; initial?: string }) {
@@ -109,7 +109,7 @@ export default function CommandBar({ open, onOpenChange }: { open: boolean; onOp
                   ))}
                 </Command.Group>
                 <Command.Group heading="Go to">
-                  {PAGES.map(p => <Command.Item key={p.to} value={`go ${p.label}`} onSelect={() => go(p.to)} className="cmdk-item"><ArrowRight size={14} />{p.label}</Command.Item>)}
+                  {PAGES.map(p => <Command.Item key={p.to} value={`go ${p.label}`} keywords={p.keywords} onSelect={() => go(p.to)} className="cmdk-item"><ArrowRight size={14} />{p.label}</Command.Item>)}
                   {AGENTS.map(a => <Command.Item key={a.id} value={`agent profile ${a.name} ${a.dept}`} onSelect={() => go(`/agents/${a.id}`)} className="cmdk-item"><Mark agent={a.id} />{a.name}’s profile<span className="hint">{a.dept}</span></Command.Item>)}
                 </Command.Group>
               </Command.List>
