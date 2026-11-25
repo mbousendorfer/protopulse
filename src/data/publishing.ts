@@ -24,6 +24,8 @@ export type Post = {
   handoff?: string
   note?: string
   group?: string
+  /** Held for something Sam said they'd provide. */
+  waiting?: 'visual'
   /** What happened to this post, newest last. */
   history?: { at: number; text: string }[]
 }
