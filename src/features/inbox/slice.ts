@@ -4,6 +4,7 @@ import { MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
 import type { Escalation } from '../../data/playbook'
 import { actionOf } from '../../app/core'
+import { fill, SAVED, type SavedReply } from './saved'
 import { didText, effect, matches, RULES, thenText, whenText, type InboxRule, type RuleOp } from './rules'
 
 declare module '../../app/types' {
@@ -21,8 +22,8 @@ import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type ConvType,
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
 /** `taught`: conversations Sam labelled by hand, per label, not covered by a rule yet (3 make Nova propose one). */
-export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]> }
-export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES) })
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[] }
+export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED) })
 
 export type BulkOp =
   | { op: 'approve' } | { op: 'hide' } | { op: 'unhide' } | { op: 'reviewed'; value: boolean }
@@ -30,7 +31,7 @@ export type BulkOp =
 
 export type InboxAction =
   | { type: 'inbox/approve'; id: string; text?: string }
-  | { type: 'inbox/send'; id: string; text: string }
+  | { type: 'inbox/send'; id: string; text: string; saved?: string }
   | { type: 'inbox/takeover'; id: string }
   | { type: 'inbox/hide'; id: string; hidden: boolean }
   | { type: 'inbox/claire'; id: string }
@@ -49,6 +50,11 @@ export type InboxAction =
   | { type: 'inbox/ruleApply'; id: string; rule: string }
   | { type: 'inbox/ruleDismiss'; id: string; rule: string }
   | { type: 'inbox/ruleApplyAll' }
+  | { type: 'inbox/savedAdd'; name: string; text: string }
+  | { type: 'inbox/savedEdit'; id: string; name: string; text: string }
+  | { type: 'inbox/savedDelete'; id: string }
+  | { type: 'inbox/savedRestore'; reply: SavedReply; index: number }
+  | { type: 'inbox/savedUse'; id: string; saved: string }
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
@@ -64,6 +70,8 @@ export type CardConv = {
   type: ConvType; sentiment: Sentiment; contact?: string; stars?: number; intent?: number; post?: string
   /** What Nova sends when she answers alone (she resolved the doubts flagged in the draft). */
   reply?: string
+  /** The saved reply Nova started from. */
+  saved?: string
   /** Author's audience, for the "creators above 50k" escalation. */
   followers?: number
   note?: string
@@ -81,7 +89,7 @@ function cardConv(h: Omit<Handoff, 'id' | 'at'>, p: Reply, id: string, at: numbe
   const k = kindOf(h, p)
   return {
     id, contact: k.contact, author: p.author, network: p.network, type: k.type, sentiment: k.sentiment, stars: k.stars, intent: k.intent, post: k.post,
-    at, handoff: card, unread: true, labels: [], note: k.note,
+    at, handoff: card, unread: true, labels: [], note: k.note, savedFrom: k.saved,
     status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
     messages: [{ id: `${id}-q`, from: 'them', text: p.text, at: at - MIN }],
     draft: p.draft, rules: h.rules,
@@ -141,6 +149,12 @@ const hasDraft = (c: Conversation) => (c.status === 'draft' || c.status === 'esc
 const BY_SAM = { reviewed: true, reviewedBy: 'sam' } as const
 const NAME: Record<Assignee, string> = { sam: 'you', claire: 'Claire' }
 
+/** A draft started from a saved reply went out: that reply's count goes up. */
+const bumpSaved = (s: State, ...ids: (string | undefined)[]): State => {
+  const hit = ids.filter(Boolean)
+  return hit.length ? { ...s, inbox: { ...s.inbox, saved: s.inbox.saved.map(r => ({ ...r, uses: r.uses + hit.filter(x => x === r.id).length })) } } : s
+}
+
 /** One action on many conversations: one journal line, one Undo. */
 function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State {
   const existing = new Set(s0.inbox.convs.map(c => c.id))
@@ -176,6 +190,7 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   // Sending or hiding settles the linked Desk cards, like doing it one by one.
   const settles = a.op === 'approve' || a.op === 'hide'
   let next: State = { ...s, handoffs: settles ? s.handoffs.filter(h => !cards.includes(h)) : s.handoffs, inbox: { ...s.inbox, convs: s.inbox.convs.map(c => (ids.has(c.id) ? { ...withTeam(c), ...change(withTeam(c)) } : c)) } }
+  if (a.op === 'approve') next = bumpSaved(next, ...picked.map(c => c.savedFrom))
   next = pushLog(next, { agent: 'nova', text: label, status: a.op === 'approve' ? 'approved' : 'done', reason: n > 1 ? 'Your call from the Inbox, in one go' : 'Your call from the Inbox', link: '/inbox' })
   const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id)), created: picked.map(c => c.id).filter(id => !existing.has(id)), cards: settles ? cards : [] }
   next = { ...next, inbox: { ...next.inbox, undo } }
@@ -198,6 +213,7 @@ function undoBulk(s: State): State {
 
 export function reduceInbox(s0: State, a: InboxAction): State {
   if (isRule(a)) return reduceRules(s0, a)
+  if (isSaved(a)) return reduceSaved(s0, a)
   if (a.type === 'inbox/bulk') return bulk(s0, a)
   if (a.type === 'inbox/undo') return undoBulk(s0)
   if (a.type === 'inbox/dismissUndo') return s0.inbox.undo ? { ...s0, inbox: { ...s0.inbox, undo: undefined } } : s0
@@ -209,13 +225,13 @@ export function reduceInbox(s0: State, a: InboxAction): State {
       const text = a.text ?? plain(c.draft)
       const edited = a.text !== undefined && a.text !== plain(c.draft)
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, ...BY_SAM, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
-      next = settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved')
+      next = bumpSaved(settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved'), c.savedFrom)
       if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
     }
     case 'inbox/send': {
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, ...BY_SAM, messages: [...x.messages, { id: uid('m'), from: 'you', text: a.text, at: t }] }))
-      next = settleCard(next, c, `You replied to ${c.author} yourself`, 'done')
+      next = bumpSaved(settleCard(next, c, `You replied to ${c.author} yourself`, 'done'), a.saved)
       if (!c.handoff || next === s) next = pushLog(next, { agent: 'nova', text: `You replied to ${c.author} yourself`, status: 'done', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
     }
@@ -325,6 +341,7 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
     case 'trial': break
   }
   if (!change) return s0
+  if (change.messages !== conv.messages) s = bumpSaved(s, conv.savedFrom)
   const settled = { card: h.id, created, status: conv.status, draft: conv.draft, note: conv.note, unread: conv.unread, reviewed: conv.reviewed, reviewedBy: conv.reviewedBy }
   return patch(s, conv.id, { ...change, settled })
 }
@@ -532,4 +549,27 @@ function teach(s: State, label: string, ids: string[]): State {
   const seen = [...new Set([...(s.inbox.taught?.[label] ?? []), ...fresh])]
   const keep = (list: string[]): State => ({ ...s, inbox: { ...s.inbox, taught: { ...s.inbox.taught, [label]: list } } })
   return seen.length >= 3 ? proposeRule(keep([]), label, seen.slice(-3)) : keep(seen)
+}
+
+/* ---------- Saved replies ---------- */
+
+type SavedAction = Extract<InboxAction, { type: `inbox/saved${string}` }>
+const isSaved = (a: InboxAction): a is SavedAction => a.type.startsWith('inbox/saved')
+const setSaved = (s: State, saved: SavedReply[]): State => ({ ...s, inbox: { ...s.inbox, saved } })
+
+function reduceSaved(s: State, a: SavedAction): State {
+  const list = s.inbox.saved
+  switch (a.type) {
+    case 'inbox/savedAdd': return a.name.trim() && a.text.trim() ? setSaved(s, [...list, { id: uid('sr'), name: a.name.trim(), text: a.text.trim(), uses: 0, by: 'you' }]) : s
+    case 'inbox/savedEdit': return setSaved(s, list.map(r => (r.id === a.id ? { ...r, name: a.name.trim() || r.name, text: a.text.trim() || r.text } : r)))
+    case 'inbox/savedDelete': return setSaved(s, list.filter(r => r.id !== a.id))
+    case 'inbox/savedRestore': return list.some(r => r.id === a.reply.id) ? s : setSaved(s, [...list.slice(0, a.index), a.reply, ...list.slice(a.index)])
+    case 'inbox/savedUse': {
+      // Sam asked for this saved reply (⌘K, Chat): it becomes the draft, adapted to the customer, ready to send.
+      const r = list.find(x => x.id === a.saved)
+      const [next, c] = materialize(s, a.id)
+      if (!r || !c) return s
+      return patch(next, c.id, x => ({ draft: [fill(r, x)], savedFrom: r.id, status: x.status === 'escalated' || x.status === 'claire' ? x.status : 'draft' }))
+    }
+  }
 }
