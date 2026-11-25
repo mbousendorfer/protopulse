@@ -23,7 +23,7 @@ Trié par valeur ; les corrections « À corriger d'abord » passent en tête et
 
 | # | Capacité (Opus Clip / Descript / Agorapulse) | État actuel | Version agentique | Valeur | Taille | Statut |
 |---|---|---|---|---|---|---|
-| N1 | Versions par réseau | un clip = un ratio pour tous ses réseaux (`model.ts:58`) ; `clipPosts` envoie le même cadre partout | Un clip = une version par réseau (ratio, durée, sous-titres hors zones d'interface, légende) ; Juno les fait en Act (reframe) et signale celles hors spec | 3 | L | todo |
+| N1 | Versions par réseau | un clip = un ratio pour tous ses réseaux (`model.ts:58`) ; `clipPosts` envoie le même cadre partout | Un clip = une version par réseau (ratio, durée, sous-titres hors zones d'interface, légende) ; Juno les fait en Act (reframe) et signale celles hors spec | 3 | L | done (aperçu Atlas : demande ouverte) |
 | N2 | Juno en Chat et ⌘K | intent `clip` : seulement « latest video » et un lien (`agent.tsx:20-58`) | « Clip the best 3 moments about the strap », « Make a LinkedIn version », « Why is this clip not going out? », « Which clip did best last week? » — chiffres lus dans l'état | 3 | M | done |
 | N3 | Couverture et miniature | aucune (miniature = poster de la source) | Juno propose 3 cadres de couverture, texte de couverture au brand kit, titre YouTube ; « Pick a better cover » | 2 | M | done |
 | N4 | Score qui apprend | `rescore` ne lit que le clip (`model.ts:268`) | Le score intègre les perfs passées par pilier et réseau ; « Why this moment » cite le clip passé comparable | 2 | M | done |
