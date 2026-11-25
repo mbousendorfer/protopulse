@@ -6,7 +6,7 @@ import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
-import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
+import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
 import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
@@ -360,103 +360,86 @@ function CampaignView() {
         </section>
       )}
 
-      {c.status !== 'review' && (
-        <section className="card pad progress-card">
-          <div className="progress-top">
-            <div className="stat">
-              <b className="num">{fmtGoal(c, c.goal.current)} <span className="faint">of {fmtGoal(c, c.goal.target)}</span></b>
-              <span className="label">{c.goal.label.replace(' (€)', '')} · {pct}% of goal{c.status === 'live' ? ` · day ${Math.min(dayN, days)} of ${days}` : ''}</span>
-            </div>
-            {c.status === 'live' && expected > 0 && (
-              <Pill tone={c.goal.current >= expected ? 'ok' : 'caution'}>{Math.round((c.goal.current / expected) * 100)}% of trajectory</Pill>
-            )}
-          </div>
-          <LineChart label="Plan versus actual" labels={c.planned.map((_, i) => `Day ${i}`)} h={180}
-            series={[{ name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }, { name: 'Actual', data: c.actual, color: 'var(--a-sage)' }]} />
-        </section>
-      )}
+      {/* Work on the left (where it stands, what Sage changes, the posts), the brief it answers to on the right. */}
+      <div className="campaign-grid">
+        <div className="stack lg">
+          {c.status !== 'review' && (
+            <section className="card pad progress-card">
+              <div className="progress-top">
+                <div className="stat">
+                  <b className="num">{fmtGoal(c, c.goal.current)} <span className="faint">of {fmtGoal(c, c.goal.target)}</span></b>
+                  <span className="label">{c.goal.label.replace(' (€)', '')} · {pct}% of goal{c.status === 'live' ? ` · day ${Math.min(dayN, days)} of ${days}` : ''}</span>
+                </div>
+                {c.status === 'live' && expected > 0 && (
+                  <Pill tone={c.goal.current >= expected ? 'ok' : 'caution'}>{Math.round((c.goal.current / expected) * 100)}% of trajectory</Pill>
+                )}
+              </div>
+              <LineChart label="Plan versus actual" labels={c.planned.map((_, i) => `Day ${i}`)} h={180}
+                series={[{ name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }, { name: 'Actual', data: c.actual, color: 'var(--a-sage)' }]} />
+            </section>
+          )}
 
-      {c.status === 'live' && c.adjustments.length > 0 && (
-        <section className="card">
-          <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Sage’s adjustments</h2></div>
-          <ul className="rows">
-            {c.adjustments.map(a => (
-              <li key={a.id} className="adjust">
-                <p>{a.text}</p>
-                {a.status === 'proposed' ? (
-                  <div className="row nowrap">
-                    <Btn size="sm" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
-                  </div>
-                ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {c.recap && (
-        <section className="card pad recap">
-          <div className="section-title"><Mark agent={c.recapBy ?? 'iris'} />{c.recapBy === 'sage' ? 'Recap by Sage, with Iris’s numbers' : 'Recap by Iris'}</div>
-          {c.recap.map(p => <p key={p}>{p}</p>)}
-          {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
-        </section>
-      )}
-
-      <div className="grid-2">
-        <section className="card pad">
-          <div className="section-title">Goal and KPIs</div>
-          <p className="goal-big"><b className="num">{fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')}</p>
-          <ul className="bullets">{c.kpis.map(k => <li key={k}>{k}</li>)}</ul>
-          <div className="faint budget">Boost budget: <b className="num">€{c.budget.toLocaleString('en-GB')}</b></div>
-        </section>
-        <section className="card pad">
-          <div className="section-title">Key messages</div>
-          <ul className="bullets">{c.messages.map(m => <li key={m}>{m}</li>)}</ul>
-          <div className="section-title mt-4">Audience</div>
-          <p className="muted">{c.audience}</p>
-        </section>
-      </div>
-
-      <section className="card pad">
-        <div className="section-title">Timeline</div>
-        <Timeline c={c} now={now} />
-      </section>
-
-      <section className="card pad">
-        <div className="section-title">Posts by phase <span className="faint">· {c.posts.length} posts</span>{c.status === 'live' && <Link to="/publishing/calendar" className="section-link">See them in Atlas’s calendar</Link>}</div>
-        <div className="phase-cols">
-          {(['Teasing', 'Launch', 'Follow-up'] as Phase['name'][]).map(ph => (
-            <div key={ph} className="phase-col">
-              <h3>{ph} <span className="faint num">{c.posts.filter(p => p.phase === ph).length}</span></h3>
-              <ul>
-                {c.posts.filter(p => p.phase === ph).sort((a, b) => a.day - b.day).map(p => (
-                  <li key={p.id}>
-                    <Net n={p.network} />
-                    <span className="ellipsis" title={p.title}>{p.title}</span>
-                    <span className="mono faint">{fmtDate(c.base + p.day * DAY)}</span>
-                    {p.published && <Check size={14} className="ok" aria-label="Published" />}
+          {c.status === 'live' && c.adjustments.length > 0 && (
+            <section className="card">
+              <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Sage’s adjustments</h2></div>
+              <ul className="rows">
+                {c.adjustments.map(a => (
+                  <li key={a.id} className="adjust">
+                    <p>{a.text}</p>
+                    {a.status === 'proposed' ? (
+                      <div className="row nowrap">
+                        <Btn size="sm" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
+                        <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
+                      </div>
+                    ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
                   </li>
                 ))}
               </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+            </section>
+          )}
 
-      {c.status !== 'review' && <LabelCard c={c} />}
+          {c.recap && (
+            <section className="card pad recap">
+              <div className="section-title"><Mark agent={c.recapBy ?? 'iris'} />{c.recapBy === 'sage' ? 'Recap by Sage, with Iris’s numbers' : 'Recap by Iris'}</div>
+              {c.recap.map(p => <p key={p}>{p}</p>)}
+              {c.reportId && <Link to={`/insights/reports/${c.reportId}`} className="btn sm">Full recap</Link>}
+            </section>
+          )}
+
+          <PlanCard c={c} now={now} />
+        </div>
+
+        <aside className="stack lg">
+          <section className="card pad brief-card">
+            <div>
+              <div className="section-title">Goal</div>
+              <p className="goal-big"><b className="num">{fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')}</p>
+              <ul className="bullets">{c.kpis.map(k => <li key={k}>{k}</li>)}</ul>
+              <p className="budget">Boost budget <b className="num">€{c.budget.toLocaleString('en-GB')}</b></p>
+            </div>
+            <div>
+              <div className="section-title">Key messages</div>
+              <ul className="bullets">{c.messages.map(m => <li key={m}>{m}</li>)}</ul>
+            </div>
+            <div>
+              <div className="section-title">Audience</div>
+              <p className="muted">{c.audience}</p>
+            </div>
+            {c.risks.length > 0 && (
+              <div>
+                <div className="section-title">Risks Sage sees</div>
+                <ul className="bullets">{c.risks.map(r => <li key={r}>{r}</li>)}</ul>
+              </div>
+            )}
+          </section>
+          {c.status !== 'review' && <LabelCard c={c} />}
+        </aside>
+      </div>
 
       <section className="card pad">
         <div className="section-title">Who does what <span className="faint">· drag a task to another agent, or use its menu</span></div>
         <DelegateBoard c={c} />
       </section>
-
-      {c.risks.length > 0 && (
-        <section className="card pad">
-          <div className="section-title">Risks Sage sees</div>
-          <ul className="bullets">{c.risks.map(r => <li key={r}>{r}</li>)}</ul>
-        </section>
-      )}
 
       <Modal open={discard} onOpenChange={setDiscard} title={`Discard ${c.name}?`} footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setDiscard(false)}>Keep it</Btn><Btn variant="danger" onClick={() => { d({ type: 'strategy/discard', id: c.id }); nav('/strategy') }}>Discard plan</Btn></>}>
         <p className="muted">The plan and its Desk card go away. Sage keeps the brief in the journal.</p>
@@ -482,23 +465,46 @@ function LabelCard({ c }: { c: Campaign }) {
   )
 }
 
-function Timeline({ c, now }: { c: Campaign; now: number }) {
-  const span = c.end - c.start
-  const x = (t: number) => `${Math.max(0, Math.min(100, ((t - c.start) / span) * 100))}%`
+/** The posts, phase by phase: each phase says when it runs and what it's for, then lists its posts in date order. */
+function PlanCard({ c, now }: { c: Campaign; now: number }) {
+  const live = c.status === 'live'
   return (
-    <div className="timeline">
-      <div className="tl-track">
-        {c.phases.map(p => (
-          <div key={p.name} className={`tl-phase ${p.name === 'Launch' ? 'launch' : ''}`} style={{ left: x(p.start), width: `calc(${x(p.end)} - ${x(p.start)})` }}>
-            <b>{p.name}</b><span>{fmtDate(p.start)} – {fmtDate(p.end)}</span>
-          </div>
-        ))}
-        {now > c.start && now < c.end && <span className="tl-now" style={{ left: x(now) }} aria-label="Today" />}
+    <section className="card">
+      <div className="card-head">
+        <h2>Plan <span className="faint num">{c.posts.length} posts</span></h2>
+        {live && <Link to="/publishing/calendar" className="btn sm ghost">See them in Atlas’s calendar</Link>}
       </div>
-      <div className="tl-summary">
-        {c.phases.map(p => <p key={p.name}><b>{p.name}</b> <span className="muted">{p.summary}</span></p>)}
+      <div className="plan-phases">
+        {c.phases.map(ph => {
+          const posts = c.posts.filter(p => p.phase === ph.name).sort((a, b) => a.day - b.day)
+          const current = live && now >= ph.start && now <= ph.end
+          return (
+            <section key={ph.name} className="phase" aria-label={`${ph.name}, ${fmtRange(ph.start, ph.end)}`}>
+              <div className="phase-head">
+                <h3>{ph.name}</h3>
+                <span className="mono faint">{fmtRange(ph.start, ph.end)}</span>
+                {current && <Pill dot>Now</Pill>}
+                <span className="spacer" />
+                <span className="faint">{posts.length} post{posts.length === 1 ? '' : 's'}</span>
+              </div>
+              <p className="muted phase-sum">{ph.summary}</p>
+              {posts.length > 0 && (
+                <ul className="phase-posts">
+                  {posts.map(p => (
+                    <li key={p.id}>
+                      <Net n={p.network} />
+                      <span>{p.title}</span>
+                      <span className="mono faint">{fmtDate(c.base + p.day * DAY)}</span>
+                      {p.published ? <Check size={14} className="ok" aria-label="Published" /> : <span aria-hidden />}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )
+        })}
       </div>
-    </div>
+    </section>
   )
 }
 

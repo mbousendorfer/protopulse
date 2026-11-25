@@ -9,7 +9,6 @@
 .ltext svg { color: var(--ink-3); flex: none; }
 .ltext span { min-width: 0; }
 .ledger li.undone .ltext span { text-decoration: line-through; color: var(--ink-3); }
-.lstatus { font-size: var(--t-sm); }
 .lact { display: flex; gap: 4px; }
 .ldetail { padding: 0 var(--s4) var(--s4) calc(44px + 28px + var(--s3) * 2 + var(--s4)); display: flex; flex-direction: column; gap: 8px; align-items: flex-start; color: var(--ink-2); }
 .beforeafter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); width: 100%; }
@@ -19,3 +18,4 @@
   .lrow > :nth-child(n+4) { grid-column: 3; justify-self: start; }
   .ldetail { padding-left: var(--s4); }
 }
+.act-more { padding: 6px var(--s4); }
