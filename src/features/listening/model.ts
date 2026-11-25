@@ -35,6 +35,8 @@ export function topComplaints(s: State, ms: Mention[]) {
 }
 
 export const pct = (n: number, of: number) => (of ? `${((n / of) * 100).toFixed(1).replace(/\.0$/, '')}%` : '0%')
+/** A share as people read it: counts for a handful (“2 of 3”), a percentage from 10 up. */
+export const share = (n: number, of: number) => (of < 10 ? `${n} of ${of}` : pct(n, of))
 export const WEEK = 7 * DAY
 
 /* ---------- The Storm Jacket seams spike ---------- */
@@ -204,7 +206,9 @@ export function searchRead(s: State, x: Search) {
   const word = topWord(day, `${x.name} ${x.keywords} ${top?.[0] ?? ''}`)
   const head = day.length >= 3
     ? `${day.length} negative mentions in the last 24 hours${top && !x.name.toLowerCase().includes(top[0].toLowerCase()) ? `, ${top[1]} about the ${top[0]}` : ''}${word ? `; ${word[1]} say “${word[0]}”` : ''}.`
-    : `Mostly ${c.positive >= c.negative ? 'positive' : 'negative'}: ${pct(c.positive, c.total)} positive, ${pct(c.negative, c.total)} negative.`
+    : c.total < 10
+      ? `${c.positive >= c.negative ? `${c.positive} of the last ${c.total} are positive` : `${c.negative} of the last ${c.total} are negative`}.`
+      : `Mostly ${c.positive >= c.negative ? 'positive' : 'negative'}: ${pct(c.positive, c.total)} positive, ${pct(c.negative, c.total)} negative.`
   return `${head} Loudest: ${loud.author} on ${loud.network} (${loud.reach.toLocaleString('en-GB')} reach).${waiting ? ` Nova has ${waiting} repl${waiting === 1 ? 'y' : 'ies'} waiting on your Desk.` : ''}`
 }
 

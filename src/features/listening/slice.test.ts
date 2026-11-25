@@ -223,3 +223,9 @@ describe('Echo · search view', () => {
     expect(searchVolume(x, 0, searchLive(s, x)).volume).toBe(310 + 27)
   })
 })
+
+it('a share reads as counts under 10, a percentage from 10', async () => {
+  const { share } = await import('./model')
+  expect(share(2, 3)).toBe('2 of 3')
+  expect(share(5, 10)).toBe('50%')
+})
