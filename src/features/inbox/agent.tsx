@@ -79,8 +79,8 @@ const inboxRule = defineIntent({
     const q = t.replace(/^(?:make|have|ask|let)\s+nova\s+|^nova,?\s+/, '').replace(/^(?:please\s+)?(?:always\s+)?/, '')
     let m = q.match(/^(?:label|tag)\s+(.+?)\s+(?:as|with)\s+["“]?(.+?)["”]?$/)
     if (m) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'label', value: cap(m[2].trim()) } }
-    m = q.match(/^assign\s+(.+?)\s+to\s+(claire|me|sam)$/)
-    if (m) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'assign', value: m[2] === 'claire' ? 'claire' : 'sam' } }
+    m = q.match(/^assign\s+(.+?)\s+to\s+(claire|me|sam|l[eé]o|yanis)$/)
+    if (m) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'assign', value: m[2] === 'me' || m[2] === 'sam' ? 'sam' : m[2] === 'yanis' ? 'yanis' : m[2] === 'claire' ? 'claire' : 'leo' } }
     m = q.match(/^hide\s+(.+)$/)
     if (m && wordsOf(m[1]).length) return { kind: 'inboxRule', words: wordsOf(m[1]), then: { op: 'hide' } }
     m = q.match(/^(?:mark\s+(.+?)\s+(?:as\s+)?reviewed|review\s+(.+))$/)

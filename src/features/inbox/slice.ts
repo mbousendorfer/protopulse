@@ -15,16 +15,19 @@ declare module '../../app/types' {
     inboxRuleUses?: { id: string; n: number }
     /** Inbox: the rule this entry added (Undo removes it). */
     inboxRule?: string
+    /** Inbox: rules and labels as they were before a label was renamed or deleted. */
+    inboxRulesBefore?: import('./rules').InboxRule[]
+    inboxLabelsBefore?: string[]
   }
 }
-import { CONVERSATIONS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
+import { CONVERSATIONS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
 /** `taught`: conversations Sam labelled by hand, per label, not covered by a rule yet (3 make Nova propose one). */
 /** `targets`: response target per type, in minutes. `warned`: conversations Nova already raised before their target. */
-export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[] }
-export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED), targets: { ...TARGETS } })
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[]; labels: string[] }
+export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED), targets: { ...TARGETS }, labels: [...LABELS, 'Order status'] })
 
 export type BulkOp =
   | { op: 'approve' } | { op: 'hide' } | { op: 'unhide' } | { op: 'reviewed'; value: boolean }
@@ -57,6 +60,9 @@ export type InboxAction =
   | { type: 'inbox/savedRestore'; reply: SavedReply; index: number }
   | { type: 'inbox/savedUse'; id: string; saved: string }
   | { type: 'inbox/target'; kind: ConvType; minutes: number }
+  | { type: 'inbox/labelAdd'; name: string }
+  | { type: 'inbox/labelRename'; from: string; to: string }
+  | { type: 'inbox/labelDelete'; name: string }
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
@@ -198,6 +204,7 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   next = pushLog(next, { agent: 'nova', text: label, status: a.op === 'approve' ? 'approved' : 'done', reason: n > 1 ? 'Your call from the Inbox, in one go' : 'Your call from the Inbox', link: '/inbox' })
   const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id)), created: picked.map(c => c.id).filter(id => !existing.has(id)), cards: settles ? cards : [] }
   next = { ...next, inbox: { ...next.inbox, undo } }
+  if (a.op === 'label' && !next.inbox.labels.includes(a.value)) next = { ...next, inbox: { ...next.inbox, labels: [...next.inbox.labels, a.value] } }
   return a.op === 'label' ? teach(next, a.value, picked.map(c => c.id)) : next
 }
 
@@ -218,6 +225,7 @@ function undoBulk(s: State): State {
 export function reduceInbox(s0: State, a: InboxAction): State {
   if (isRule(a)) return reduceRules(s0, a)
   if (isSaved(a)) return reduceSaved(s0, a)
+  if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)
   if (a.type === 'inbox/target') return { ...s0, inbox: { ...s0.inbox, targets: { ...s0.inbox.targets, [a.kind]: a.minutes } } }
   if (a.type === 'inbox/bulk') return bulk(s0, a)
   if (a.type === 'inbox/undo') return undoBulk(s0)
@@ -514,6 +522,8 @@ function undoRules(s: State, entry: LogEntry): State {
     next = setRules(next, next.inbox.rules.map(r => (r.id === id ? { ...r, uses: Math.max(0, r.uses - n) } : r)))
   }
   if (entry.inboxRule) next = setRules(next, next.inbox.rules.filter(r => r.id !== entry.inboxRule))
+  if (entry.inboxRulesBefore) next = setRules(next, entry.inboxRulesBefore)
+  if (entry.inboxLabelsBefore) next = { ...next, inbox: { ...next.inbox, labels: entry.inboxLabelsBefore } }
   return next
 }
 export type { RuleOp }
@@ -687,4 +697,34 @@ function teamReplies(s: State, t: number): State {
     const line = `${ROSTER[who].short} replied to ${c.author}`
     return c.handoff && done.handoffs.some(h => h.id === c.handoff) ? settleCard(done, c, line, 'done') : pushLog(done, { agent: 'nova', text: line, status: 'done', reason: `Assigned to ${ROSTER[who].short}`, link: `/inbox/${c.id}` })
   }, s)
+}
+
+/* ---------- Labels ---------- */
+
+/** Rename or delete a label everywhere: conversations, Nova's rules, the list. One journal line, a real Undo. */
+function reduceLabels(s: State, a: Extract<InboxAction, { type: 'inbox/labelAdd' | 'inbox/labelRename' | 'inbox/labelDelete' }>): State {
+  const labels = s.inbox.labels
+  if (a.type === 'inbox/labelAdd') return a.name.trim() && !labels.includes(a.name.trim()) ? { ...s, inbox: { ...s.inbox, labels: [...labels, a.name.trim()] } } : s
+  const name = a.type === 'inbox/labelRename' ? a.from : a.name
+  const to = a.type === 'inbox/labelRename' ? a.to.trim() : undefined
+  if (a.type === 'inbox/labelRename' && (!to || to === name || labels.includes(to))) return s
+  const before = s.inbox.convs.filter(c => c.labels?.includes(name))
+  const uses = s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === name)
+  const relabel = (l: string[]) => (to ? l.map(x => (x === name ? to : x)) : l.filter(x => x !== name))
+  const next: State = {
+    ...s,
+    inbox: {
+      ...s.inbox,
+      labels: to ? labels.map(x => (x === name ? to : x)) : labels.filter(x => x !== name),
+      convs: s.inbox.convs.map(c => (c.labels?.includes(name) ? { ...c, labels: relabel(c.labels) } : c)),
+      rules: s.inbox.rules.map(r => (r.then.op === 'label' && r.then.value === name ? (to ? { ...r, then: { op: 'label' as const, value: to } } : { ...r, on: false }) : r)),
+    },
+  }
+  const n = before.length
+  const where = [`${n} conversation${n === 1 ? '' : 's'}`, uses.length ? `${uses.length} rule${uses.length > 1 ? 's' : ''}${to ? '' : ' switched off'}` : ''].filter(Boolean).join(', ')
+  return pushLog(next, {
+    agent: 'nova', text: to ? `Renamed the label “${name}” to “${to}” on ${where}` : `Deleted the label “${name}”: removed from ${where}`,
+    status: 'done', reason: 'You changed the labels', undoMinutes: 30, link: '/inbox?labels=1',
+    inboxBefore: before, inboxRulesBefore: uses.length ? s.inbox.rules : undefined, inboxLabelsBefore: labels,
+  })
 }

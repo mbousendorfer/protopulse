@@ -279,3 +279,25 @@ describe('team', () => {
     expect(didText(r.then, 'Hôtel Les Cimes')).toBe('Assigned Hôtel Les Cimes to Yanis')
   })
 })
+
+describe('labels', () => {
+  it('rename goes everywhere (conversations and rules); delete switches the rules off; Undo puts it all back', () => {
+    let s = reducer(initialState(), { type: 'inbox/labelRename', from: 'Refund', to: 'Money back' })
+    expect(conv(s, 'c-thomas').labels).toContain('Money back')
+    expect(s.inbox.rules.find(r => r.id === 'ir-refund')!.then).toEqual({ op: 'label', value: 'Money back' })
+    expect(s.inbox.labels).toContain('Money back')
+    s = reducer(s, { type: 'inbox/labelDelete', name: 'Money back' })
+    expect(conv(s, 'c-thomas').labels).not.toContain('Money back')
+    expect(s.inbox.rules.find(r => r.id === 'ir-refund')!.on).toBe(false)
+    expect(s.log[0].text).toBe('Deleted the label “Money back”: removed from 2 conversations, 1 rule switched off')
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(conv(s, 'c-thomas').labels).toContain('Money back')
+    expect(s.inbox.rules.find(r => r.id === 'ir-refund')!.on).toBe(true)
+    expect(s.inbox.labels).toContain('Money back')
+  })
+
+  it('⌘K assigns to Léo and Yanis too', async () => {
+    const { parse } = await import('../../data/command')
+    expect(parse('assign wholesale requests to Yanis').intent).toMatchObject({ kind: 'inboxRule', words: ['wholesale'], then: { op: 'assign', value: 'yanis' } })
+  })
+})
