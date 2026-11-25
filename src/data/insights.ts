@@ -5,11 +5,11 @@ import { T } from '../app/time'
 export type Cited = string | { n: string; source: string }
 
 /** What a Report Studio section is about; Iris rewrites it from this. */
-export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community'
+export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community' | 'campaign' | 'label'
 /** How Iris writes a report on request: its window, networks, reader and sections. Saved as a template, it can be asked for again. */
-export type Recipe = { days: number; networks: Network[]; audience: 'claire' | 'sam'; sections: SectionKind[] }
+export type Recipe = { days: number; networks: Network[]; audience: 'claire' | 'sam'; sections: SectionKind[]; /** Sage's campaign id. */ campaign?: string; /** A label on Atlas's posts. */ label?: string }
 
-export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars'; kind?: SectionKind; short?: boolean }
+export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' | 'campaign'; kind?: SectionKind; short?: boolean }
 
 export type Report = {
   id: string

@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, Check, Copy, PauseCircle, Pencil, RotateCw, Trash2, UserRound } from 'lucide-react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { AlertTriangle, CalendarClock, Check, ChevronDown, Copy, PauseCircle, Pencil, Plus, RotateCw, Tag, Trash2, UserRound, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { PUBLISH_NETWORKS, type Post } from '../../data/publishing'
-import { Btn, Mark, Modal, Net, Pill, Seg, Sheet } from '../../ui'
+import { Btn, Mark, Menu, Modal, Net, Pill, Seg, Sheet } from '../../ui'
 import { BulkBar, type Selection } from '../../ui/Selection'
 import { Notice, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -14,6 +14,8 @@ import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
 import { RETRY_OPTIONS, failureCardOf, type Retry } from './failures'
 import { FORMAT_LABEL } from './formats'
+import { perfOf } from './perf'
+import { knownLabels } from './labels'
 
 const when = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · ${hhmm(t)}`
 
@@ -24,7 +26,7 @@ export function useOpenPost() {
   return (id: string) => nav(`${loc.pathname}?post=${id}`)
 }
 
-type Dialog = { kind: 'reschedule' | 'duplicate' | 'delete'; ids: string[] } | null
+type Dialog = { kind: 'reschedule' | 'duplicate' | 'delete' | 'label'; ids: string[] } | null
 
 /** Reschedule, duplicate and delete dialogs, shared by the bulk bar and the preview panel. */
 function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => void; onDone?: () => void }) {
@@ -34,6 +36,8 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
   const [dt, setDt] = useState('')
   const now = useNow()
   const [net, setNet] = useState<Network>('instagram')
+  const [picked, setPicked] = useState<string[]>([])
+  const [fresh, setFresh] = useState('')
   const posts = s.publishing.posts.filter(p => dialog?.ids.includes(p.id))
   useEffect(() => { if (dialog && posts[0]) { const x = new Date(posts[0].at + DAY); setDt(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}T${hhmm(posts[0].at)}`); setNet(posts[0].network === 'instagram' ? 'tiktok' : 'instagram') } }, [dialog?.ids.join()]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!dialog) return null
@@ -41,6 +45,21 @@ function Dialogs({ dialog, onClose, onDone }: { dialog: Dialog; onClose: () => v
   const run = (op: BulkOp, extra: { shiftDays?: number; at?: number; network?: Network } = {}) => { d({ type: 'publishing/bulk', ids: dialog.ids, op, ...extra }); onClose(); onDone?.() }
   const noun = `${n} post${n > 1 ? 's' : ''}`
 
+  if (dialog.kind === 'label') {
+    const add = [...picked, ...(fresh.trim() ? [fresh.trim()] : [])]
+    const close = () => { setPicked([]); setFresh(''); onClose() }
+    return (
+      <Modal open onOpenChange={o => !o && close()} title={`Label ${noun}`}
+        footer={<><span className="spacer" /><Btn variant="ghost" onClick={close}>Cancel</Btn><Btn variant="primary" disabled={!add.length} onClick={() => { d({ type: 'publishing/labels', ids: dialog.ids, add }); close(); onDone?.() }}><Tag size={14} />Add {add.length > 1 ? `${add.length} labels` : 'label'}</Btn></>}>
+        <div className="pub-filters">
+          {knownLabels(s).map(l => (
+            <label key={l} className="row tight pub-filter-opt"><input type="checkbox" className="check" checked={picked.includes(l)} onChange={() => setPicked(x => (x.includes(l) ? x.filter(y => y !== l) : [...x, l]))} />{l}</label>
+          ))}
+          <div className="field"><label htmlFor="new-label">New label</label><input id="new-label" className="input" value={fresh} onChange={e => setFresh(e.target.value)} placeholder="Black Friday" /></div>
+        </div>
+      </Modal>
+    )
+  }
   if (dialog.kind === 'delete') return (
     <Modal open onOpenChange={o => !o && onClose()} title={`Delete ${noun}?`}
       footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="danger" onClick={() => run('delete')}><Trash2 size={14} />Delete {noun}</Btn></>}>
@@ -97,6 +116,7 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
         { label: `Approve${approvable && approvable < sel.count ? ` ${approvable}` : ''}`, icon: <Check size={14} />, primary: true, disabled: !approvable, note: approvable < sel.count ? `${approvable} of ${sel.count} can be approved, the rest are already scheduled or published` : undefined, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'approve' }); sel.clear() } },
         { label: 'Reschedule', icon: <CalendarClock size={14} />, onRun: () => setDialog({ kind: 'reschedule', ids }) },
         { label: 'Duplicate', icon: <Copy size={14} />, onRun: () => setDialog({ kind: 'duplicate', ids }) },
+        { label: 'Label', icon: <Tag size={14} />, onRun: () => setDialog({ kind: 'label', ids }) },
         { label: 'Ask Claire', icon: <UserRound size={14} />, onRun: () => { d({ type: 'publishing/bulk', ids, op: 'claire' }); sel.clear() } },
         { label: 'Delete', icon: <Trash2 size={14} />, onRun: () => setDialog({ kind: 'delete', ids }) },
       ]} />
@@ -109,6 +129,26 @@ export function PostsBulk({ sel, posts }: { sel: Selection; posts: Post[] }) {
   )
 }
 
+/** A post's labels: remove one, add a known one, or type a new one. */
+function LabelsEdit({ p }: { p: Post }) {
+  const { s, d } = useStore()
+  const [typing, setTyping] = useState(false)
+  const [v, setV] = useState('')
+  const others = knownLabels(s).filter(l => !p.labels?.includes(l))
+  const add = (l: string) => { if (l.trim()) d({ type: 'publishing/labels', ids: [p.id], add: [l] }); setV(''); setTyping(false) }
+  return (
+    <span className="pub-labels">
+      {(p.labels ?? []).map(l => (
+        <span key={l} className="chip">{l}<Btn size="xs" variant="ghost" icon aria-label={`Remove the label ${l}`} onClick={() => d({ type: 'publishing/labels', ids: [p.id], remove: [l] })}><X size={12} /></Btn></span>
+      ))}
+      {typing
+        ? <form onSubmit={e => { e.preventDefault(); add(v) }}><input autoFocus className="input" aria-label="New label" value={v} onChange={e => setV(e.target.value)} onBlur={() => (v.trim() ? add(v) : setTyping(false))} placeholder="New label" /></form>
+        : <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Plus size={12} />Add<ChevronDown size={12} /></Btn>}
+            items={[...others.map(l => ({ label: l, onSelect: () => add(l) })), ...(others.length ? ['sep' as const] : []), { label: 'New label…', onSelect: () => setTyping(true) }]} />}
+    </span>
+  )
+}
+
 /** Read-only preview of a post, with what happened to it and what you can do next. */
 export function PostPreview() {
   const { s, d } = useStore()
@@ -116,6 +156,7 @@ export function PostPreview() {
   const loc = useLocation()
   const id = new URLSearchParams(loc.search).get('post')
   const p = s.publishing.posts.find(x => x.id === id)
+  const perf = p && perfOf(s, p)
   const [dialog, setDialog] = useState<Dialog>(null)
   const close = () => nav(loc.pathname)
   return (
@@ -162,12 +203,30 @@ export function PostPreview() {
               <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status === 'unapproved' ? 'To approve' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>
               <div><dt>Pillar</dt><dd>{p.pillar}</dd></div>
+              <div><dt>Labels</dt><dd><LabelsEdit p={p} /></dd></div>
               {p.format && <div><dt>Format</dt><dd>{FORMAT_LABEL[p.format]}</dd></div>}
               {p.firstComment && <div><dt>First comment</dt><dd>{p.firstComment}</dd></div>}
               {p.campaign && <div><dt>Campaign</dt><dd>{p.campaign}</dd></div>}
-              {p.stats && <div><dt>Results</dt><dd className="num">{p.stats.reach.toLocaleString('en-GB')} reach · {p.stats.er}% engagement</dd></div>}
+              {p.stats && !perf && <div><dt>Results</dt><dd className="num">{p.stats.reach.toLocaleString('en-GB')} reach · {p.stats.er}% engagement</dd></div>}
               {p.note && <div><dt>Note</dt><dd>{p.note}</dd></div>}
             </dl>
+            {perf && (
+              <section aria-label="Results">
+                <h3 className="pub-prev-h">Results</h3>
+                <dl className="pub-perf">
+                  <div><dt>Reach</dt><dd><b className="num">{perf.reach.toLocaleString('en-GB')}</b> <span className="muted">{perf.ratio}× your {NETWORK_LABEL[p!.network]} median ({Math.round(perf.medianReach).toLocaleString('en-GB')})</span></dd></div>
+                  <div><dt>Engagement</dt><dd><b className="num">{perf.er}%</b> <span className="muted">{perf.er >= perf.medianEr ? 'above' : 'below'} the median ({perf.medianEr}%)</span></dd></div>
+                </dl>
+                <div className="pub-perf-read">
+                  <Mark agent="atlas" /><p><b>Atlas:</b> {perf.reading}</p>
+                  {perf.worth && (() => {
+                    const idea = s.publishing.ideas.find(i => i.key === `recycle-${p!.id}`)
+                    return idea ? <Link to={`/publishing/ideas/${idea.id}`}>In Ideas: review it</Link> : <Btn size="sm" onClick={() => d({ type: 'publishing/recycle', id: p!.id })}>Recycle it</Btn>
+                  })()}
+                </div>
+                <Link to="/insights">See in Insights</Link>
+              </section>
+            )}
             <section>
               <h3 className="pub-prev-h">History</h3>
               <ol className="pub-hist">

@@ -14,6 +14,8 @@ import { PAUSE_TOPIC, fitCap, overCap, pauseFor, resumeAll } from './guards'
 import { approved, sendToClaire } from './approvals'
 import { withFormat } from './formats'
 import { fillQueues } from './queues'
+import { perfOf, recycleSeed } from './perf'
+import { editLabels, withLabels } from './labels'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -34,7 +36,7 @@ export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: P
 export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[] }
 const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
 export const initialPublishing = (): PublishingState => ({
-  posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
+  posts: structuredClone(POSTS).map(p => withLabels(p)), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
   ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [], queues: structuredClone(QUEUES),
 })
 
@@ -75,6 +77,8 @@ export type PublishingAction =
   | { type: 'publishing/firstComment'; id: string; text: string }
   | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
   | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
+  | { type: 'publishing/recycle'; id: string }
+  | { type: 'publishing/labels'; ids: string[]; add?: string[]; remove?: string[] }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -252,6 +256,23 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/fillQueue':
       return fillQueues(s, { queue: a.queue, days: a.days, from: a.from, why: 'You asked Atlas to fill the queue.' })
+    case 'publishing/labels': {
+      const next = setPosts(s, s.publishing.posts.map(p => (a.ids.includes(p.id) ? editLabels(p, a.add, a.remove) : p)))
+      if (a.ids.length < 2) return next
+      return pushLog(next, { agent: 'atlas', text: `Labelled ${a.ids.length} posts${a.add?.length ? ` “${a.add.join('”, “')}”` : ''}`, status: 'approved', reason: 'Your call from Publishing', link: '/publishing/calendar' })
+    }
+    case 'publishing/recycle': {
+      const p = s.publishing.posts.find(x => x.id === a.id)
+      const perf = p && perfOf(s, p)
+      if (!p || !perf) return s
+      const seed = recycleSeed(s, p, perf)
+      const known = s.publishing.ideas.find(i => i.key === seed.key)
+      if (known) return notify(s, 'publishing', 'Atlas already has this one in Ideas.', { link: { to: `/publishing/ideas/${known.id}`, label: 'Open the idea' } })
+      const next = arriveIdeas(s, [seed], 'continuous', 'atlas')
+      const idea = next.publishing.ideas.find(i => i.key === seed.key)
+      return idea ? notify(next, 'publishing', `Atlas rewrote it as an idea for ${NET[perf.to] ?? perf.to}.`, { link: { to: `/publishing/ideas/${idea.id}`, label: 'Review the idea' } })
+        : notify(next, 'publishing', 'Ideas already has 8 open ideas, Atlas’s limit. Settle one and ask again.', { link: { to: '/publishing/ideas', label: 'Open Ideas' } })
+    }
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
     case 'publishing/restore': {

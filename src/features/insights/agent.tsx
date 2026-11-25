@@ -8,7 +8,7 @@ import { ALERT_CONDITIONS, ALERT_SUBJECTS, ALERT_UNITS, BEST_CELL, DAILY_REACH, 
 import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
 import { AlertsTable } from './alerts'
 import { onResolveInsights, onUndoInsights, reduceInsights, writeReport } from './slice'
-import { DEFAULT_SECTIONS, parseEdits, parseRecipe, writeStudio } from './studio'
+import { DEFAULT_SECTIONS, enrich, parseEdits, parseRecipe, writeStudio } from './studio'
 import { actionOf, now, uid } from '../../app/core'
 import type { State } from '../../app/state'
 import type { Network } from '../../app/types'
@@ -34,7 +34,7 @@ const SHORT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 /** A saved template named in the sentence wins; else the window, networks and reader Sam asked for. */
 function recipeFor(s: State, i: { days: number; networks: Network[]; audience: 'claire' | 'sam'; raw: string }): { recipe: Recipe; template?: string } {
   const t = s.insights.templates.find(x => i.raw.includes(x.name.toLowerCase()))
-  return t ? { recipe: t.recipe, template: t.name } : { recipe: { days: i.days, networks: i.networks, audience: i.audience, sections: DEFAULT_SECTIONS } }
+  return t ? { recipe: t.recipe, template: t.name } : { recipe: enrich(s, i.raw, { days: i.days, networks: i.networks, audience: i.audience, sections: DEFAULT_SECTIONS }) }
 }
 
 const report = defineIntent({
@@ -237,5 +237,7 @@ const iris: AgentModule = {
   intents: [schedule, reportEdit, report, besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-linkedin', to: '/insights/anomalies' }],
 }
 export default iris
