@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { initialState } from '../../app/state'
 import { reducer } from '../../app/reducer'
 import { parse } from '../../data/command'
-import { applyOp, DEFAULT_SECTIONS, parseEdits, parseRecipe, writeStudio } from './studio'
+import { applyOp, DEFAULT_SECTIONS, enrich, parseEdits, parseRecipe, writeStudio } from './studio'
 import { fmt, rangeKpis } from './metrics'
 
 const ask = (t: string) => ({ ...parseRecipe(t)!, sections: DEFAULT_SECTIONS })
@@ -48,5 +48,20 @@ describe('Report Studio, agentic', () => {
     let s = reducer(initialState(), { type: 'insights/studio', id: 'r1', recipe: ask('a monthly report for claire on instagram'), via: 'test' })
     s = reducer(s, { type: 'insights/template', id: 'r1', name: 'Monthly for Claire' })
     expect(s.insights.templates[0]).toMatchObject({ name: 'Monthly for Claire', recipe: { days: 30, networks: ['instagram'], audience: 'claire' } })
+  })
+
+  it('a campaign named in the request brings Sage’s goal and window; a label brings Atlas’s labelled posts', () => {
+    const s = initialState()
+    const raw = 'a report on trail week for claire'
+    expect(parse('Iris, a report on Trail Week for Claire').intent.kind).toBe('report')
+    const recipe = enrich(s, raw, ask(raw))
+    expect(recipe).toMatchObject({ campaign: 'trail-week', networks: expect.arrayContaining(['tiktok', 'instagram']) })
+    const r = writeStudio(s, recipe, 'r1', 0)
+    expect(r.title).toMatch(/^Trail Week report/)
+    expect(r.sections[0].kind).toBe('campaign')
+    expect(r.sections[0].paras[0]).toContainEqual(expect.objectContaining({ n: '154 of 300 challenge sign-ups' }))
+    const lab = enrich(s, 'a report on the posts labelled sale', ask('a report on the posts labelled sale'))
+    expect(lab.label).toBe('sale')
+    expect(writeStudio(s, lab, 'r2', 0).sections[0].paras[0][0]).toMatch(/No published post carries the label “sale”/)
   })
 })

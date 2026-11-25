@@ -32,3 +32,4 @@
 - 25/11/2026 · Pitch B6 liens et UTM · **Go** (UTM + raccourci, X garde le lien simple, demande à Iris pour les clics)
 - 25/11/2026 · Pitch B7 notes de calendrier · **Go, plus simple** (notes + « quiet day » appliqué ; la note de lancement reste informative)
 - 25/11/2026 · Pitch B9 performance d'un post · **Go** (vs médiane, lecture d'Atlas, Recycle it, lien Insights)
+- 25/11/2026 · Performance d'un post · médiane calculée sur les autres posts publiés du même réseau (chiffres d'Iris portés par les posts) ; « worth recycling » = 1.5× la médiane de reach et engagement au-dessus de la médiane ; Recycle it passe par Ideas (plafond de 8) · une carte Desk · Ideas est le lieu validé des propositions d'Atlas

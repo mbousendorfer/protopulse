@@ -69,3 +69,20 @@ describe('agent registry', () => {
     expect(calm.handoffs.map(h => h.id).sort()).toEqual(['h-plan', 'h-report', 'h-strap', 'h-tiktok'])
   })
 })
+
+describe('moderator', () => {
+  it('every Hard to see trigger fires a real script event and opens an app page', () => {
+    const ids = new Set(scriptEvents().map(e => e.id))
+    const triggers = registry().flatMap(m => m.triggers ?? [])
+    expect(triggers.length).toBeGreaterThan(0)
+    for (const t of triggers) { expect(ids.has(t.event), t.event).toBe(true); expect(t.to).toMatch(/^\//) }
+  })
+
+  it('a time jump moves the clock and lets what was waiting happen (Claire answers)', () => {
+    const s0 = initialState()
+    expect(s0.handoffs.some(h => h.lane === 'claire' && !h.claire?.reply)).toBe(true)
+    const s = reducer(s0, { type: 'core/advance', minutes: 10 })
+    expect(s.clock.base - s0.clock.base).toBeGreaterThanOrEqual(10 * 60_000)
+    expect(s.handoffs.some(h => h.lane === 'claire' && !h.claire?.reply)).toBe(false)
+  })
+})
