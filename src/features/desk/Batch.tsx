@@ -102,7 +102,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
             <div className="faint">Spam</div>
             <b className="num">{hidden}</b>
             <p className="faint">Hidden by Nova on her own, set to Act</p>
-            <div className="row"><Btn size="sm" onClick={() => nav('/inbox')}>See them</Btn></div>
+            <div className="row"><Btn size="sm" onClick={() => nav('/inbox?view=hidden')}>See them</Btn></div>
           </section>
         )}
       </div>
