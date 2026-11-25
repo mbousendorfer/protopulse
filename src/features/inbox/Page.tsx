@@ -86,10 +86,13 @@ export default function InboxPage() {
   const id = params['*'] || undefined
   const [params2] = useSearchParams()
   const asked = VIEWS.find(x => x.id === params2.get('view'))?.id
-  const [view, setView] = useState<View>(asked ?? 'needs')
+  const [view, setView] = useState<View>(asked ?? (params2.get('label') ? 'all' : 'needs'))
   // A link can open a view (the Desk's spam lane opens Hidden).
   useEffect(() => { if (asked) { setView(asked); setLabel(null) } }, [asked])
-  const [label, setLabel] = useState<string | null>(null)
+  const [label, setLabel] = useState<string | null>(params2.get('label'))
+  // A link can open one label (Sage's campaign page opens its campaign label).
+  const askedLabel = params2.get('label')
+  useEffect(() => { if (askedLabel) { setLabel(askedLabel); setView('all') } }, [askedLabel])
   const [network, setNetwork] = useState<Network | 'all'>('all')
   const [type, setType] = useState<ConvType | 'all'>('all')
   const [sentiment, setSentiment] = useState<Sentiment | 'all'>('all')

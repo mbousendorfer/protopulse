@@ -41,3 +41,4 @@
 - 25/11/2026 · Pitch B10 médiathèque · **Go, plus simple** (tags d'Atlas à l'upload, tags éditables, recherche, alerte de licence + remplacement ; pas de dossiers)
 - 25/11/2026 · Pitch B12 import CSV · **Later**
 - 25/11/2026 · Pitch B13 multi-profils · **Go** (version complète, avec demandes à Nova, Iris et Sage ; ma recommandation était Later)
+- 25/11/2026 · Médiathèque · licence de la tente de @camille.outdoors ramenée à « until Dec 2025 » dans les données pour que l'alerte existe au test (utilisée par la story de midi) ; alerte = licence finissant sous 60 jours ET post encore à publier ; remplaçant = même tag, droits Fernway · alerter sur toute licence · une licence qui ne sert à rien ne demande rien à Sam
