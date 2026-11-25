@@ -20,12 +20,13 @@ function drag(e: RPointerEvent, move: (dx: number) => void, end: (dx: number) =>
 export default function Timeline({ clip, source, pb, onEdit }: { clip: Clip; source: Source; pb: Playback; onEdit: (p: Partial<Clip>) => void }) {
   const { segs, total, t, tr } = pb
   const [zoom, setZoom] = useState(12)
+  const [fit, setFit] = useState(40)
   const [trim, setTrim] = useState<{ edge: 'start' | 'end'; dx: number } | null>(null)
   const [moving, setMoving] = useState<{ id: string; dx: number } | null>(null)
   const lane = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
-  // Opens fitted to the width; zoom from there.
-  useLayoutEffect(() => { const w = scroller.current?.clientWidth; if (w && total) setZoom(Math.max(6, Math.min(40, Math.floor((w - 56) / total)))) }, [Math.round(total)]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Opens fitted to the full width, however short the clip; zoom in from there.
+  useLayoutEffect(() => { const w = scroller.current?.clientWidth; if (w && total) { const f = Math.max(6, Math.floor((w - 56) / total)); setFit(f); setZoom(f) } }, [Math.round(total)]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = useMemo(() => captionLines(clip, tr), [clip, tr])
   const px = (sec: number) => sec * zoom
   const width = Math.max(px(total) + 48, 320)
@@ -77,7 +78,7 @@ export default function Timeline({ clip, source, pb, onEdit }: { clip: Clip; sou
         <span className="mono t-sm">{fmt(t)} / {fmt(total)}</span>
         <span className="muted t-sm">{segs.length - 1 > 0 ? `${segs.length - 1} cut${segs.length > 2 ? 's' : ''}` : 'No cuts'}</span>
         <span className="spacer" />
-        <label className="row tight t-sm muted">Zoom<input type="range" min={6} max={40} value={zoom} onChange={e => setZoom(+e.target.value)} aria-label="Timeline zoom" /></label>
+        <label className="row tight t-sm muted">Zoom<input type="range" min={6} max={Math.max(40, fit * 2)} value={zoom} onChange={e => setZoom(+e.target.value)} aria-label="Timeline zoom" /></label>
       </div>
       <div className="tl-body">
       <div className="tl-names" aria-hidden><span className="tl-ruler-gap" /><span>Video</span><span>Captions</span><span>B-roll</span>{music && <span>Music</span>}</div>
@@ -98,9 +99,10 @@ export default function Timeline({ clip, source, pb, onEdit }: { clip: Clip; sou
               <button className="tl-handle end" style={{ left: blocks.length ? blocks.at(-1)!.x + blocks.at(-1)!.w - 6 + (trim?.edge === 'end' ? trim.dx : 0) : 0 }} onPointerDown={trimEdge('end')} onKeyDown={keyTrim('end')} aria-label={`Clip end, ${fmt(clip.end)} in the video. Arrows move it word by word.`} />
             </div>
             <div className="tl-track caps" aria-label="Captions">
-              {lines.map((l, k) => <span key={k} className="tl-cap" style={{ left: px(l.s), width: Math.max(4, px(l.e - l.s)) }} title={l.words.map(w => w.text).join(' ')}>{l.words.map(w => w.text).join(' ')}</span>)}
+              {lines.map((l, k) => <span key={k} className={`tl-cap ${t >= l.s && t < l.e ? 'on' : ''}`} style={{ left: px(l.s), width: Math.max(4, px(l.e - l.s)) }} title={l.words.map(w => w.text).join(' ')}>{l.words.map(w => w.text).join(' ')}</span>)}
             </div>
             <div className="tl-track" aria-label="B-roll">
+              {!clip.broll.length && <span className="tl-empty">No B-roll yet. Juno suggests shots in Brand.</span>}
               {clip.broll.map(b => (
                 <button key={b.id} className="tl-broll" style={{ left: px(toClipTime(segs, b.at)) + (moving?.id === b.id ? moving.dx : 0), width: px(b.dur) }} onPointerDown={moveBroll(b.id)}
                   aria-label={`${BROLL.find(x => x.id === b.asset)?.label} at ${fmt(toClipTime(segs, b.at))}. Drag to move.`}>
