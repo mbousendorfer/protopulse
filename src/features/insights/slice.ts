@@ -1,13 +1,22 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
+import { T } from '../../app/time'
 import { ANOMALIES, type Anomaly } from '../../data/insights'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
 export type Share = { at: number }
-export type Boost = { post: string; budget: number; days: number; at: number }
+/** A paid boost Sam decided. `card`: the Desk card it was decided on, so undoing that decision gives the money back. */
+export type Boost = { id: string; post: string; budget: number; days: number; at: number; card?: string }
+
+declare module '../../app/types' {
+  interface LogEntry {
+    /** The boost this journal line set up: undoing the line cancels it. */
+    boost?: string
+  }
+}
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
 
 export type InsightsState = {
@@ -34,7 +43,10 @@ export const initialInsights = (): InsightsState => ({
   alerts: structuredClone(ALERTS),
   shared: { w46: { at: Date.UTC(2025, 10, 17, 9, 12) }, w45: { at: Date.UTC(2025, 10, 10, 9, 3) } },
   anomalies: {},
-  boosts: [],
+  boosts: [
+    { id: 'b-teaser', post: 'Trail Week teaser', budget: 280, days: 4, at: T(10, 0, -7) },
+    { id: 'b-bottle', post: 'Summit Bottle: one year later', budget: 300, days: 5, at: T(9, 30, -19) },
+  ],
   followUps: [],
   raised: [],
   spikes: [],
@@ -55,6 +67,37 @@ const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights:
 
 export const patchInsights = patch
 
+/** The monthly boost cap is Iris's guardrail, as Sam wrote it: its last euro amount (“€580 of €1,500 used” → 1,500). */
+export function boostBudget(s: State) {
+  const g = s.agents.find(a => a.id === 'iris')?.guardrails.find(x => x.id === 'g2')
+  const amounts = g?.value.match(/€\s?[\d,]+/g)
+  const cap = amounts ? +amounts[amounts.length - 1].replace(/[€,\s]/g, '') : undefined
+  const month = new Date(now(s)).getMonth()
+  const used = s.insights.boosts.filter(b => new Date(b.at).getMonth() === month).reduce((t, b) => t + b.budget, 0)
+  return { cap, used, left: cap === undefined ? Infinity : cap - used }
+}
+
+/** The guardrail line shows what is really spent. */
+function syncBudget(s: State): State {
+  const { cap, used } = boostBudget(s)
+  if (cap === undefined) return s
+  const value = `€${used.toLocaleString('en-GB')} of €${cap.toLocaleString('en-GB')} used`
+  return { ...s, agents: s.agents.map(a => (a.id !== 'iris' ? a : { ...a, guardrails: a.guardrails.map(g => (g.id === 'g2' ? { ...g, value } : g)) })) }
+}
+
+/**
+ * Set up a boost if the monthly cap allows it. Every boost goes through here: Desk, Insights and Chat.
+ * Refused: the state is unchanged and `refused` says why, in Sam's words.
+ */
+export function recordBoost(s: State, b: Omit<Boost, 'id' | 'at'>): { s: State; id?: string; refused?: string } {
+  const { cap, used, left } = boostBudget(s)
+  if (b.budget > left) return { s, refused: `€${b.budget} would take this month to €${(used + b.budget).toLocaleString('en-GB')}, over the €${cap!.toLocaleString('en-GB')} cap in Iris’s guardrails.` }
+  const id = uid('b')
+  return { s: syncBudget(patch(s, { boosts: [...s.insights.boosts, { ...b, id, at: now(s) }] })), id }
+}
+
+const dropBoosts = (s: State, keep: (b: Boost) => boolean) => syncBudget(patch(s, { boosts: s.insights.boosts.filter(keep) }))
+
 function setAnomaly(s: State, id: string, resolution: string): State {
   return patch(s, { anomalies: { ...s.insights.anomalies, [id]: { open: false, resolution, at: now(s) } } })
 }
@@ -69,7 +112,7 @@ const SNOOZED = 'Snoozed for a week. Iris checks again in 7 days.'
  * Do one of an anomaly's actions, from the Anomalies tab, its Desk card or Act. Closes it, and its Desk card if any.
  * Returns the resolution line too, for the journal.
  */
-export function actOnAnomaly(s: State, id: string, action: string): { s: State; resolution: string } {
+export function actOnAnomaly(s: State, id: string, action: string, card?: string): { s: State; resolution: string; refused?: boolean; boost?: string } {
   const a = anomalyList(s).find(x => x.id === id)
   if (!a) return { s, resolution: action }
   let next = s
@@ -83,13 +126,17 @@ export function actOnAnomaly(s: State, id: string, action: string): { s: State; 
     resolution = 'Sage knows. It’s a Playbook fact for her plans.'
   } else if (/snooze/i.test(action)) resolution = SNOOZED
   const boost = /€(\d+) for (\d+) days/.exec(action)
+  let boostId: string | undefined
   if (boost) {
-    next = patch(next, { boosts: [...next.insights.boosts, { post: a.title, budget: +boost[1], days: +boost[2], at: now(s) }] })
+    const r = recordBoost(next, { post: a.title, budget: +boost[1], days: +boost[2], card })
+    if (r.refused) return { s, resolution: `Boost refused: ${r.refused}`, refused: true }
+    next = r.s
+    boostId = r.id
     resolution = `Boosted €${boost[1]} for ${boost[2]} days`
   }
   next = setAnomaly(next, id, resolution)
   next = { ...next, handoffs: next.handoffs.filter(h => !(h.id === a.handoff || (h.agent === 'iris' && h.ref === id))) }
-  return { s: next, resolution }
+  return { s: next, resolution, boost: boostId }
 }
 
 /** Answers to follow-up questions on a report, read from the same numbers as Explore, Chat and ⌘K. */
@@ -124,7 +171,8 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     }
     case 'insights/anomaly': {
       const r = actOnAnomaly(s, a.id, a.action)
-      return pushLog(r.s, { agent: 'iris', text: `${a.title}: ${a.action}`, status: 'approved', reason: 'Your call from Insights' })
+      if (r.refused) return pushLog(s, { agent: 'iris', text: `${a.title}: ${r.resolution}`, status: 'rejected', reason: 'Iris’s boost cap', link: '/agents/iris?tab=guardrails' })
+      return pushLog(r.s, { agent: 'iris', text: `${a.title}: ${a.action}`, status: 'approved', reason: 'Your call from Insights', undoMinutes: r.boost ? 30 : undefined, boost: r.boost })
     }
     case 'insights/reopen':
       return patch(s, { anomalies: { ...s.insights.anomalies, [a.id]: { open: true } } })
@@ -184,14 +232,17 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
   if (h.id === 'h-boost' && d.kind === 'option') {
     if (d.index === 2) return setAnomaly(s, 'an-storm', 'No boost. Organic only.')
     const budget = d.index === 0 ? 150 : 300, days = d.index === 0 ? 5 : 7
-    return setAnomaly(patch(s, { boosts: [...s.insights.boosts, { post: 'Storm Jacket carousel', budget, days, at: now(s) }] }), 'an-storm', `Boosted €${budget} for ${days} days`)
+    const r = recordBoost(s, { post: 'Storm Jacket carousel', budget, days, card: h.id })
+    // Over the cap: the card comes back with the reason, and nothing is spent.
+    if (r.refused) return pushHandoff(s, { ...h, why: `Not boosted: ${r.refused} Raise the cap or pick a smaller boost.`, urgency: 'today' })
+    return setAnomaly(r.s, 'an-storm', `Boosted €${budget} for ${days} days`)
   }
   if ((h.id === 'h-report' || h.topic === 'Weekly report') && (d.kind === 'approve' || d.kind === 'option')) {
     return patch(s, { shared: { ...s.insights.shared, w47: { at: now(s) } } })
   }
   const an = h.topic === 'Anomaly' ? anomalyOf(s, h) : undefined
   if (an?.open) {
-    if (d.kind === 'option') return actOnAnomaly(s, an.id, d.option).s
+    if (d.kind === 'option') return actOnAnomaly(s, an.id, d.option, h.id).s
     if (d.kind === 'reject') return setAnomaly(s, an.id, 'Dismissed from the Desk')
   }
   return s
@@ -199,7 +250,12 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
-  let next = s
+  const cards = new Set((entry.restore ?? []).map(h => h.id))
+  let next = entry.boost || cards.size ? dropBoosts(s, b => b.id !== entry.boost && !(b.card && cards.has(b.card))) : s
+  if (entry.boost) {
+    const an = anomalyList(next).find(a => a.resolution?.startsWith('Boosted') && next.insights.anomalies[a.id] && entry.text.startsWith(a.title))
+    if (an) { const { [an.id]: _gone, ...anomalies } = next.insights.anomalies; next = patch(next, { anomalies }) }
+  }
   for (const h of entry.restore ?? []) {
     const an = h.topic === 'Anomaly' ? anomalyOf(next, h) : undefined
     if (!an) continue
