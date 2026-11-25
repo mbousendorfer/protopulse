@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Echo Agent Depth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ux-audit.html: one reading column, measures first, then patterns, captures, checklist, open items. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.list li { padding: 14px 16px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+.list li:first-child { border-top: 0; }
+.list li p { color: var(--ink-2); }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Echo, listening: agent depth</h1>
+  <p class="lede">Session of 25 November 2026. Listening now lives: the numbers come from the mention feed and move when agents act, alert rules and guardrails are applied, a spike changes what Atlas does, and Echo brings the conclusion (her read on a search, a network, the creators) instead of the raw feed. Backlog: <code>design-plans/agent-depth/echo-backlog.md</code>, decisions: <code>echo-log.md</code>.</p>
+</header>
+
+<section>
+  <div class="tiles">
+    <div class="tile"><b>14</b><span>Echo PRs merged, incl. this closing one</span></div>
+    <div class="tile"><b>0 → 35</b><span>Listening tests (slice, model, intents)</span></div>
+    <div class="tile"><b>9 / 9</b><span>bugs from the brief fixed</span></div>
+    <div class="tile"><b>5 Go · 2 Later · 2 Drop</b><span>features pitched and answered</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>Parity, capability by capability</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Agorapulse capability</th><th>Before</th><th>After</th><th>PR</th></tr>
+    <tr><td>Spike alert that acts</td><td>Card with 3 options and no effect; « 27 mentions » that didn’t exist</td><td>27 real mentions in the feed; guardrail-driven card; Atlas paused with a Claire statement, one Nova reply card, or a 2-hour watch; Act does it alone with Undo</td><td class="num">#33, #77</td></tr>
+    <tr><td>Counts from the data</td><td>⌘K « 14 of 388 », Chat quoting a positive mention as negative, tab counting hidden ones, brief « 23 new mentions »</td><td>Every count read from <code>listening/model.ts</code>: screen, ⌘K, Chat, Desk brief</td><td class="num">#33, #59, #115</td></tr>
+    <tr><td>Sales digest</td><td>Email sent at once whatever the level</td><td>Suggest says what to tell, Draft puts the email on the Desk, Act sends</td><td class="num">#38</td></tr>
+    <tr><td>Competitor event settled everywhere</td><td>Only the Peakline card left the Desk</td><td>Every card about the event leaves</td><td class="num">#38</td></tr>
+    <tr><td>Listening alerts</td><td>Editable, never evaluated</td><td>Checked every minute on the feed, quiet window, copies Claire, joins the spike card</td><td class="num">#45</td></tr>
+    <tr><td>Search sync (Your searches)</td><td>New search « Collecting » forever</td><td>Collects for 10 minutes, then its 7-day volume; slots « N of 15 » applied</td><td class="num">#45</td></tr>
+    <tr><td>Competitor pool</td><td>An added competitor had no data; website link disabled</td><td>Backfilled in 10 min: benchmark row, profile, share of voice, first event; cap applied</td><td class="num">#51</td></tr>
+    <tr><td>Search view (feed + metrics)</td><td>A row in a table</td><td>Page per search: Echo’s read, four named numbers, its own feed with every move</td><td class="num">#65</td></tr>
+    <tr><td>Creators and authors</td><td>One Desk card leading nowhere</td><td>Creators tab, sheet, collab DM drafted by Nova, new action <code>echo-creators</code></td><td class="num">#74</td></tr>
+    <tr><td>Competitors per network</td><td>One mixed row per brand</td><td>Network switch, ranks, best posts side by side, Echo’s reading, « Atlas tests their format », ⌘K answer</td><td class="num">#96</td></tr>
+    <tr><td>Tags and filing</td><td>5 fixed tags, never applied by Echo</td><td>Editable tags with rules; Echo tags new mentions by level (Act, Draft card, Suggest buttons)</td><td class="num">#104</td></tr>
+    <tr><td>Seen / unseen</td><td>None</td><td>Unseen = needs you; Mark as seen; the tab badge counts only those</td><td class="num">#111</td></tr>
+    <tr><td>Mention → Inbox</td><td colspan="2">Already there: Nova shows reply cards born from mentions as Inbox conversations</td><td class="num">–</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2>Before and after</h2>
+  <h3>Searches: from a table to a search view</h3>
+  <div class="pair">
+    <figure><img src="echo/searches-before.jpg" alt="Searches before: a static table of 12 searches"><figcaption><b>Before.</b> A table; a search could not be opened.</figcaption></figure>
+    <figure><img src="echo/searches-after.jpg" alt="Storm Jacket search page after the spike: Echo's read, four named numbers, sentiment, feed"><figcaption><b>After.</b> Storm Jacket after the spike: Echo names the dominant word (« seams »), the numbers agree with the table.</figcaption></figure>
+  </div>
+  <h3>Benchmark: per network, with a reading</h3>
+  <div class="pair">
+    <figure><img src="echo/benchmark-before.jpg" alt="Benchmark before: one row per brand, all networks mixed"><figcaption><b>Before.</b> All networks mixed, fixed share of voice.</figcaption></figure>
+    <figure><img src="echo/benchmark-after.jpg" alt="Benchmark TikTok after: ranks, Echo's reading and the Atlas test"><figcaption><b>After.</b> TikTok: Trailkind leads, Echo says why and offers the test.</figcaption></figure>
+  </div>
+  <h3>Mentions: a feed that moves</h3>
+  <div class="pair">
+    <figure><img src="echo/mentions-before.jpg" alt="Mentions before: 50 static mentions"><figcaption><b>Before.</b> 50 fixed mentions, the tab counted them all.</figcaption></figure>
+    <figure><img src="echo/mentions-after.jpg" alt="Mentions after the spike: 77 mentions, tag menu, Mark 36 as seen"><figcaption><b>After.</b> The spike’s mentions arrive, the badge counts what needs you, tags and seen state.</figcaption></figure>
+  </div>
+  <figure><img src="echo/creators-after.jpg" alt="Creators tab: Echo's read and five creators with their verdict"><figcaption><b>New.</b> Creators: who talks about Fernway, who fits a collab, and why.</figcaption></figure>
+</section>
+
+<section>
+  <h2>Still open</h2>
+  <ul class="check">
+    <li><span class="tag open">Later</span><div><h3>Advanced query and screening (F3)</h3><p>Answered « Later » at the pitch. Keyword matching already takes every word of a keyword, any keyword, minus exclusions.</p></div></li>
+    <li><span class="tag open">Later</span><div><h3>Listening report export (F9)</h3><p>Answered « Later ». CSV export of mentions stays.</p></div></li>
+    <li><span class="tag open">Dropped</span><div><h3>Time series (F2) and per-product view (F4)</h3><p>Dropped at the pitch. The spike card keeps its 10-hour chart; Mentions keeps the product filter.</p></div></li>
+    <li><span class="tag open">Known</span><div><h3>Saved sessions keep old agent settings</h3><p>A tester with a saved session keeps the previous Echo actions (labels, defaults) until « Reset the demo »: the core merges agents as saved.</p></div></li>
+    <li><span class="tag ok">Done</span><div><h3>Requests</h3><p>From Atlas: spike pause wording (#77). To Atlas: hold today’s posts and competitor names from Echo’s state, both done on Atlas’s side.</p></div></li>
+  </ul>
+</section>
+</main>
+</body>
+</html>
