@@ -9,6 +9,7 @@ import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet 
 import { AlertsTable } from './alerts'
 import { onResolveInsights, onUndoInsights } from './slice'
 import { anomaliesDue, tickAnomalies } from './engine'
+import { reportsDue, tickReports } from './reports'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -126,8 +127,8 @@ const iris: AgentModule = {
   script: SCRIPT,
   onResolve: onResolveInsights,
   onUndo: onUndoInsights,
-  due: anomaliesDue,
-  tick: tickAnomalies,
+  due: (s, t) => anomaliesDue(s) || reportsDue(s, t),
+  tick: (s, t) => tickAnomalies(reportsDue(s, t) ? tickReports(s, t) : s),
   intents: [besttime, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },

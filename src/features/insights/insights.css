@@ -25,7 +25,11 @@
 .qa .a { display: flex; gap: 8px; color: var(--ink-2); }
 
 .explore-bar { gap: var(--s4); }
-.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--s3); margin: 0; }
+.kpi-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--s3); margin: 0; }
+/* Two full rows: audience (reach, engagement, followers, clicks) then community (replies, reply time, sentiment). */
+.kpi-grid > .kpi { grid-column: span 3; }
+.kpi-grid > .kpi:nth-child(n + 5) { grid-column: span 4; }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .kpi-grid > .kpi, .kpi-grid > .kpi:nth-child(n + 5) { grid-column: auto; } .kpi-grid > .kpi:last-child:nth-child(odd) { grid-column: 1 / -1; } }
 .kpi { background: var(--panel); padding: var(--s4) var(--s5); display: flex; flex-direction: column; gap: 4px; border-radius: var(--r-card); box-shadow: var(--card-shadow); border: 1px solid var(--card-border); }
 .kpi dt { color: var(--ink-2); font-size: var(--t-sm); display: flex; align-items: center; gap: 8px; }
 .kpi-icon { width: 26px; height: 26px; border-radius: var(--r-ctl); display: inline-grid; place-items: center; background: var(--a-iris-wash); color: var(--a-iris-ink); flex: none; }
@@ -34,7 +38,15 @@
 .kpi-prev { font-size: var(--t-xs); }
 .heat-note { margin-top: var(--s3); }
 .heat-note b { color: var(--ink); font-weight: 600; }
-.pillar-table { margin-top: var(--s4); }
+.pillar-table { margin-top: var(--s3); }
+.pillar-er { display: flex; align-items: center; gap: var(--s2); min-width: 120px; }
+.pillar-er .track { flex: 1; height: 8px; border-radius: 4px; background: var(--lift); overflow: hidden; }
+.pillar-er .track i { display: block; height: 100%; border-radius: 4px; background: color-mix(in srgb, var(--a-iris) 55%, transparent); }
+.pillar-er b { width: 40px; text-align: right; font-weight: 500; color: var(--ink); }
+.pillar-table tr.best .track i { background: var(--a-iris); }
+.pillar-table tr.best td:first-child { color: var(--ink); font-weight: 600; }
+/* Narrow screens keep the numbers, drop the bar. */
+@media (max-width: 520px) { .pillar-er { min-width: 0; } .pillar-er .track { display: none; } .pillar-er b { width: auto; } .pillar-table th, .pillar-table td { white-space: normal; padding-left: var(--s2); padding-right: var(--s2); } .pillar-table td.num { white-space: nowrap; } }
 
 .anomaly { padding: var(--s4) var(--s5) var(--s4) var(--s2); display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s2); align-items: start; }
 .anomaly-body { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
