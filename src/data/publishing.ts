@@ -32,6 +32,8 @@ export type Post = {
   comments?: { from: 'atlas' | 'claire' | 'you'; text: string; at: number }[]
   /** Why the network refused it, while it is Failed. */
   failure?: { at: number; text: string }
+  /** The queue whose slot this post fills. */
+  queue?: string
   /** Held for something Sam said they'd provide. */
   waiting?: 'visual'
   /** What happened to this post, newest last. */
@@ -180,4 +182,28 @@ export const MEDIA: Media[] = [
   { id: 'md-28', name: 'mountain', title: 'Mont Blanc from Brévent', tags: ['Landscape'], rights: 'Fernway', used: 3, added: '11 Sep' },
   { id: 'md-29', name: 'pack', title: 'Ridge 28L · Glacier, on trail', tags: ['Product', 'Ridge', 'UGC'], rights: 'UGC · @camille.outdoors, permission granted', used: 2, added: '19 Nov' },
   { id: 'md-30', name: 'workshop', title: 'Zip repair, close-up (October)', tags: ['Repair'], rights: 'Fernway', used: 0, added: '16 Oct' },
+]
+
+/** A queue: a kind of content on recurring slots (Agorapulse Library › Queues). Atlas fills it. weekday 0 = Monday. */
+export type Queue = { id: string; name: string; network: Network; pillar: Pillar; media: string; slots: { weekday: number; time: string }[]; copy: string[] }
+
+export const QUEUES: Queue[] = [
+  {
+    id: 'q-tips', name: 'Tuesday tips', network: 'linkedin', pillar: 'Trail stories', media: 'map', slots: [{ weekday: 1, time: '08:30' }],
+    copy: [
+      'Three knots that hold a tarp in the wind: the trucker’s hitch, the taut-line and the bowline. Learn one this weekend.',
+      'Dry wet boots overnight without a radiator: newspaper inside, changed twice, laces out. Heat cracks the leather.',
+      'Pack heavy things close to your back and high. Your hips carry them, not your shoulders.',
+      'Before a hut trip, weigh your bag empty. Every 100 g you take off the bag is 100 g of food you can bring.',
+    ],
+  },
+  {
+    id: 'q-repair', name: 'Sunday repair', network: 'instagram', pillar: 'Repair & care', media: 'workshop', slots: [{ weekday: 6, time: '11:00' }],
+    copy: [
+      'A stuck zip? Rub a graphite pencil on the teeth, then work it slowly. No pliers.',
+      'Seam tape lifting on your shell? Iron on low through a cotton cloth, 10 seconds a section.',
+      'Wash your fleece inside out, cold, no softener. It keeps its loft for years.',
+      'A small hole in a down jacket: a round patch, never a square one. Corners peel.',
+    ],
+  },
 ]

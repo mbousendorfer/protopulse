@@ -14,6 +14,7 @@ import Photo from '../../ui/Photo'
 import Composer from './Composer'
 import PlanReview from './Plan'
 import Ideas from './Ideas'
+import Queues from './QueuesTab'
 import { isOpen, recommendNetwork } from './ideasModel'
 import { targetsOf } from '../strategy/slice'
 import { uid } from '../../app/core'
@@ -21,7 +22,7 @@ import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
-type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'media'
+type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'queues' | 'media'
 const STATUS: Record<PostStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
   scheduled: { label: 'Scheduled' }, published: { label: 'Published', tone: 'ok' }, draft: { label: 'Draft' }, needs: { label: 'Needs you', tone: 'caution' }, failed: { label: 'Failed', tone: 'alert' }, paused: { label: 'Paused', tone: 'caution' }, unapproved: { label: 'To approve' },
 }
@@ -34,7 +35,7 @@ export default function PublishingPage() {
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
   // /publishing lands on Ideas; the composer (new, post/:id) opens over the calendar.
-  const tab: Tab = !rest[0] ? 'ideas' : rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'media' ? rest[0] : 'calendar'
+  const tab: Tab = !rest[0] ? 'ideas' : rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'queues' || rest[0] === 'media' ? rest[0] : 'calendar'
   const editId = rest[0] === 'post' ? rest[1] : undefined
   const creating = rest[0] === 'new'
   const query = new URLSearchParams(loc.search)
@@ -56,12 +57,14 @@ export default function PublishingPage() {
         { value: 'calendar', label: <>Calendar{failed > 0 && <CountBadge n={failed} needs label={`${failed} failed post${failed > 1 ? 's' : ''}`} />}</> },
         { value: 'plan', label: <>Plan review{planPending && <span className="dot" style={{ color: 'var(--caution)' }} aria-label="waiting for you" />}</> },
         { value: 'drafts', label: 'Drafts', count: drafts },
+        { value: 'queues', label: 'Queues' },
         { value: 'media', label: 'Media', count: libraryOf(s).length },
       ]} />
       {tab === 'ideas' && <Ideas id={rest[1]} />}
       {tab === 'calendar' && <Calendar />}
       {tab === 'plan' && <PlanReview />}
       {tab === 'drafts' && <Drafts />}
+      {tab === 'queues' && <Queues />}
       {tab === 'media' && <MediaLibrary />}
       <PostPreview />
 
