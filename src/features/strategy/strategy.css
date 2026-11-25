@@ -72,6 +72,8 @@
 .pbar { position: relative; height: 8px; border-radius: 4px; background: var(--sunk); }
 .pbar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--ink-2); }
 .pbar i.off { background: var(--caution); }
+/* Off target, either way: worded, caution tone, never green or red (status colours stay for status). */
+.off-target { font-size: var(--t-sm); font-weight: 500; color: var(--caution); }
 .pbar .target { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); border-radius: 1px; }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
 .proposal { display: flex; gap: var(--s4); align-items: center; padding: 12px var(--s4); }

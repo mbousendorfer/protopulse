@@ -226,7 +226,7 @@ function CampaignView() {
                 <p>{a.text}</p>
                 {a.status === 'proposed' ? (
                   <div className="row nowrap">
-                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
+                    <Btn size="sm" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })}>Decline</Btn>
                   </div>
                 ) : a.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: c.id, adj: a.id })} />}
@@ -385,7 +385,7 @@ function Pillars() {
                   <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
                   <span className="target" style={{ left: `${p.target * 2}%` }} />
                 </div>
-                {Math.abs(off) > 5 && <span className={`delta ${off < 0 ? 'down' : 'up'}`}>{off > 0 ? '+' : ''}{off} pt vs target</span>}
+                {Math.abs(off) > 5 && <span className="off-target">{Math.abs(off)} pt {off > 0 ? 'over' : 'under'} target</span>}
               </div>
             )
           })}
@@ -401,7 +401,7 @@ function Pillars() {
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
                   <td><Net n={c.network} size={20} /></td>
-                  <td className="r">{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="delta down"> −{c.target - (week[c.network] ?? 0)}</span>}</td>
+                  <td className="r">{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}</td>
                   <td className="r">
                     <span className="stepper">
                       <Btn size="xs" variant="ghost" icon aria-label={`Lower ${NETWORK_LABEL[c.network]} target`} onClick={() => d({ type: 'strategy/cadence', network: c.network, target: c.target - 1 })}><Minus size={12} /></Btn>
@@ -426,7 +426,7 @@ function Pillars() {
                 </div>
                 {p.status === 'proposed' ? (
                   <div className="row nowrap">
-                    <Btn size="sm" variant="primary" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                    <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
                   </div>
                 ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
