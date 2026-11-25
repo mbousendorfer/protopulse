@@ -110,3 +110,5 @@
 }
 /* Tinted tags need no dot between them. */
 .chip + .chip.ls-tag::before { content: none; }
+/* Mentions carry five bulk actions: the bar wraps rather than hiding Cancel off its edge. */
+.listening .bulk-bar { flex-wrap: wrap; }

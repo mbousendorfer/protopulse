@@ -561,21 +561,27 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
   const body = useRef<HTMLDivElement>(null)
-  // Open on the latest message, like any conversation: the draft and its Send sit right under it.
   useEffect(() => {
     setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); setNoting(false)
     if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id })
-    requestAnimationFrame(() => {
-      if (!body.current) return
-      body.current.scrollTop = body.current.scrollHeight
-      // The docked panel is as tall as the window: bring its foot (Send, the note) into view on open.
-      const panel = body.current.closest('.ib-panel')
-      if (panel && panel.getBoundingClientRect().bottom > window.innerHeight) panel.scrollIntoView({ block: 'end' })
-    })
   }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // While Nova's draft waits on a decision, the note field folds to one button so it never covers Send.
   const pending = c.status === 'draft' || (c.status === 'escalated' && !!c.draft)
   const [noting, setNoting] = useState(false)
+  // Open on the latest message, like any conversation, and follow it when a message or a draft arrives:
+  // the draft and its Send sit right under it. The docked panel is as tall as the window, so its foot is brought into view too.
+  useEffect(() => {
+    const toFoot = () => {
+      if (!body.current) return
+      body.current.scrollTop = body.current.scrollHeight
+      const panel = body.current.closest('.ib-panel')
+      if (panel && panel.getBoundingClientRect().bottom > window.innerHeight) panel.scrollIntoView({ block: 'end' })
+    }
+    // Once now, once after the panel's slide-in (on a fresh load the layout settles only then).
+    const f = requestAnimationFrame(toFoot)
+    const t = setTimeout(toFoot, 300)
+    return () => { cancelAnimationFrame(f); clearTimeout(t) }
+  }, [c.id, pending, c.messages.length, tab])
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
