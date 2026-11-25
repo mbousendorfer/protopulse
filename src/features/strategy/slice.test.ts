@@ -168,3 +168,50 @@ test('pillar shares and last week’s posts are read from Atlas’s posts, and m
   expect(mixOf(s).Community).toBe(11)
   expect(lastWeekOf(s).instagram).toBe(ig + 1)
 })
+
+test('results come in as days pass, and the goal shown everywhere follows', async () => {
+  const { trackCampaigns } = await import('./slice')
+  let s = initialState()
+  const tw = cmp(s, 'trail-week')
+  const t = tw.start + 4 * ((tw.end - tw.start) / 8) + 1000
+  s = trackCampaigns(s, t)
+  const after = cmp(s, 'trail-week')
+  expect(after.actual).toHaveLength(5)
+  expect(after.goal.current).toBe(after.actual[4])
+  expect(after.actual.every((v, i) => i === 0 || v >= after.actual[i - 1])).toBe(true)
+})
+
+test('below its trajectory, Sage proposes real moves on the Desk; approving them moves the posts', () => {
+  let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-trajectory' })
+  const h = s.handoffs.find(x => x.ref === 'trail-week' && x.title.includes('below'))!
+  expect(h).toBeDefined()
+  const adj = cmp(s, 'trail-week').adjustments.find(a => a.id === h.sage!.adjust)!
+  expect(adj.moves!.length).toBeGreaterThan(0)
+  s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+  const moved = cmp(s, 'trail-week').posts.find(p => p.id === adj.moves![0].post)!
+  expect(moved.network).toBe(adj.moves![0].network)
+  expect(cmp(s, 'trail-week').adjustments.find(a => a.id === adj.id)!.status).toBe('accepted')
+})
+
+test('on Act, Sage applies the fix itself, with an Undo', () => {
+  let s = reducer(initialState(), { type: 'core/autonomy', agent: 'sage', action: 'sage-cadence', level: 'act' })
+  s = reducer(s, { type: 'core/fire', eventId: 'ev-trajectory' })
+  expect(s.handoffs.some(x => x.ref === 'trail-week' && x.title.includes('below'))).toBe(false)
+  const adj = cmp(s, 'trail-week').adjustments[0]
+  expect(adj.status).toBe('accepted')
+  s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+  expect(cmp(s, 'trail-week').adjustments.find(a => a.id === adj.id)!.status).toBe('proposed')
+})
+
+test('ahead of its trajectory, the adjustment raises the goal and the plan with it', async () => {
+  const { trackCampaigns } = await import('./slice')
+  let s = reducer(initialState(), { type: 'strategy/adjust', id: 'trail-week', adj: 'adj1', accept: false })
+  s = reducer(s, { type: 'strategy/adjust', id: 'trail-week', adj: 'adj2', accept: false })
+  s = trackCampaigns(s, now(s), { id: 'trail-week', ratio: 1.4 })
+  const adj = cmp(s, 'trail-week').adjustments[0]
+  expect(adj.goal).toBe(390)
+  const before = cmp(s, 'trail-week').planned.at(-1)!
+  s = reducer(s, { type: 'strategy/adjust', id: 'trail-week', adj: adj.id, accept: true })
+  expect(cmp(s, 'trail-week').goal.target).toBe(390)
+  expect(cmp(s, 'trail-week').planned.at(-1)).toBe(Math.round(before * 1.3))
+})

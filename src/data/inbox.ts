@@ -37,6 +37,8 @@ export type Conversation = {
   /** Who reviewed it: Nova reviews what she settled alone, a person what they looked at. */
   reviewedBy?: 'nova' | Assignee
   notes?: Note[]
+  /** The saved reply Nova started her draft from (cited under the draft). */
+  savedFrom?: string
   /** Inbox rules that fit but that Nova only proposes (her rules action is on Suggest or Draft). */
   suggested?: string[]
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
@@ -143,7 +145,7 @@ const reviewedDefault = (c: Conversation): Conversation =>
 export const CONVERSATIONS: Conversation[] = ([
   // Drafts waiting for you
   {
-    id: 'c-lea', contact: 'k-lea', author: '@lea.hikes', network: 'instagram', type: 'comment', status: 'draft', sentiment: 'negative', at: T(7, 41), handoff: 'h-strap', unread: true,
+    id: 'c-lea', savedFrom: 'sr-exchange', contact: 'k-lea', author: '@lea.hikes', network: 'instagram', type: 'comment', status: 'draft', sentiment: 'negative', at: T(7, 41), handoff: 'h-strap', unread: true,
     post: 'Reel · “The Ridge on the GR20” · yesterday · 41 likes on this comment',
     messages: [m('them', 'Strap snapped on day 2 of the GR20. For a €140 bag that’s not ok.', T(7, 39)), m('them', '@marco.alp: same thing happened to mine in June', T(7, 40))],
     draft: ['Léa, that should not happen on the ', { text: 'GR20', note: 'Léa wrote GR20 but tagged the Tour du Mont Blanc in her story. Check before sending.' }, ' or anywhere else. Sorry. A new Ridge ships today, no need to send the old one back. Details in your DMs.'],
@@ -151,7 +153,7 @@ export const CONVERSATIONS: Conversation[] = ([
     rules: ['Apologise once, then fix', 'Move order details to DM'],
   },
   {
-    id: 'c-thomas', contact: 'k-thomas', author: 'Thomas Girard · ★★', network: 'trustpilot', type: 'review', status: 'draft', sentiment: 'negative', stars: 2, at: T(4, 20), handoff: 'h-review',
+    id: 'c-thomas', savedFrom: 'sr-refund', contact: 'k-thomas', author: 'Thomas Girard · ★★', network: 'trustpilot', type: 'review', status: 'draft', sentiment: 'negative', stars: 2, at: T(4, 20), handoff: 'h-review',
     messages: [m('them', 'Nice bottle but it arrived 6 days late. I won’t order again before a trip.', T(4, 18))],
     draft: ['Thomas, 6 days late before a trip is frustrating. Sorry. We’ve refunded your shipping and added a code for your next order. Enjoy the bottle out there.'],
     attachments: [{ id: 'a2', kind: 'refund', label: 'Refund shipping: €9.90', limit: 'within your €15 limit' }, { id: 'a3', kind: 'code', label: 'Code: THANKS10, single use', limit: 'within your 15% limit' }],
@@ -164,14 +166,14 @@ export const CONVERSATIONS: Conversation[] = ([
     rules: ['Give the number, then the answer'], note: 'Refund confirmed in Shopify on 12 Nov.',
   },
   {
-    id: 'c-ana', handoff: 'h-ana', contact: 'k-ana', author: '@ana.climbs', network: 'instagram', type: 'dm', status: 'draft', sentiment: 'negative', at: T(6, 15),
+    id: 'c-ana', savedFrom: 'sr-exchange', handoff: 'h-ana', contact: 'k-ana', author: '@ana.climbs', network: 'instagram', type: 'dm', status: 'draft', sentiment: 'negative', at: T(6, 15),
     messages: [m('them', 'My Ember fleece is pilling after 2 washes. Kind of disappointed for €95.', T(6, 13))],
     draft: ['Ana, that’s not normal for the Ember. Sorry. We’ll send you a new one in your size, and you can keep the old one for the crag.'],
     attachments: [{ id: 'a4', kind: 'exchange', label: 'Replacement: Ember Fleece · Ember · S · €95', limit: 'within your €150 limit' }],
     rules: ['Apologise once, then fix'],
   },
   {
-    id: 'c-max', handoff: 'h-max', contact: 'k-max', author: '@maxoutside', network: 'x', type: 'dm', status: 'draft', sentiment: 'neutral', at: T(5, 55),
+    id: 'c-max', savedFrom: 'sr-late', handoff: 'h-max', contact: 'k-max', author: '@maxoutside', network: 'x', type: 'dm', status: 'draft', sentiment: 'neutral', at: T(5, 55),
     messages: [m('them', 'Order #48333 has been “processing” for 4 days. Any news?', T(5, 53))],
     draft: ['Max, sorry for the wait. The Storm Jacket in Ember L was back in stock yesterday, so your order ships today. You’ll get tracking by email this afternoon.'],
     attachments: [{ id: 'a5', kind: 'refund', label: 'Refund shipping: €12.50', limit: 'within your €15 limit' }],
@@ -185,7 +187,7 @@ export const CONVERSATIONS: Conversation[] = ([
   },
   // Escalated: Nova never answers these herself
   {
-    id: 'c-marc', contact: 'k-marc', author: 'Marc Delorme · Outdoor Weekly', network: 'linkedin', type: 'dm', status: 'escalated', sentiment: 'neutral', at: T(7, 12), handoff: 'h-press', unread: true,
+    id: 'c-marc', savedFrom: 'sr-press', contact: 'k-marc', author: 'Marc Delorme · Outdoor Weekly', network: 'linkedin', type: 'dm', status: 'escalated', sentiment: 'neutral', at: T(7, 12), handoff: 'h-press', unread: true,
     messages: [m('them', 'Hi, I’m writing a piece on PFAS in rainwear. Can you confirm whether the 2023 Storm Jacket uses a PFC-free DWR? Deadline today 5pm.', T(7, 12))],
     draft: ['Hi Marc, thanks for reaching out. Our Head of Brand will get back to you before your deadline today.'],
     note: 'Press topic · locked. Nova suggests a holding reply only.',

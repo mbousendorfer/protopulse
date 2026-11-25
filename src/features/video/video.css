@@ -5,7 +5,13 @@
 
 /* Clip and source thumbnails: the poster cropped like the clip. */
 .clip-thumb { position: relative; display: block; overflow: hidden; border-radius: var(--r-sm); background: var(--lift-2); flex: none; }
-.clip-thumb img, .clip-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.clip-thumb img, .clip-thumb svg, .cover-frame { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Cover text is content (Fernway's look inside the video), not UI. */
+.cover-text { position: absolute; left: 6%; right: 6%; top: 12%; color: #fff; font-weight: 800; font-size: 11px; line-height: 1.15; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.cover-pick { position: relative; display: block; width: 72px; height: 128px; overflow: hidden; border-radius: var(--r-sm); border: 2px solid transparent; padding: 0; background: var(--lift-2); cursor: pointer; }
+.cover-pick[aria-checked="true"] { border-color: var(--signal); }
+.cover-pick:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.cover-pick .mono { position: absolute; left: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: var(--t-xs); }
 .clip-thumb.sm { width: 40px; height: 71px; }
 .clip-thumb.md { width: 54px; height: 96px; }
 .clip-thumb.lg { width: 90px; height: 160px; }
@@ -251,3 +257,4 @@
 
 /* Juno flags something inline (captions to fix, framing to check). */
 .ed-flag { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--r-ctl); font-size: var(--t-sm); }
+.cover-pick .cover-text { font-size: 9px; }

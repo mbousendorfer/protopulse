@@ -23,3 +23,9 @@
 - 25/11 · Inbox rules · une carte Nova qui arrive devient une conversation stockée (`land`) pour que les règles s'y appliquent · garder la conversation virtuelle · une étiquette posée sur une conversation virtuelle serait perdue.
 - 25/11 · Règle apprise · déclenchée par 3 étiquetages à la main du même label non couverts par une règle ; mots = ceux que partagent au moins 2 des 3 messages · apprendre aussi l'assignation · le pitch parlait des labels ; l'assignation suit le même chemin si besoin.
 - 25/11 · Règle apprise · carte Desk dans Needs you (comme les règles de Playbook proposées) · Worth a look · cohérence avec « 2 Playbook rules proposed ».
+- 25/11 · pitch Saved replies · **Go** · — · tel que pitché.
+- 25/11 · pitch Response time (SLA) · **Go** · — · tel que pitché.
+- 25/11 · pitch Team and assignment · **Go** · — · tel que pitché.
+- 25/11 · pitch CRM contacts · **Later** · — · reste au backlog.
+- 25/11 · Saved replies · une bibliothèque d'équipe (pas par profil social) · par profil comme Agorapulse · une seule marque ; le choix par profil n'apporte rien au test.
+- 25/11 · Saved replies · « Save as reply » ouvre le panneau prérempli (prénom → `{name}`) · formulaire dans la bulle · un seul endroit pour nommer et relire.
