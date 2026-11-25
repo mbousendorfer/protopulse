@@ -175,7 +175,7 @@ export function LiveFeed() {
   const items = s.log.slice(0, 9)
   return (
     <section className="card">
-      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/activity')}>All activity</Btn></div>
+      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn></div>
       <ul className="feed">
         {items.map(l => {
           const canUndo = l.undoUntil && l.undoUntil > now && l.status !== 'undone'

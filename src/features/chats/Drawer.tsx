@@ -28,8 +28,11 @@ export default function ChatDrawer({ open, onOpenChange, chatId, setChatId }: { 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} title={chat?.messages.length ? chat.title : 'New chat'}
-      head={<Btn size="sm" variant="ghost" onClick={fresh}><MessageSquarePlus size={14} />New</Btn>}
-      footer={chat && <Btn size="sm" variant="ghost" onClick={() => { onOpenChange(false); nav(`/chats/${chat.id}`) }}><Maximize2 size={14} />Open in Chats</Btn>}>
+      footer={chat && <>
+        <span className="spacer" />
+        {chat.messages.length > 0 && <Btn size="sm" variant="ghost" onClick={fresh}><MessageSquarePlus size={14} />New chat</Btn>}
+        <Btn size="sm" variant="ghost" onClick={() => { onOpenChange(false); nav(`/chats/${chat.id}`) }}><Maximize2 size={14} />Open in Chats</Btn>
+      </>}>
       {chat && <ChatThread key={chat.id} chat={chat} compact />}
     </Sheet>
   )

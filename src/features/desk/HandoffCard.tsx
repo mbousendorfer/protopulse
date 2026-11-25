@@ -64,7 +64,7 @@ export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (
                 {h.options.map((o, i) => (
                   <li key={o.label}>
                     <button className={`choice ${o.recommended ? 'rec' : ''}`} onClick={() => settle(o.label, () => act.option(h, i))}>
-                      <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
+                      <span className="kbd">{i + 1}</span><span className="choice-label">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
                     </button>
                   </li>
                 ))}
