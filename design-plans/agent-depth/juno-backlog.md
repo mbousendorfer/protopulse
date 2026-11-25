@@ -31,5 +31,5 @@ Trié par valeur ; les corrections « À corriger d'abord » passent en tête et
 | N6 | Autorisations avancées | — (F8 bloque seulement) | Juno floute ou coupe le passage sans autorisation et le dit, au lieu de bloquer le clip | 2 | M | dropped — décision de l'humain au pitch (pas de commentaire) |
 | N7 | Labels et campagne sur les posts | `clipPosts` ne pose ni label ni campagne | Les posts envoyés portent le label du pilier et la campagne en cours de Sage (`targetsOf`) | 2 | S | done |
 | N8 | Lives en direct | les lives arrivent enregistrés | Chapitres en direct, « moment fort à l'instant » remonté pendant le live | 1 | L | dropped — décision de l'humain au pitch |
-| N9 | Intervenants nommés, recadrage qui suit celui qui parle | 3 noms en dur | Détection au-delà de 3, cadrage par intervenant | 1 | M | todo |
-| N10 | Bibliothèques élargies | 4 B-roll, 2 musiques | Plus de B-roll et musiques générés, suggestions par Juno | 1 | M | todo |
+| N9 | Intervenants nommés, recadrage qui suit celui qui parle | 3 noms en dur | Détection au-delà de 3, cadrage par intervenant | 1 | M | dropped — décision de l'humain au pitch |
+| N10 | Bibliothèques élargies | 4 B-roll, 2 musiques | Plus de B-roll et musiques générés, suggestions par Juno | 1 | M | dropped — décision de l'humain au pitch |
