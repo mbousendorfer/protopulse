@@ -17,3 +17,6 @@
 - 25/11/2026 · Pitch B2 To approve · **Go** (statut, réponse de Claire qui agit, commentaires, routage auto prix/promo)
 - 25/11/2026 · Pitch B1 composer par réseau · **Go, plus simple** (format + premier commentaire pré-remplis ; pas de specs TikTok/YouTube détaillées)
 - 25/11/2026 · Pitch B3 files · **Go, plus simple** (2 files fournies aux créneaux modifiables, remplies par Atlas ; pas de création de file)
+- 25/11/2026 · Garde-fous · « alerte critique » = carte `alert` urgente d'Echo ou d'Iris, ou `listening.pausedAtlas` posé ; pause des posts `scheduled` des 24 h suivantes, reprise seule à la fin, post passé pendant la pause → brouillon · pause de tout le calendrier · 24 h couvre ce qui partirait pendant la crise sans geler la semaine
+- 25/11/2026 · Garde-fous · plafond 3/réseau/jour : le plan et les cartes Desk décalent au jour suivant (note sur le post), le glisser-déposer refuse avec un message, le report groupé garde en place ce qui dépasserait, le composer bloque et propose un jour · décaler en silence partout · un geste de Sam refusé doit le dire ; un post d'Atlas décalé le dit sur sa note
+- 25/11/2026 · Garde-fous · la ligne de journal d'Echo (« posts … stay in the calendar ») contredit la pause : demande `requests/echo-from-atlas-pause-wording.md`

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { AlertTriangle, CalendarClock, Check, Copy, Pencil, RotateCw, Trash2, UserRound } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Check, Copy, PauseCircle, Pencil, RotateCw, Trash2, UserRound } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, hhmm } from '../../app/time'
@@ -147,11 +147,18 @@ export function PostPreview() {
             </section>
           )
         })()}
+        {p?.status === 'paused' && (
+          <section className="pub-fail pub-paused card pad" aria-label="Paused">
+            <PauseCircle size={18} aria-hidden />
+            <div className="grow"><b>Paused by Atlas</b><p className="muted">{p.note} It goes out on its own once the alert is over.</p></div>
+            <Btn onClick={() => d({ type: 'publishing/resume', ids: [p.id] })}>Resume this post</Btn>
+          </section>
+        )}
         {!p ? <p className="muted">This post no longer exists.</p> : (
           <div className="pub-prev">
             <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} /></div>
             <dl className="pub-prev-meta">
-              <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
+              <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>
               <div><dt>Pillar</dt><dd>{p.pillar}</dd></div>
               {p.campaign && <div><dt>Campaign</dt><dd>{p.campaign}</dd></div>}

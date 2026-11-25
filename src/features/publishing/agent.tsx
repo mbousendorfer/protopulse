@@ -6,6 +6,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { flagged } from '../desk/parts'
 import { actVisuals, ideasDue, onResolvePublishing, tickIdeas, undoCards, unscheduleIdea, visualsDue } from './slice'
 import { SCRIPT } from './script'
+import { guardsDue, tickGuards } from './guards'
 
 declare module '../../app/types' {
   interface LogEntry {
@@ -62,8 +63,13 @@ const atlas: AgentModule = {
   onResolve: onResolvePublishing,
   onUndo: (s, l) => undoCards(l.idea ? unscheduleIdea(s, l.idea) : s, l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s),
-  tick: (s, t) => (visualsDue(s) ? actVisuals(tickIdeas(s, t)) : tickIdeas(s, t)),
+  // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s),
+  tick: (s, t) => {
+    let next = tickIdeas(s, t)
+    if (visualsDue(next)) next = actVisuals(next)
+    return guardsDue(next) ? tickGuards(next) : next
+  },
   intents: [post],
   batches: [{
     // An idea with a short window stands on its own: it opens the idea, and its other networks live there.
