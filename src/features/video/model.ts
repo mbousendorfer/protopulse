@@ -49,6 +49,8 @@ export type Clip = {
   trimGaps: boolean
   /** Caption-only spelling fixes, by word index. */
   fixes: Record<number, string>
+  /** What speech-to-text heard where it got a product or Playbook word wrong, by word index. Captions show it until fixed. */
+  heard?: Record<number, string>
   /** Words re-voiced in the speaker's voice, by word index. */
   overdub: Record<number, string>
   /** Juno's read of the moment before any edit; `rescore` adjusts it. */
@@ -62,7 +64,10 @@ export type Clip = {
   captions: Captions
   broll: Broll[]
   brand: Brand
-  audio: { studio: boolean; lang: Lang; dubs: Lang[] }
+  /** `review`: dubs Juno made on Draft that you haven't approved yet. */
+  audio: { studio: boolean; lang: Lang; dubs: Lang[]; review?: Lang[] }
+  /** Reframe and brand kit on Draft: applied, to check. On Suggest: not applied, Juno suggests it. */
+  framing?: 'check' | 'suggested'
   post: { networks: Network[]; text: Partial<Record<Network, string>> }
   pillar: Pillar
   status: ClipStatus
@@ -174,7 +179,13 @@ export type CapLine = { s: number; e: number; words: CapWord[] }
 const KEY = /\d|ridge|storm|summit|ember|repair|free|lifetime|gr20|strap|rain|warranty/i
 const EMOJI_FOR: [RegExp, string][] = [[/repair|stitch|sew/i, '🧵'], [/rain|storm|wet/i, '🌧️'], [/mountain|gr20|summit|peak/i, '⛰️'], [/strap|bag|backpack|ridge/i, '🎒'], [/free/i, '🎁'], [/lifetime|forever/i, '♾️'], [/water|bottle|lake/i, '💧'], [/jacket/i, '🧥']]
 export const emojiFor = (w: string) => EMOJI_FOR.find(([re]) => re.test(w))?.[1]
-export const wordText = (c: Clip, w: Word) => c.overdub[w.i] ?? c.fixes[w.i] ?? w.w
+export const wordText = (c: Clip, w: Word) => c.overdub[w.i] ?? c.fixes[w.i] ?? c.heard?.[w.i] ?? w.w
+
+/** Words speech-to-text got wrong that still play and aren't fixed: word index → the right word. */
+export const captionSlips = (c: Clip, t: Transcript): Record<number, string> =>
+  Object.fromEntries(keptWords(c, t).filter(w => c.heard?.[w.i] !== undefined && c.fixes[w.i] === undefined && c.overdub[w.i] === undefined).map(w => [w.i, w.w]))
+/** “28” → “28L”, without the punctuation around the words. */
+export const slipLabel = (heard: string, right: string) => `“${heard.replace(/[.,!?]$/, '')}” → “${right.replace(/[.,!?]$/, '')}”`
 
 /** Caption lines in clip time. English follows the words; a dub shows each sentence's translation, timed across the sentence. */
 export function captionLines(c: Clip, t: Transcript, lang: Lang = c.audio.lang): CapLine[] {
