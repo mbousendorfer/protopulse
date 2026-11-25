@@ -1,8 +1,9 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, generatePlan, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
+import { NETWORK_LABEL } from '../../data/agents'
 import { DAY, dayLabel } from '../../app/time'
 
 export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[] }
@@ -36,7 +37,19 @@ declare module '../../app/types' {
     sage?: SageUndo
   }
 }
-export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] } }
+export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[] }
+
+/** What a Sage Desk card changes when it's approved (or its first option picked). */
+export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange }
+declare module '../../app/types' {
+  interface Handoff { sage?: SageCard }
+}
+/** Cards seeded outside Sage's files (the Desk seed, Day 1) say what they change here. */
+const SEED_CARDS: Record<string, SageCard> = {
+  'h-cadence': { campaign: 'trail-week', adjust: 'adj1' },
+  'd1-sage': { change: { pillars: { 'Gear that lasts': 35, 'Trail stories': 25, 'Repair & care': 20, Community: 20 }, cadence: { instagram: 5, tiktok: 4, facebook: 3, linkedin: 3, youtube: 1, x: 1 } } },
+}
+export const cardOf = (h: Handoff): SageCard | undefined => h.sage ?? SEED_CARDS[h.id]
 
 /* ---------- Atlas's calendar ---------- */
 
@@ -142,6 +155,8 @@ function reverse(s: State, u: SageUndo): State {
     next = patch(next, { campaigns: next.strategy.campaigns.map(c => back.get(c.id) ?? c) })
   }
   if (u.posts) next = toAtlas(fromAtlas(next, u.posts.added), u.posts.before)
+  if (u.targets) next = patch(next, u.targets)
+  if (u.proposals) next = patch(next, { proposals: u.proposals })
   return next
 }
 
@@ -195,47 +210,95 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
     case 'strategy/adjust':
       return applyAdjust(s, a.id, a.adj, a.accept)
     case 'strategy/reopen':
-      // Only a decline can be taken back: an applied change already moved posts.
+      // A decline is taken back here; an applied change is undone from the journal.
       return a.adj
         ? updateCampaign(s, a.id, x => ({ ...x, adjustments: x.adjustments.map(y => (y.id === a.adj && y.status === 'declined' ? { ...y, status: 'proposed' } : y)) }))
         : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
     case 'strategy/proposal': {
       const p = s.strategy.proposals.find(x => x.id === a.id)
-      if (!p) return s
-      return pushLog(patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id ? { ...x, status: a.accept ? 'accepted' : 'declined' } : x)) }),
-        { agent: 'sage', text: `${p.text}: ${a.accept ? 'accepted' : 'declined'}`, status: a.accept ? 'approved' : 'rejected', reason: 'Your call on the pillars' })
+      if (!p || p.status !== 'proposed') return s
+      const next = patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id ? { ...x, status: a.accept ? 'accepted' : 'declined' } : x)) })
+      if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
+      return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
     }
-    case 'strategy/cadence':
-      return patch(s, { cadence: s.strategy.cadence.map(c => (c.network === a.network ? { ...c, target: Math.max(0, a.target) } : c)) })
+    case 'strategy/cadence': {
+      const c = s.strategy.cadence.find(x => x.network === a.network)
+      const target = Math.max(0, a.target)
+      if (!c || c.target === target) return s
+      // Steppers clicked in a row make one journal line, undone in one go.
+      const last = s.log[0]
+      const again = last?.agent === 'sage' && last.status === 'done' && last.sage?.targets && last.text.startsWith(`You set ${NETWORK_LABEL[a.network]} to `) && (last.undoUntil ?? 0) > now(s)
+      const base = again ? { ...s, log: s.log.slice(1) } : s
+      return changeTargets(base, { cadence: { [a.network]: target } }, {
+        text: `You set ${NETWORK_LABEL[a.network]} to ${target} post${target === 1 ? '' : 's'} a week. Atlas plans to it from next week.`,
+        reason: 'Your change to the cadence', status: 'done', before: again ? { ...s.strategy, ...last.sage!.targets! } : s.strategy,
+      })
+    }
   }
 }
 
 const cap = (x: string) => x[0].toUpperCase() + x.slice(1)
 
-function applyAdjust(s: State, id: string, adj: string, accept: boolean): State {
+/** Sage's targets change: pillars, cadence, or both. Logged with a real Undo; Atlas reads the new targets at once. */
+function changeTargets(s: State, ch: TargetsChange, o: { text: string; reason: string; status?: 'approved' | 'done'; card?: Handoff; before?: StrategyState; record?: Proposal }): State {
+  const before = o.before ?? s.strategy
+  let next = patch(s, applyChange(s.strategy, ch))
+  if (o.record) next = patch(next, { proposals: [o.record, ...next.strategy.proposals] })
+  return pushLog(next, {
+    agent: 'sage', text: o.text, status: o.status ?? 'approved', reason: o.reason, link: '/strategy/pillars', undoMinutes: o.card ? undefined : 10,
+    sage: { card: o.card?.id, targets: { pillars: before.pillars, cadence: before.cadence }, proposals: before.proposals },
+  })
+}
+
+/** An adjustment to a live campaign: its moves change the campaign's posts and their copies in Atlas's calendar. */
+function applyAdjust(s: State, id: string, adj: string, accept: boolean, card?: Handoff): State {
   const c = campaign(s, id)
   const a = c?.adjustments.find(x => x.id === adj)
-  if (!c || !a) return s
-  let next = updateCampaign(s, id, x => ({
-    ...x,
-    adjustments: x.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)),
-    posts: accept && adj === 'adj1' ? x.posts.map(p => (p.id === 'tw6' || p.id === 'tw7' ? { ...p, network: 'tiktok' as const } : p))
-      : accept && adj === 'adj2' ? x.posts.map(p => (p.id === 'tw7' ? { ...p, title: 'Plan your trail from the sofa' } : p)) : x.posts,
-  }))
-  if (adj === 'adj1') next = { ...next, handoffs: next.handoffs.filter(h => h.id !== 'h-cadence') }
-  return pushLog(next, { agent: 'sage', text: `${c.name}: ${a.text.split('.').slice(-2, -1)[0]?.trim() || a.text} ${accept ? '(accepted)' : '(declined)'}`, status: accept ? 'approved' : 'rejected', reason: 'Your call on the campaign' })
+  if (!c || !a || a.status !== 'proposed') return s
+  const moves = accept ? a.moves ?? [] : []
+  const posts = c.posts.map(p => {
+    const m = moves.find(x => x.post === p.id)
+    return m ? { ...p, network: m.network ?? p.network, title: m.title ?? p.title } : p
+  })
+  const after: Campaign = { ...c, posts, adjustments: c.adjustments.map(y => (y.id === adj ? { ...y, status: accept ? 'accepted' : 'declined' } : y)) }
+  const touched = new Set(moves.map(m => posts.find(p => p.id === m.post)).filter((p): p is CPost => !!p).map(p => p.postId ?? p.id))
+  const inCalendar = s.publishing.posts.filter(p => touched.has(p.id) && p.status !== 'published')
+  const moved = inCalendar.map(p => {
+    const cp = posts.find(x => (x.postId ?? x.id) === p.id)!
+    const m = moves.find(x => x.post === cp.id)!
+    return { ...p, network: cp.network, text: m.title ? `${m.title}. ${c.messages[0] ?? ''}`.trim() : p.text, note: `Changed by Sage: ${a.text}` }
+  })
+  // The Desk card raising the same adjustment goes with it.
+  const cards = s.handoffs.filter(h => h.id !== card?.id && cardOf(h)?.adjust === adj && cardOf(h)?.campaign === id)
+  let next = toAtlas({ ...updateCampaign(s, id, () => after), handoffs: s.handoffs.filter(h => !cards.includes(h)) }, moved)
+  const what = a.text.split('. ').slice(-1)[0].replace(/\.$/, '')
+  if (!accept) return pushLog(next, { agent: 'sage', text: `${c.name}: ${what} (declined)`, status: 'rejected', reason: 'Your call on the campaign', link: `/strategy/campaigns/${id}` })
+  next = pushLog(next, {
+    agent: 'sage', text: `${c.name}: ${what}${moved.length ? ` (${moved.length} post${moved.length > 1 ? 's' : ''} changed in Atlas’s calendar)` : ''}`, status: 'approved', reason: 'Your call on the campaign',
+    link: `/strategy/campaigns/${id}`, undoMinutes: card ? undefined : 10, restore: card ? undefined : cards,
+    sage: { card: card?.id, campaigns: [c], posts: { added: [], before: inCalendar } },
+  })
+  return next
+}
+
+/** A new goal for a live campaign: the planned trajectory scales with it. */
+function setGoal(s: State, id: string, goal: number, card: Handoff): State {
+  const c = campaign(s, id)
+  if (!c || c.goal.target === goal) return s
+  const k = goal / c.goal.target
+  const next = updateCampaign(s, id, x => ({ ...x, goal: { ...x.goal, target: goal }, planned: x.planned.map(v => Math.round(v * k)) }))
+  return pushLog(next, { agent: 'sage', text: `${c.name}: goal raised from ${c.goal.target.toLocaleString('en-GB')} to ${goal.toLocaleString('en-GB')} ${c.goal.label}`, status: 'approved', reason: 'Your call on the goal', link: `/strategy/campaigns/${id}`, sage: { card: card.id, campaigns: [c] } })
 }
 
 export function onResolveStrategy(s: State, h: Handoff, d: Decision): State {
-  if (h.id === 'h-cadence') return d.kind === 'approve' ? applyAdjust(s, 'trail-week', 'adj1', true) : d.kind === 'reject' ? applyAdjust(s, 'trail-week', 'adj1', false) : s
-  if (h.topic === 'Campaign' && /Trail Week/.test(h.title) && d.kind === 'option') {
-    return d.index === 0 ? updateCampaign(s, 'trail-week', c => ({ ...c, goal: { ...c.goal, target: 360 }, planned: c.planned.map(v => Math.round(v * 1.2)) })) : s
-  }
-  if (h.topic === 'Pillars' && d.kind === 'approve') {
-    return patch(s, {
-      proposals: [{ id: uid('pr'), text: 'Add 2 customer-photo posts per week on Instagram', why: h.context, status: 'accepted' }, ...s.strategy.proposals],
-      cadence: s.strategy.cadence.map(c => (c.network === 'instagram' ? { ...c, target: c.target + 2 } : c)),
-    })
+  const k = cardOf(h)
+  const yes = d.kind === 'approve' || d.kind === 'trial' || (d.kind === 'option' && d.index === 0)
+  if (k?.adjust && k.campaign) return yes ? applyAdjust(s, k.campaign, k.adjust, true, h) : d.kind === 'reject' ? applyAdjust(s, k.campaign, k.adjust, false, h) : s
+  if (k?.goal && k.campaign) return yes ? setGoal(s, k.campaign, k.goal, h) : s
+  if (k?.change) {
+    if (!yes) return s
+    const record: Proposal = { id: uid('pr'), text: h.title, why: h.context, status: 'accepted', change: k.change }
+    return changeTargets(s, k.change, { text: `${h.title}: applied`, reason: 'You approved it on the Desk', card: h, record })
   }
   if (h.topic === 'Campaign plan' && h.ref && h.kind === 'approval') {
     if (d.kind === 'approve' || d.kind === 'trial') return approveCampaign(s, h.ref, { card: h })
