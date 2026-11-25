@@ -5,6 +5,7 @@ import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { useTheme, type Theme } from '../../app/theme'
 import { ago, MIN } from '../../app/time'
+import { agentName } from '../../data/agents'
 import { Btn, Net, PageHead, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import './settings.css'
 
@@ -54,11 +55,16 @@ export default function SettingsPage() {
 
 function Accounts() {
   const now = useNow()
-  const [list, setList] = useState(ACCOUNTS)
+  const { s, d } = useStore()
+  // Day 1: accounts were connected minutes ago, so none is expiring yet; those skipped at sign-up can be connected here.
+  const day1 = s.phase === 'day1'
+  const [list, setList] = useState<Account[]>(() => (day1 ? ACCOUNTS.map(a => ({ ...a, state: 'ok', syncedMin: 1, note: a.id === 'shop' ? a.note : undefined })) : ACCOUNTS))
   const [busy, setBusy] = useState<string | null>(null)
+  const off = (a: Account) => day1 && !s.setup.connected.includes(a.id)
   const reconnect = (a: Account) => {
     setBusy(a.id)
     setTimeout(() => {
+      if (off(a)) d({ type: 'setup/connect', ids: [a.id] })
       setList(l => l.map(x => (x.id === a.id ? { ...x, state: 'ok', syncedMin: 0, note: x.id === 'shop' ? x.note : undefined } : x)))
       setBusy(null)
     }, 1400)
@@ -71,10 +77,10 @@ function Accounts() {
           <div className="grow">
             <div className="row tight"><b>{a.name}</b><span className="faint">{a.handle}</span></div>
             <div className="faint t-xs">
-              {[a.followers, a.note, busy === a.id ? null : `Synced ${ago(now - a.syncedMin * MIN, now)}`].filter(Boolean).join(' · ')}
+              {off(a) ? 'Not connected yet' : [a.followers, a.note, busy === a.id ? null : `Synced ${ago(now - a.syncedMin * MIN, now)}`].filter(Boolean).join(' · ')}
             </div>
           </div>
-          {busy === a.id ? <Thinking label="Reconnecting…" /> : (
+          {busy === a.id ? <Thinking label={off(a) ? 'Connecting…' : 'Reconnecting…'} /> : off(a) ? <Btn size="sm" onClick={() => reconnect(a)}>Connect</Btn> : (
             <>
               {a.state === 'ok' && <Pill tone="ok" dot>Connected</Pill>}
               {a.state === 'expiring' && <Pill tone="caution" dot>Expires soon</Pill>}
@@ -140,23 +146,25 @@ function Profile() {
   )
 }
 
+/** A read-only summary: escalation is edited in Agents › Escalation. */
 function Approver() {
   const { s } = useStore()
+  const on = s.playbook.escalate.filter(e => e.on)
+  const claire = on.filter(e => e.to === 'claire')
+  const toYou = on.length - claire.length
+  const off = s.playbook.escalate.length - on.length
   return (
     <section className="card">
       <div className="card-head">
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
-        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
+        <Link to="/agents/escalation" className="btn sm ghost">Edit in Escalation</Link>
       </div>
       <p className="card-body muted pb-0">Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
       <ul className="rows">
-        {s.playbook.escalate.map(e => (
-          <li key={e.id} className="set-row">
-            <span>{e.label}</span>
-            <span className="faint">{!e.on ? 'Off' : e.to === 'claire' ? 'Goes to Claire' : 'Goes to you'}</span>
-          </li>
-        ))}
+        {claire.map(e => <li key={e.id} className="set-row"><span>{e.label}</span><span className="faint">Watched by {e.agents.map(agentName).join(' and ')}</span></li>)}
+        {!claire.length && <li className="set-row faint">Nothing goes to Claire yet.</li>}
       </ul>
+      <p className="card-body faint">{toYou} other topic{toYou === 1 ? '' : 's'} come{toYou === 1 ? 's' : ''} to you{off ? `, ${off} ${off === 1 ? 'is' : 'are'} off` : ''}.</p>
     </section>
   )
 }

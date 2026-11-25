@@ -11,6 +11,8 @@ export type ScriptEvent = {
   id: string
   label: string
   always?: boolean
+  /** Needs a history the workspace doesn't have on Day 1 (a track record, learned edits, a live campaign): skipped there. */
+  history?: boolean
   /** Who raises it (shown in the moderator panel). */
   agent?: AgentId
   /** An idea arrives in Publishing › Ideas instead of a Desk card (urgent ones also reach the Desk). */
@@ -101,14 +103,14 @@ export const SCRIPT: ScriptEvent[] = [
     auto: { text: 'Filled Saturday 10:00 on Instagram with @julien_trail’s Lac Blanc photo', reason: 'Empty slots, set to Act', link: '/publishing/calendar' },
   },
   {
-    id: 'ev-promo-exchange', label: 'Nova · promotion request (exchanges)', always: true,
+    id: 'ev-promo-exchange', history: true, label: 'Nova · promotion request (exchanges)', always: true,
     handoff: { agent: 'nova', kind: 'promotion', urgency: 'today', topic: 'Autonomy',
       title: 'Nova wants to send exchanges on her own', context: 'You approved 19 of her last 22 exchanges without changes.',
       why: 'Above 85% for 4 weeks, no exchange undone.', confidence: 88, promote: { action: 'nova-exchange', from: 'draft', to: 'act' },
       preview: { type: 'evidence', lines: ['19 approved unchanged · 2 edited (shipping speed) · 1 rejected (out of stock)', 'Average exchange value: €96, limit stays at €150', 'No exchange undone in 30 days'] } },
   },
   {
-    id: 'ev-trail-goal', label: 'Sage · Trail Week ahead of goal', always: true,
+    id: 'ev-trail-goal', history: true, label: 'Sage · Trail Week ahead of goal', always: true,
     handoff: { agent: 'sage', kind: 'decision', urgency: 'week', topic: 'Campaign', action: 'sage-plan',
       title: 'Trail Week is at 128% of its trajectory on day 2', context: '154 sign-ups vs 120 expected. TikTok drives 61% of them.',
       why: 'Goal changes are your call.', confidence: 79, link: '/strategy/campaigns/trail-week',
@@ -125,7 +127,7 @@ export const SCRIPT: ScriptEvent[] = [
   },
   { id: 'ev-idea-gap', label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', idea: { origin: 'gap', agent: 'atlas' } },
   {
-    id: 'ev-demote', label: 'Nova · steps back on refunds', always: true,
+    id: 'ev-demote', history: true, label: 'Nova · steps back on refunds', always: true,
     handoff: { agent: 'nova', kind: 'promotion', urgency: 'today', topic: 'Autonomy',
       title: 'Nova will go back to drafting shipping refunds', context: 'You undid 2 of her shipping refunds in the last 24 hours.',
       why: 'Two undos on the same action in a day.', confidence: 90, promote: { action: 'nova-refund', from: 'act', to: 'draft' },
@@ -140,11 +142,11 @@ export const SCRIPT: ScriptEvent[] = [
     auto: { text: 'Briefed Sage on a Repair Week response', reason: 'Counter-moves, set to Act', link: '/strategy' },
   },
   {
-    id: 'ev-rule-emoji', label: 'Nova · rule proposal (emojis on LinkedIn)', always: true,
+    id: 'ev-rule-emoji', history: true, label: 'Nova · rule proposal (emojis on LinkedIn)', always: true,
     rule: { text: 'No emojis in LinkedIn replies', agents: ['nova', 'atlas'] },
     handoff: { agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “No emojis in LinkedIn replies”', context: 'You removed emojis from 9 of my last 10 LinkedIn drafts.',
-      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/playbook' },
+      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/agents/nova?tab=rules' },
   },
   {
     id: 'ev-x-fail', label: 'Atlas · X rejected a post', always: true,
@@ -194,11 +196,11 @@ export const SCRIPT: ScriptEvent[] = [
     auto: { text: 'Added 2 Community posts per week to the cadence', reason: 'Cadence, set to Act', link: '/strategy/pillars' },
   },
   {
-    id: 'ev-rule-tiktok', label: 'Atlas · rule proposal (short TikTok captions)', always: true,
+    id: 'ev-rule-tiktok', history: true, label: 'Atlas · rule proposal (short TikTok captions)', always: true,
     rule: { text: 'Keep TikTok captions under 100 characters', agents: ['atlas'] },
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “Keep TikTok captions under 100 characters”', context: 'You shortened 8 of my last 10 TikTok captions.',
-      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/playbook' },
+      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/agents/atlas?tab=rules' },
   },
 ]
 

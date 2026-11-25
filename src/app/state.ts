@@ -11,6 +11,7 @@ import { initialStrategy, type StrategyState } from '../features/strategy/slice'
 import { initialPlaybook, type PlaybookState } from '../features/playbook/slice'
 import { initialChats, type ChatsState } from '../features/chats/slice'
 import { initialVideo, type VideoState } from '../features/video/slice'
+import { initialSetup, type Setup } from '../features/onboarding/model'
 
 export type Engine = { live: boolean; cadence: number; nextAt: number; cursor: number }
 
@@ -26,6 +27,10 @@ export type State = {
   desk: { done: DoneItem[] }
   tester: TesterEvent[]
   onboarded: boolean
+  /** Day 30 is the seeded test workspace; Day 1 is the one a new sign-up lands in. */
+  phase: 'day1' | 'day30'
+  /** Sign-up answers and the getting-started checklist. */
+  setup: Setup
   inbox: InboxState
   publishing: PublishingState
   insights: InsightsState
@@ -36,7 +41,7 @@ export type State = {
   video: VideoState
 }
 
-export const STATE_VERSION = 2
+export const STATE_VERSION = 3
 
 export type Preset = 'calm' | 'busy' | 'competitor' | 'trust'
 
@@ -53,6 +58,8 @@ export function initialState(): State {
     desk: { done: [] },
     tester: [],
     onboarded: true,
+    phase: 'day30',
+    setup: initialSetup(),
     inbox: initialInbox(),
     publishing: initialPublishing(),
     insights: initialInsights(),

@@ -13,12 +13,12 @@ import { BriefScene } from '../../ui/Illustrations'
 
 /* ---------- Morning brief: one line, the team at a glance, three highlights ---------- */
 const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: number) => string> = {
-  nova: (s, need) => `${142 + s.log.filter(l => l.agent === 'nova' && l.at > s.brief.since && l.status === 'done').length} conversations handled alone`,
-  atlas: s => s.handoffs.some(h => h.id === 'h-plan') ? 'Next week’s plan is ready for you' : 'Next week is planned and scheduled',
-  iris: s => { const n = s.handoffs.filter(h => h.agent === 'iris' && h.kind === 'alert' && !h.lane).length; return `${n || 'No'} ${n === 1 ? 'anomaly' : 'anomalies'} · weekly report written` },
-  echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'} · 23 new mentions` },
-  sage: () => 'Trail Week is at 128% of its trajectory',
-  juno: s => { const n = s.handoffs.filter(h => h.agent === 'juno' && !h.lane).length; return n ? 'New clips are ready for you' : 'No new video since yesterday' },
+  nova: (s, need) => `${(s.phase === 'day1' ? 0 : 142) + s.log.filter(l => l.agent === 'nova' && l.at > s.brief.since && l.status === 'done').length} conversations handled alone`,
+  atlas: s => s.handoffs.some(h => h.id === 'h-plan') ? 'Next week’s plan is ready for you' : s.phase === 'day1' ? `${s.publishing.ideas.filter(i => i.status === 'new' || i.status === 'ready').length} post ideas in Publishing` : 'Next week is planned and scheduled',
+  iris: s => { const n = s.handoffs.filter(h => h.agent === 'iris' && h.kind === 'alert' && !h.lane).length; return `${n || 'No'} ${n === 1 ? 'anomaly' : 'anomalies'}${s.phase === 'day1' ? '' : ' · weekly report written'}` },
+  echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'}${s.phase === 'day1' ? '' : ' · 23 new mentions'}` },
+  sage: s => (s.phase === 'day1' ? 'Pillars and cadence proposed' : 'Trail Week is at 128% of its trajectory'),
+  juno: s => (s.phase === 'day1' ? 'Watching your YouTube channel for the next video' : s.handoffs.some(h => h.agent === 'juno' && !h.lane) ? 'New clips are ready for you' : 'No new video since yesterday'),
 }
 
 export function Brief({ onPick }: { onPick: (key: string) => void }) {
@@ -27,7 +27,7 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
   const now = useNow()
   const open = s.handoffs.filter(h => !h.lane)
   const since = s.brief.since
-  const handled = 214 + s.log.filter(l => l.at > since && l.status === 'done').length
+  const handled = (s.phase === 'day1' ? 0 : 214) + s.log.filter(l => l.at > since && l.status === 'done').length
   const need = open.filter(h => groupOf(h) === 'need').length
   const hour = new Date(now).getHours()
   const hello = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'

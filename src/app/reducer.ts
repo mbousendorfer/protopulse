@@ -6,6 +6,7 @@ import {
   actionOf, addRule, agentOf, now, pronoun, notify, pushHandoff, pushLog, removeHandoff, setAutonomy, track, uid, updateHandoff,
 } from './core'
 import { SCRIPT, CLAIRE } from '../data/script'
+import { levelFor } from '../data/agents'
 import { onResolveInbox, reduceInbox, type InboxAction } from '../features/inbox/slice'
 import { ideaEvent, onResolvePublishing, reducePublishing, tickIdeas, unscheduleIdea, type PublishingAction } from '../features/publishing/slice'
 import { onResolveInsights, reduceInsights, type InsightsAction } from '../features/insights/slice'
@@ -14,6 +15,7 @@ import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../featu
 import { onResolvePlaybook, reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
 import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
 import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, unsendClips, videoEvent, type VideoAction } from '../features/video/slice'
+import { reduceSetup, type SetupAction } from '../features/onboarding/slice'
 
 export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
@@ -46,7 +48,7 @@ export type CoreAction =
   | { type: 'core/hydrate'; state: State }
   | { type: 'core/restore'; handoff: Handoff }
 
-export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction | VideoAction
+export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction | SetupAction | VideoAction
 
 const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropNotice', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
 
@@ -66,6 +68,7 @@ function reduceAll(s: State, a: Action): State {
   if (a.type.startsWith('playbook/')) return reducePlaybook(s, a as PlaybookAction)
   if (a.type.startsWith('video/')) return reduceVideo(s, a as VideoAction)
   if (a.type.startsWith('chats/')) return reduceChats(s, a as ChatsAction, resolve)
+  if (a.type.startsWith('setup/')) return reduceSetup(s, a as SetupAction, initialState)
   return reduceCore(s, a as CoreAction)
 }
 
@@ -158,6 +161,8 @@ function fire(s: State, eventId?: string): State {
   const ev = SCRIPT[idx]
   if (!ev) return s
   let next: State = eventId ? s : { ...s, engine: { ...s.engine, cursor: s.engine.cursor + 1 } }
+  // A Day 1 workspace has no history: no promotion earned, no rule learned, no campaign running.
+  if (ev.history && s.phase === 'day1' && !eventId) return next
   if (ev.idea) {
     // Ideas arrive in Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it.
     if (!eventId && (agentOf(next, ev.idea.agent).status !== 'on' || agentOf(next, 'atlas').status !== 'on')) return next
@@ -292,7 +297,7 @@ function reduceCore(s: State, a: CoreAction): State {
       const m = h?.thread?.find(x => x.id === a.msg)
       if (!h || !m?.rule) return s
       let next = addRule(s, { kind: 'dont', text: m.rule, agents: [h.agent], origin: `From your conversation with ${agentOf(s, h.agent).name}` })
-      next = updateHandoff(next, h.id, { thread: h.thread!.map(x => x.id === m.id ? { ...x, ruleAdded: true } : x).concat({ id: uid('m'), from: 'agent', at: now(s), text: `Added. All agents will follow “${m.rule}”. You can pause or delete it in the Playbook.` }) })
+      next = updateHandoff(next, h.id, { thread: h.thread!.map(x => x.id === m.id ? { ...x, ruleAdded: true } : x).concat({ id: uid('m'), from: 'agent', at: now(s), text: `Added. I’ll follow “${m.rule}” from now on. You can pause or delete it in my Rules tab.` }) })
       return next
     }
 
@@ -331,13 +336,11 @@ function reduceCore(s: State, a: CoreAction): State {
     }
 
     case 'core/preset': {
-      // Cautious: everything suggests or drafts. Balanced: safe acts, risky drafts. Autonomous: everything not locked acts.
       const ag = agentOf(s, a.agent)
       let next = s
       for (const x of ag.actions) {
         if (x.locked) continue
-        const level: Autonomy = a.preset === 'cautious' ? (x.risk === 'safe' ? 'draft' : 'suggest') : a.preset === 'balanced' ? (x.risk === 'safe' ? 'act' : 'draft') : 'act'
-        next = setAutonomy(next, a.agent, x.id, level, `You set ${ag.name} to ${a.preset}`)
+        next = setAutonomy(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
       }
       return next
     }
@@ -434,8 +437,12 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/unfresh':
       return s.handoffs.some(h => h.fresh) ? { ...s, handoffs: s.handoffs.map(h => (h.fresh ? { ...h, fresh: false } : h)) } : s
 
-    case 'core/track':
-      return track(s, a.kind, a.detail)
+    case 'core/track': {
+      // The getting-started list ticks pages off once you've been there.
+      const path = String(a.detail?.path ?? '')
+      const seen = a.kind === 'nav' && s.phase === 'day1' && ['/playbook', '/agents'].includes(path) && !s.setup.seen.includes(path)
+      return track(seen ? { ...s, setup: { ...s.setup, seen: [...s.setup.seen, path] } } : s, a.kind, a.detail)
+    }
 
     case 'core/takeBack': {
       // Sam takes a card back from Claire's lane and decides himself.

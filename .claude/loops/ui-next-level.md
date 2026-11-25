@@ -1,0 +1,59 @@
+# Loop — UI next level (protopulse)
+
+Objectif constant : chaque changement mergé dans main ressort ultra qualitatif, delightful, compréhensible au premier
+regard, simple en surface et profond quand on creuse, parfaitement cohérent avec le reste du produit.
+
+## 1. Détecter ce qui est nouveau
+- `git fetch origin main --quiet`.
+- STATE=`$(git rev-parse --git-common-dir)/ui-loop-last-reviewed`. S'il n'existe pas : base = `origin/main~1`
+  (première passe = dernière PR mergée).
+- Liste `git log --first-parent --format='%H %s' <base>..origin/main`. Retire les commits dont le sujet commence par
+  `UI next level:` ou `Merge pull request … from …/claude/ui-next-level-`.
+- Rien qui reste → écris `origin/main` dans STATE, `ScheduleWakeup` 300 s, fin du tick.
+- Calcule les fichiers touchés par les commits restants. Aucun fichier sous `src/features`, `src/ui`, `src/styles`,
+  `src/app/Shell*` → avance STATE, wakeup, fin.
+- Déduis les surfaces (routes) concernées à partir de `src/features/<module>` et du router.
+
+## 2. Préparer la branche
+- Arbre propre sinon stop + notification. `git switch -c claude/ui-next-level-<sha7> origin/main`.
+- `node_modules` absent → `npm ci`.
+
+## 3. Review (deux lentilles, scope = surfaces touchées + ce qu'elles partagent)
+- Lance `/improve-ui` sur ces surfaces. Pré-sélection : **toutes les findings de sévérité ≥ 2, 6 max, les plus
+  graves d'abord** → ne t'arrête pas pour demander, écris directement les plans dans `design-plans/`.
+- Lance `/anthropic-skills:ux-heuristics` sur les mêmes parcours (Nielsen + Krug, scénarios de test de PROMPT.md §1).
+  Garde ce qui touche la compréhension, la confiance, l'annulation, les états vides/chargement/erreur.
+- Références qui font foi, dans cet ordre : PROMPT.md §3 et §10, `design-plans/consistency-matrix.md` (exceptions
+  écrites incluses), règles UI de `~/.claude/CLAUDE.md` sauf exception écrite dans la matrice, `src/styles/tokens.css`
+  + primitives `src/ui`. Pas de valeur inventée, pas de nouveau composant si une primitive existe.
+- Une finding = une règle + une preuve à l'écran + un fix. Pas de goût personnel non sourcé.
+- Cohérence : chaque fix vérifie si le même motif existe ailleurs et le corrige partout (fix à la racine, dans la
+  primitive partagée, pas écran par écran).
+- Delight : au plus une amélioration de « moment » par passe (micro-interaction, copy plus humaine, état vide plus
+  utile), uniquement si elle sert la compréhension.
+- Aucune finding qui survit → avance STATE, supprime la branche, wakeup, fin.
+
+## 4. Implémenter
+- Exécute les plans de `design-plans/` écrits à l'étape 3. Diff le plus court qui règle la cause.
+- Ne casse aucune règle de PROMPT.md §3 (pas de bouton mort, tout s'explique, tout s'annule).
+- Met à jour `consistency-matrix.md` seulement si une règle ou exception change.
+
+## 5. Vérifier
+- `npm test` et `npm run build` verts.
+- `preview_start` `protopulse`, chaque surface touchée en 1440×900 et 375×812, clair et sombre : pas d'erreur console,
+  pas de scroll horizontal, focus visible, contraste AA du texte, fix visible. Screenshots avant/après.
+- Un échec que tu ne sais pas corriger en deux essais → PR en draft, `PushNotification` avec la cause, avance STATE,
+  wakeup, fin.
+
+## 6. Livrer
+- Commit (message en anglais, sujet `UI next level: <résumé>`), push, `gh pr create` : titre identique, corps =
+  commits relus, findings (règle / preuve / fix), ce qui a été écarté et pourquoi, captures avant/après.
+- `gh pr merge --squash --delete-branch`. Puis `git switch --detach origin/main` après fetch.
+- Écris dans STATE le SHA de `origin/main` **d'avant** ton merge (ton propre commit est ignoré au tick suivant).
+- `ScheduleWakeup` 300 s.
+
+## Garde-fous
+- Une seule PR par tick. Jamais de force-push, jamais de modification de `main` hors PR.
+- Ne touche pas aux données mock (`src/data`) ni au moteur (`src/app/store|reducer|engine`) sauf si la finding
+  l'exige, et dis-le dans la PR.
+- Une PR de la loop encore ouverte → ne crée rien, notifie, wakeup.

@@ -178,7 +178,8 @@ export default function Ideas({ id }: { id?: string }) {
 const ORIGIN = { analytics: 'Insights', listening: 'Listening', brand: 'Playbook', calendar: 'Calendar' } as const
 /** The big figure and the named measure of a source. */
 const evidence = (x: IdeaSource) => ({
-  value: x.value ?? x.proof.match(/[+−-]?\d[\d.,]*\s?[%×k]?/)?.[0].trim(),
+  // A source that names its own measure already says its figures: no extra figure in front.
+  value: x.value ?? (x.measure ? undefined : x.proof.match(/[+−-]?\d[\d.,]*\s?[%×k]?/)?.[0].trim()),
   measure: x.measure ?? `${x.label}: ${x.proof}`,
 })
 
@@ -251,9 +252,9 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
               const e = evidence(x)
               return (
                 <li key={x.label}>
-                  <span className="v">{e.value ?? (() => { const I = iconOf(x); return <I size={18} aria-hidden /> })()}</span>
-                  <span className="l">{e.measure}</span>
-                  <Link to={x.link}>{ORIGIN[x.type]}<ArrowUpRight size={12} aria-hidden /></Link>
+                  {(() => { const I = iconOf(x); return <I size={14} aria-hidden /> })()}
+                  <span>{e.value && <b>{e.value} </b>}{e.measure}</span>
+                  <Link to={x.link} aria-label={`Open in ${ORIGIN[x.type]}: ${x.label}`}>{ORIGIN[x.type]}<ArrowUpRight size={12} aria-hidden /></Link>
                 </li>
               )
             })}
@@ -279,7 +280,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
             <>
               {(i.drafts?.length ?? 0) > 1 && <Seg name="idea-net" label="Network" size="sm" value={shownNet} onChange={setNet} options={i.drafts!.map(x => ({ value: x.network, label: NETWORK_LABEL[x.network] }))} />}
               <div className="idea-stage">
-                <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} /></div>
+                <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} at={draft?.at} slides={Number(fmt?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
               </div>
               {!draft && <p className="faint t-sm idea-note">Atlas’s first take, not written yet. Draft it to get the final caption, the visual check and the slot.</p>}
 

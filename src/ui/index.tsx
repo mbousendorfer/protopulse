@@ -7,8 +7,8 @@ import { BookOpen, CalendarDays, ChartLine, CircleHelp, Flame, Image as ImageIco
 import { AgentAvatar } from './Avatar'
 import { Glyph, ROUND } from './SocialAvatar'
 import { EmptyScene, type EmptyKind } from './Illustrations'
-import type { AgentId, Autonomy, Flagged, Network } from '../app/types'
-import { AUTONOMY, AUTONOMY_LABEL, NETWORK_LABEL, agentName } from '../data/agents'
+import type { AgentId, Flagged, Network } from '../app/types'
+import { NETWORK_LABEL, agentName } from '../data/agents'
 
 /* ---------- Buttons ---------- */
 type BtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -108,13 +108,6 @@ export function Seg<T extends string>({ name, value, options, onChange, size, la
         </label>
       ))}
     </div>
-  )
-}
-
-export function AutonomySeg({ name, value, locked, onChange, size }: { name: string; value: Autonomy; locked?: boolean; onChange: (v: Autonomy) => void; size?: 'sm' }) {
-  return (
-    <Seg name={name} value={value} size={size} label="Autonomy" onChange={onChange}
-      options={AUTONOMY.map(a => ({ value: a, label: AUTONOMY_LABEL[a], disabled: locked && a !== 'suggest' }))} />
   )
 }
 

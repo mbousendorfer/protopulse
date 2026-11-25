@@ -1,37 +1,49 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
+import { useEffect, useState } from 'react'
+import { Link, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, ChevronDown, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
-import { ago, DAY } from '../../app/time'
-import { AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
-import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
-import { Notice, UndoBar } from '../../ui/Feedback'
+import { ago } from '../../app/time'
+import { AUTONOMY_LABEL, PRESET_LABEL } from '../../data/agents'
+import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs } from '../../ui'
+import { AutonomyList, AutonomySummary, PRESET_SAYS, presetDelta, presetOf } from './autonomy'
+import { AgentRules } from './SharedRules'
+import { proposalsFor } from './rules'
+import { CountBadge, Notice, UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AlertsTable } from '../insights/alerts'
 import { AgentScene } from '../../ui/Illustrations'
 
-const RISK_LABEL = { safe: 'Low risk', risky: 'Medium risk', destructive: 'High risk' } as const
+/* ---------- Agents: Team · Shared rules · Escalation ---------- */
+type Section = 'team' | 'rules' | 'escalation'
+const SECTION_PATH: Record<Section, string> = { team: '/agents', rules: '/agents/rules', escalation: '/agents/escalation' }
 
-type Preset = 'cautious' | 'balanced' | 'autonomous' | 'custom'
-function presetOf(a: Agent): Preset {
-  const free = a.actions.filter(x => !x.locked)
-  const is = (f: (x: AgentAction) => Autonomy) => free.every(x => x.autonomy === f(x))
-  if (is(x => (x.risk === 'safe' ? 'draft' : 'suggest'))) return 'cautious'
-  if (is(x => (x.risk === 'safe' ? 'act' : 'draft'))) return 'balanced'
-  if (is(() => 'act')) return 'autonomous'
-  return 'custom'
+export function AgentsLayout() {
+  const { s } = useStore()
+  const nav = useNavigate()
+  const seg = useLocation().pathname.split('/')[2]
+  const section: Section = seg === 'rules' || seg === 'escalation' ? seg : 'team'
+  // A count on a tab means "needs you": rule proposals only.
+  const proposals = s.handoffs.filter(h => h.proposal && !h.lane).length
+  return (
+    <div className="page">
+      <PageHead title="Agents" lede="Your team, the rules they share, and what they always hand to a person." />
+      <Tabs value={section} onChange={v => nav(SECTION_PATH[v])} items={[
+        { value: 'team', label: 'Team' },
+        { value: 'rules', label: <>Shared rules{proposals > 0 && <CountBadge n={proposals} needs label={`${proposals} rule proposal${proposals > 1 ? 's' : ''} need you`} />}</> },
+        { value: 'escalation', label: 'Escalation' },
+      ]} />
+      <Outlet />
+    </div>
+  )
 }
 
-/* ---------- Team ---------- */
 export function Team() {
   const { s, d } = useStore()
   return (
-    <div className="page">
-      <PageHead title="Agents" lede="Your team. Each agent works within the autonomy and guardrails you set, and asks for more when it has earned it." />
-      <div className="team-grid">
+    <div className="team-grid">
         {s.agents.map(a => {
           const lv = (l: Autonomy) => a.actions.filter(x => x.autonomy === l).length
           const pending = s.handoffs.filter(h => h.agent === a.id && !h.lane && groupOf(h) === 'need').length
@@ -59,7 +71,7 @@ export function Team() {
               <dl className="agent-stats">
                 <div><dt>Handled alone · 30 days</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
                 <div><dt>Raised to you</dt><dd className="num">{a.record.escalated}</dd></div>
-                <div><dt>Approved unchanged</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
+                <div><dt>Approved unchanged</dt><dd className="num">{a.record.handled ? `${a.record.approvedUnchanged}%` : "–"}</dd></div>
                 <div><dt>Undone by you</dt><dd className="num">{a.record.undone}</dd></div>
               </dl>
               <div className="row">
@@ -73,13 +85,12 @@ export function Team() {
             </article>
           )
         })}
-      </div>
     </div>
   )
 }
 
 /* ---------- Profile ---------- */
-type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'alerts' | 'record' | 'activity'
+type Tab = 'autonomy' | 'guardrails' | 'rules' | 'escalation' | 'alerts' | 'record' | 'activity'
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
@@ -104,11 +115,13 @@ export function AgentProfile() {
   const a = s.agents.find(x => x.id === id)
   const [params] = useSearchParams()
   const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'autonomy')
-  const [undoPreset, setUndoPreset] = useState<{ label: string; levels: [string, Autonomy][] } | null>(null)
+  const [undoPreset, setUndoPreset] = useState<{ label: string; delta: string; levels: [string, Autonomy][] } | null>(null)
   // Same component for every agent: going from Echo's Alerts to Nova must not keep Echo's tab.
-  useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A link to another tab of the same agent (a Desk card to ?tab=rules) moves the tab too.
+  useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id, params.get('tab')]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!a) return <div className="page"><Empty title="This agent doesn’t exist" action={<Link to="/agents" className="btn">Back to the team</Link>} /></div>
   const preset = presetOf(a)
+  const proposals = proposalsFor(s.handoffs, a.id).length
 
   return (
     <div className="page">
@@ -124,7 +137,9 @@ export function AgentProfile() {
       </div>
 
       <Tabs value={tab} onChange={setTab} items={[
-        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length }, { value: 'escalation', label: 'Escalation', count: s.playbook.escalate.filter(e => e.agents.includes(a.id) && e.on).length },
+        { value: 'autonomy', label: 'Autonomy' }, { value: 'guardrails', label: 'Guardrails', count: a.guardrails.length },
+        { value: 'rules', label: <>Rules{proposals > 0 && <CountBadge n={proposals} needs label={`${proposals} rule proposal${proposals > 1 ? 's' : ''} need you`} />}</> },
+        { value: 'escalation', label: 'Escalation' },
         ...(a.id === 'iris' || a.id === 'echo' ? [{ value: 'alerts' as Tab, label: 'Alerts', count: (a.id === 'iris' ? s.insights.alerts : s.listening.alerts).filter(x => x.on).length }] : []),
         { value: 'record', label: 'Track record' }, { value: 'activity', label: 'Activity' },
       ]} />
@@ -135,75 +150,27 @@ export function AgentProfile() {
             <div className="row between items-start">
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
-                <p className="muted mw-62ch">A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
+                <p className="preset-says">{PRESET_SAYS[preset]}</p>
+                <AutonomySummary agent={a} />
               </div>
-              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: p, levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
+              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: PRESET_LABEL[p], delta: presetDelta(a, p), levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
             </div>
             {undoPreset && (
-              <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. Every unlocked action moved.</UndoBar>
+              <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. {undoPreset.delta}</UndoBar>
             )}
             <Notice scope="agents" className="mt-3" />
-            <AutonomyBoard agent={a} />
+            <AutonomyList key={a.id} agent={a} onChange={(x, level) => d({ type: 'core/autonomy', agent: a.id, action: x.id, level })} />
           </section>
           <Promotions agent={a} />
         </div>
       )}
       {tab === 'guardrails' && <Guardrails agent={a} />}
+      {tab === 'rules' && <AgentRules agent={a} />}
       {tab === 'escalation' && <Escalation agent={a} />}
       {tab === 'alerts' && <AgentAlerts agent={a.id} />}
       {tab === 'record' && <Record agent={a} />}
       {tab === 'activity' && <AgentActivity agent={a.id} />}
-    </div>
-  )
-}
-
-/** Three columns; action cards glide between them when their level changes (FLIP). */
-function AutonomyBoard({ agent }: { agent: Agent }) {
-  const { d } = useStore()
-  const now = useNow()
-  const ref = useRef<HTMLDivElement>(null)
-  const rects = useRef(new Map<string, DOMRect>())
-  const key = agent.actions.map(x => x.autonomy).join()
-
-  useLayoutEffect(() => {
-    const els = ref.current?.querySelectorAll<HTMLElement>('[data-flip]') ?? []
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    els.forEach(el => {
-      const id = el.dataset.flip!
-      const prev = rects.current.get(id)
-      const next = el.getBoundingClientRect()
-      if (prev && !reduce && (prev.left !== next.left || prev.top !== next.top)) {
-        el.animate([{ transform: `translate(${prev.left - next.left}px, ${prev.top - next.top}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' })
-      }
-      rects.current.set(id, next)
-    })
-  }, [key])
-
-  return (
-    <div className="aboard" ref={ref}>
-      {AUTONOMY.map(level => (
-        <section key={level} className="acol" aria-label={AUTONOMY_LABEL[level]}>
-          <h3>{AUTONOMY_LABEL[level]} <span className="faint num">{agent.actions.filter(x => x.autonomy === level).length}</span></h3>
-          <p className="faint acol-sub">{level === 'act' ? 'Runs on its own. You can undo.' : level === 'draft' ? 'Prepares it, waits for your approval.' : 'Points it out. You do it.'}</p>
-          {agent.actions.filter(x => x.autonomy === level).map(x => (
-            <article key={x.id} data-flip={x.id} className="aitem">
-              <div className="row nowrap items-start">
-                <h4>{x.label}</h4>
-                {x.locked && <Tip label={x.lockReason}><span className="lock" tabIndex={0} aria-label={`Locked: ${x.lockReason}`}><Lock size={13} /></span></Tip>}
-              </div>
-              <div className="row tight">
-                <span className="chip">{RISK_LABEL[x.risk]}</span>
-                {x.reviewed ? <span className="chip">{x.approvedUnchanged}% approved unchanged · {x.reviewed}</span> : null}
-                {x.trialUntil && x.trialUntil > now && <Pill tone="signal">Trial · {Math.ceil((x.trialUntil - now) / DAY)} days left</Pill>}
-              </div>
-              <AutonomySeg size="sm" name={`${agent.id}-${x.id}`} value={x.autonomy} locked={x.locked} onChange={v => d({ type: 'core/autonomy', agent: agent.id, action: x.id, level: v })} />
-              <p className="says">{x.says[x.autonomy]}</p>
-            </article>
-          ))}
-          {!agent.actions.some(x => x.autonomy === level) && <div className="aempty">No action here</div>}
-        </section>
-      ))}
     </div>
   )
 }
@@ -275,7 +242,7 @@ function Guardrails({ agent }: { agent: Agent }) {
   )
 }
 
-/** Read-only here: escalation is edited in the Playbook, one place for every agent. */
+/** Read-only here: escalation is edited in Agents › Escalation, one place for every agent. */
 function Escalation({ agent }: { agent: Agent }) {
   const { s } = useStore()
   const rules = s.playbook.escalate.filter(e => e.agents.includes(agent.id))
@@ -283,7 +250,7 @@ function Escalation({ agent }: { agent: Agent }) {
     <section className="card">
       <div className="card-head">
         <div><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy.</span></div>
-        <Link to="/playbook?tab=escalation" className="btn sm ghost">Edit in the Playbook</Link>
+        <Link to={`/agents/escalation?agent=${agent.id}`} className="btn sm ghost">Edit in Escalation</Link>
       </div>
       <ul className="rows">
         {rules.map(e => (
@@ -324,7 +291,7 @@ function Record({ agent }: { agent: Agent }) {
       <dl className="grid-4 record-kpis">
         <div className="card pad stat"><dd><b className="num">{agent.record.handled.toLocaleString('en-GB')}</b></dd><dt className="label">Handled alone · 30 days</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.escalated}</b></dd><dt className="label">Raised to you</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.approvedUnchanged}%</b></dd><dt className="label">Approved unchanged</dt></div>
+        <div className="card pad stat"><dd><b className="num">{agent.record.handled ? `${agent.record.approvedUnchanged}%` : "–"}</b></dd><dt className="label">Approved unchanged</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.undone}</b></dd><dt className="label">Undone by you</dt></div>
       </dl>
       <section className="card pad">

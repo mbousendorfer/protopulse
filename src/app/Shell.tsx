@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, BookOpen, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
+  Activity, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
   Radar, Search, Clapperboard, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
@@ -28,10 +28,13 @@ const DEPTS: { to: string; label: string; agent: AgentId; icon: ReactNode }[] = 
 
 const CRUMB: Record<string, string> = {
   '': 'Desk', focus: 'Focus', inbox: 'Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy', video: 'Video',
-  agents: 'Agents', chats: 'Chats', activity: 'Activity', playbook: 'Playbook', settings: 'Settings', onboarding: 'Onboarding',
+  agents: 'Agents', chats: 'Chats', activity: 'Activity', settings: 'Settings', onboarding: 'Onboarding',
 }
 
-const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/activity', b: '/playbook' }
+// Agents › Shared rules and Escalation are tabs of the Agents page, named in the crumbs.
+const AGENT_TABS: Record<string, string> = { rules: 'Shared rules', escalation: 'Escalation' }
+
+const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/activity', b: '/agents/rules' }
 
 export default function Shell() {
   const { s, d } = useStore()
@@ -117,7 +120,6 @@ export default function Shell() {
           <span className="label hide-collapsed">Team</span>
           <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" />
           <RailLink to="/activity" icon={<Activity size={16} />} label="Activity" />
-          <RailLink to="/playbook" icon={<BookOpen size={16} />} label="Playbook" />
         </div>
 
         <div className="rail-foot">
@@ -140,7 +142,7 @@ export default function Shell() {
             <b>{CRUMB[seg] ?? seg}</b>
             {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
-              const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
+              const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x) : decodeURIComponent(x).replace(/-/g, ' ')
               return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
           </div>
@@ -224,7 +226,7 @@ function Notifications() {
 
 const SHORTCUTS: [string, string][] = [
   ['⌘K or /', 'Ask or brief an agent'], ['F', 'Process the Desk in Focus'], ['G then D', 'Desk'], ['G then I', 'Inbox'], ['G then P', 'Publishing'],
-  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then V', 'Video'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Playbook'],
+  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then V', 'Video'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Shared rules'],
   ['↑ / ↓ or J / K', 'Desk and Focus: next / previous card'], ['A', 'Desk and Focus: approve, or pick the recommended option'], ['1–9', 'Desk and Focus: pick an option'],
   ['E', 'Desk and Focus: edit (⌘↵ approves the edit)'], ['R then 1–4', 'Desk and Focus: reject with a reason'], ['S then 1–4', 'Desk and Focus: snooze'],
   ['T / N', 'Autonomy request: try for a week / not yet'], ['C', 'Desk and Focus: ask Claire'], ['Z', 'Focus: undo the last decision'],
