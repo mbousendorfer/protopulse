@@ -2,9 +2,10 @@
 import type { Autonomy, Network, PlaybookRule } from '../../app/types'
 import { DAY, MIN, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, CADENCE, type Pillar, type Post } from '../../data/publishing'
+import { BEST_SLOT, type Pillar, type Post } from '../../data/publishing'
 import { PILLAR_PERF } from '../../data/insights'
-import { BANNED, FACTS, PILLARS as PILLAR_TARGETS } from '../../data/playbook'
+import { BANNED, FACTS } from '../../data/playbook'
+import { CADENCE, PILLARS, targetsFrom, type Targets } from '../../data/strategy'
 import { GAP_COPY, IDEA_SEEDS, LOAD_SEEDS, type Idea, type IdeaDraft, type IdeaOrigin, type IdeaSeed, type IdeaVersion } from '../../data/ideas'
 import { EMOJI } from './checks'
 
@@ -34,43 +35,46 @@ export const namesCompetitor = (text: string) => COMPETITORS.test(text)
 /** The calendar's week starts on Monday 24 November (demo day −1), so gaps match what the calendar shows. */
 const WEEK0 = T(0, 0, -1)
 const mondayOf = (t: number) => WEEK0 + Math.floor((startOfDay(t) - WEEK0) / (7 * DAY)) * 7 * DAY
+/** Sage's targets when the demo loads. The app passes `targetsOf(s)`, so Atlas follows Sage's changes. */
+const SEED: Targets = targetsFrom({ pillars: PILLARS, cadence: CADENCE })
+
 /** The pillar furthest below Sage's target share. */
-export function behindPillar(): { pillar: Pillar; share: number; target: number } {
-  return PILLAR_PERF.map(p => ({ pillar: p.pillar as Pillar, share: p.share, target: PILLAR_TARGETS.find(x => x.name === p.pillar)?.share ?? 0 }))
+export function behindPillar(t: Targets = SEED): { pillar: Pillar; share: number; target: number } {
+  return PILLAR_PERF.map(p => ({ pillar: p.pillar as Pillar, share: p.share, target: t.pillars.find(x => x.name === p.pillar)?.target ?? 0 }))
     .sort((a, b) => (b.target - b.share) - (a.target - a.share))[0]
 }
 const PILLAR_NETWORK: Record<Pillar, Network[]> = { Community: ['facebook', 'instagram'], 'Repair & care': ['linkedin', 'instagram'], 'Trail stories': ['tiktok', 'instagram'], 'Gear that lasts': ['instagram', 'tiktok'] }
 
 /** For a future day with fewer than 2 posts: the network furthest below the weekly cadence, else one that serves the pillar behind target. */
-export function recommendNetwork(posts: Post[], day: number, now: number): Network | null {
+export function recommendNetwork(posts: Post[], day: number, now: number, t: Targets = SEED): Network | null {
   const inDay = posts.filter(p => p.at >= day && p.at < day + DAY)
   if (day < startOfDay(now) || inDay.length >= 2) return null
   const start = mondayOf(day)
   const week = posts.filter(p => p.at >= start && p.at < start + 7 * DAY && p.status !== 'draft')
   const taken = new Set(inDay.map(p => p.network))
-  const gaps = (Object.keys(CADENCE) as Network[]).map(n => ({ n, gap: (CADENCE[n] ?? 0) - week.filter(p => p.network === n).length })).filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap)
-  return gaps.find(g => !taken.has(g.n))?.n ?? PILLAR_NETWORK[behindPillar().pillar].find(n => !taken.has(n)) ?? null
+  const gaps = (Object.keys(t.cadence) as Network[]).map(n => ({ n, gap: (t.cadence[n] ?? 0) - week.filter(p => p.network === n).length })).filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap)
+  return gaps.find(g => !taken.has(g.n))?.n ?? PILLAR_NETWORK[behindPillar(t).pillar].find(n => !taken.has(n)) ?? null
 }
 
 /** The next days that need a post, from tomorrow (or today before 16:00). */
-export function gapDays(posts: Post[], now: number, horizon = 7): { day: number; network: Network }[] {
+export function gapDays(posts: Post[], now: number, horizon = 7, t: Targets = SEED): { day: number; network: Network }[] {
   const first = startOfDay(now) + (new Date(now).getHours() >= 16 ? DAY : 0)
-  return Array.from({ length: horizon }, (_, i) => first + i * DAY).flatMap(day => { const n = recommendNetwork(posts, day, now); return n ? [{ day, network: n }] : [] })
+  return Array.from({ length: horizon }, (_, i) => first + i * DAY).flatMap(day => { const n = recommendNetwork(posts, day, now, t); return n ? [{ day, network: n }] : [] })
 }
 
 /** An idea for an empty day, with the calendar as its source. Null when every post Atlas has for that network is already proposed. */
-export function gapSeed(gap: { day: number; network: Network }, posts: Post[], ideas: Idea[] = []): IdeaSeed | null {
+export function gapSeed(gap: { day: number; network: Network }, posts: Post[], ideas: Idea[] = [], t: Targets = SEED): IdeaSeed | null {
   const taken = new Set(ideas.filter(i => isOpen(i) || i.status === 'scheduled').flatMap(i => Object.values(i.copy)))
   const copy = (GAP_COPY[gap.network] ?? []).find(c => !taken.has(c.text))
   if (!copy) return null
   const count = posts.filter(p => p.at >= gap.day && p.at < gap.day + DAY).length
   const start = mondayOf(gap.day)
   const week = posts.filter(p => p.at >= start && p.at < start + 7 * DAY && p.status !== 'draft' && p.network === gap.network).length
-  const target = CADENCE[gap.network]
+  const target = t.cadence[gap.network]
   const label = new Date(gap.day).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
   const long = new Date(gap.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })
   const name = NETWORK_LABEL[gap.network]
-  const behind = behindPillar()
+  const behind = behindPillar(t)
   const slot = BEST_SLOT[gap.network]
   const sources: IdeaSeed['sources'] = [
     { type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing/calendar', value: String(count), measure: `post${count === 1 ? '' : 's'} planned on ${long}, where 2 a day is your rhythm` },
@@ -115,10 +119,10 @@ export function learn(learned: Record<string, number>, key: string, rules: Playb
 }
 
 /** Seeds a dismiss rule says to hold back, with the rule. */
-export function heldByRules(seeds: IdeaSeed[], rules: PlaybookRule[], posts: Post[], now: number): { keep: IdeaSeed[]; held: { seed: IdeaSeed; rule: string }[] } {
+export function heldByRules(seeds: IdeaSeed[], rules: PlaybookRule[], posts: Post[], now: number, t: Targets = SEED): { keep: IdeaSeed[]; held: { seed: IdeaSeed; rule: string }[] } {
   const keys = new Set(learnedKeys(rules))
   const week = posts.filter(p => p.at >= mondayOf(now) && p.at < mondayOf(now) + 7 * DAY)
-  const behind = behindPillar().pillar
+  const behind = behindPillar(t).pillar
   const keep: IdeaSeed[] = [], held: { seed: IdeaSeed; rule: string }[] = []
   for (const seed of seeds) {
     const why = keys.has('dismiss:Off-brand') && seed.fit && seed.fit !== 'High' ? 'dismiss:Off-brand'
@@ -404,10 +408,10 @@ export function capIdeas(ideas: Idea[], incoming: Idea[]): { accepted: Idea[]; h
 }
 
 /** Atlas's one line at the top of Ideas: only what the counts beside it don't already say. */
-export function summarize(ideas: Idea[]): string {
+export function summarize(ideas: Idea[], t: Targets = SEED): string {
   const open = ideas.filter(isOpen)
   if (!open.length) return 'No ideas waiting. Atlas brings the next one as soon as a signal is worth it.'
-  const behind = behindPillar().pillar
+  const behind = behindPillar(t).pillar
   const inPillar = open.filter(i => i.pillar === behind).length
   const soon = open.filter(i => i.expires && i.expires.at - Math.max(...open.map(x => x.at)) < DAY).length
   if (inPillar) return `${inPillar} of ${open.length} ideas are for ${behind}, the pillar furthest behind target.`
@@ -438,10 +442,10 @@ export function ideaPosts(idea: Idea, makeId: () => string): Post[] {
 }
 
 /** The ideas on screen when the demo loads: from the data, plus the first calendar gap. */
-export function spotIdeas(now: number, posts: Post[], levels: Partial<Record<string, Autonomy>>, rules: PlaybookRule[] = []): Idea[] {
+export function spotIdeas(now: number, posts: Post[], levels: Partial<Record<string, Autonomy>>, rules: PlaybookRule[] = [], t: Targets = SEED): Idea[] {
   const ARRIVED: Record<string, number> = { 'storm-snow': T(8, 2), 'dawn-patrol': T(7, 40), 'founder-repair': T(17, 20, -1), 'camille-ridge': T(7, 55), 'gr20-throwback': T(6, 50), 'series-ridge': T(7, 40) }
-  const gap = gapDays(posts, now)[0]
-  const gs = gap && gapSeed(gap, posts)
+  const gap = gapDays(posts, now, 7, t)[0]
+  const gs = gap && gapSeed(gap, posts, [], t)
   const seeds = LOAD_SEEDS.map(k => IDEA_SEEDS[k])
   const list = seeds.map(seed => makeIdea(seed, 'continuous', ARRIVED[seed.key] ?? now, `idea-${seed.key}`))
   if (gs) list.splice(1, 0, makeIdea(gs, 'gap', T(8, 5), `idea-${gs.key}`))

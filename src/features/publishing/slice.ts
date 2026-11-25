@@ -7,7 +7,7 @@ import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
 import { DEMO_START } from '../../app/time'
 import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
-import { briefSage } from '../strategy/slice'
+import { briefSage, targetsOf } from '../strategy/slice'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -171,7 +171,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/askFill': {
       const day = T(0, 0, a.day)
-      const seed = gapSeed({ day, network: a.network }, s.publishing.posts, s.publishing.ideas)
+      const seed = gapSeed({ day, network: a.network }, s.publishing.posts, s.publishing.ideas, targetsOf(s))
       if (!seed) return notify(s, 'publishing', `Atlas already proposed every ${a.network === 'x' ? 'X' : a.network} post it has for this week. Write one yourself, or check Ideas.`, { link: { to: '/publishing', label: 'Open Ideas' } })
       const next = arriveIdeas(s, [seed], 'gap', 'atlas')
       const idea = next.publishing.ideas.find(i => i.key === seed.key)
@@ -453,7 +453,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
   const t = now(next)
   const fresh = seeds.filter(seed => !next.publishing.ideas.some(i => i.key === seed.key))
   if (!fresh.length) return next
-  const { keep, held: byRule } = heldByRules(fresh, next.playbook.rules, next.publishing.posts, t)
+  const { keep, held: byRule } = heldByRules(fresh, next.playbook.rules, next.publishing.posts, t, targetsOf(next))
   const { accepted, held, retired } = capIdeas(next.publishing.ideas, keep.map(seed => makeIdea(seed, origin, t)))
   for (const r of retired) {
     const by = accepted[retired.indexOf(r) + accepted.length - retired.length]
@@ -499,7 +499,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
 /** A scripted idea event: named seeds, or the next calendar gap. */
 export function ideaEvent(s: State, ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }): State {
   const seeds = ev.origin === 'gap'
-    ? gapDays(s.publishing.posts, now(s), 14).flatMap(g => { const seed = gapSeed(g, s.publishing.posts, s.publishing.ideas); return seed && !s.publishing.ideas.some(i => i.key === seed.key) ? [seed] : [] }).slice(0, 1)
+    ? gapDays(s.publishing.posts, now(s), 14, targetsOf(s)).flatMap(g => { const seed = gapSeed(g, s.publishing.posts, s.publishing.ideas, targetsOf(s)); return seed && !s.publishing.ideas.some(i => i.key === seed.key) ? [seed] : [] }).slice(0, 1)
     : (ev.seeds ?? []).map(k => IDEA_SEEDS[k]).filter(Boolean)
   return arriveIdeas(s, seeds, ev.origin, ev.agent)
 }

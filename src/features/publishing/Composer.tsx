@@ -5,7 +5,7 @@ import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, MEDIA, PILLARS, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
+import { BEST_SLOT, MEDIA, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
 import { Btn, Mark, Menu, Net, Pop, Seg, Sheet, Thinking, Tip } from '../../ui'
 import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
@@ -161,7 +161,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             </div>
             <div className="field">
               <span className="label">Pillar</span>
-              <Menu align="start" trigger={<button className="select-btn block">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
+              <Menu align="start" trigger={<button className="select-btn block">{pillar}<ChevronDown size={14} /></button>} items={s.strategy.pillars.map(({ name: p }) => ({ label: p, onSelect: () => setPillar(p) }))} />
             </div>
           </div>
 

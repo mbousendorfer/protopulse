@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, Network } from '../../app/types'
 import { now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, generatePlan, revisePlan, type Cadence, type Campaign, type Pillar, type Proposal } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, generatePlan, revisePlan, targetsFrom, type Cadence, type Campaign, type Pillar, type Proposal } from '../../data/strategy'
 import { dayLabel } from '../../app/time'
 
 export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[] }
@@ -27,6 +27,9 @@ const updateCampaign = (s: State, id: string, f: (c: Campaign) => Campaign): Sta
   patch(s, { campaigns: s.strategy.campaigns.map(c => (c.id === id ? f(c) : c)) })
 
 /** Sage turns a brief into a plan to review, and puts a card on the Desk. Used by Listening's “Brief Sage”. */
+/** Sage's pillars and weekly cadence: the one source. Atlas (Ideas, plan review, calendar) and the Playbook read them here. */
+export const targetsOf = (s: State) => targetsFrom(s.strategy)
+
 export function briefSage(s: State, brief: string, source: string, from: AgentId = 'echo'): State {
   const id = uid('cmp')
   const c = generatePlan(id, brief, now(s), { source })

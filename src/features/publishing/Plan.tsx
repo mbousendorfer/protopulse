@@ -5,7 +5,8 @@ import type { Network } from '../../app/types'
 import { useStore } from '../../app/store'
 import { DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { CADENCE, PILLARS, type PlanItem } from '../../data/publishing'
+import type { PlanItem } from '../../data/publishing'
+import { targetsOf } from '../strategy/slice'
 import { Btn, Empty, Mark, Modal, Net, Pill, Thinking } from '../../ui'
 import { HBars } from '../../ui/charts'
 import Photo from '../../ui/Photo'
@@ -21,6 +22,9 @@ export default function PlanReview() {
   const [thinking, setThinking] = useState(false)
   const [confirmReject, setConfirmReject] = useState(false)
   const included = plan.items.filter(i => i.included)
+  // Sage's targets, live: change the cadence in Strategy and the review follows.
+  const { cadence: CADENCE } = targetsOf(s)
+  const PILLARS = s.strategy.pillars.map(p => p.name)
   const nets = Object.keys(CADENCE) as Network[]
   const count = (n: Network, items: PlanItem[]) => items.filter(i => i.network === n).length
   const warnings = [

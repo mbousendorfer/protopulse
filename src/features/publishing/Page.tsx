@@ -15,6 +15,7 @@ import Composer from './Composer'
 import PlanReview from './Plan'
 import Ideas from './Ideas'
 import { isOpen, recommendNetwork } from './ideasModel'
+import { targetsOf } from '../strategy/slice'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -95,7 +96,7 @@ function Calendar() {
   const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
 
   /** For a future day with fewer than 2 posts: the network Atlas recommends (cadence first, then the pillar behind target). */
-  const recommend = (day: number): Network | null => (view !== 'week' ? null : recommendNetwork(s.publishing.posts, day, now))
+  const recommend = (day: number): Network | null => (view !== 'week' ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
   const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)

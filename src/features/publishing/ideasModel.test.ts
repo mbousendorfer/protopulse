@@ -27,7 +27,8 @@ test('demo load: at least 6 ideas from the four sources, 2 ready, 1 series, 1 ex
   expect(ideas.filter(i => i.kind === 'series')).toHaveLength(1)
   expect(ideas.some(i => i.expires && i.expires.at - NOW < DAY)).toBe(true)
   for (const i of ideas) for (const s of i.sources) { expect(s.proof).toMatch(/\d/); expect(s.link).toMatch(/^\//) }
-  expect(summarize(ideas)).toBe('3 of 7 ideas are for Community, the pillar furthest behind target.')
+  // 2, not 3: since Atlas reads Sage's cadence (X: 3 a week), the calendar gap idea is an X post, not a Community one.
+  expect(summarize(ideas)).toBe('2 of 7 ideas are for Community, the pillar furthest behind target.')
 })
 
 test('trend ideas stay suggestions on Suggest; recycle and fill get drafted on Draft', () => {
@@ -38,12 +39,13 @@ test('trend ideas stay suggestions on Suggest; recycle and fill get drafted on D
   expect(onDraft.find(i => i.key === 'dawn-patrol')!.status).toBe('ready')
 })
 
-test('the calendar gap is Sunday 30 on Facebook: one post that day, cadence met, Community behind', () => {
+test('the calendar gap is Sunday 30 on X: one post that day, X below Sage’s cadence of 3 a week', () => {
   const [gap] = gapDays(POSTS, NOW)
-  expect(gap).toEqual({ day: T(0, 0, 5), network: 'facebook' })
+  expect(gap).toEqual({ day: T(0, 0, 5), network: 'x' })
   const idea = spotIdeas(NOW, POSTS, LEVELS).find(i => i.origin === 'gap')!
-  expect(idea.pillar).toBe('Community')
-  expect(idea.drafts![0].at).toBe(T(19, 0, 5))
+  expect(idea.pillar).toBe('Gear that lasts')
+  expect(idea.sources.some(x => x.label === 'X this week' && /of 3/.test(x.proof))).toBe(true)
+  expect(idea.drafts![0].at).toBe(T(12, 0, 5))
 })
 
 test('a draft has a slot in the future, max 3 posts per network per day, and media with rights or a visual brief', () => {
