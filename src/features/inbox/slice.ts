@@ -20,7 +20,8 @@ import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type ConvType,
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
-export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[] }
+/** `taught`: conversations Sam labelled by hand, per label, not covered by a rule yet (3 make Nova propose one). */
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]> }
 export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES) })
 
 export type BulkOp =
@@ -177,7 +178,8 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   let next: State = { ...s, handoffs: settles ? s.handoffs.filter(h => !cards.includes(h)) : s.handoffs, inbox: { ...s.inbox, convs: s.inbox.convs.map(c => (ids.has(c.id) ? { ...withTeam(c), ...change(withTeam(c)) } : c)) } }
   next = pushLog(next, { agent: 'nova', text: label, status: a.op === 'approve' ? 'approved' : 'done', reason: n > 1 ? 'Your call from the Inbox, in one go' : 'Your call from the Inbox', link: '/inbox' })
   const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id)), created: picked.map(c => c.id).filter(id => !existing.has(id)), cards: settles ? cards : [] }
-  return { ...next, inbox: { ...next.inbox, undo } }
+  next = { ...next, inbox: { ...next.inbox, undo } }
+  return a.op === 'label' ? teach(next, a.value, picked.map(c => c.id)) : next
 }
 
 function undoBulk(s: State): State {
@@ -290,6 +292,7 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
  * in Handled by Nova). What it looked like before is kept, so the journal's Undo puts it back (see onUndoInbox).
  */
 export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
+  if (h.inboxRule) return d.kind === 'approve' ? reduceRules(s0, { type: 'inbox/ruleAdd', rule: h.inboxRule, applyNow: true, origin: LEARNED }) : s0
   const p = replyOf(h)
   let s = s0
   let c = convOf(s, h)
@@ -329,6 +332,11 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
 /** The journal's Undo: a card's decision comes off its conversation, and a reply Nova sent alone comes back as a draft. */
 export function onUndoInbox(s: State, entry: LogEntry): State {
   let next = undoRules(s, entry)
+  // A learned rule approved from the Desk goes away with its card's Undo.
+  for (const h of entry.restore ?? []) {
+    const r = h.inboxRule
+    if (r) next = setRules(next, next.inbox.rules.filter(x => !(x.origin === LEARNED && x.words.join() === r.words.join() && thenText(x.then) === thenText(r.then))))
+  }
   for (const h of entry.restore ?? []) {
     const c = next.inbox.convs.find(x => x.settled?.card === h.id)
     if (!c?.settled) continue
@@ -487,3 +495,41 @@ function undoRules(s: State, entry: LogEntry): State {
   return next
 }
 export type { RuleOp }
+
+/* ---------- Rules learned from Sam's gestures ---------- */
+
+const LEARNED = 'Learned from your labels'
+const STOP = new Set(['that', 'this', 'with', 'have', 'from', 'your', 'after', 'again', 'about', 'what', 'when', 'still', 'just', 'they', 'them', 'there', 'their', 'would', 'could', 'into', 'been', 'were', 'will', 'very', 'much', 'more', 'than', 'then', 'only', 'also', 'some', 'does', 'fernway', 'thanks', 'please'])
+const tokens = (t: string) => new Set(t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/[a-z]{4,}/g)?.filter(w => !STOP.has(w)) ?? [])
+
+/** Words most of these conversations share (two at most); the label itself when they share none. */
+export function sharedWords(convs: Conversation[], label: string): string[] {
+  const n = new Map<string, number>()
+  for (const c of convs) for (const w of tokens(c.messages.filter(m => m.from === 'them').map(m => m.text).join(' '))) n.set(w, (n.get(w) ?? 0) + 1)
+  const common = [...n].filter(([, k]) => k >= 2).sort((a, b) => b[1] - a[1] || b[0].length - a[0].length).slice(0, 2).map(([w]) => w)
+  return common.length ? common : [label.toLowerCase()]
+}
+
+/** Nova proposes the rule that would have done these labels for Sam: a Desk card he approves once. */
+export function proposeRule(s: State, label: string, ids: string[]): State {
+  const convs = ids.map(id => s.inbox.convs.find(c => c.id === id)).filter((c): c is Conversation => !!c)
+  if (!convs.length || s.handoffs.some(h => h.inboxRule?.then.op === 'label' && h.inboxRule.then.value === label)) return s
+  const rule = { words: sharedWords(convs, label), then: { op: 'label' as const, value: label } }
+  return pushHandoff(s, {
+    agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Inbox rule', action: 'nova-rules', link: '/inbox?rules=1', confidence: 85,
+    title: `New Inbox rule? ${thenText(rule.then)} when a message ${whenText(rule)}`,
+    context: `You labelled ${convs.length} conversations “${label}” by hand.`,
+    why: `Same label added by hand ${convs.length} times. With a rule I’d do it as messages arrive.`,
+    inboxRule: rule,
+    preview: { type: 'evidence', lines: convs.map(c => `${c.author}: “${c.messages.find(m => m.from === 'them')?.text ?? ''}”`) },
+  })
+}
+
+/** Count Sam's hand labels that no rule covers; the third one makes Nova propose a rule. */
+function teach(s: State, label: string, ids: string[]): State {
+  const covered = (c: Conversation) => s.inbox.rules.some(r => r.then.op === 'label' && r.then.value === label && matches(r, withTeam(c)))
+  const fresh = ids.filter(id => { const c = s.inbox.convs.find(x => x.id === id); return c && !covered(c) })
+  const seen = [...new Set([...(s.inbox.taught?.[label] ?? []), ...fresh])]
+  const keep = (list: string[]): State => ({ ...s, inbox: { ...s.inbox, taught: { ...s.inbox.taught, [label]: list } } })
+  return seen.length >= 3 ? proposeRule(keep([]), label, seen.slice(-3)) : keep(seen)
+}

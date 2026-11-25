@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
 import { actionOf, agentOf, pushHandoff } from '../../app/core'
-import { escalate, escalationOf, handledAlone, land } from './slice'
+import { escalate, escalationOf, handledAlone, land, proposeRule } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -59,6 +59,11 @@ export const SCRIPT: ScriptEvent[] = ([
       preview: { type: 'reply', network: 'facebook', author: 'Hélène Dubois', text: 'The Storm Jacket is too big for me. Can I get my money back? Order #48402.',
         draft: ['Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.'] } },
     auto: { text: 'Answered Hélène Dubois about returning her Storm Jacket', reason: 'Product question, set to Act', link: '/inbox' },
+  },
+  {
+    // Sam labelled three product complaints by hand: Nova offers to do it herself from now on.
+    id: 'ev-teach-rule', order: 175, history: true, agent: 'nova', tag: 'rule', label: 'Nova · proposes an Inbox rule (learned from your labels)',
+    run: s => proposeRule(s, 'Product issue', ['c-lea', 'c-ana', 'c-pierre']),
   },
   {
     id: 'ev-stove', order: 60, label: 'Nova · safety question (stove clip)', always: true,
