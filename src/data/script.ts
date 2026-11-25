@@ -134,7 +134,7 @@ export const SCRIPT: ScriptEvent[] = [
     rule: { text: 'No emojis in LinkedIn replies', agents: ['nova', 'atlas'] },
     handoff: { agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “No emojis in LinkedIn replies”', context: 'You removed emojis from 9 of my last 10 LinkedIn drafts.',
-      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/playbook' },
+      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/agents/nova?tab=rules' },
   },
   {
     id: 'ev-x-fail', label: 'Atlas · X rejected a post', always: true,
@@ -188,7 +188,7 @@ export const SCRIPT: ScriptEvent[] = [
     rule: { text: 'Keep TikTok captions under 100 characters', agents: ['atlas'] },
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “Keep TikTok captions under 100 characters”', context: 'You shortened 8 of my last 10 TikTok captions.',
-      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/playbook' },
+      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/agents/atlas?tab=rules' },
   },
 ]
 

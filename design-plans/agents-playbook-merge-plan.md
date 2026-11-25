@@ -65,8 +65,8 @@ lede bridges the two: "Your Playbook: what every agent knows about Fernway and h
 - `data/ideas.ts`: `srcFact` link → `/agents/rules?section=facts`.
 - `app/reducer.ts:291`: "You can pause or delete it in the Playbook" → "in Shared rules".
 - `features/onboarding/Page.tsx:192`: "later in the Playbook".
-- **Open:** `features/publishing/slice.ts:408, 491` (`link: '/playbook'`) sit in the folder another session owns. The
-  redirect keeps them working; I change those two strings last, after checking that session is done.
+- `features/publishing/slice.ts:410, 493`: the learned-rule log links → `/agents/atlas?tab=rules` (the Publishing
+  Ideas session had finished, PR #2 and #5 merged, before this change).
 
 ## Spec
 
@@ -75,6 +75,6 @@ under Agents), §3.7 wording kept.
 
 ## Order
 
-1. `rulesFor` / `scopeOf` / `proposalsFor` + tests (done, `features/agents/rules.ts`).
+1. `rulesFor` / `scopeOf` / `proposalsFor` / `appliesTo` / `playbookTarget` + tests (`features/agents/rules.ts`).
 2. Routes and redirects. 3. Move components. 4. Links and wording. 5. `PROMPT.md`.
 6. Browser: 1440 and 375, light and dark, every old address. `tsc -b`, `vitest run`, `npm run build`.

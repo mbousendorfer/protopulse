@@ -2,13 +2,13 @@ import { expect, test } from 'vitest'
 import type { AgentId, Handoff, PlaybookRule } from '../../app/types'
 import { AGENTS, agentName } from '../../data/agents'
 import { FACTS, RULES } from '../../data/playbook'
-import { proposalsFor, rulesFor, scopeLabel, scopeOf } from './rules'
+import { appliesTo, playbookTarget, proposalsFor, rulesFor, scopeLabel, scopeOf } from './rules'
 
 const TEAM = AGENTS.map(a => a.id)
 const rule = (id: string, agents: AgentId[], kind: PlaybookRule['kind'] = 'do'): PlaybookRule => ({ id, kind, text: id, agents, origin: 'Added by you', uses: 0, addedAt: 0 })
 
 test('agent ids never collide with the Agents tab routes', () => {
-  expect(TEAM.filter(id => id === 'rules' || id === 'escalation')).toEqual([])
+  expect((TEAM as string[]).filter(id => id === 'rules' || id === 'escalation')).toEqual([])
 })
 
 test('scope: all agents, this agent only, or shared with named others', () => {
@@ -39,4 +39,21 @@ test('proposalsFor: open proposals raised by or applying to the agent', () => {
   const h = (id: string, agent: AgentId, agents: AgentId[], lane?: Handoff['lane']) => ({ id, agent, lane, proposal: { text: id, agents } }) as unknown as Handoff
   const hs = [h('p1', 'nova', ['nova']), h('p2', 'atlas', ['atlas', 'nova']), h('p3', 'atlas', ['atlas']), h('p4', 'nova', ['nova'], 'snoozed'), { id: 'x', agent: 'nova' } as Handoff]
   expect(proposalsFor(hs, 'nova').map(x => x.id)).toEqual(['p1', 'p2'])
+})
+
+test('appliesTo names who follows a rule in Shared rules', () => {
+  expect(appliesTo(TEAM, TEAM, agentName)).toBe('All agents')
+  expect(appliesTo(['nova'], TEAM, agentName)).toBe('Nova only')
+  expect(appliesTo(['nova', 'atlas'], TEAM, agentName)).toBe('Nova and Atlas')
+})
+
+test('every old /playbook address lands in the right place', () => {
+  expect(playbookTarget('')).toBe('/agents/rules')
+  expect(playbookTarget('?tab=rules')).toBe('/agents/rules')
+  expect(playbookTarget('?tab=words')).toBe('/agents/rules?section=words')
+  expect(playbookTarget('?tab=facts')).toBe('/agents/rules?section=facts')
+  expect(playbookTarget('?tab=voice')).toBe('/agents/rules?section=voice')
+  expect(playbookTarget('?tab=escalation')).toBe('/agents/escalation')
+  expect(playbookTarget('?tab=pillars')).toBe('/strategy/pillars')
+  expect(playbookTarget('?tab=nonsense')).toBe('/agents/rules')
 })

@@ -187,7 +187,7 @@ function Playbook({ kept, setKept }: { kept: Record<string, { keep: boolean; tex
         ) : (
           <div className="card pad onb-summary">
             <Check size={16} className="ok" />
-            <span>{Object.values(kept).filter(k => k.keep).length} kept, {Object.values(kept).filter(k => !k.keep).length} skipped. You can change any of it later in the Playbook.</span>
+            <span>{Object.values(kept).filter(k => k.keep).length} kept, {Object.values(kept).filter(k => !k.keep).length} skipped. You can change any of it later in Agents › Shared rules.</span>
             <Btn size="sm" variant="ghost" onClick={() => setKept(() => ({}))}>Review again</Btn>
           </div>
         )

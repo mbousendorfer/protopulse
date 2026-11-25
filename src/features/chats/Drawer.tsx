@@ -7,7 +7,7 @@ import { Btn, Sheet } from '../../ui'
 import ChatThread from './Thread'
 import './chats.css'
 
-const LABEL: Record<string, string> = { '': 'your Desk', inbox: 'the Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy', agents: 'the team', activity: 'Activity', playbook: 'the Playbook', settings: 'Settings' }
+const LABEL: Record<string, string> = { '': 'your Desk', inbox: 'the Inbox', publishing: 'Publishing', insights: 'Insights', listening: 'Listening', strategy: 'Strategy', agents: 'the team', activity: 'Activity', settings: 'Settings' }
 
 /** The chat, from anywhere, with the page you're on as context. */
 export default function ChatDrawer({ open, onOpenChange, chatId, setChatId }: { open: boolean; onOpenChange: (o: boolean) => void; chatId: string | null; setChatId: (id: string) => void }) {

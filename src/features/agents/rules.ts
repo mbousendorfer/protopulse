@@ -25,3 +25,18 @@ export function scopeLabel(s: Scope, agentName: string, name: (a: AgentId) => st
   if (s.kind === 'only') return `${agentName} only`
   return `Shared with ${s.others.map(name).join(' and ')}`
 }
+
+/** Who a rule applies to, in Shared rules, where no agent is the point of view. */
+export function appliesTo(agents: AgentId[], team: AgentId[], name: (a: AgentId) => string) {
+  if (team.every(a => agents.includes(a))) return 'All agents'
+  return agents.length === 1 ? `${name(agents[0])} only` : agents.map(name).join(' and ')
+}
+
+/** Where an old /playbook address lands now. `search` is the query string, with or without "?". */
+export function playbookTarget(search: string) {
+  const tab = new URLSearchParams(search).get('tab')
+  if (tab === 'escalation') return '/agents/escalation'
+  if (tab === 'pillars') return '/strategy/pillars'
+  if (tab === 'words' || tab === 'facts' || tab === 'voice') return `/agents/rules?section=${tab}`
+  return '/agents/rules'
+}

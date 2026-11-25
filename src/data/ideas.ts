@@ -104,7 +104,7 @@ export const srcMention = (author: string): IdeaSource => {
   const m = mention(author)
   return { type: 'listening', agent: 'echo', label: m.author, proof: `“${m.text}”, ${k(m.reach)} reach`, link: '/listening/mentions', value: k(m.reach), measure: `people reached by ${m.author}: “${m.text}”` }
 }
-export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/playbook', measure: fact(id).text })
+export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/agents/rules?section=facts', measure: fact(id).text })
 export const srcPillar = (p: string, target: number): IdeaSource => {
   const x = pillar(p)
   return { type: 'analytics', agent: 'iris', label: `${p} pillar`, proof: `${x.share}% of posts vs ${target}% target, ${x.saves}% saves`, link: '/strategy/pillars', value: `${x.share}%`, measure: `of your posts are ${p}, target ${target}%. It has your best saves rate (${x.saves}%)` }

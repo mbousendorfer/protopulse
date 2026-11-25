@@ -289,7 +289,7 @@ function reduceCore(s: State, a: CoreAction): State {
       const m = h?.thread?.find(x => x.id === a.msg)
       if (!h || !m?.rule) return s
       let next = addRule(s, { kind: 'dont', text: m.rule, agents: [h.agent], origin: `From your conversation with ${agentOf(s, h.agent).name}` })
-      next = updateHandoff(next, h.id, { thread: h.thread!.map(x => x.id === m.id ? { ...x, ruleAdded: true } : x).concat({ id: uid('m'), from: 'agent', at: now(s), text: `Added. All agents will follow “${m.rule}”. You can pause or delete it in the Playbook.` }) })
+      next = updateHandoff(next, h.id, { thread: h.thread!.map(x => x.id === m.id ? { ...x, ruleAdded: true } : x).concat({ id: uid('m'), from: 'agent', at: now(s), text: `Added. I’ll follow “${m.rule}” from now on. You can pause or delete it in my Rules tab.` }) })
       return next
     }
 
