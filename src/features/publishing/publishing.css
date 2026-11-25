@@ -435,7 +435,7 @@
   .idea-row { grid-template-columns: 24px 40px minmax(0, 1fr); padding: var(--s3); }
   .idea-thumb { width: 40px; height: 40px; }
   .idea-row h3 { white-space: normal; }
-  .idea-acts { grid-column: 3; padding: var(--s2) 0 0; }
+  .idea-acts { grid-column: 3; flex-wrap: wrap; padding: var(--s2) 0 0; }
   .idea-variants, .idea-facts { grid-template-columns: minmax(0, 1fr); }
   .idea-zone { padding: var(--s4); }
   .idea-stage { padding: var(--s2); }
