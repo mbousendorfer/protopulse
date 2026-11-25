@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertTriangle, CalendarClock, Check, Copy, PauseCircle, Pencil, RotateCw, Trash2, UserRound } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -14,6 +14,7 @@ import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
 import { RETRY_OPTIONS, failureCardOf, type Retry } from './failures'
 import { FORMAT_LABEL } from './formats'
+import { perfOf } from './perf'
 
 const when = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · ${hhmm(t)}`
 
@@ -116,6 +117,7 @@ export function PostPreview() {
   const loc = useLocation()
   const id = new URLSearchParams(loc.search).get('post')
   const p = s.publishing.posts.find(x => x.id === id)
+  const perf = p && perfOf(s, p)
   const [dialog, setDialog] = useState<Dialog>(null)
   const close = () => nav(loc.pathname)
   return (
@@ -165,9 +167,26 @@ export function PostPreview() {
               {p.format && <div><dt>Format</dt><dd>{FORMAT_LABEL[p.format]}</dd></div>}
               {p.firstComment && <div><dt>First comment</dt><dd>{p.firstComment}</dd></div>}
               {p.campaign && <div><dt>Campaign</dt><dd>{p.campaign}</dd></div>}
-              {p.stats && <div><dt>Results</dt><dd className="num">{p.stats.reach.toLocaleString('en-GB')} reach · {p.stats.er}% engagement</dd></div>}
+              {p.stats && !perf && <div><dt>Results</dt><dd className="num">{p.stats.reach.toLocaleString('en-GB')} reach · {p.stats.er}% engagement</dd></div>}
               {p.note && <div><dt>Note</dt><dd>{p.note}</dd></div>}
             </dl>
+            {perf && (
+              <section aria-label="Results">
+                <h3 className="pub-prev-h">Results</h3>
+                <dl className="pub-perf">
+                  <div><dt>Reach</dt><dd><b className="num">{perf.reach.toLocaleString('en-GB')}</b> <span className="muted">{perf.ratio}× your {NETWORK_LABEL[p!.network]} median ({Math.round(perf.medianReach).toLocaleString('en-GB')})</span></dd></div>
+                  <div><dt>Engagement</dt><dd><b className="num">{perf.er}%</b> <span className="muted">{perf.er >= perf.medianEr ? 'above' : 'below'} the median ({perf.medianEr}%)</span></dd></div>
+                </dl>
+                <div className="pub-perf-read">
+                  <Mark agent="atlas" /><p><b>Atlas:</b> {perf.reading}</p>
+                  {perf.worth && (() => {
+                    const idea = s.publishing.ideas.find(i => i.key === `recycle-${p!.id}`)
+                    return idea ? <Link to={`/publishing/ideas/${idea.id}`}>In Ideas: review it</Link> : <Btn size="sm" onClick={() => d({ type: 'publishing/recycle', id: p!.id })}>Recycle it</Btn>
+                  })()}
+                </div>
+                <Link to="/insights">See in Insights</Link>
+              </section>
+            )}
             <section>
               <h3 className="pub-prev-h">History</h3>
               <ol className="pub-hist">
