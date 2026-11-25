@@ -23,6 +23,7 @@ export type StrategyAction =
   | { type: 'strategy/reopen'; id: string; adj?: string }
   | { type: 'strategy/cadence'; network: Network; target: number }
   | { type: 'strategy/propose'; proposal: Proposal }
+  | { type: 'strategy/pillars'; pillars: Pillar[] }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
 const campaign = (s: State, id: string) => s.strategy.campaigns.find(c => c.id === id)
@@ -306,6 +307,13 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
     }
+    case 'strategy/pillars': {
+      const check = pillarCheck(s, a.pillars)
+      if (!check.ok) return s
+      const before = s.strategy
+      const next = patch(s, { pillars: a.pillars })
+      return pushLog(next, { agent: 'sage', text: `You changed the pillars: ${check.changes.join(', ')}`, status: 'done', reason: 'Your edit, checked by Sage', link: '/strategy/pillars', undoMinutes: 10, sage: { targets: { pillars: before.pillars, cadence: before.cadence } } })
+    }
     case 'strategy/propose': {
       if (s.strategy.proposals.some(p => p.text === a.proposal.text && p.status === 'proposed')) return s
       return pushLog(patch(s, { proposals: [a.proposal, ...s.strategy.proposals] }), { agent: 'sage', text: `Proposed: ${a.proposal.text}`, status: 'done', reason: 'You asked for it', link: '/strategy/pillars' })
@@ -446,4 +454,30 @@ export function pillarProposal(s: State, pillar: string, more: boolean): Proposa
     text: `${more ? 'Raise' : 'Lower'} ${me.name} from ${me.target}% to ${me.target + d}% of posts, ${other.name} from ${other.target}% to ${other.target - d}%`,
     why: `${me.name} is at ${me.actual}% of posts against ${me.target}%; ${other.name} is at ${other.actual}% against ${other.target}%. Last 30 days.`,
   }
+}
+
+/**
+ * Sage checks Sam's pillar edit before it applies: shares add up to 100, no empty pillar,
+ * and what each change means in posts a week (from Sage's cadence).
+ */
+export function pillarCheck(s: State, draft: Pillar[]): { ok: boolean; total: number; issues: string[]; changes: string[]; impact: string[] } {
+  const total = draft.reduce((n, p) => n + p.target, 0)
+  const weekly = Object.values(targetsOf(s).cadence).reduce<number>((n, v) => n + (v ?? 0), 0)
+  const issues = [
+    ...(total !== 100 ? [`Shares add up to ${total}%: ${total < 100 ? `${100 - total} points to place` : `${total - 100} points too many`}.`] : []),
+    ...draft.filter(p => p.target < 0 || !Number.isFinite(p.target)).map(p => `${p.name} needs a share between 0 and 100%.`),
+    ...draft.filter(p => p.target === 0).map(p => `${p.name} at 0% means Atlas stops posting it.`),
+  ]
+  const was = new Map(s.strategy.pillars.map(p => [p.id, p]))
+  const moved = draft.filter(p => was.get(p.id) && was.get(p.id)!.target !== p.target)
+  const changes = [
+    ...moved.map(p => `${p.name} ${was.get(p.id)!.target}% → ${p.target}%`),
+    ...draft.filter(p => was.get(p.id) && was.get(p.id)!.desc !== p.desc).map(p => `${p.name}’s description`),
+  ]
+  const impact = moved.map(p => {
+    const d = ((p.target - was.get(p.id)!.target) / 100) * weekly
+    const n = Math.round(Math.abs(d) * 10) / 10
+    return `${p.name} ${p.target}% is about ${n} ${d > 0 ? 'more' : 'fewer'} post${n === 1 ? '' : 's'} a week`
+  })
+  return { ok: total === 100 && !draft.some(p => p.target < 0 || !Number.isFinite(p.target)) && changes.length > 0, total, issues, changes, impact }
 }
