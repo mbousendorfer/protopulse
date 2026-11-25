@@ -19,3 +19,8 @@ Sage pose alors `reportId: 'campaign-' + c.id` sur la campagne. Lecture côté I
 
 **En attendant.** Le bilan de Sage est sur la page de la campagne ; « Full recap » n'apparaît que si
 `reportId` est posé (Repair Friday seulement).
+
+---
+**Fait (Iris).** `writeCampaignReport(s, c)` dans `src/features/insights/slice.ts` : rapport `campaign-${c.id}` (kind `campaign`,
+titre = nom de la campagne), fenêtre et réseaux de la campagne, sections « Campaign vs goal », Results, Top 3 posts,
+Website results. Pas de journal. C'est un rapport du Report Studio : Sam peut le raccourcir, le partager à Claire, le planifier.
