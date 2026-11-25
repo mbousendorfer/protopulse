@@ -34,6 +34,8 @@ export type Campaign = {
   actual: number[]
   adjustments: Adjustment[]
   recap?: string[]
+  /** Who wrote the recap: Iris (seeded reports) or Sage (when a campaign ends). */
+  recapBy?: 'iris' | 'sage'
   version: number
   diff?: Change[]
   createdAt: number

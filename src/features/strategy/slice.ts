@@ -261,11 +261,56 @@ export function trackCampaigns(s: State, t: number, force?: { id: string; ratio:
 export const campaignsDue = (s: State, t: number) => s.strategy.campaigns.some(c => (c.status === 'live' && c.end < t) || resultsDue(c, t))
 export function closeCampaigns(s: State, t: number): State {
   let next = trackCampaigns(s, t)
-  for (const c of next.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) {
-    next = updateCampaign(next, c.id, x => ({ ...x, status: 'done' }))
-    next = pushLog(next, { agent: 'sage', text: `${c.name} ended: ${c.goal.current.toLocaleString('en-GB')} of ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${c.id}` })
-  }
+  for (const c of next.strategy.campaigns.filter(x => x.status === 'live' && x.end < t)) next = endCampaign(next, c.id)
   return next
+}
+
+/** What went out for a campaign: its posts marked published, and Atlas's published posts that carry its id. */
+function sentPosts(s: State, c: Campaign): { network: Network }[] {
+  const atlas = s.publishing.posts.filter(p => p.campaignId === c.id && p.status === 'published')
+  const ids = new Set(atlas.map(p => p.id))
+  return [...c.posts.filter(p => p.published && !ids.has(p.postId ?? p.id)), ...atlas]
+}
+
+/** Sage's recap, written from the state: the goal, where it worked, what you changed, what it cost; and the lesson as a proposal. */
+export function recapOf(s: State, c: Campaign): { recap: string[]; lesson?: Proposal } {
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  const sent = sentPosts(s, c)
+  const by = (n: Network) => sent.filter(p => p.network === n).length
+  const nets = [...new Set(sent.map(p => p.network))].sort((a, b) => by(b) - by(a))
+  const applied = c.adjustments.filter(a => a.status === 'accepted')
+  const movedTo = applied.flatMap(a => a.moves ?? []).map(m => m.network).filter((n): n is Network => !!n).at(-1)
+  const per = c.goal.current ? c.budget / c.goal.current : 0
+  const one = unit(c).replace(/s$/, '').replace(/^revenue from social$/, '€ of revenue')
+  const recap = [
+    `${fmtN(c, c.goal.current)} ${unit(c)}, ${pct}% of the ${fmtN(c, c.goal.target)} goal.`,
+    nets[0] ? `${sent.length} post${sent.length === 1 ? '' : 's'} went out; ${NETWORK_LABEL[nets[0]]} carried the most (${by(nets[0])}).` : 'No campaign post went out.',
+    applied.length ? `You applied ${applied.length} adjustment${applied.length > 1 ? 's' : ''}: ${applied.map(a => a.text.split('. ').slice(-1)[0].replace(/\.$/, '')).join('; ')}.` : 'No adjustment during the campaign.',
+    per ? `€${c.budget.toLocaleString('en-GB')} of boosts, €${per.toFixed(2)} per ${one}.` : `€${c.budget.toLocaleString('en-GB')} of boost budget.`,
+  ]
+  const net = movedTo ?? nets[0]
+  const weekly = net ? targetsOf(s).cadence[net] ?? 0 : 7
+  const lesson: Proposal | undefined = net && weekly < 7 && !s.strategy.proposals.some(p => p.status === 'proposed' && p.change?.add?.[net])
+    ? { id: uid('pr'), status: 'proposed', change: { add: { [net]: 1 } }, text: `Add 1 ${NETWORK_LABEL[net]} post a week`, why: `${NETWORK_LABEL[net]} ${movedTo ? 'is where you moved posts' : 'carried the most posts'} in ${c.name}, which reached ${pct}% of its goal.` }
+    : undefined
+  return { recap, lesson }
+}
+
+/** A campaign ends: the rest of its results come in, Sage writes the recap, raises it on the Desk and proposes the lesson. */
+export function endCampaign(s: State, id: string): State {
+  let c = campaign(s, id)
+  if (!c || c.status !== 'live') return s
+  while (c.actual.length < POINTS) c = nextResult(c)
+  const { recap, lesson } = recapOf(s, c)
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  let next = updateCampaign(s, id, () => ({ ...c!, status: 'done', recap: c!.recap ?? recap, recapBy: c!.recap ? c!.recapBy : 'sage' }))
+  if (lesson) next = patch(next, { proposals: [lesson, ...next.strategy.proposals] })
+  next = pushHandoff(next, {
+    agent: 'sage', kind: 'news', group: pct >= 100 ? 'good' : 'look', urgency: 'week', topic: 'Campaign recap', ref: id, chain: ['iris', 'sage'],
+    title: `${c.name} is over: ${pct}% of its goal`, context: recap.slice(0, 2).join(' '), why: 'Sage writes the recap when a campaign ends, with Iris’s numbers.', confidence: 90,
+    link: `/strategy/campaigns/${id}`, cta: { label: 'Read the recap', to: `/strategy/campaigns/${id}` },
+  })
+  return pushLog(next, { agent: 'sage', text: `${c.name} ended: ${fmtN(c, c.goal.current)} of ${fmtN(c, c.goal.target)} ${unit(c)}. Recap written${lesson ? `, proposed: ${lesson.text}` : ''}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${id}` })
 }
 
 export function reduceStrategy(s: State, a: StrategyAction): State {
