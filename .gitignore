@@ -2,3 +2,6 @@ node_modules
 dist
 .DS_Store
 .claude/settings.local.json
+
+# media build: downloaded stock footage + intermediates (scripts/media/build.mjs)
+scripts/media/footage/
