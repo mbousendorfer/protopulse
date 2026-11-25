@@ -1,10 +1,10 @@
-// App clock. The demo starts on Tuesday 25 November 2026 at 08:12 and runs in real time from there.
+// App clock. The demo starts on Tuesday 25 November 2025 at 08:12 and runs in real time from there.
 
 export const DAY = 86_400_000
 export const MIN = 60_000
 
 /** App time for a given hour/minute, `day` days from the demo start day (negative = past). */
-export const T = (h: number, m = 0, day = 0) => new Date(2026, 10, 25 + day, h, m).getTime()
+export const T = (h: number, m = 0, day = 0) => new Date(2025, 10, 25 + day, h, m).getTime()
 
 export const DEMO_START = T(8, 12)
 
