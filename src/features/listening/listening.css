@@ -102,3 +102,4 @@
 .ls-tagdefs .input { flex: 1; min-width: 140px; }
 .ls-tagdefs .input:first-child { flex: 0 0 200px; }
 .ls-tag-used { min-width: 96px; text-align: right; }
+.ls-unseen .mention-main b { font-weight: 700; }

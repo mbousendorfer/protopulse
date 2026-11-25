@@ -49,6 +49,8 @@ export type ListeningState = {
   /** Sam's tags and their rules; mentions Echo already filed; tags waiting for Sam's OK (Draft/Suggest). */
   tagDefs: TagDef[]
   filed: Record<string, true>
+  /** Mentions you opened or marked as seen. */
+  seen: Record<string, true>
   pendingTags: Record<string, string[]>
   /** The last batch approved from the Desk, so its Undo can take the tags off again. */
   lastBatch?: { before: Record<string, string[] | null>; pending: Record<string, string[]> }
@@ -60,7 +62,7 @@ const ALERTS: Alert[] = [
   { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
 ]
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: seedTags({ listening: { watch: WATCH } as ListeningState }), tagDefs: structuredClone(TAG_DEFS), filed: {}, pendingTags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: seedTags({ listening: { watch: WATCH } as ListeningState }), tagDefs: structuredClone(TAG_DEFS), filed: {}, seen: {}, pendingTags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
   // The press mention on “PFAS rainwear” came in overnight: Echo already raised it (Nova's PFAS card).
   fired: { la3: DEMO_START }, hits: {}, customEvents: [], creators: {} })
 
@@ -86,6 +88,7 @@ export type ListeningAction =
   | { type: 'listening/creator'; handle: string; op: 'list' | 'unlist' | 'propose' }
   | { type: 'listening/testFormat'; network: Network; competitor: string }
   | { type: 'listening/tagSave'; def: TagDef }
+  | { type: 'listening/seen'; ids: string[] }
   | { type: 'listening/tagDelete'; id: string }
   | { type: 'listening/tagAccept'; id?: string; tag?: string }
 
@@ -230,6 +233,7 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
     case 'listening/alertDelete':
       return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
     case 'listening/testFormat': return testFormat(s, a.network, a.competitor)
+    case 'listening/seen': return patch(s, { seen: { ...s.listening.seen, ...Object.fromEntries(a.ids.map(id => [id, true as const])) } })
     case 'listening/tagSave': return saveTag(s, a.def)
     case 'listening/tagDelete': return deleteTag(s, a.id)
     case 'listening/tagAccept': return acceptPending(s, a.id && a.tag ? { id: a.id, tag: a.tag } : undefined)
