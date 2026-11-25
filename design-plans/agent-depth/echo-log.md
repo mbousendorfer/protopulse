@@ -34,3 +34,4 @@
 - 25/11/2026 · Pitch F10 Vu / non vu · **Go** (tel que pitché) · – · réponse de l'humain
 - 25/11/2026 · F10 vu / non vu · « needs you » = négatif, à risque ou question, sans réponse ; vu = ouvert, marqué, antérieur au dernier brief, ou traité seul par Echo ; non vu = graisse (convention Inbox) · pastille de couleur · le badge de l'onglet veut dire « needs you » (décision prise)
 - 25/11/2026 · ⌘K concurrent · réponse lue dans les événements ouverts (même état que Listening › Competitors) · texte Peakline figé · « les chiffres cités en ⌘K sont ceux de l'écran »
+- 25/11/2026 · Clôture · PROMPT.md §1 (scénarios Listening), §4 Echo, §6.5, §9 réécrits ; rapport `docs/agent-depth/echo.html` avec captures avant (73a7ba2) / après · – · fin de session

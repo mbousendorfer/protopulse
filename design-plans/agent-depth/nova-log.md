@@ -51,3 +51,5 @@
 - 25/11 · Filters · un seul prédicat (`filters.ts`) pour l'Inbox, les vues enregistrées et ⌘K · prédicats séparés · les comptes doivent être identiques partout.
 - 25/11 · Filters · ⌘K ne prend « mentions » que si l'Inbox est nommée · prendre toutes les mentions · les mentions de Listening sont à Echo.
 - 25/11 · Filters · nom de vue proposé = phrase des filtres (« Negative conversations from the last 7 days »), 40 caractères max · nom vide · Sam n'a qu'à valider.
+- 25/11 · Post threads · le post reste un texte de la conversation, la clé est la partie titre (`postKey`) · objet Post partagé avec Atlas · les posts publiés sont chez Atlas ; un lien vers son calendrier pourra suivre si Atlas expose un id.
+- 25/11 · Post threads · « By post » : 4 posts, ceux avec des commentaires en attente d'abord · liste complète · la barre latérale est déjà longue.

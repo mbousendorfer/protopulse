@@ -48,7 +48,7 @@
 /* Narrow screens keep the numbers, drop the bar. */
 /* Narrow card (beside the heatmap below ~1200 px, or a phone): keep the numbers, drop the bar, let headers wrap. */
 .pillar-card { container-type: inline-size; }
-@container (max-width: 480px) { .pillar-er { min-width: 0; } .pillar-er .track { display: none; } .pillar-er b { width: auto; } .pillar-table th, .pillar-table td { white-space: normal; padding-left: var(--s2); padding-right: var(--s2); } .pillar-table td.num { white-space: nowrap; } }
+@container (max-width: 480px) { .pillar-er { min-width: 0; } .pillar-er .track { display: none; } .pillar-er b { width: auto; } .pillar-table { font-size: var(--t-sm); } .pillar-table th, .pillar-table td { white-space: normal; padding-left: 6px; padding-right: 6px; } .pillar-table :is(th, td):first-child { padding-left: 0; } .pillar-table :is(th, td):last-child { padding-right: 0; } .pillar-table td.num { white-space: nowrap; } }
 
 .anomaly { padding: var(--s4) var(--s5) var(--s4) var(--s2); display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: var(--s2); align-items: start; }
 .anomaly-body { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
