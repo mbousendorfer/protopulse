@@ -78,6 +78,8 @@ function ClipPoster({ name, alt, className, style }: { name: string; alt: string
 /** A generated photo. Fills its box (object-fit: cover equivalent). A clip shows its video's poster. */
 export default function Photo({ name, alt = '', className = '', style }: { name?: string; alt?: string; className?: string; style?: React.CSSProperties }) {
   if (name?.startsWith('clip:')) return <ClipPoster name={name} alt={alt} className={className} style={style} />
+  // An image uploaded in the browser (Publishing › Media) travels as a data URL.
+  if (name?.startsWith('data:image/')) return <img className={`photo ${className}`} src={name} alt={alt} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', outline: '1px solid var(--photo-edge)', outlineOffset: -1, ...style }} />
   return <Scene name={name} alt={alt} className={className} style={style} />
 }
 
