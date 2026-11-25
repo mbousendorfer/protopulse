@@ -314,7 +314,7 @@
 /* ---------- Ideas ---------- */
 /* Level 1: rows to scan. Level 2: the panel. Level 3: disclosures inside the panel. */
 .ideas-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); align-items: start; }
-.ideas-layout.has-current { grid-template-columns: minmax(0, 1fr) minmax(460px, 560px); }
+.ideas-layout.has-current { grid-template-columns: minmax(0, 1fr) minmax(480px, 600px); }
 .ideas-lede { display: flex; gap: var(--s2); align-items: center; margin: 0 0 var(--s4); color: var(--ink); }
 .ideas-main > .undo-bar, .ideas-main > .bulk-bar { margin-bottom: var(--s4); }
 .ideas-group { margin-bottom: var(--s5); }
@@ -351,50 +351,70 @@
 .idea-rule { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--a-atlas-wash); color: var(--ink); cursor: default; }
 .idea-rule p { flex: 1; min-width: 200px; font-size: var(--t-sm); }
 
-.idea-panel { position: sticky; top: calc(var(--topbar) + var(--s4)); max-height: calc(100vh - var(--topbar) - var(--s8)); display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: sheet-in var(--slow) var(--ease); }
+/* Panel: three zones that don't look alike. Why (Atlas speaks, on its wash) · The post (the preview at real size) · Ask Atlas (docked, like a chat bar). */
+/* Fits under the page header on first view, so the Ask Atlas bar and Schedule are always on screen. */
+.idea-panel { position: sticky; top: calc(var(--topbar) + var(--s4)); max-height: calc(100vh - 232px); min-height: 520px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; animation: sheet-in var(--slow) var(--ease); }
 .idea-panel-head { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); }
-.idea-panel-head h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 2px; }
-.idea-panel-body { flex: 1; overflow-y: auto; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s5); }
+.idea-panel-head h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }
+.idea-panel-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; scrollbar-width: thin; }
+/* The app's scrollbar thumb is bordered with the page colour; inside a card that border shows as a grey track. */
+.idea-panel ::-webkit-scrollbar { width: 8px; height: 8px; }
+.idea-panel ::-webkit-scrollbar-thumb { border-color: transparent; background-clip: padding-box; border-width: 2px; }
 .idea-panel-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s4); padding: var(--s3) var(--s4); border-top: 1px solid var(--line); }
-.idea-why { color: var(--ink); margin-bottom: var(--s2); }
-.idea-src { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--t-sm); }
-.idea-src a { display: inline-flex; align-items: baseline; gap: 6px; color: var(--action-ink); text-decoration: none; }
-.idea-src a svg { flex: none; align-self: center; }
-.idea-src a:hover { text-decoration: underline; text-underline-offset: 3px; }
-.idea-src b { font-weight: 600; color: var(--ink); }
-.idea-conf { margin-top: var(--s2); }
+.idea-state { padding: var(--s3) var(--s5); border-bottom: 1px solid var(--line); }
 .idea-state p { display: flex; align-items: center; gap: 6px; }
-.idea-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); font-size: var(--t-sm); }
-.idea-steps li { display: flex; gap: var(--s2); align-items: flex-start; }
-.idea-copy { padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--sunk); margin-bottom: var(--s2); }
-.idea-draft { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: var(--s4); align-items: start; margin-top: var(--s3); }
-/* The full caption is one click away (Edit): the preview shows its start. */
-.idea-facts { margin: 0; display: flex; flex-direction: column; gap: var(--s3); font-size: var(--t-sm); }
+.idea-zone { padding: var(--s5); }
+.idea-zone + .idea-zone { border-top: 1px solid var(--line); }
+.idea-zone-title { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-md); font-weight: 600; margin-bottom: var(--s3); }
+
+.idea-why { background: var(--a-atlas-wash); }
+.idea-say { color: var(--ink); line-height: 1.55; }
+/* Evidence: a plain list. The figure leads in bold, the measure is named, the source is a link at the end. */
+.idea-evidence { list-style: none; margin: var(--s3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); font-size: var(--t-sm); color: var(--ink); }
+.idea-evidence li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: var(--s2); align-items: baseline; }
+.idea-evidence li > svg { color: var(--ink-2); align-self: start; margin-top: 3px; }
+.idea-evidence b { font-weight: 600; }
+.idea-evidence a { font-size: var(--t-sm); color: var(--action-ink); text-decoration: none; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; }
+.idea-evidence a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.idea-why-foot { margin-top: var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
+
+.idea-stage { display: flex; justify-content: center; padding: var(--s4); background: var(--sunk); border-radius: var(--r-card); margin-top: var(--s2); }
+.idea-pv { width: 100%; max-width: 340px; }
+.idea-note { margin-top: var(--s2); }
+.idea-edit { margin-top: var(--s3); display: flex; flex-direction: column; gap: 6px; }
+.idea-facts { margin: var(--s4) 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s3); font-size: var(--t-sm); }
 .idea-facts dt { font-weight: 600; margin-bottom: 2px; }
 .idea-facts dd { margin: 0; }
-.idea-facts .textarea { margin-bottom: 6px; }
 .idea-facts .input { margin-top: 6px; }
 .idea-brief { display: inline-flex; gap: 6px; align-items: flex-start; color: var(--ink-2); }
 .idea-brief svg { flex: none; margin-top: 2px; }
 .idea-pass { display: inline-flex; align-items: center; gap: 4px; color: var(--ok-strong); }
 .idea-checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--caution-strong); }
 .idea-checks li { display: flex; gap: 6px; align-items: center; }
-.idea-redirect { display: flex; flex-direction: column; gap: var(--s3); }
-.idea-ask .label { display: block; font-size: var(--t-sm); font-weight: 600; margin-bottom: 6px; }
-.idea-ask .input { flex: 1; min-width: 0; }
-.idea-redirect .filters { flex-wrap: wrap; }
-.idea-version { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: var(--s3); }
+.idea-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); font-size: var(--t-sm); }
+.idea-steps li { display: flex; gap: var(--s2); align-items: flex-start; }
+.idea-version, .idea-variants-box { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: var(--s3); margin-top: var(--s3); }
 .diff { line-height: 1.6; margin-top: 6px; }
 .diff ins { text-decoration: none; background: var(--ok-tint); color: var(--ok-strong); border-radius: 3px; padding: 0 2px; }
 .diff del { color: var(--alert-strong); background: var(--alert-tint); border-radius: 3px; padding: 0 2px; }
-.atlas-says { display: flex; gap: var(--s2); align-items: flex-start; font-size: var(--t-sm); }
-.idea-variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); }
+.idea-variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s2); margin-top: var(--s2); }
 .idea-variant { border: 1px solid var(--line); border-radius: var(--r-ctl); padding: var(--s3); display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); font-size: var(--t-sm); }
 .idea-variant .k { font-weight: 600; color: var(--ink-2); }
 .idea-variant p { flex: 1; }
 .idea-variant .hook { background: var(--lift-2); border-radius: 3px; }
 .idea-mix { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; margin-top: var(--s2); font-size: var(--t-sm); }
-.idea-history { border-top: 1px solid var(--line); padding-top: var(--s3); }
+
+.idea-dock { background: var(--sunk); border-top: 1px solid var(--line); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s2); }
+.idea-dock .idea-zone-title { margin: 0; font-size: var(--t-sm); }
+.idea-dock .idea-zone-title .mark { width: 20px; height: 20px; }
+.idea-bubble { display: flex; gap: var(--s2); align-items: flex-start; }
+.idea-bubble p { background: var(--panel); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; padding: 6px var(--s3); font-size: var(--t-sm); }
+.idea-dock .idea-rule { margin: 0; }
+.idea-ask { display: flex; gap: var(--s2); align-items: center; }
+.idea-ask .input { flex: 1; min-width: 0; height: 34px; background: var(--panel); }
+.idea-dock .filters { flex-wrap: wrap; gap: 6px; }
+.idea-dock .filter { background: var(--panel); }
+.idea-history { border-top: 1px solid var(--line); padding: var(--s3) var(--s5); }
 .idea-history summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); }
 .idea-history summary::-webkit-details-marker { display: none; }
 .idea-history[open] summary svg { transform: rotate(90deg); }
@@ -416,6 +436,7 @@
   .idea-thumb { width: 40px; height: 40px; }
   .idea-row h3 { white-space: normal; }
   .idea-acts { grid-column: 3; padding: var(--s2) 0 0; }
-  .idea-variants, .idea-draft { grid-template-columns: minmax(0, 1fr); }
-  .idea-pv { max-width: 240px; }
+  .idea-variants, .idea-facts { grid-template-columns: minmax(0, 1fr); }
+  .idea-zone { padding: var(--s4); }
+  .idea-stage { padding: var(--s2); }
 }

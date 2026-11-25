@@ -9,7 +9,11 @@ import { FACTS } from './playbook'
 
 export type IdeaSourceType = 'analytics' | 'listening' | 'brand' | 'calendar'
 /** Where Atlas found the idea: the number that justifies it and the screen it comes from. */
-export type IdeaSource = { type: IdeaSourceType; agent: AgentId; label: string; proof: string; link: string }
+export type IdeaSource = {
+  type: IdeaSourceType; agent: AgentId; label: string; proof: string; link: string
+  /** The figure shown big in "Why Atlas suggests this" ("6.4%"), and what it measures, named in words. */
+  value?: string; measure?: string
+}
 export type IdeaAction = 'atlas-trend' | 'atlas-recycle' | 'atlas-fill' | 'atlas-competitor' | 'atlas-plan'
 export type IdeaOrigin = 'continuous' | 'weekly' | 'gap' | 'urgent'
 export type IdeaStatus = 'new' | 'ready' | 'scheduled' | 'snoozed' | 'dismissed' | 'sent-to-sage' | 'expired'
@@ -82,44 +86,63 @@ const pillar = (p: string) => PILLAR_PERF.find(x => x.pillar === p)!
 
 export const srcPost = (id: string): IdeaSource => {
   const p = perf(id)
-  return { type: 'analytics', agent: 'iris', label: p.title, proof: `${k(p.reach)} reach, ${p.er}% engagement`, link: '/insights/explore' }
+  return { type: 'analytics', agent: 'iris', label: p.title, proof: `${k(p.reach)} reach, ${p.er}% engagement`, link: '/insights/explore', value: k(p.reach), measure: `reach for “${p.title}”, at ${p.er}% engagement` }
 }
 export const srcAnomaly = (id: string): IdeaSource => {
   const a = ANOMALIES.find(x => x.id === id)!
-  return { type: 'analytics', agent: 'iris', label: a.title.split(' at ')[0], proof: `${a.value} ${a.metric.toLowerCase()}, ${a.delta}`, link: '/insights/anomalies' }
+  return { type: 'analytics', agent: 'iris', label: a.title.split(' at ')[0], proof: `${a.value} ${a.metric.toLowerCase()}, ${a.delta}`, link: '/insights/anomalies', value: a.value, measure: `${a.metric.toLowerCase()} on the ${a.title.split(' at ')[0]}, ${a.delta}` }
 }
 export const srcTrend = (id: string): IdeaSource => {
   const t = trend(id)
-  return { type: 'listening', agent: 'echo', label: `“${t.name.replace(/[“”]/g, '')}” trend`, proof: `${t.growth}, ${t.fit.toLowerCase()} fit`, link: '/listening/trends' }
+  const name = t.name.replace(/[“”]/g, '')
+  const [, value = t.growth, rest = ''] = t.growth.match(/^(\S+)\s*(.*)$/) ?? []
+  return { type: 'listening', agent: 'echo', label: `“${name}” trend`, proof: `${t.growth}, ${t.fit.toLowerCase()} fit`, link: '/listening/trends', value, measure: `growth of “${name}” ${rest}${rest ? ', ' : ''}${t.fit.toLowerCase()} fit with Fernway` }
 }
 export const srcLesson = (id: string, label: string): IdeaSource =>
-  ({ type: 'listening', agent: 'echo', label, proof: lesson(id).evidence, link: '/listening/competitors/benchmark' })
+  ({ type: 'listening', agent: 'echo', label, proof: lesson(id).evidence, link: '/listening/competitors/benchmark', measure: lesson(id).evidence })
 export const srcMention = (author: string): IdeaSource => {
   const m = mention(author)
-  return { type: 'listening', agent: 'echo', label: m.author, proof: `“${m.text}”, ${k(m.reach)} reach`, link: '/listening/mentions' }
+  return { type: 'listening', agent: 'echo', label: m.author, proof: `“${m.text}”, ${k(m.reach)} reach`, link: '/listening/mentions', value: k(m.reach), measure: `people reached by ${m.author}: “${m.text}”` }
 }
-export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/playbook' })
+export const srcFact = (id: string, label: string): IdeaSource => ({ type: 'brand', agent: 'atlas', label, proof: fact(id).text, link: '/playbook', measure: fact(id).text })
 export const srcPillar = (p: string, target: number): IdeaSource => {
   const x = pillar(p)
-  return { type: 'analytics', agent: 'iris', label: `${p} pillar`, proof: `${x.share}% of posts vs ${target}% target, ${x.saves}% saves`, link: '/strategy/pillars' }
+  return { type: 'analytics', agent: 'iris', label: `${p} pillar`, proof: `${x.share}% of posts vs ${target}% target, ${x.saves}% saves`, link: '/strategy/pillars', value: `${x.share}%`, measure: `of your posts are ${p}, target ${target}%. It has your best saves rate (${x.saves}%)` }
 }
 
 /* ---------- Seeds ---------- */
 
-/** Copy Atlas writes for an empty slot, per network. */
-export const GAP_COPY: Partial<Record<Network, { text: string; media: string; pillar: Pillar }>> = {
-  facebook: { text: 'Show us your oldest Fernway bag. The most worn one this week gets a free repair kit from the Annecy workshop.', media: 'workshop', pillar: 'Community' },
-  instagram: { text: 'Carousel: 4 ways to layer the Ember Fleece under the Storm Jacket.', media: 'fleece', pillar: 'Gear that lasts' },
-  tiktok: { text: 'POV: you forgot the rain cover is in the bottom pocket.', media: 'rain', pillar: 'Gear that lasts' },
-  linkedin: { text: 'How we test a bag before it reaches you: 40 hours, 3 climates.', media: 'workshop', pillar: 'Gear that lasts' },
-  youtube: { text: 'Short: how to pack a sleeping bag in 15 seconds.', media: 'pack', pillar: 'Trail stories' },
-  x: { text: 'Rain tomorrow in the Alps. Good day to test a jacket.', media: 'rain', pillar: 'Gear that lasts' },
+/** What Atlas writes for an empty day, per network, in order of preference. Atlas never proposes the same post twice. */
+export type GapCopy = { title: string; text: string; media: string; pillar: Pillar; format?: string; why: string }
+export const GAP_COPY: Partial<Record<Network, GapCopy[]>> = {
+  facebook: [
+    { title: 'Show us your oldest Fernway bag', text: 'Show us your oldest Fernway bag. The most worn one this week gets a free repair kit from the Annecy workshop.', media: 'workshop', pillar: 'Community', why: 'Customer photo calls are your best Community format on Facebook.' },
+    { title: 'Ask us anything about winter hiking', text: 'Ask us anything about winter hiking. Our guides answer in the comments, Thursday from 19:00.', media: 'snow', pillar: 'Community', why: 'Questions in the comments keep Facebook reach up after 19:00.' },
+  ],
+  instagram: [
+    { title: '4 ways to layer the Ember Fleece under the Storm Jacket', text: '4 ways to layer the Ember Fleece under the Storm Jacket. Save it for your first cold morning.', media: 'fleece', pillar: 'Gear that lasts', format: 'Carousel · 4 slides', why: 'Carousels are your most saved format on Instagram.' },
+    { title: 'What’s in the workshop this week', text: 'What’s in the workshop this week: a 6-year-old Ridge, a new zip, and a bag that will see another winter.', media: 'workshop', pillar: 'Repair & care', format: 'Carousel · 3 slides', why: 'Behind-the-scenes repair posts get your best saves rate after Community.' },
+    { title: 'Sunrise at Lac Blanc, by @julien_trail', text: 'Sunrise at Lac Blanc by @julien_trail. 4:30 alarm, zero regrets. Where’s your next sunrise?', media: 'lake', pillar: 'Community', why: '@julien_trail gave you the photo, and Community is the pillar furthest behind.' },
+  ],
+  tiktok: [
+    { title: 'POV: the rain cover is in the bottom pocket', text: 'POV: you forgot the rain cover is in the bottom pocket.', media: 'rain', pillar: 'Gear that lasts', why: 'Short POV hooks show the product in the first second.' },
+    { title: 'Packing the Ridge in 20 seconds', text: 'Packing the Ridge 28L for a hut night in 20 seconds.', media: 'pack', pillar: 'Trail stories', why: 'Packing videos are up 4× this week.' },
+  ],
+  linkedin: [
+    { title: 'How we test a bag before it reaches you', text: 'How we test a bag before it reaches you: 40 hours, 3 climates, one workshop in Annecy.', media: 'workshop', pillar: 'Gear that lasts', why: 'Behind-the-scenes posts are your best on LinkedIn mornings.' },
+  ],
+  youtube: [
+    { title: 'How to pack a sleeping bag in 15 seconds', text: 'Short: how to pack a sleeping bag in 15 seconds.', media: 'pack', pillar: 'Trail stories', why: 'Shorts under 30 seconds keep 55% of viewers.' },
+  ],
+  x: [
+    { title: 'Rain tomorrow in the Alps', text: 'Rain tomorrow in the Alps. Good day to test a jacket.', media: 'rain', pillar: 'Gear that lasts', why: 'Weather posts get replies at lunchtime.' },
+  ],
 }
 
 const SEEDS: IdeaSeed[] = [
   {
     key: 'storm-snow', kind: 'post', topic: 'Storm Jacket', title: 'Storm Jacket, part 2: four hours in the snow',
-    why: 'Your rain-test carousel is at 3 times your usual engagement, and most saves come from people who never bought from Fernway.',
+    why: 'Your rain-test carousel is doing 3 times your usual engagement, and most of its saves come from people who never bought from Fernway. A snow test while it’s still being saved should reach the same people, right when they’re looking for winter gear.',
     sources: [srcAnomaly('an-storm'), srcPost('p-storm')], confidence: 82, pillar: 'Gear that lasts', networks: ['instagram'], action: 'atlas-recycle',
     copy: { instagram: 'Four hours in the rain last month. This time, four hours in the snow on the Semnoz. The Storm Jacket kept us dry, the hot chocolate didn’t last. Swipe for the test ❄️' },
     media: 'snow', format: 'Carousel · 5 slides', day: 2,
@@ -154,7 +177,7 @@ const SEEDS: IdeaSeed[] = [
   {
     key: 'gr20-throwback', kind: 'post', topic: 'GR20', title: '#GR20 throwback: the Ridge on the ridge line', fit: 'High',
     why: 'The GR20 is the talk of your audience this morning, and @lea.hikes already gave you her ridge-line photo.',
-    sources: [{ type: 'listening', agent: 'echo', label: 'GR20 search', proof: '1,500 mentions this week, 320 since 06:00', link: '/listening/searches' }, srcMention('@benoit.gr20')], confidence: 68, pillar: 'Trail stories', networks: ['instagram'], action: 'atlas-trend',
+    sources: [{ type: 'listening', agent: 'echo', label: 'GR20 search', proof: '1,500 mentions this week, 320 since 06:00', link: '/listening/searches', value: '320', measure: 'GR20 mentions since 06:00 (1,500 this week)' }, srcMention('@benoit.gr20')], confidence: 68, pillar: 'Trail stories', networks: ['instagram'], action: 'atlas-trend',
     copy: { instagram: 'Day 5 on the GR20, straps still holding. Where would you take your Ridge next?' },
     media: 'ridge', day: 0, expires: { at: T(9, 30), reason: 'the #GR20 conversation dropped 40% since this morning' },
   },
@@ -174,14 +197,14 @@ const SEEDS: IdeaSeed[] = [
   {
     key: 'knots-winter', kind: 'post', topic: 'knots', title: '5 knots every hiker should know, winter edition',
     why: 'The knots carousel is being saved again two weeks after it went out, and cold-weather questions are up.',
-    sources: [srcPost('p-knots'), { type: 'analytics', agent: 'iris', label: 'New saves', proof: '+380 saves since Sunday, 2 weeks after posting', link: '/insights/explore' }], confidence: 81, pillar: 'Trail stories', networks: ['instagram'], action: 'atlas-recycle',
+    sources: [srcPost('p-knots'), { type: 'analytics', agent: 'iris', label: 'New saves', proof: '+380 saves since Sunday, 2 weeks after posting', link: '/insights/explore', value: '+380', measure: 'new saves since Sunday, 2 weeks after it was posted' }], confidence: 81, pillar: 'Trail stories', networks: ['instagram'], action: 'atlas-recycle',
     copy: { instagram: 'Five knots every hiker should know, now with gloves on. Save this before your first winter trip.' },
     media: 'map', format: 'Carousel · 6 slides', day: 3,
   },
   {
     key: 'first-snow', kind: 'post', topic: 'snow', title: 'First snow above Annecy: post it tonight', fit: 'High',
     why: 'Everyone around Annecy is posting the first snow this morning. The moment is over by tonight.',
-    sources: [{ type: 'listening', agent: 'echo', label: '“First snow” in Haute-Savoie', proof: '5× the usual mentions since 07:00', link: '/listening/mentions' }, srcFact('f-storm', 'Storm Jacket')], confidence: 76, pillar: 'Trail stories', networks: ['instagram', 'tiktok'], action: 'atlas-trend',
+    sources: [{ type: 'listening', agent: 'echo', label: '“First snow” in Haute-Savoie', proof: '5× the usual mentions since 07:00', link: '/listening/mentions', value: '5×', measure: 'the usual “first snow” mentions in Haute-Savoie since 07:00' }, srcFact('f-storm', 'Storm Jacket')], confidence: 76, pillar: 'Trail stories', networks: ['instagram', 'tiktok'], action: 'atlas-trend',
     copy: {
       instagram: 'First snow on the Semnoz this morning. Jackets out, thermos full. Who’s going up this weekend?',
       tiktok: 'First snow on the Semnoz. We went up before work, obviously.',
@@ -203,7 +226,7 @@ const SEEDS: IdeaSeed[] = [
   {
     key: 'zip-flaw', kind: 'post', topic: 'zip', title: 'The zip we got wrong, and how we redesigned it',
     why: lesson('ls4').text + '.', sources: [srcLesson('ls4', 'Admitting a flaw')], confidence: 71, pillar: 'Repair & care', networks: ['linkedin', 'instagram'], action: 'atlas-plan',
-    copy: { linkedin: 'In 2025 we redesigned the Ridge zip after reading our own repair tickets. Here’s what we changed, and what 1,200 repairs taught us.', instagram: 'The zip we got wrong. The zip we fixed. Swipe for the difference.' },
+    copy: { linkedin: 'In 2024 we redesigned the Ridge zip after reading our own repair tickets. Here’s what we changed, and what 1,200 repairs taught us.', instagram: 'The zip we got wrong. The zip we fixed. Swipe for the difference.' },
     media: 'workshop', day: 9,
   },
   {

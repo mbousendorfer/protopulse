@@ -1,29 +1,18 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronDown, Lock, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import type { Agent, AgentAction, AgentId, Autonomy } from '../../app/types'
+import { ArrowLeft, ChevronDown, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
-import { ago, DAY } from '../../app/time'
-import { AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
-import { AutonomySeg, Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { ago } from '../../app/time'
+import { AUTONOMY_LABEL, PRESET_LABEL } from '../../data/agents'
+import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs } from '../../ui'
+import { AutonomyList, AutonomySummary, PRESET_SAYS, presetDelta, presetOf } from './autonomy'
 import { Notice, UndoBar } from '../../ui/Feedback'
 import { Bars, StackBar } from '../../ui/charts'
 import './agents.css'
 import { AlertsTable } from '../insights/alerts'
 import { AgentScene } from '../../ui/Illustrations'
-
-const RISK_LABEL = { safe: 'Low risk', risky: 'Medium risk', destructive: 'High risk' } as const
-
-type Preset = 'cautious' | 'balanced' | 'autonomous' | 'custom'
-function presetOf(a: Agent): Preset {
-  const free = a.actions.filter(x => !x.locked)
-  const is = (f: (x: AgentAction) => Autonomy) => free.every(x => x.autonomy === f(x))
-  if (is(x => (x.risk === 'safe' ? 'draft' : 'suggest'))) return 'cautious'
-  if (is(x => (x.risk === 'safe' ? 'act' : 'draft'))) return 'balanced'
-  if (is(() => 'act')) return 'autonomous'
-  return 'custom'
-}
 
 /* ---------- Team ---------- */
 export function Team() {
@@ -83,16 +72,16 @@ type Tab = 'autonomy' | 'guardrails' | 'escalation' | 'alerts' | 'record' | 'act
 
 const HISTORY: Record<AgentId, { at: number; text: string; kind: 'up' | 'down' | 'declined' }[]> = {
   nova: [
-    { at: Date.UTC(2026, 10, 12), text: 'Shipping refunds up to €15 moved to Act (trial week, then kept)', kind: 'up' },
-    { at: Date.UTC(2026, 10, 5), text: 'Asked to answer reviews alone. You said not yet.', kind: 'declined' },
-    { at: Date.UTC(2026, 9, 29), text: 'Product and shipping questions moved to Act', kind: 'up' },
+    { at: Date.UTC(2025, 10, 12), text: 'Shipping refunds up to €15 moved to Act (trial week, then kept)', kind: 'up' },
+    { at: Date.UTC(2025, 10, 5), text: 'Asked to answer reviews alone. You said not yet.', kind: 'declined' },
+    { at: Date.UTC(2025, 9, 29), text: 'Product and shipping questions moved to Act', kind: 'up' },
   ],
   atlas: [
-    { at: Date.UTC(2026, 10, 14), text: 'Slot moves moved to Act', kind: 'up' },
-    { at: Date.UTC(2026, 10, 7), text: 'Recycling went back to Draft after a post you undid', kind: 'down' },
+    { at: Date.UTC(2025, 10, 14), text: 'Slot moves moved to Act', kind: 'up' },
+    { at: Date.UTC(2025, 10, 7), text: 'Recycling went back to Draft after a post you undid', kind: 'down' },
   ],
-  iris: [{ at: Date.UTC(2026, 9, 30), text: 'Anomaly alerts moved to Act', kind: 'up' }],
-  echo: [{ at: Date.UTC(2026, 10, 3), text: 'Mention filing moved to Act', kind: 'up' }],
+  iris: [{ at: Date.UTC(2025, 9, 30), text: 'Anomaly alerts moved to Act', kind: 'up' }],
+  echo: [{ at: Date.UTC(2025, 10, 3), text: 'Mention filing moved to Act', kind: 'up' }],
   sage: [],
 }
 
@@ -103,7 +92,7 @@ export function AgentProfile() {
   const a = s.agents.find(x => x.id === id)
   const [params] = useSearchParams()
   const [tab, setTab] = useState<Tab>((params.get('tab') as Tab) || 'autonomy')
-  const [undoPreset, setUndoPreset] = useState<{ label: string; levels: [string, Autonomy][] } | null>(null)
+  const [undoPreset, setUndoPreset] = useState<{ label: string; delta: string; levels: [string, Autonomy][] } | null>(null)
   // Same component for every agent: going from Echo's Alerts to Nova must not keep Echo's tab.
   useEffect(() => { setTab((params.get('tab') as Tab) || 'autonomy'); setUndoPreset(null) }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!a) return <div className="page"><Empty title="This agent doesn’t exist" action={<Link to="/agents" className="btn">Back to the team</Link>} /></div>
@@ -134,16 +123,18 @@ export function AgentProfile() {
             <div className="row between items-start">
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
-                <p className="muted mw-62ch">A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
+                <p className="preset-says">{PRESET_SAYS[preset]}</p>
+                <p className="muted mw-62ch">Pick a preset, or set each action below.</p>
               </div>
-              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: p, levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
+              <Seg name="preset" label="Autonomy preset" value={preset} onChange={p => { if (p === 'custom') return; setUndoPreset({ label: PRESET_LABEL[p], delta: presetDelta(a, p), levels: a.actions.map(x => [x.id, x.autonomy] as [string, Autonomy]) }); d({ type: 'core/preset', agent: a.id, preset: p }) }}
                 options={[{ value: 'cautious', label: 'Cautious' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }, { value: 'custom', label: 'Custom', disabled: preset !== 'custom' }]} />
             </div>
             {undoPreset && (
-              <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. Every unlocked action moved.</UndoBar>
+              <UndoBar className="mt-3" onUndo={() => { for (const [action, level] of undoPreset.levels) d({ type: 'core/autonomy', agent: a.id, action, level }); setUndoPreset(null) }} onDismiss={() => setUndoPreset(null)}>{a.name} is now {undoPreset.label}. {undoPreset.delta}</UndoBar>
             )}
             <Notice scope="agents" className="mt-3" />
-            <AutonomyBoard agent={a} />
+            <AutonomySummary agent={a} />
+            <AutonomyList key={a.id} agent={a} onChange={(x, level) => d({ type: 'core/autonomy', agent: a.id, action: x.id, level })} />
           </section>
           <Promotions agent={a} />
         </div>
@@ -153,56 +144,6 @@ export function AgentProfile() {
       {tab === 'alerts' && <AgentAlerts agent={a.id} />}
       {tab === 'record' && <Record agent={a} />}
       {tab === 'activity' && <AgentActivity agent={a.id} />}
-    </div>
-  )
-}
-
-/** Three columns; action cards glide between them when their level changes (FLIP). */
-function AutonomyBoard({ agent }: { agent: Agent }) {
-  const { d } = useStore()
-  const now = useNow()
-  const ref = useRef<HTMLDivElement>(null)
-  const rects = useRef(new Map<string, DOMRect>())
-  const key = agent.actions.map(x => x.autonomy).join()
-
-  useLayoutEffect(() => {
-    const els = ref.current?.querySelectorAll<HTMLElement>('[data-flip]') ?? []
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    els.forEach(el => {
-      const id = el.dataset.flip!
-      const prev = rects.current.get(id)
-      const next = el.getBoundingClientRect()
-      if (prev && !reduce && (prev.left !== next.left || prev.top !== next.top)) {
-        el.animate([{ transform: `translate(${prev.left - next.left}px, ${prev.top - next.top}px)` }, { transform: 'none' }], { duration: 320, easing: 'cubic-bezier(0.77, 0, 0.175, 1)' })
-      }
-      rects.current.set(id, next)
-    })
-  }, [key])
-
-  return (
-    <div className="aboard" ref={ref}>
-      {AUTONOMY.map(level => (
-        <section key={level} className="acol" aria-label={AUTONOMY_LABEL[level]}>
-          <h3>{AUTONOMY_LABEL[level]} <span className="faint num">{agent.actions.filter(x => x.autonomy === level).length}</span></h3>
-          <p className="faint acol-sub">{level === 'act' ? 'Runs on its own. You can undo.' : level === 'draft' ? 'Prepares it, waits for your approval.' : 'Points it out. You do it.'}</p>
-          {agent.actions.filter(x => x.autonomy === level).map(x => (
-            <article key={x.id} data-flip={x.id} className="aitem">
-              <div className="row nowrap items-start">
-                <h4>{x.label}</h4>
-                {x.locked && <Tip label={x.lockReason}><span className="lock" tabIndex={0} aria-label={`Locked: ${x.lockReason}`}><Lock size={13} /></span></Tip>}
-              </div>
-              <div className="row tight">
-                <span className="chip">{RISK_LABEL[x.risk]}</span>
-                {x.reviewed ? <span className="chip">{x.approvedUnchanged}% approved unchanged · {x.reviewed}</span> : null}
-                {x.trialUntil && x.trialUntil > now && <Pill tone="signal">Trial · {Math.ceil((x.trialUntil - now) / DAY)} days left</Pill>}
-              </div>
-              <AutonomySeg size="sm" name={`${agent.id}-${x.id}`} value={x.autonomy} locked={x.locked} onChange={v => d({ type: 'core/autonomy', agent: agent.id, action: x.id, level: v })} />
-              <p className="says">{x.says[x.autonomy]}</p>
-            </article>
-          ))}
-          {!agent.actions.some(x => x.autonomy === level) && <div className="aempty">No action here</div>}
-        </section>
-      ))}
     </div>
   )
 }

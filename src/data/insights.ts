@@ -35,7 +35,7 @@ export const REPORTS: Report[] = [
     ],
   },
   {
-    id: 'w47', kind: 'weekly', title: '17 – 23 November', period: '17 – 23 Nov 2026', writtenAt: T(8, 0, -1),
+    id: 'w47', kind: 'weekly', title: '17 – 23 November', period: '17 – 23 Nov 2025', writtenAt: T(8, 0, -1),
     summary: 'Reach up 8% to 412k, engagement steady at 3.1%. TikTok dipped late in the week; the repair post did more for LinkedIn than any post this year.',
     sections: [
       { heading: 'What worked', paras: [[
@@ -55,7 +55,7 @@ export const REPORTS: Report[] = [
     ],
   },
   {
-    id: 'w46', kind: 'weekly', title: '10 – 16 November', period: '10 – 16 Nov 2026', writtenAt: T(8, 0, -8),
+    id: 'w46', kind: 'weekly', title: '10 – 16 November', period: '10 – 16 Nov 2025', writtenAt: T(8, 0, -8),
     summary: 'A steady week. Reach 381k, engagement 2.9%. Facebook recovered from the 10 November drop.',
     sections: [
       { heading: 'What worked', paras: [['Reach reached ', c('381k', 'All networks · unique reach · 10 – 16 Nov'), ', ', c('+3%', 'vs. 370k on 3 – 9 Nov'), '. The “5 knots” carousel was the most saved post of the month with ', c('388 saves', 'Instagram · saves · 12 Nov'), '.']] },
@@ -64,7 +64,7 @@ export const REPORTS: Report[] = [
     ],
   },
   {
-    id: 'w45', kind: 'weekly', title: '3 – 9 November', period: '3 – 9 Nov 2026', writtenAt: T(8, 0, -15),
+    id: 'w45', kind: 'weekly', title: '3 – 9 November', period: '3 – 9 Nov 2025', writtenAt: T(8, 0, -15),
     summary: 'Instagram followers jumped after a creator story. Reach 370k, engagement 3.0%.',
     sections: [
       { heading: 'What worked', paras: [['Instagram gained ', c('+1,240 followers', 'Instagram · new followers · 3 Nov'), ' in a day after @camille.outdoors shared the Ridge in a story.']] },
@@ -72,7 +72,7 @@ export const REPORTS: Report[] = [
     ],
   },
   {
-    id: 'w44', kind: 'weekly', title: '27 October – 2 November', period: '27 Oct – 2 Nov 2026', writtenAt: T(8, 0, -22),
+    id: 'w44', kind: 'weekly', title: '27 October – 2 November', period: '27 Oct – 2 Nov 2025', writtenAt: T(8, 0, -22),
     summary: 'Repair Friday week. Reach 402k, the best week of October, with LinkedIn carrying the story.',
     sections: [
       { heading: 'What worked', paras: [['Repair Friday drove ', c('1,180 repair requests', 'fernway.co/repair · form submissions · 24 – 31 Oct'), ' against a goal of ', c('800', 'Repair Friday · campaign goal'), '.']] },
@@ -80,7 +80,7 @@ export const REPORTS: Report[] = [
     ],
   },
   {
-    id: 'repair-friday', kind: 'campaign', title: 'Repair Friday', period: '24 – 31 Oct 2026', writtenAt: T(9, 30, -24),
+    id: 'repair-friday', kind: 'campaign', title: 'Repair Friday', period: '24 – 31 Oct 2025', writtenAt: T(9, 30, -24),
     summary: 'Goal beaten by 48%. Repair requests 1,180 of 800. LinkedIn and Instagram reels did most of the work; X added little.',
     sections: [
       { heading: 'Result', paras: [['Repair requests reached ', c('1,180', 'fernway.co/repair · 24 – 31 Oct'), ', ', c('148% of goal', 'Repair Friday · goal 800 requests'), '. Cost per request: ', c('€0.42', 'Boost spend €500 / 1,180 requests'), '.']] },

@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, Pencil, Sunrise } from 'lucide-react'
-import type { AgentId, Autonomy, Network, RuleKind } from '../../app/types'
+import type { AgentId, Network, RuleKind } from '../../app/types'
 import { useStore } from '../../app/store'
-import { AGENTS, AUTONOMY, AUTONOMY_LABEL } from '../../data/agents'
+import { AGENTS, PRESET_LABEL, levelFor, type Preset } from '../../data/agents'
+import { AutonomyList, AutonomySummary, PRESET_SAYS } from '../agents/autonomy'
 import { Btn, Mark, Net, Pill, Seg, Thinking } from '../../ui'
 import './onboarding.css'
 import { AgentScene, OnboardingScene } from '../../ui/Illustrations'
 
-type Preset = 'cautious' | 'balanced' | 'autonomous'
 const STEPS = ['Connect accounts', 'Build your Playbook', 'Meet your team', 'Set autonomy', 'First brief']
 
 const INTEGRATIONS: { id: string; name: string; net?: Network; handle: string; group: 'Social' | 'Reviews' | 'Store' }[] = [
@@ -43,8 +43,6 @@ const TOMORROW: Record<AgentId, string> = {
   echo: 'Starts watching Peakline, Norrø, Trailkind and Basecamp Co., plus every mention of Fernway.',
   sage: 'Reads your last 90 days and proposes 4 editorial pillars and a posting cadence.',
 }
-
-const levelFor = (risk: string, p: Preset): Autonomy => p === 'cautious' ? (risk === 'safe' ? 'draft' : 'suggest') : p === 'balanced' ? (risk === 'safe' ? 'act' : 'draft') : 'act'
 
 export default function OnboardingPage() {
   const { d } = useStore()
@@ -225,7 +223,6 @@ function Autonomy({ presets, setPresets }: { presets: Record<AgentId, Preset>; s
       <div className="stack">
         {AGENTS.map(a => {
           const p = presets[a.id]
-          const by = (l: Autonomy) => a.actions.filter(x => (x.locked ? 'suggest' : levelFor(x.risk, p)) === l)
           return (
             <article key={a.id} className="card pad onb-auto">
               <div className="row between">
@@ -233,14 +230,12 @@ function Autonomy({ presets, setPresets }: { presets: Record<AgentId, Preset>; s
                 <Seg name={`onb-${a.id}`} label={`${a.name} autonomy`} value={p} onChange={v => setPresets(x => ({ ...x, [a.id]: v }))}
                   options={[{ value: 'cautious', label: 'Cautious · recommended' }, { value: 'balanced', label: 'Balanced' }, { value: 'autonomous', label: 'Autonomous' }]} />
               </div>
-              <div className="onb-levels">
-                {AUTONOMY.map(l => (
-                  <div key={l}>
-                    <span className="faint">{AUTONOMY_LABEL[l]} · {by(l).length}</span>
-                    <ul>{by(l).map(x => <li key={x.id}>{x.label}{x.locked ? ' (locked)' : ''}</li>)}{!by(l).length && <li className="faint">Nothing</li>}</ul>
-                  </div>
-                ))}
-              </div>
+              <p className="preset-says">{PRESET_SAYS[p]}</p>
+              <AutonomySummary agent={a} levelOf={x => levelFor(x.risk, p)} />
+              <details className="onb-actions">
+                <summary>See {a.name}’s {a.actions.length} actions</summary>
+                <AutonomyList agent={a} levelOf={x => levelFor(x.risk, p)} />
+              </details>
             </article>
           )
         })}
@@ -250,7 +245,6 @@ function Autonomy({ presets, setPresets }: { presets: Record<AgentId, Preset>; s
 }
 
 function FirstBrief({ connected, kept, presets }: { connected: number; kept: number; presets: Record<AgentId, Preset> }) {
-  const label = { cautious: 'Cautious', balanced: 'Balanced', autonomous: 'Autonomous' }
   return (
     <section className="onb-step">
       <h1>Your agents start tonight</h1>
@@ -258,7 +252,7 @@ function FirstBrief({ connected, kept, presets }: { connected: number; kept: num
       <dl className="card pad onb-recap">
         <div><dt>Accounts connected</dt><dd className="num">{connected}</dd></div>
         <div><dt>Playbook entries kept</dt><dd className="num">{kept}</dd></div>
-        {AGENTS.map(a => <div key={a.id}><dt>{a.name}</dt><dd>{label[presets[a.id]]}</dd></div>)}
+        {AGENTS.map(a => <div key={a.id}><dt>{a.name}</dt><dd>{PRESET_LABEL[presets[a.id]]}</dd></div>)}
       </dl>
       <p className="faint">For this demo, starting your agents jumps to a workspace that has been running for 30 days.</p>
     </section>

@@ -31,7 +31,7 @@ export const namesCompetitor = (text: string) => COMPETITORS.test(text)
 
 /* ---------- Calendar gaps (was recommend() in Page.tsx) ---------- */
 
-/** The calendar's week starts on demo day −1 ("Monday" in the app's story), so gaps match what the calendar shows. */
+/** The calendar's week starts on Monday 24 November (demo day −1), so gaps match what the calendar shows. */
 const WEEK0 = T(0, 0, -1)
 const mondayOf = (t: number) => WEEK0 + Math.floor((startOfDay(t) - WEEK0) / (7 * DAY)) * 7 * DAY
 /** The pillar furthest below Sage's target share. */
@@ -58,23 +58,33 @@ export function gapDays(posts: Post[], now: number, horizon = 7): { day: number;
   return Array.from({ length: horizon }, (_, i) => first + i * DAY).flatMap(day => { const n = recommendNetwork(posts, day, now); return n ? [{ day, network: n }] : [] })
 }
 
-/** An idea for an empty day, with the calendar as its source. */
-export function gapSeed(gap: { day: number; network: Network }, posts: Post[]): IdeaSeed {
-  const copy = GAP_COPY[gap.network] ?? GAP_COPY.instagram!
+/** An idea for an empty day, with the calendar as its source. Null when every post Atlas has for that network is already proposed. */
+export function gapSeed(gap: { day: number; network: Network }, posts: Post[], ideas: Idea[] = []): IdeaSeed | null {
+  const taken = new Set(ideas.filter(i => isOpen(i) || i.status === 'scheduled').flatMap(i => Object.values(i.copy)))
+  const copy = (GAP_COPY[gap.network] ?? []).find(c => !taken.has(c.text))
+  if (!copy) return null
   const count = posts.filter(p => p.at >= gap.day && p.at < gap.day + DAY).length
+  const start = mondayOf(gap.day)
+  const week = posts.filter(p => p.at >= start && p.at < start + 7 * DAY && p.status !== 'draft' && p.network === gap.network).length
+  const target = CADENCE[gap.network]
   const label = new Date(gap.day).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
   const long = new Date(gap.day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric' })
+  const name = NETWORK_LABEL[gap.network]
   const behind = behindPillar()
-  const pillarSource = copy.pillar === behind.pillar
-    ? [{ type: 'analytics' as const, agent: 'iris' as const, label: `${behind.pillar} pillar`, proof: `${behind.share}% of posts vs ${behind.target}% target`, link: '/strategy/pillars' }]
-    : []
+  const slot = BEST_SLOT[gap.network]
+  const sources: IdeaSeed['sources'] = [
+    { type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing/calendar', value: String(count), measure: `post${count === 1 ? '' : 's'} planned on ${long}, where 2 a day is your rhythm` },
+    ...(target && week < target ? [{ type: 'calendar' as const, agent: 'atlas' as const, label: `${name} this week`, proof: `${week} of ${target} posts`, link: '/strategy/pillars', value: `${week} of ${target}`, measure: `${name} posts this week against Sage’s weekly target` }] : []),
+    ...(copy.pillar === behind.pillar ? [{ type: 'analytics' as const, agent: 'iris' as const, label: `${behind.pillar} pillar`, proof: `${behind.share}% of posts vs ${behind.target}% target`, link: '/strategy/pillars', value: `${behind.share}%`, measure: `of your posts are ${behind.pillar}, target ${behind.target}%` }] : []),
+    ...(slot ? [{ type: 'analytics' as const, agent: 'iris' as const, label: `Best slot on ${name}`, proof: slot.reason, link: '/insights/explore', value: slot.time, measure: slot.reason }] : []),
+  ]
+  const behindWeek = target !== undefined && week < target
   return {
-    key: `gap-${offsetOf(gap.day)}-${gap.network}`, kind: 'post', topic: copy.text.split(' ').slice(0, 3).join(' '),
-    title: `For ${long}: ${shorten(copy.text).replace(/\.$/, '')}`,
-    why: `${long} has ${count === 0 ? 'nothing planned' : `${count} post`}${pillarSource.length ? `, and ${behind.pillar} is your pillar furthest below target` : ` and ${NETWORK_LABEL[gap.network]} is behind its weekly rhythm`}.`,
-    sources: [{ type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing/calendar' }, ...pillarSource],
-    confidence: 84, pillar: copy.pillar, networks: [gap.network], action: 'atlas-fill', copy: { [gap.network]: copy.text }, media: copy.media, day: offsetOf(gap.day),
-    expires: { at: gap.day + DAY - MIN, reason: `${label} has passed` },
+    key: `gap-${offsetOf(gap.day)}-${gap.network}`, kind: 'post', topic: copy.title.split(' ').slice(0, 3).join(' '),
+    title: copy.title,
+    why: `${long} has ${count === 0 ? 'nothing planned' : `only ${count} post`}${behindWeek ? `, and ${name} is at ${week} of its ${target} posts this week` : copy.pillar === behind.pillar ? `, and ${behind.pillar} is your pillar furthest behind target` : ''}. ${copy.why}`,
+    sources, confidence: 84, pillar: copy.pillar, networks: [gap.network], action: 'atlas-fill', copy: { [gap.network]: copy.text }, media: copy.media,
+    format: copy.format, day: offsetOf(gap.day), expires: { at: gap.day + DAY - MIN, reason: `${label} has passed` },
   }
 }
 
@@ -203,7 +213,7 @@ function rewrite(idea: Idea, d: IdeaDraft, angle: Angle): { text: string; note: 
       const kept = CTA.test(s.at(-1) ?? '') ? s.slice(0, -1) : s
       const jacket = /jacket|fleece/.test(all)
       const add = jacket ? 'Re-proof it once a winter and it keeps doing that: the 3 steps are on the last slide.'
-        : /ridge|bag|pack/.test(all) ? 'And if it ever tears, your first repair is free: 1,200 bags fixed in 2026.' : 'Built to last, and we repair what breaks.'
+        : /ridge|bag|pack/.test(all) ? 'And if it ever tears, your first repair is free: 1,200 bags fixed in 2025.' : 'Built to last, and we repair what breaks.'
       const note = jacket ? 'Added the care tip from Sunday’s re-proofing post. I didn’t promise a free repair: the repair programme covers bags, not jackets.'
         : add.includes('1,200') ? 'Added the repair promise. 1,200 bags fixed comes from the Playbook facts.' : 'Added the repair line from the Playbook.'
       return { text: `${stop(kept.join(' '))} ${add}${end}`.trim(), note: CTA.test(s.at(-1) ?? '') ? `${note} I dropped “${s.at(-1)}”: one call to action per post.` : note }
@@ -282,8 +292,8 @@ export function applyInstruction(idea: Idea, input: string, ctx: Ctx): { idea: I
     did.push(`added the ${p.name} price from the catalog`)
   }
   if (/pfc|pfas/.test(t)) {
-    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} PFAS-free since 2024.${tail(d.text).end}` }))
-    did.push('added “PFAS-free since 2024”, from the Playbook facts')
+    drafts = drafts.map(d => ({ ...d, text: `${stop(tail(d.text).body)} PFAS-free since 2023.${tail(d.text).end}` }))
+    did.push('added “PFAS-free since 2023”, from the Playbook facts')
   }
   const day = WEEKDAYS.findIndex(w => t.includes(w))
   if (day >= 0 || /tomorrow/.test(t)) {
@@ -431,8 +441,9 @@ export function ideaPosts(idea: Idea, makeId: () => string): Post[] {
 export function spotIdeas(now: number, posts: Post[], levels: Partial<Record<string, Autonomy>>, rules: PlaybookRule[] = []): Idea[] {
   const ARRIVED: Record<string, number> = { 'storm-snow': T(8, 2), 'dawn-patrol': T(7, 40), 'founder-repair': T(17, 20, -1), 'camille-ridge': T(7, 55), 'gr20-throwback': T(6, 50), 'series-ridge': T(7, 40) }
   const gap = gapDays(posts, now)[0]
+  const gs = gap && gapSeed(gap, posts)
   const seeds = LOAD_SEEDS.map(k => IDEA_SEEDS[k])
   const list = seeds.map(seed => makeIdea(seed, 'continuous', ARRIVED[seed.key] ?? now, `idea-${seed.key}`))
-  if (gap) list.splice(1, 0, makeIdea(gapSeed(gap, posts), 'gap', T(8, 5), `idea-${gapSeed(gap, posts).key}`))
+  if (gs) list.splice(1, 0, makeIdea(gs, 'gap', T(8, 5), `idea-${gs.key}`))
   return list.map(i => (draftsAlone(i, levels[i.action]) ? draftIdea(i, { now, posts, rules }) : i))
 }

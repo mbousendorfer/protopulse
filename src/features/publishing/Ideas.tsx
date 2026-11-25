@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, BookOpen, CalendarDays, ChartLine, Check, ChevronDown, ChevronRight, Flame, Layers, Lightbulb, MessageCircle, Radar, Sparkles, TriangleAlert, X } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm } from '../../app/time'
+import { T, ago, hhmm } from '../../app/time'
 import { NETWORK_LABEL, agentName } from '../../data/agents'
 import { MEDIA } from '../../data/publishing'
 import { BANNED } from '../../data/playbook'
@@ -78,7 +78,7 @@ function IdeaRow({ i, current, sel, now, settled }: { i: Idea; current: boolean;
   const P = proof ? iconOf(proof) : Lightbulb
   const f = freshness(i, now)
   const thumb = d0?.media ? <Photo name={d0.media} /> : i.kind === 'series' ? <Layers size={16} aria-hidden /> : <P size={16} aria-hidden />
-  const when = d0 ? slot(d0.at) : i.steps ? `${day(new Date(2026, 11, 1 + i.steps[0].day).getTime())} to ${day(new Date(2026, 11, 1 + i.steps.at(-1)!.day).getTime())}` : undefined
+  const when = d0 ? slot(d0.at) : i.steps ? `${day(T(0, 0, 6 + i.steps[0].day))} to ${day(T(0, 0, 6 + i.steps.at(-1)!.day))}` : undefined
   const ready = i.status === 'ready' && i.kind === 'post'
   return (
     <article className={`idea-row ${current ? 'current' : ''} ${now - i.at < 120_000 ? 'arrive' : ''} ${sel.has(i.id) ? 'picked' : ''}`}
@@ -172,6 +172,16 @@ export default function Ideas({ id }: { id?: string }) {
 }
 
 /* ---------- Side panel ---------- */
+// Three zones that don't look alike: why Atlas suggests it (Atlas speaking), the post (what gets published),
+// and Ask Atlas (a conversation, docked at the bottom like a chat bar).
+
+const ORIGIN = { analytics: 'Insights', listening: 'Listening', brand: 'Playbook', calendar: 'Calendar' } as const
+/** The big figure and the named measure of a source. */
+const evidence = (x: IdeaSource) => ({
+  // A source that names its own measure already says its figures: no extra figure in front.
+  value: x.value ?? (x.measure ? undefined : x.proof.match(/[+−-]?\d[\d.,]*\s?[%×k]?/)?.[0].trim()),
+  measure: x.measure ?? `${x.label}: ${x.proof}`,
+})
 
 function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
   const { s, d } = useStore()
@@ -192,6 +202,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
   const last = i.versions.at(-1)
   const prev = i.versions.at(-2)
   const found = finders(i)
+  const fresh = freshness(i, now)
 
   useEffect(() => { d({ type: 'publishing/ideaOpen', id: i.id }) }, [i.id]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setText(draft?.text ?? ''); setEditing(false) }, [draft?.text])
@@ -199,10 +210,13 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
   const think = (label: string, f: () => void) => { setBusy(label); setTimeout(() => { f(); setBusy(null); setJustChanged(true) }, 650) }
   const angle = (a: Angle, label: string) => think(`Atlas is rewriting: ${label.toLowerCase()}`, () => d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'angle', angle: a }))
   const send = () => { const t = ask.trim(); if (!t) return; think('Atlas is reading your note', () => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'free', text: t }); setAsk('') }) }
-  const media = mediaOf(i, draft?.media)
+  const media = mediaOf(i, draft?.media ?? i.media)
   const failing = draft ? checkPost({ text: draft.text, network: draft.network, media: draft.media, brief: draft.brief, words, rules: s.playbook.rules }).filter(c => !c.ok) : []
   const pick = (k: 'A' | 'B' | 'C') => variants!.find(v => v.key === k)!
-  const status = { scheduled: i.inPlan ? 'In next week’s plan' : 'Scheduled', snoozed: 'Back tomorrow 08:00', dismissed: 'Dismissed', 'sent-to-sage': 'With Sage', expired: 'Expired', new: '', ready: '' }[i.status]
+  const status = { scheduled: i.inPlan ? 'In next week’s plan' : 'Scheduled', snoozed: 'Back tomorrow 08:00', dismissed: 'Dismissed', 'sent-to-sage': 'With Sage', expired: 'Expired', new: 'New idea', ready: 'Ready' }[i.status]
+  const shownNet = draft?.network ?? i.networks[0]
+  const shownText = draft?.text ?? i.copy[shownNet] ?? Object.values(i.copy)[0] ?? ''
+  const fmt = (draft?.format ?? (shownNet === 'instagram' ? i.format : undefined))
 
   return (
     <aside className="card idea-panel" aria-label={`Idea: ${i.title}`}>
@@ -211,22 +225,14 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
         <div className="grow">
           <h2>{i.title}</h2>
           <p className="row tight t-sm faint">
-            {found.length ? <>Spotted by {found.map(agentName).join(' and ')}</> : <>Found by Atlas</>} · {ago(i.at, now)}
-            {status && <Pill>{status}</Pill>}
+            <Pill tone={i.status === 'ready' ? 'ok' : i.status === 'new' ? 'signal' : undefined}>{status}</Pill>
+            {i.kind === 'series' ? <>{i.steps?.length} posts · {i.networks.map(n => NETWORK_LABEL[n]).join(', ')}</> : <>{NETWORK_LABEL[shownNet]}{fmt ? ` ${fmt.split(' ·')[0].toLowerCase()}` : ''}{draft && ` · ${slot(draft.at)}`}</>}
           </p>
         </div>
         <Btn variant="ghost" icon size="sm" aria-label="Close" onClick={onClose}><X size={16} /></Btn>
       </header>
 
       <div className="idea-panel-body">
-        <section>
-          <p className="idea-why">{i.why}</p>
-          <ul className="idea-src" aria-label="Sources">
-            {i.sources.map(x => { const I = iconOf(x); return <li key={x.label}><Link to={x.link}><I size={14} aria-hidden /><span><b>{x.label}:</b> {x.proof}</span><ArrowUpRight size={12} aria-hidden /></Link></li> })}
-          </ul>
-          <p className="faint t-sm idea-conf">{i.confidence}% confident · {i.pillar}{freshness(i, now).label !== 'No deadline' && ` · ${freshness(i, now).label}`}</p>
-        </section>
-
         {!open && (
           <div className="idea-state">
             {i.status === 'scheduled' && !i.inPlan && <p><Check size={14} aria-hidden />In the calendar. <Link to="/publishing/calendar">Open the calendar</Link></p>}
@@ -237,107 +243,112 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
           </div>
         )}
 
-        {i.steps && (
-          <section>
-            <ol className="idea-steps">{i.steps.map((st, n) => <li key={st.step}><Net n={st.network} size={16} /><span><b>{n + 1} · {st.step}.</b> {st.text}</span></li>)}</ol>
-          </section>
-        )}
+        {/* 1. Why: Atlas speaking, on its own colour */}
+        <section className="idea-zone idea-why" aria-labelledby={`why-${i.id}`}>
+          <h3 className="idea-zone-title" id={`why-${i.id}`}><Mark agent="atlas" />Why Atlas suggests this</h3>
+          <p className="idea-say">{i.why}</p>
+          <ul className="idea-evidence">
+            {i.sources.map(x => {
+              const e = evidence(x)
+              return (
+                <li key={x.label}>
+                  {(() => { const I = iconOf(x); return <I size={14} aria-hidden /> })()}
+                  <span>{e.value && <b>{e.value} </b>}{e.measure}</span>
+                  <Link to={x.link} aria-label={`Open in ${ORIGIN[x.type]}: ${x.label}`}>{ORIGIN[x.type]}<ArrowUpRight size={12} aria-hidden /></Link>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="idea-why-foot">
+            {found.length ? <>Spotted by {found.map(agentName).join(' and ')}</> : <>Found by Atlas</>} {ago(i.at, now)} · {i.confidence}% confident · {i.pillar}
+            {fresh.label !== 'No deadline' && <> · {fresh.label}</>}
+            {i.followsRule && <> · follows your rule “{i.followsRule}”</>}
+          </p>
+        </section>
 
-        {i.kind === 'post' && !draft && (
-          <section>
-            <p className="idea-copy">{Object.values(i.copy)[0]}</p>
-            <p className="faint t-sm">Atlas’s angle, not written yet.</p>
-          </section>
-        )}
+        {/* 2. The post: the preview at real size is the hero */}
+        <section className="idea-zone idea-post" aria-labelledby={`post-${i.id}`}>
+          <h3 className="idea-zone-title" id={`post-${i.id}`}>
+            {i.kind === 'series' ? 'The series' : 'The post'}
+            <span className="spacer" />
+            {draft && open && !editing && <button className="link-btn t-sm" onClick={() => setEditing(true)}>Edit caption</button>}
+          </h3>
 
-        {draft && (
-          <section>
-            {i.drafts!.length > 1 && <Seg name="idea-net" label="Network" size="sm" value={draft.network} onChange={setNet} options={i.drafts!.map(x => ({ value: x.network, label: NETWORK_LABEL[x.network] }))} />}
-            <div className="idea-draft">
-              <div className="idea-pv"><NetworkPreview network={draft.network} text={draft.text} media={draft.media} words={words} at={draft.at} slides={Number(draft.format?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
+          {i.steps ? (
+            <ol className="idea-steps">{i.steps.map((st, n) => <li key={st.step}><Net n={st.network} size={16} /><span><b>{n + 1} · {st.step}, {day(T(0, 0, 6 + st.day))}.</b> {st.text}</span></li>)}</ol>
+          ) : (
+            <>
+              {(i.drafts?.length ?? 0) > 1 && <Seg name="idea-net" label="Network" size="sm" value={shownNet} onChange={setNet} options={i.drafts!.map(x => ({ value: x.network, label: NETWORK_LABEL[x.network] }))} />}
+              <div className="idea-stage">
+                <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} at={draft?.at} slides={Number(fmt?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
+              </div>
+              {!draft && <p className="faint t-sm idea-note">Atlas’s first take, not written yet. Draft it to get the final caption, the visual check and the slot.</p>}
+
+              {editing && draft && (
+                <div className="idea-edit">
+                  <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Caption" autoFocus />
+                  <span className="row tight"><Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'edit', network: draft.network, text, label: 'Your edit' }); setEditing(false); setJustChanged(true) }} disabled={text === draft.text}>Save</Btn><Btn size="xs" variant="ghost" onClick={() => { setText(draft.text); setEditing(false) }}>Cancel</Btn></span>
+                </div>
+              )}
+
+              {!busy && justChanged && last && prev && last.by === 'you' && (() => {
+                const a = prev.drafts.find(x => x.network === shownNet)?.text, b = last.drafts.find(x => x.network === shownNet)?.text
+                return b !== undefined && (
+                  <div className="idea-version" aria-live="polite">
+                    <p className="row tight t-sm"><b>What changed</b><span className="faint">· {last.label}, version {last.n}</span></p>
+                    {a === undefined ? <p className="diff t-sm"><ins>{b}</ins></p> : <p className="diff t-sm">{diffWords(a, b).map((p, n) => <span key={n}>{p.op === 'add' ? <ins>{p.text}</ins> : p.op === 'del' ? <del>{p.text}</del> : p.text}{' '}</span>)}</p>}
+                  </div>
+                )
+              })()}
+
+              {variants && !busy && (
+                <div className="idea-variants-box">
+                  <p className="row tight t-sm"><b>3 variants from Atlas</b><span className="spacer" /><button className="link-btn t-sm" onClick={() => setVariants(null)}>Close</button></p>
+                  <div className="idea-variants">
+                    {variants.map(v => (
+                      <div key={v.key} className="idea-variant">
+                        <span className="k">{v.key} · {v.label}</span>
+                        <p><span className="hook">{v.hook}</span> {v.body}</p>
+                        <Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'variant', network: shownNet, text: variantText(v), label: `Variant ${v.key} (${v.label.toLowerCase()})` }); setVariants(null); setJustChanged(true) }}>Keep this</Btn>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="idea-mix">
+                    <span>Hook from</span>
+                    <Menu align="start" trigger={<button className="select-btn" aria-label="Hook from">{mix.hook}<ChevronDown size={14} /></button>} items={variants.map(v => ({ label: `${v.key} · ${v.label}`, onSelect: () => setMix(m => ({ ...m, hook: v.key })) }))} />
+                    <span>body from</span>
+                    <Menu align="start" trigger={<button className="select-btn" aria-label="Body from">{mix.body}<ChevronDown size={14} /></button>} items={variants.map(v => ({ label: `${v.key} · ${v.label}`, onSelect: () => setMix(m => ({ ...m, body: v.key })) }))} />
+                    <Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'variant', network: shownNet, text: mixVariants(pick(mix.hook), pick(mix.body)), label: `Hook ${mix.hook} + body ${mix.body}` }); setVariants(null); setJustChanged(true) }}>Use the mix</Btn>
+                  </div>
+                </div>
+              )}
+
               <dl className="idea-facts">
                 <div>
-                  <dt>Caption</dt>
-                  {editing ? (
-                    <dd>
-                      <textarea className="textarea" rows={5} value={text} onChange={e => setText(e.target.value)} aria-label="Caption" autoFocus />
-                      <span className="row tight"><Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'edit', network: draft.network, text, label: 'Your edit' }); setEditing(false) }} disabled={text === draft.text}>Save</Btn><Btn size="xs" variant="ghost" onClick={() => { setText(draft.text); setEditing(false) }}>Cancel</Btn></span>
-                    </dd>
-                  ) : <dd><span className="faint">In the preview, {draft.text.length} characters</span>{open && <> · <button className="link-btn t-sm" onClick={() => setEditing(true)}>Edit</button></>}</dd>}
-                </div>
-                <div>
                   <dt>When</dt>
-                  <dd>
-                    {slot(draft.at)}{open && !moving && <> <button className="link-btn t-sm" onClick={() => setMoving(true)}>Change</button></>}
-                    {moving && <input type="datetime-local" className="input" aria-label="New slot" value={toLocal(draft.at)} onChange={e => { const t = new Date(e.target.value).getTime(); if (t > now) d({ type: 'publishing/ideaSlot', id: i.id, network: draft.network, at: t }) }} onBlur={() => setMoving(false)} autoFocus />}
-                    {/* A good slot needs no paragraph; a weaker one gets Atlas's advice. */}
-                    <span className="faint block">{slotComment(draft.network, draft.at).startsWith('Good slot') ? 'Good slot' : slotComment(draft.network, draft.at)}</span>
-                  </dd>
+                  {draft ? (
+                    <>
+                      <dd>{slot(draft.at)}</dd>
+                      <dd className="faint">{slotComment(draft.network, draft.at).startsWith('Good slot') ? 'Good slot' : slotComment(draft.network, draft.at)}{open && !moving && <> · <button className="link-btn t-sm" onClick={() => setMoving(true)}>Change</button></>}</dd>
+                      {moving && <dd><input type="datetime-local" className="input" aria-label="New slot" value={toLocal(draft.at)} onChange={e => { const t = new Date(e.target.value).getTime(); if (t > now) d({ type: 'publishing/ideaSlot', id: i.id, network: draft.network, at: t }) }} onBlur={() => setMoving(false)} autoFocus /></dd>}
+                    </>
+                  ) : <dd className="faint">Picked when drafted</dd>}
                 </div>
                 <div>
                   <dt>Visual</dt>
-                  <dd>{media ? <>{media.title} · <span className="faint">{media.rights === 'Fernway' ? 'Fernway photo' : media.rights}</span></> : <span className="idea-brief"><Lightbulb size={14} aria-hidden />{draft.brief ?? 'No visual.'} No stock photos.</span>}</dd>
+                  {media ? <><dd>{media.title}</dd><dd className="faint">{media.rights === 'Fernway' ? 'Fernway photo' : media.rights}{fmt ? ` · ${fmt.split('· ')[1] ?? fmt}` : ''}</dd></>
+                    : <dd className="idea-brief"><Lightbulb size={14} aria-hidden />{draft?.brief ?? i.brief ?? 'No visual yet.'} No stock photos.</dd>}
                 </div>
                 <div>
-                  {failing.length ? (
-                    <ul className="idea-checks">{failing.map(c => <li key={c.label}><TriangleAlert size={14} aria-hidden />{c.label.replace(`${NETWORK_LABEL[draft.network]}: `, '')}</li>)}</ul>
-                  ) : <dd className="idea-pass"><Check size={14} aria-hidden />Passes the Playbook</dd>}
+                  <dt>Playbook</dt>
+                  {!draft ? <dd className="faint">Checked when drafted</dd> : failing.length ? (
+                    <dd><ul className="idea-checks">{failing.map(c => <li key={c.label}><TriangleAlert size={14} aria-hidden />{c.label.replace(`${NETWORK_LABEL[draft.network]}: `, '')}</li>)}</ul></dd>
+                  ) : <dd className="idea-pass"><Check size={14} aria-hidden />All checks pass</dd>}
                 </div>
               </dl>
-            </div>
-          </section>
-        )}
-
-        {i.kind === 'post' && open && (
-          <section className="idea-redirect" aria-label="Redirect">
-            <form className="idea-ask" onSubmit={e => { e.preventDefault(); send() }}>
-              <label htmlFor="idea-ask" className="label">Tell Atlas what to change</label>
-              <span className="row nowrap">
-                <input id="idea-ask" className="input" value={ask} onChange={e => setAsk(e.target.value)} placeholder="Make it about repair, and post it Saturday" disabled={!!busy} />
-                <Btn type="submit" disabled={!ask.trim() || !!busy}>Send</Btn>
-              </span>
-            </form>
-            <div className="filters" role="group" aria-label="Quick changes">
-              {ANGLES.map(a => <button key={a.key} className="filter" disabled={!!busy} onClick={() => angle(a.key, a.label)}>{a.label}</button>)}
-              <button className="filter" disabled={!!busy} onClick={() => think('Atlas is writing 3 variants', () => setVariants(variantsOf(i, net)))}><Sparkles size={12} aria-hidden />3 variants</button>
-            </div>
-
-            {busy && <Thinking label={busy} />}
-
-            {!busy && justChanged && last && prev && last.by === 'you' && (() => {
-              const a = prev.drafts.find(x => x.network === net)?.text, b = last.drafts.find(x => x.network === net)?.text
-              return b !== undefined && (
-                <div className="idea-version" aria-live="polite">
-                  <p className="row tight t-sm"><b>{last.label}</b><span className="faint">· version {last.n}</span></p>
-                  {a === undefined ? <p className="diff t-sm"><ins>{b}</ins></p> : <p className="diff t-sm">{diffWords(a, b).map((p, n) => <span key={n}>{p.op === 'add' ? <ins>{p.text}</ins> : p.op === 'del' ? <del>{p.text}</del> : p.text}{' '}</span>)}</p>}
-                </div>
-              )
-            })()}
-            {!busy && i.said && <p className="atlas-says" aria-live="polite"><Mark agent="atlas" /><span>{i.said.atlas}</span></p>}
-            <RuleProposal i={i} />
-
-            {variants && !busy && (
-              <div>
-                <div className="idea-variants">
-                  {variants.map(v => (
-                    <div key={v.key} className="idea-variant">
-                      <span className="k">{v.key} · {v.label}</span>
-                      <p><span className="hook">{v.hook}</span> {v.body}</p>
-                      <Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'variant', network: net, text: variantText(v), label: `Variant ${v.key} (${v.label.toLowerCase()})` }); setVariants(null); setJustChanged(true) }}>Keep this</Btn>
-                    </div>
-                  ))}
-                </div>
-                <div className="idea-mix">
-                  <span>Hook from</span>
-                  <Menu align="start" trigger={<button className="select-btn" aria-label="Hook from">{mix.hook}<ChevronDown size={14} /></button>} items={variants.map(v => ({ label: `${v.key} · ${v.label}`, onSelect: () => setMix(m => ({ ...m, hook: v.key })) }))} />
-                  <span>body from</span>
-                  <Menu align="start" trigger={<button className="select-btn" aria-label="Body from">{mix.body}<ChevronDown size={14} /></button>} items={variants.map(v => ({ label: `${v.key} · ${v.label}`, onSelect: () => setMix(m => ({ ...m, body: v.key })) }))} />
-                  <Btn size="xs" onClick={() => { d({ type: 'publishing/ideaRedirect', id: i.id, mode: 'variant', network: net, text: mixVariants(pick(mix.hook), pick(mix.body)), label: `Hook ${mix.hook} + body ${mix.body}` }); setVariants(null); setJustChanged(true) }}>Use the mix</Btn>
-                </div>
-              </div>
-            )}
-          </section>
-        )}
+            </>
+          )}
+        </section>
 
         {i.versions.length > 0 && (
           <details className="idea-history">
@@ -354,6 +365,26 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
           </details>
         )}
       </div>
+
+      {/* 3. Ask Atlas: a conversation, docked under the detail */}
+      {i.kind === 'post' && open && (
+        <section className="idea-dock" aria-labelledby={`ask-${i.id}`}>
+          <h3 className="idea-zone-title" id={`ask-${i.id}`}><Mark agent="atlas" />Ask Atlas for changes</h3>
+          {busy ? <Thinking label={busy} /> : i.said && (
+            <div className="idea-bubble" aria-live="polite"><Mark agent="atlas" /><p><span className="faint">You asked: {i.said.you.replace(/^“|”$/g, '')}. </span>{i.said.atlas}</p></div>
+          )}
+          <RuleProposal i={i} />
+          <form className="idea-ask" onSubmit={e => { e.preventDefault(); send() }}>
+            <label htmlFor="idea-ask" className="sr-only">Tell Atlas what to change</label>
+            <input id="idea-ask" className="input" value={ask} onChange={e => setAsk(e.target.value)} placeholder="Tell Atlas what to change: “make it about repair, post it Saturday”" disabled={!!busy} />
+            <Btn type="submit" disabled={!ask.trim() || !!busy}>Send</Btn>
+          </form>
+          <div className="filters" role="group" aria-label="Suggestions">
+            {ANGLES.map(a => <button key={a.key} className="filter" disabled={!!busy} onClick={() => angle(a.key, a.label)}>{a.label}</button>)}
+            <button className="filter" disabled={!!busy} onClick={() => think('Atlas is writing 3 variants', () => setVariants(variantsOf(i, shownNet)))}><Sparkles size={12} aria-hidden />3 variants</button>
+          </div>
+        </section>
+      )}
 
       {open && (
         <footer className="idea-panel-foot">
