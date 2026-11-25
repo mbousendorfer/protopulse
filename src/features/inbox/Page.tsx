@@ -128,8 +128,8 @@ export default function InboxPage() {
   const sel = useSelection(ids, `${view}|${toSearch(f)}`)
   const current = all.find(c => c.id === id)
 
-  // Deep link to a conversation outside the current view: switch to All so it stays visible in the list.
-  useEffect(() => { if (current && !v.match(current, now)) { setView('all'); setLabel(null) } }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Deep link to a conversation the list doesn't show (other view, label or filter): drop what hides it so it stays visible.
+  useEffect(() => { if (current && !list.some(x => x.id === current.id)) apply({}, v.match(current, now) ? view : 'all') }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ↑/↓ or J/K move between conversations while one is open; Esc closes it.
   useEffect(() => {
@@ -261,7 +261,7 @@ export default function InboxPage() {
                 title={drafts < sel.count ? `${sel.count - drafts} of them have no draft to send` : undefined}>
                 <Send size={14} />{drafts === sel.count ? `Approve ${drafts}` : `Approve ${drafts} of ${sel.count}`}
               </Btn>
-              <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Not reviewed' : 'Mark reviewed'}</Btn>
+              <Btn size="sm" variant="ghost" onClick={() => run({ op: 'reviewed', value: !allReviewed })}><CheckCheck size={14} />{allReviewed ? 'Mark not reviewed' : 'Mark reviewed'}</Btn>
               <Menu align="start" trigger={<Btn size="sm" variant="ghost"><UserRound size={14} />Assign<ChevronDown size={12} /></Btn>} items={assignItems(v2 => run({ op: 'assign', value: v2 }))} />
               <LabelMenu trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Label<ChevronDown size={12} /></Btn>} labels={labels} onPick={l => run({ op: 'label', value: l })} />
               <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="More actions">More<ChevronDown size={12} /></Btn>} items={[
@@ -561,7 +561,6 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
             ...(!c.removed ? [{ label: 'Delete…', hint: 'Can’t be undone', icon: <Trash2 size={14} />, onSelect: () => setDeleting(true) }] : []),
           ] : [{ label: 'Reviews can’t be hidden, reported or deleted', disabled: true, onSelect: () => {} }]),
         ]} />
-        <span className="ib-sep" aria-hidden />
         {(c.labels ?? []).map(l => (
           <span key={l} className="ib-label">{l}<button aria-label={`Remove the label ${l}`} onClick={() => one({ op: 'unlabel', value: l })}><X size={12} /></button></span>
         ))}

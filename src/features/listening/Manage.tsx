@@ -21,7 +21,7 @@ export default function ManageCompetitors() {
   return (
     <div className="stack lg">
       <div className="row between">
-        <Link to="/listening/competitors" className="btn sm ghost"><ArrowLeft size={14} />Competitor events</Link>
+        <Link to="/listening/competitors" className="btn sm ghost"><ArrowLeft size={14} />All events</Link>
         <Btn variant="primary" onClick={() => setEdit(blank())}><Plus size={14} />Add a competitor</Btn>
       </div>
 

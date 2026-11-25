@@ -37,8 +37,8 @@ export default function ListeningPage() {
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
       <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
         { value: 'competitors', label: 'Competitors', count: openEvents },
-        { value: 'mentions', label: 'Mentions', count: unseenNeeds(s).length },
-        { value: 'creators', label: 'Creators', count: creatorsOf(s).filter(c => c.fit && !s.listening.creators[c.handle]).length },
+        { value: 'mentions', label: 'Mentions', count: allMentions(s).filter(m => s.listening.mentions[m.id] !== 'hidden').length },
+        { value: 'creators', label: 'Creators', count: creatorsOf(s).length },
         { value: 'trends', label: 'Trends', count: TRENDS.length },
         { value: 'searches', label: 'Searches', count: s.listening.searches.length },
       ]} />
@@ -386,10 +386,10 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
       </div>
       <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
         { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
-        hidden ? { label: 'Bring back', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
+        hidden ? { label: 'Unhide', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
         { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
       ]} />
-      {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can bring them back.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
+      {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can unhide them.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
         <section className="card">
           <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}</h2></span></div>
           <ul className="ls-mentions">
@@ -413,7 +413,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
                     {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
                       <Btn size="xs" onClick={() => run('nova', {}, [m.id])}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
                     )}
-                    <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Bring back ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
+                    <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Unhide ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
                   </div>
                 </li>
               )
@@ -431,7 +431,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
       {managing && <ManageTags onClose={() => setManaging(false)} />}
       <Sheet open={!!open} onOpenChange={o => !o && setOpenId(null)} title={open ? `${open.author} on ${open.network}` : ''}
         footer={open && <>
-          <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Bring back</> : <><EyeOff size={14} />Hide</>}</Btn>
+          <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Unhide</> : <><EyeOff size={14} />Hide</>}</Btn>
           <span className="spacer" />
           {s.handoffs.some(h => h.ref === `mention-post:${open.id}`) || s.listening.mentions[open.id] === 'handed'
             ? <Btn disabled><Check size={14} />With Atlas</Btn>
