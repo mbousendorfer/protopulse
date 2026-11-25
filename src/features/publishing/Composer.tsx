@@ -12,6 +12,7 @@ import { NetworkPreview } from './Previews'
 import { slotComment } from './slice'
 import { checkPost } from './checks'
 import { libraryOf } from './visuals'
+import { nextRoom, overCap } from './guards'
 import { variantsOf, type Variant } from './copilot'
 import { forLinkedIn, shorten } from './ideasModel'
 
@@ -56,7 +57,13 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const textFor = (n: Network) => variants[n] ?? text
   const previewNet = accounts.includes(preview) ? preview : accounts[0]
 
-  const checks = accounts.flatMap(n => checkPost({ text: textFor(n), network: n, media, words, rules: s.playbook.rules ?? [] }))
+  // Guardrail: 3 posts per network per day. The post you are editing doesn't count against itself.
+  const others = s.publishing.posts.filter(p => p.id !== post?.id)
+  const full = accounts.filter(n => overCap(others, { network: n, at }))
+  const checks = [
+    ...accounts.flatMap(n => checkPost({ text: textFor(n), network: n, media, words, rules: s.playbook.rules ?? [] })),
+    ...full.map(n => ({ ok: false, label: `${NETWORK_LABEL[n]} already has 3 posts on ${new Date(at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}. Atlas suggests ${new Date(nextRoom(others, { network: n, at })).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}.` })),
+  ]
   const blocking = checks.filter(c => !c.ok)
 
   const think = (label: string, fn: () => void) => { setBusy(label); setTimeout(() => { fn(); setBusy(null) }, 700) }
@@ -166,6 +173,17 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             {time !== best.time && <Btn size="xs" onClick={() => setTime(best.time)}>Use {best.time}</Btn>}
           </div>
 
+          {full.length > 0 && (() => {
+            const room = nextRoom(others, { network: full[0], at })
+            const label = new Date(room).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
+            return (
+              <div className="cmp-slot">
+                <Mark agent="atlas" />
+                <p><b>Atlas:</b> {NETWORK_LABEL[full[0]]} already has 3 posts that day, the most Atlas schedules. {label} has room.</p>
+                <Btn size="xs" onClick={() => setDate(toDate(room))}>Use {label}</Btn>
+              </div>
+            )
+          })()}
           <section className="cmp-check" aria-label="Playbook check">
             <div className="section-title">Playbook check <span className="faint">· live</span></div>
             <ul>{checks.map(c => <li key={c.label} className={c.ok ? 'ok' : 'bad'}>{c.ok ? <Check size={13} /> : <AlertTriangle size={13} />}{c.label}</li>)}</ul>
