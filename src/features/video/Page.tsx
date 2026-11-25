@@ -9,6 +9,7 @@ import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
 import { captionSlips, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipScore } from './parts'
+import { holdReason } from './slice'
 import Sources, { SourceDetail } from './Sources'
 import BrandKit from './BrandKit'
 import Editor from './Editor'
@@ -75,7 +76,9 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
   // What Juno left for you on this clip, by her level on each action.
   const slips = Object.keys(captionSlips(c, TRANSCRIPT[src.transcript])).length
   const review = c.audio.review?.length ?? 0
+  const held = c.status === 'ready' || c.status === 'snoozed' ? holdReason(s, c) : undefined
   const todo = c.status !== 'ready' && c.status !== 'snoozed' ? [] : [
+    held ? `Held: ${held}` : '',
     slips ? `${slips} caption${slips > 1 ? 's' : ''} to fix` : '',
     c.framing === 'check' ? 'Framing to check' : c.framing === 'suggested' ? 'Framing suggested' : '',
     review ? `${review} language version${review > 1 ? 's' : ''} to review` : '',

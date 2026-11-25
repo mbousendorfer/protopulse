@@ -6,9 +6,9 @@ import { dayLabel, hhmm } from '../../app/time'
 import { PHASES, PHASE_MS, TRANSCRIPT, WATCHING, type Source } from '../../data/video'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
-import { validUrl } from './slice'
+import { WEEKLY_QUOTA, sentThisWeek, validUrl } from './slice'
 import { SESSION_BLOBS, ScoreBadge, SourceThumb, clipScore, fmt, playable, videoUrl } from './parts'
-import { mediaUrl, speakerName } from '../../data/video'
+import { ON_SCREEN, PEOPLE, mediaUrl, speakerName } from '../../data/video'
 
 const KIND = { youtube: { icon: Youtube, label: 'YouTube upload' }, live: { icon: Radio, label: 'Recorded live' }, link: { icon: Link2, label: 'Pasted link' }, upload: { icon: Upload, label: 'Uploaded file' } }
 export const lengthOf = (src: Source) => src.shownDuration ?? fmt(TRANSCRIPT[src.transcript].duration)
@@ -122,6 +122,7 @@ export function SourceDetail({ id }: { id: string }) {
   const src = s.video.sources.find(x => x.id === id)
   if (!src) return <Empty title="This video is gone" body="It may have been cleared by a reset." action={<Btn onClick={() => nav('/video/sources')}>Back to sources</Btn>} />
   const tr = TRANSCRIPT[src.transcript]
+  const people = [...new Set((ON_SCREEN[src.transcript] ?? []).map(p => p.who))]
   const clips = s.video.clips.filter(c => c.source === src.id && c.status !== 'dismissed')
   const clipAt = (t: number) => clips.find(c => t >= c.start - 0.01 && t <= c.end + 0.01)
   const seek = (t: number) => { if (video.current) { video.current.currentTime = t; void video.current.play().catch(() => {}) } }
@@ -136,7 +137,7 @@ export function SourceDetail({ id }: { id: string }) {
       <Link to="/video/sources" className="link-btn row tight self-start"><ArrowLeft size={14} />All videos</Link>
       <div className="src-head">
         <h2>{src.title}</h2>
-        <p className="muted">{KIND[src.kind].label} · {src.channel} · {dayLabel(src.at, now)}, {hhmm(src.at)} · <span className="num">{lengthOf(src)}</span></p>
+        <p className="muted">{KIND[src.kind].label} · {src.channel} · {dayLabel(src.at, now)}, {hhmm(src.at)} · <span className="num">{lengthOf(src)}</span> · <span className="num">{sentThisWeek(s, src.id)} of {WEEKLY_QUOTA}</span> clips sent this week</p>
       </div>
       <Notice scope="video" />
       {src.status !== 'ready' ? (
@@ -165,6 +166,17 @@ export function SourceDetail({ id }: { id: string }) {
               </div>
               {busy && <Thinking label="Reading the transcript…" />}
             </form>
+            {people.length > 0 && (
+              <section className="card pad stack" aria-labelledby="people-h">
+                <h3 id="people-h" className="section-title flush">People on screen</h3>
+                <ul className="ed-list">{people.map(p => (
+                  <li key={p}>
+                    <span><b>{PEOPLE[p].name}</b>, {PEOPLE[p].role} · {s.video.releases[p] ? 'release signed' : 'no signed release: Juno holds the clips that show him'}</span>
+                    <Btn size="xs" variant={s.video.releases[p] ? 'ghost' : undefined} onClick={() => d({ type: 'video/release', person: p, signed: !s.video.releases[p] })}>{s.video.releases[p] ? 'Remove the release' : 'Release is signed'}</Btn>
+                  </li>
+                ))}</ul>
+              </section>
+            )}
           </div>
           <section className="card src-transcript" aria-labelledby="tr-h">
             <div className="card-head"><h3 id="tr-h">Transcript</h3><span className="muted t-sm">{clips.length} moments picked</span></div>
