@@ -24,7 +24,7 @@ const Scene = ({ label, viewBox, children, className }: Svg) => (
 /** Mountains over a lake. The sky and the sun follow the time of day. */
 export function BriefScene({ hour }: { hour: number }) {
   const t = hour < 10 ? 'dawn' : hour < 17 ? 'day' : 'evening'
-  const sky = t === 'dawn' ? mix(HUE.nova, 16) : t === 'day' ? mix(WATER, 13) : mix(HUE.iris, 18)
+  const sky = t === 'evening' ? mix(HUE.iris, 14) : mix(WATER, t === 'day' ? 13 : 9)
   const sun = t === 'dawn' ? { x: 70, y: 74 } : t === 'day' ? { x: 172, y: 36 } : { x: 196, y: 70 }
   return (
     <Scene viewBox="0 0 240 140" label={`Mountains at ${t === 'dawn' ? 'sunrise' : t === 'day' ? 'midday' : 'sunset'}`}>

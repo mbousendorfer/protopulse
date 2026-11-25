@@ -45,8 +45,7 @@
 /* Batch */
 .lanes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s3); margin-top: var(--s4); }
 .lane-card { padding: var(--s4); border-radius: var(--r-card); background: var(--sunk); display: flex; flex-direction: column; gap: 4px; }
-.lane-card.main { background: var(--panel); box-shadow: inset 0 0 0 1.5px var(--agent); }
-.lane-card.main b { color: var(--agent-ink); }
+.lane-card.main { background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
 .lane-card b { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; }
 .lane-card p { font-size: var(--t-sm); min-height: 2.6em; }
 .lane-card .row { margin-top: 6px; }
