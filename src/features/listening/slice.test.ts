@@ -264,3 +264,102 @@ describe('Echo · creators', () => {
     expect(text).toMatch(/@theo\.wild \(120k, signed with Peakline\)/)
   })
 })
+
+describe('Echo · benchmark per network', () => {
+  it('ranks Fernway and the rivals on TikTok and reads it the same in ⌘K', async () => {
+    const { networkRows, benchNetworks } = await import('./model')
+    const s = s0()
+    expect(benchNetworks(s)).toContain('tiktok')
+    const rows = networkRows(s, 'tiktok')
+    expect(rows[0].name).toBe('Trailkind')
+    expect(rows.some(r => r.us)).toBe(true)
+    const def = intentDef('benchmark')!
+    const i = def.parse('how do we compare with trailkind on tiktok', { raw: '' })!
+    const text = def.bar(i as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toContain(`${rows[0].er}% engagement`)
+  })
+
+  it('“Atlas tests their format” drafts one locked post card', () => {
+    let s = reducer(s0(), { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    s = reducer(s, { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    const cards = s.handoffs.filter(h => h.ref === 'format:tiktok:trailkind')
+    expect(cards).toHaveLength(1)
+    expect(cards[0].agent).toBe('atlas')
+  })
+})
+
+describe('Echo · tags', () => {
+  const lvl = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-file', level: l })
+  const tick = (s: State) => reducer(at(s, s.clock.base + 2 * MIN), { type: 'core/heartbeat' })
+
+  it('the seeded feed comes tagged by the seeded rules', () => {
+    const s = s0()
+    expect(s.listening.tags.m4).toContain('Press')
+    expect(s.listening.tags.m1).toEqual(expect.arrayContaining(['Product feedback', 'Creator']))
+  })
+
+  it('on Act, Echo tags new mentions herself and Undo takes the tags off', () => {
+    let s = tick(fire(level(lvl('act'), 'draft')))
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    const line = s.log.find(l => /^Tagged \d+ new mentions/.test(l.text))!
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+  })
+
+  it('on Draft, the tags wait on a Desk card; on Suggest, only on Mentions', () => {
+    let s = tick(fire(level(lvl('draft'), 'draft')))
+    const card = s.handoffs.find(h => h.ref === 'tag-batch')!
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    s = reducer(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(h => h.id === card.id))!.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    const sug = tick(fire(level(lvl('suggest'), 'draft')))
+    expect(sug.handoffs.some(h => h.ref === 'tag-batch')).toBe(false)
+    expect(sug.listening.pendingTags['spike-1']).toContain('Product feedback')
+  })
+
+  it('a new rule tags matching mentions at once; deleting a tag can be undone', () => {
+    let s = reducer(s0(), { type: 'listening/tagSave', def: { id: '', name: 'Repair', rule: { kind: 'word', value: 'repair' } } })
+    expect(Object.values(s.listening.tags).filter(t => t.includes('Repair')).length).toBeGreaterThan(1)
+    const id = s.listening.tagDefs.find(t => t.name === 'Repair')!.id
+    s = reducer(s, { type: 'listening/tagDelete', id })
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(false)
+    s = reducer(s, { type: 'core/undo', id: s.notice!.undo! })
+    expect(s.listening.tagDefs.some(t => t.name === 'Repair')).toBe(true)
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(true)
+  })
+
+  it('renaming a tag renames it on every mention', () => {
+    const s = reducer(s0(), { type: 'listening/tagSave', def: { id: 'tg-press', name: 'Media', rule: { kind: 'press' } } })
+    expect(s.listening.tags.m4).toContain('Media')
+    expect(s.listening.tags.m4).not.toContain('Press')
+  })
+})
+
+describe('Echo · seen and unseen', () => {
+  it('only overnight mentions that need you are unseen; the spike adds its own; opening marks seen', async () => {
+    const { unseenNeeds, visibleMentions } = await import('./model')
+    let s = s0()
+    const before = unseenNeeds(s)
+    expect(before.length).toBeGreaterThan(0)
+    expect(before.length).toBeLessThan(visibleMentions(s).length / 3)
+    expect(before.every(m => m.sentiment === 'negative' || m.risk || m.text.includes('?'))).toBe(true)
+    s = fire(level(s, 'draft'))
+    expect(unseenNeeds(s).length).toBe(before.length + 27)
+    s = reducer(s, { type: 'listening/seen', ids: ['spike-1'] })
+    expect(unseenNeeds(s).length).toBe(before.length + 26)
+    s = reducer(s, { type: 'listening/mentions', ids: ['spike-2'], op: 'nova' })
+    expect(unseenNeeds(s).length).toBe(before.length + 25)
+  })
+})
+
+describe('Echo · competitor answer', () => {
+  it('⌘K reads open events from the feed and stops citing one once it is handled', () => {
+    const ask = (s: State) => intentDef('competitor')!.bar({ kind: 'competitor', name: 'peakline' } as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    let s = s0()
+    expect(ask(s)).toMatch(/Aero 30/)
+    s = reducer(s, { type: 'listening/move', event: 'e-peak-price', index: 3 })
+    expect(ask(s)).toMatch(/Nothing open from Peakline/)
+  })
+})

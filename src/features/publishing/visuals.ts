@@ -1,10 +1,11 @@
 // Visuals: which posts wait for one, and which library photo Atlas would use. Atlas never uses stock photos.
 import type { State } from '../../app/state'
 import type { Handoff } from '../../app/types'
-import { MEDIA, type Media, type Pillar, type Post } from '../../data/publishing'
+import { MEDIA, type Media, type Pillar, type Post, pillarFamily } from '../../data/publishing'
 
 /** The library: what you uploaded first, then the seeded photos. */
-export const libraryOf = (s: State): Media[] => [...(s.publishing.uploads ?? []), ...MEDIA]
+export const libraryOf = (s: State): Media[] =>
+  [...(s.publishing.uploads ?? []), ...MEDIA].map(m => (s.publishing.mediaTags?.[m.id] ? { ...m, tags: s.publishing.mediaTags[m.id] } : m))
 
 /** The Desk card asking for this post's visual, if one is open. */
 export const visualCardOf = (s: State, p: Post): Handoff | undefined =>
@@ -27,7 +28,7 @@ const words = (t: string) => new Set(t.toLowerCase().match(/[a-z]{4,}/g) ?? [])
 
 /** The photo Atlas would pick for a post: same pillar tags, then shared words, least used first. Undefined if nothing fits. */
 export function pickVisual(p: Post, library: Media[], now: number): Media | undefined {
-  const tags = PILLAR_TAGS[p.pillar] ?? []
+  const tags = PILLAR_TAGS[pillarFamily(p.pillar)]
   const w = words(p.text)
   const score = (m: Media) => m.tags.filter(t => tags.includes(t)).length * 2 + [...words(`${m.title} ${m.tags.join(' ')}`)].filter(x => w.has(x) || w.has(`${x}s`) || w.has(x.replace(/s$/, ''))).length * 3
   const ranked = library.filter(m => usable(m, now)).map(m => ({ m, n: score(m) })).filter(x => x.n > 0)

@@ -1,9 +1,11 @@
 import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { T } from '../../app/time'
+import { DAY, T } from '../../app/time'
+import type { Campaign } from '../../data/strategy'
 import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../../data/insights'
 import { applyOp, writeStudio, type StudioOp } from './studio'
+import { bestReturn } from './roi'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
@@ -23,6 +25,8 @@ declare module '../../app/types' {
     unshare?: string
     /** A schedule set up from this line: undoing it removes the schedule. */
     schedule?: string
+    /** A Playbook fact Iris gave Sage from this line: undoing it removes the fact. */
+    fact?: string
   }
 }
 export type FollowUp = { id: string; report: string; q: string; a: string; at: number }
@@ -94,10 +98,23 @@ export type InsightsAction =
   | { type: 'insights/schedule'; name: string; recipe: Recipe; every: 'week' | 'month'; to: 'claire' | 'sam'; via: string }
   | { type: 'insights/schedulePause'; id: string }
   | { type: 'insights/scheduleDelete'; id: string }
+  | { type: 'insights/tellSage'; via: string }
 
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
 export const patchInsights = patch
+
+/**
+ * The recap report of one of Sage's campaigns (id `campaign-<id>`), on its window and networks: goal vs actual,
+ * results, top posts, website results. No journal line: Sage logs the end of the campaign (requests/iris-from-sage-campaign-report).
+ */
+export function writeCampaignReport(s: State, c: Campaign): State {
+  const id = `campaign-${c.id}`
+  const days = Math.min(90, Math.max(1, Math.round((c.end - c.start) / DAY) + 1))
+  const recipe: Recipe = { days, networks: [...new Set(c.posts.map(p => p.network))], audience: 'claire', sections: ['campaign', 'summary', 'top', 'roi'], campaign: c.id }
+  const r: Report = { ...writeStudio(s, recipe, id, Math.min(c.end, now(s))), kind: 'campaign', title: c.name }
+  return patch(s, { reports: [r, ...s.insights.reports.filter(x => x.id !== id)] })
+}
 
 /** Iris writes a report Sam asked for (⌘K, Chat or Insights); Undo removes it. */
 export function writeReport(s: State, recipe: Recipe, id: string, via: string): State {
@@ -279,6 +296,12 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     }
     case 'insights/schedulePause':
       return patch(s, { schedules: s.insights.schedules.map(x => (x.id === a.id ? { ...x, paused: !x.paused } : x)) })
+    case 'insights/tellSage': {
+      const b = bestReturn(s)
+      if (!b || s.playbook.rules.some(r => r.text === b.fact)) return s
+      const next = addRule(s, { kind: 'fact', text: b.fact, agents: ['sage'], origin: 'From Iris’s ROI numbers' })
+      return pushLog(next, { agent: 'iris', text: `Told Sage: ${b.fact}`, status: 'done', reason: a.via, undoMinutes: 30, link: '/insights/roi', fact: b.fact })
+    }
     case 'insights/scheduleDelete':
       return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== a.id) })
   }
@@ -342,6 +365,7 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
 
 /** Undo of a Desk decision or of what Iris did on Act: the anomaly reopens and Atlas's follow-up card goes away. */
 export function onUndoInsights(s: State, entry: LogEntry): State {
+  if (entry.fact) return { ...s, playbook: { ...s.playbook, rules: s.playbook.rules.filter(r => r.text !== entry.fact) } }
   if (entry.schedule) return patch(s, { schedules: s.insights.schedules.filter(x => x.id !== entry.schedule) })
   if (entry.unshare) {
     const { [entry.unshare]: _gone, ...shared } = s.insights.shared

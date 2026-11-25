@@ -8,12 +8,14 @@ import { dueInbox, dur, NEEDS_YOU, onResolveInbox, reduceInbox, tickInbox, waiti
 import { fill, savedNamed } from './saved'
 import { matches, thenText, whenText, wordsOf, type InboxRule, type RuleOp } from './rules'
 import { SCRIPT } from './script'
+import { describe, matchFilters, parseFilters, toSearch, type Filters } from './filters'
 
 declare module '../../data/command' {
   interface IntentTypes {
     reply: { name: string; saved?: string }
     inboxRule: { words: string[]; then: RuleOp }
     waiting: object
+    inboxFilter: { f: Filters }
   }
 }
 declare module '../../app/types' {
@@ -24,6 +26,8 @@ declare module '../../app/types' {
     inboxRule?: Pick<InboxRule, 'words' | 'network' | 'type' | 'then'>
     /** Nova's response-time warning: the conversations it is about (the card goes once they are answered). */
     sla?: string[]
+    /** Nova's spam suspects (conversation ids): approving the card reports them as spam. */
+    inboxSpam?: string[]
   }
 }
 
@@ -123,12 +127,40 @@ const waiting = defineIntent({
   chat: (_i, { s }) => ({ replies: [{ from: 'nova', text: `${waitingAnswer(s).text} Sort the Inbox by “Waiting longest” to see them all.` }], effects: [] }),
 })
 
+/** "Show me negative Instagram DMs this week": the count and the Inbox opened on exactly those, with the same filter. */
+function filterAnswer(s: State, f: Filters) {
+  const list = [...virtualConvs(s), ...s.inbox.convs.map(withTeam)].filter(c => matchFilters(c, f, now(s))).sort((a, b) => b.at - a.at)
+  const what = describe(f)
+  if (!list.length) return { n: 0, text: `No ${what} right now.` }
+  return { n: list.length, text: `${list.length} ${what}. Latest: ${list.slice(0, 3).map(c => c.author).join(', ')}.` }
+}
+const inboxFilter = defineIntent({
+  kind: 'inboxFilter', owner: 'nova', order: 62,
+  parse: t => {
+    const f = parseFilters(t)
+    // Mentions outside the Inbox are Echo's (Listening): only take them when the Inbox is named.
+    if (!f || (f.type === 'mention' && !/inbox/.test(t))) return
+    return { kind: 'inboxFilter', f }
+  },
+  bar: (i, { s, d, go }) => {
+    const a = filterAnswer(s, i.f)
+    return {
+      text: a.text,
+      ctas: a.n ? [
+        { label: 'Open them in the Inbox', primary: true, run: () => go(`/inbox?${toSearch(i.f)}`) },
+        { label: 'Save as a view', run: () => { d({ type: 'inbox/viewAdd', view: { name: cap(describe(i.f)).slice(0, 40), view: 'all', f: i.f } }); go(`/inbox?${toSearch(i.f)}`) } },
+      ] : [],
+    }
+  },
+  chat: (i, { s }) => ({ replies: [{ from: 'nova', text: `${filterAnswer(s, i.f).text} Ask me in ⌘K to open them in the Inbox or save them as a view.` }], effects: [] }),
+})
+
 const nova: AgentModule = {
   id: 'nova',
   script: SCRIPT,
   onResolve: onResolveInbox,
   onUndo: onUndoInbox,
-  intents: [reply, inboxRule, waiting],
+  intents: [reply, inboxRule, waiting, inboxFilter],
   due: dueInbox,
   tick: tickInbox,
   batches: [{

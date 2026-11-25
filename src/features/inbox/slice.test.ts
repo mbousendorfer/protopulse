@@ -301,3 +301,69 @@ describe('labels', () => {
     expect(parse('assign wholesale requests to Yanis').intent).toMatchObject({ kind: 'inboxRule', words: ['wholesale'], then: { op: 'assign', value: 'yanis' } })
   })
 })
+
+describe('moderation', () => {
+  it('report as spam hides it and teaches Nova’s spam rule; Undo puts both back', () => {
+    let s = reducer(initialState(), { type: 'inbox/moderate', ids: ['c-dish'], op: 'spam' })
+    expect(conv(s, 'c-dish').status).toBe('hidden')
+    const words = s.inbox.rules.find(r => r.id === 'ir-spam')!.words
+    expect(words.length).toBe(6)
+    s = reducer(s, { type: 'inbox/undo' })
+    expect(conv(s, 'c-dish').status).toBe('auto')
+    expect(s.inbox.rules.find(r => r.id === 'ir-spam')!.words.length).toBe(5)
+  })
+
+  it('ban hides everything from the author and what they send later; delete is final and says so', async () => {
+    let s = reducer(initialState(), { type: 'inbox/moderate', ids: ['c-uk'], op: 'ban' })
+    expect(conv(s, 'c-uk').status).toBe('hidden')
+    expect(conv(s, 'c-max').status).toBe('hidden')
+    expect(s.inbox.banned).toContain('@maxoutside')
+    s = reducer(s, { type: 'inbox/moderate', ids: ['c-dish'], op: 'delete' })
+    expect(conv(s, 'c-dish')).toMatchObject({ removed: true, status: 'hidden' })
+    expect(s.log[0].undoUntil).toBeUndefined()
+    expect(reducer(s, { type: 'inbox/moderate', ids: ['c-g5'], op: 'delete' })).toBe(s)
+  })
+
+  it('reply in private opens a DM drafted by Nova; bots are reported by Nova on Act, or raised as one card on Draft', () => {
+    let s = reducer(initialState(), { type: 'inbox/private', id: 'c-lea' })
+    expect(conv(s, 'c-lea-dm')).toMatchObject({ type: 'dm', status: 'draft', author: '@lea.hikes' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-bots' })
+    expect(s.inbox.convs.filter(c => c.note === 'Reported as spam by Nova').length).toBe(3)
+    let d = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-spam', level: 'draft' })
+    d = reducer(d, { type: 'core/fire', eventId: 'ev-bots' })
+    const card = d.handoffs.find(h => h.inboxSpam)!
+    d = reducer(d, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+    expect(d.inbox.convs.filter(c => c.note === 'Reported as spam by you').length).toBe(3)
+  })
+})
+
+describe('Sage’s Trail Week label', () => {
+  it('the seed has Trail Week conversations, labelled, and Nova’s rule for it', () => {
+    const s = initialState()
+    expect(s.inbox.convs.filter(c => c.labels?.includes('Trail Week')).length).toBe(4)
+    expect(s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === 'Trail Week')?.origin).toBe('Sage · Trail Week campaign')
+  })
+})
+
+describe('filters and saved views', () => {
+  it('⌘K “show me negative Instagram DMs this week” sets the same filters the Inbox uses', async () => {
+    const { parse } = await import('../../data/command')
+    const { describe: say, matchFilters, toSearch, fromSearch } = await import('./filters')
+    const i = parse('show me negative instagram dms this week').intent as { kind: string; f: import('./filters').Filters }
+    expect(i).toMatchObject({ kind: 'inboxFilter', f: { type: 'dm', network: 'instagram', sentiment: 'negative', date: '7d' } })
+    expect(say(i.f)).toBe('negative Instagram messages from the last 7 days')
+    expect(fromSearch(new URLSearchParams(toSearch(i.f)))).toEqual(i.f)
+    const s = initialState()
+    expect(s.inbox.convs.filter(c => matchFilters(c, i.f, s.clock.base)).map(c => c.id)).toContain('c-ana')
+    expect(parse('show me mentions of the Ridge').intent.kind).not.toBe('inboxFilter')
+  })
+
+  it('a saved view is stored and can be deleted and restored', () => {
+    let s = reducer(initialState(), { type: 'inbox/viewAdd', view: { name: 'Negative IG', view: 'all', f: { network: 'instagram', sentiment: 'negative' } } })
+    const v = s.inbox.views[0]
+    s = reducer(s, { type: 'inbox/viewDelete', id: v.id })
+    expect(s.inbox.views).toEqual([])
+    s = reducer(s, { type: 'inbox/viewRestore', view: v, index: 0 })
+    expect(s.inbox.views[0].name).toBe('Negative IG')
+  })
+})

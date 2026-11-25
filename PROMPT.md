@@ -26,7 +26,7 @@ Pas de POC. La barre : un social media manager doit croire, pendant 45 minutes, 
 
 6. **Juno prépare, Sam décide.** Sam accepte qu'un agent découpe ses vidéos en clips, comprend pourquoi un moment a été choisi, retouche le clip sans quitter l'éditeur et l'envoie à Atlas.
 
-**Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas ».
+**Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas » · « Make a LinkedIn version of this clip » · « Why is this clip not going out? » · « Which clip did best last week? » · « Pick a better cover ».
 
 Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage d'autonomie lisible par l'utilisateur métier, la validation d'un plan, un journal de ce que l'agent a fait avec annulation, un brief livré avant la journée, une mémoire de marque visible. Anti-patterns à éviter : autopilote sans revue sur le contenu public, promesse « autopilot » opaque, crédits IA opaques, fonctions annoncées non livrées.
 
@@ -119,7 +119,7 @@ Planning : 24/7. Activité type : « Watching Peakline's launch comments ».
 Garde-fous : seuil de pic = 3× le volume négatif habituel en 1 h · 4 concurrents · 12 recherches actives.
 
 ### Sage — Strategy
-Planning : revue mensuelle le 1er, à la demande pour les campagnes.
+Planning : à la demande pour les campagnes ; suit les campagnes live au fil des jours, lève les temps forts 3 semaines avant. Source unique des piliers, de la cadence et des campagnes (`targetsOf(s)`, `mixOf(s)`, `lastWeekOf(s)`, `themesOf(s)`), lus par Atlas et Iris.
 
 | Action | Risque | Cran | Verrou |
 |---|---|---|---|
@@ -127,8 +127,15 @@ Planning : revue mensuelle le 1er, à la demande pour les campagnes.
 | Adjust cadence when a network underperforms | risky | Draft | |
 | Reallocate tasks between agents during a campaign | safe | Act | |
 | Change the editorial pillars | destructive | Suggest | 🔒 |
+| Plan for calendar moments | safe | Suggest | |
 
-Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes actives.
+- **Plans** : Suggest = carte d'info, on lance depuis Strategy ; Draft = carte « Campaign plan ready » ; Act = Sage lance seul (Undo 30 min). Une campagne lancée met tous ses posts à venir au calendrier d'Atlas (`campaignId`, pilier, label) et demande à Nova, par une règle d'Inbox à elle, d'étiqueter ses conversations ; l'Undo retire posts et règle.
+- **Cadence et trajectoire** (`sage-cadence`) : propositions de cibles, carte « Community pillar under target », et réajustement quand une campagne live sort de 85–120 % de sa trajectoire (déplacer des posts, relever ou baisser l'objectif) ; en Act, appliqués seuls avec Undo.
+- **Piliers** : verrouillés ; Sam repondère et décrit, Sage vérifie la somme et chiffre l'impact ; « Put more Community in the mix » devient une proposition.
+- **Temps forts** (`sage-moments`) : carte au Desk 3 semaines avant ; ajouté = idées pour Atlas par son `arriveIdeas`.
+- **Chat et ⌘K** : « How is Trail Week doing? », « Is Community behind? », « Put more Community in the mix », brief de campagne ; chiffres lus dans l'état.
+
+Garde-fous appliqués : un objectif chiffré par campagne · **Active campaigns: 2 max** (lu dans la valeur du garde-fou ; Approve désactivé avec la raison, carte renvoyée au Desk).
 
 ### Juno — Video
 Planning : 24/7, vérifie la chaîne YouTube toutes les 15 min. Activité type : « Captioning the Repair Friday live ». Couleur : emerald ADS `#12A87A`, avatar avec un clap.
@@ -143,6 +150,16 @@ Planning : 24/7, vérifie la chaîne YouTube toutes les 15 min. Activité type :
 | Change words in someone's voice | destructive | Suggest | 🔒 |
 
 Garde-fous : 15–60 s (90 s sur LinkedIn) · sous-titres toujours · brand kit sur chaque clip · 5 clips max par vidéo et par semaine · invités et clients à l'écran seulement avec autorisation signée.
+
+Ce que chaque cran fait vraiment (code : `src/features/video/`, registre `agent.tsx`) :
+- **Draft clips** : Suggest, Juno demande avant de découper (carte « New video ») ; Draft, carte « N clips … are ready » ; Act, elle découpe seule (journal).
+- **Fix captions** : le speech-to-text se trompe sur des noms produits (« Ridge 28 », « PFOS-free », « Amber »). Act, Juno corrige (journal, Undo) ; Draft, une carte Desk dont l'approbation corrige ; Suggest, les mots restent soulignés dans l'éditeur avec « Fix it ».
+- **Reframe and brand kit** (à la découpe) : cadrage, une version par réseau, couverture et habillage. Act, appliqués ; Draft, appliqués et « Framing to check » ; Suggest, clip brut et proposition « Apply ».
+- **Translate and dub** : Act, Juno fait les langues du brand kit et les envoie avec le clip ; Draft, elles arrivent « to review » et seules les approuvées partent ; Suggest, elle les signale. Chaque langue envoyée devient ses propres posts.
+- **Send 80+ to Atlas** : Act, Juno envoie seule ses clips à 80+ (journal, Undo 10 min).
+- Les garde-fous s'appliquent à tout envoi (Sam, Desk, Act) : un clip qui montre Hugo (client, GR20) sans autorisation reste « Held » ; au-delà de 5 clips par vidéo sur 7 jours, Juno garde les meilleurs et dit pourquoi ; un réseau dont la durée sort de la spec ne reçoit pas de post.
+- Elle suit ses clips : publié à l'heure du premier post, chiffres d'Iris (`clipPerf`), Good news réelle au-delà de 1,5× la moyenne du réseau ; le score intègre ensuite ce « Track record ».
+- En ⌘K et Chat : « Clip the best 3 moments about the strap », « Why is the rain clip not going out? », « Which clip did best last week? », « Make a LinkedIn version of the bottle clip ».
 
 ---
 
@@ -276,15 +293,14 @@ Onglets : **Competitors** · **Mentions** · **Trends** · **Searches**. La veil
 
 ### 6.6 Strategy — Sage
 
-Onglets : **Campaigns** · **Pillars & cadence**.
+Onglets : **Campaigns** · **Pillars and cadence**.
 
-- **Campaigns** : liste avec statut (`Brief` · `Plan to review` · `Live` · `Done`), objectif, progression vs objectif, dates. Données : une campagne **Live** (« Trail Week », teasing dès le 20 novembre, du 24 au 30 novembre, relance jusqu'au 7 décembre), une **Done** avec bilan d'Iris (« Black Friday? No: Repair Friday »), une **Plan to review** créée pendant le test.
-- **Nouveau brief** : champ libre en 2-3 lignes (+ champs optionnels : dates, produit, budget, objectif). Exemple pré-rempli en placeholder : « Launch the new Storm Jacket on March 15, goal 300 pre-orders. »
-  - Sage « réfléchit » (pattern *thinking-loader* avec phases : « Reading last launches · Checking cadence · Splitting work between agents »), puis rend :
-  - **Plan de campagne** : objectif chiffré et KPI de suivi, messages clés, cible, phases (Teasing / Launch / Follow-up) sur une frise, posts par phase et par réseau, **répartition des tâches entre agents** (pattern *delegate-board* : qui fait quoi, réattribuable par glisser-déposer), risques identifiés, budget boost proposé ;
-  - validation : **Approve campaign** · **Request changes** (v2 avec diff) · **Discard**. Une fois approuvée, Atlas reçoit les posts dans son plan et les autres agents leurs tâches.
-- **Page Campagne Live** : objectif et progression (« 212 / 300 pre-orders · day 4 of 7 »), courbe vs trajectoire prévue (pattern *plan-vs-actual*), posts publiés et à venir, tâches des agents et leur état, ajustements proposés par Sage (« Instagram underperforms, move 2 posts to TikTok? »), bilan final rédigé par Iris quand la campagne est terminée.
-- **Pillars & cadence** : 4 piliers éditoriaux (Gear that lasts · Trail stories · Repair & care · Community) avec description, part cible et part réelle sur 30 jours ; cadence cible par réseau ; propositions d'ajustement de Sage (Draft). Les piliers sont verrouillés en Suggest.
+- **Campaigns** : en tête, **Moments ahead** (Black Friday sans remise, première neige, dernière date de commande, première rando de l'année : raison chiffrée, piliers, idées pour Atlas, *Add to the calendar* / *Not this year*), puis les campagnes avec statut (`Plan to review` · `Live` · `Done`), objectif, progression, dates. Données : **Trail Week** live (24 nov – 7 déc, ralentit après un départ à 128 %), **Repair Friday** terminée avec bilan d'Iris, **Gift guide that lasts** à valider.
+- **New campaign brief** : champ libre + *More details (optional)* (produit, date de lancement, objectif et unité, budget, audience, réseaux cochés depuis la cadence). Sage réfléchit (« Reading your last 3 launches · Checking pillars and cadence · Splitting the work between agents ») et, si l'objectif chiffré ou la date manquent, pose la question (trois réponses en un clic, saisie libre, *Let Sage decide*). Un brief venu d'un autre agent ne pose pas de question : la campagne affiche « Sage assumed ».
+  - **Plan** : gabarit selon l'objectif (pré-commandes, commandes, revenu, inscriptions, demandes, abonnés), angles du produit, accroche de la saison, réseaux tirés de la cadence, un pilier par post ; objectif et KPI, messages, audience, frise des phases, posts par phase, *Who does what*, risques, budget.
+  - **Approve campaign** (désactivé avec la raison au-delà de 2 campagnes live) · **Request changes** (v2 qui applique chaque demande de la note et la liste au diff) · **Discard**.
+- **Campagne live** : progression et « % of trajectory », courbe plan vs réel qui avance avec les jours, ajustements de Sage (Apply / Decline, Undo au journal), **Campaign label** (posts d'Atlas, conversations de Nova), lien vers le calendrier. À la fin, **Recap by Sage, with Iris’s numbers** (objectif, réseau qui a porté, ajustements, coût par résultat) et une leçon en proposition.
+- **Pillars and cadence** : parts réelles sur 30 jours calculées depuis les posts d'Atlas, cible, écart ; *Edit pillars* (parts et descriptions, contrôle de Sage) ; cadence par semaine (7 derniers jours calculés, cibles à steppers journalisées) ; propositions de Sage (Apply / Decline, Undo).
 
 ### 6.7 Agents
 
@@ -374,10 +390,10 @@ Inspirations : Opus Clip (score de viralité, ClipAnything, auto-reframe, templa
 
 - **Médias réels** : 3 vidéos MP4 (footage libre de droits + voix off générée), transcript horodaté au mot, pistes `clean` (studio sound) et doublages FR/DE/ES/IT dans la même voix, posters et bandes de vignettes. Régénérés par `scripts/media/build.mjs`. Le live « Repair Friday » est affiché 52 min avec chapitres ; le fichier ne contient que les chapitres retenus.
 - **Onglets** `/video` (Clips) · `/video/sources` · `/video/brand`. Phrase de Juno en tête.
-- **Clips** : Ready to review (ligne : poster 9:16 et durée, hook, « Virality 87 », preuve chiffrée, réseaux, vidéo d'origine ; Review, Send to Atlas, Not now ▾ avec raisons), Being made (phase et progression), Later, Sent to Atlas (créneau), Published (vues et engagement). Sélection et « Send N to Atlas » avec un Undo. Filtre par vidéo.
-- **Sources** : chaîne surveillée (switchs « Clip new uploads » et « Clip recorded lives and webinars »), Paste a link (validation, un lien privé échoue avec la raison et Retry), Upload a file (fichier réel lu dans le navigateur pour la session ; le transcript est un échantillon et l'écran le dit). Fiche vidéo : lecteur, transcript avec les moments choisis et leur score, chapitres, **Find clips about…** (sujet, longueur, nombre → nouveaux clips trouvés dans le transcript).
-- **Éditeur pleine page** `/video/clips/:id` : transcript à gauche (mots cliquables, Delete / Restore, Fix spelling pour les sous-titres seulement, Change the words verrouillé et confirmé par Sam, Remove fillers, Remove pauses, Start earlier / End later), lecteur au centre (9:16, 1:1, 16:9, zones de sécurité), inspecteur à droite (Captions : 5 templates, police, taille, position, mots par ligne, couleur, emoji, capitales, langue, export `.srt` réel · Layout : Auto-track, Fill, Fit, Split, position du sujet · Brand : logo, barre de progression, carte hook, carte de fin, B-roll suggéré sur les mots, musique et ducking · Audio : studio sound avec « Hear the original », doublages, mots re-voisés · Post : score et raisons, « Why this moment » sourcé, hooks, légende par réseau avec la vérification Playbook, créneaux d'Atlas), timeline en bas (vidéo, sous-titres, B-roll déplaçable, musique, poignées de trim calées sur les mots, zoom), **Ask Juno** ancré (Shorter, Start with…, Remove the ums, Punchier captions, French version ; refus franc pour changer les mots de quelqu'un). Undo/Redo ⌘Z.
-- **Desk** : carte « N clips from … are ready » (Juno → Atlas) dont l'approbation envoie les clips au calendrier ; Good news quand un clip performe. Undo d'une décision du Desk retire aussi les posts.
+- **Clips** : Ready to review (ligne : couverture du clip et durée, hook, « Virality 87 », preuve chiffrée, réseaux, langues (FR DE), vidéo d'origine, et ce que Juno laisse à Sam : « 1 caption to fix », « Framing to check », « 2 language versions to review », « Held: Hugo is on screen without a signed release » ; Review, Send to Atlas, Not now ▾ avec raisons), Being made (phase et progression), Later, Sent to Atlas (créneau), Published (vues, engagement, rétention, chiffres d'Iris). Sélection et « Send N to Atlas » avec un Undo. Filtre par vidéo.
+- **Sources** : chaîne surveillée (switchs « Clip new uploads » et « Clip recorded lives and webinars »), Paste a link (validation, un lien privé échoue avec la raison et Retry ; le prototype ne peut pas ouvrir de lien : un échantillon est utilisé et l'écran le dit), Upload a file (fichier réel lu dans le navigateur pour la session ; le transcript est un échantillon et l'écran le dit). Fiche vidéo : lecteur, « n of 5 clips sent this week », transcript avec les moments choisis et leur score, chapitres, **Find clips about…** (sujet, longueur, nombre → nouveaux clips, chacun avec ses preuves : le moment, la tendance d'Echo qui recoupe, le clip publié le plus vu du pilier), **People on screen** (Hugo, autorisation signée ou non).
+- **Éditeur pleine page** `/video/clips/:id` : transcript à gauche (mots cliquables, Delete / Restore, Fix spelling pour les sous-titres seulement, mots mal entendus soulignés avec « Fix it », Change the words verrouillé et confirmé par Sam, Remove fillers, Remove pauses, Start earlier / End later), lecteur au centre avec un **sélecteur de version** (All · TikTok · Reels · Shorts · LinkedIn feed · Facebook : 9:16, 4:5, 1:1, 16:9, hauteur des sous-titres, zones de sécurité propres à chaque app, « Juno's version »), inspecteur à droite (Captions : 5 templates, police, taille, position, mots par ligne, couleur, emoji, capitales, langue, export `.srt` réel · Layout : note de cadrage selon le cran, Auto-track, Fill, Fit, Split, position du sujet · Brand : logo, barre de progression, carte hook, carte de fin, B-roll suggéré sur les mots, musique et ducking · Audio : studio sound avec « Hear the original », doublages (Listen, Approve en Draft), mots re-voisés · Post : motif de retenue et « Release is signed », score et raisons avec « Track record », « Why this moment » sourcé et clip comparable, hooks, **Cover** (3 cadres, texte, titre YouTube), légende par réseau avec la vérification Playbook, durée et version hors spec par réseau, label et campagne de Sage, créneaux d'Atlas), timeline en bas (vidéo, sous-titres, B-roll déplaçable, musique, poignées de trim calées sur les mots, zoom), **Ask Juno** ancré (Shorter, Start with…, Remove the ums, Punchier captions, Pick a better cover, French version ; refus franc pour changer les mots de quelqu'un). Undo/Redo ⌘Z.
+- **Desk** : carte « N clips from … are ready » (Juno → Atlas) dont l'approbation envoie les clips au calendrier ; carte « Fix … in N captions » en Draft ; Good news réelle quand un clip publié dépasse 1,5× la moyenne de son réseau. Undo d'une décision du Desk retire aussi les posts ou les corrections.
 
 ## 7. Proactivité simulée
 
@@ -386,7 +402,7 @@ Le prototype vit sans qu'on touche à rien.
 - **Moteur d'événements** : toutes les 25 à 40 s (cadence réglable), un agent produit un événement scripté. Si l'action correspondante est en Act, il devient une entrée du journal avec toast et Undo. Sinon, il devient une remontée qui arrive en haut de la bonne file avec une animation.
 - **Script** (au moins 20 événements, joués dans l'ordre puis en boucle avec des variantes) couvrant : nouvelle plainte, question produit, DM presse, avis 1 étoile, créateur qui mentionne la marque, pic de mentions négatives, baisse de prix chez Peakline, post viral chez Trailkind, anomalie de reach, post qui surperforme (boost ?), visuel manquant, code promo manquant, **demande de promotion** de Nova, **rétrogradation** proposée par Nova, ajustement de cadence par Sage, campagne Trail Week qui dépasse sa trajectoire, Claire qui répond, règle proposée pour le Playbook.
 - **Agents en pause** : leurs événements ne se produisent pas, et la pilule Running now l'indique.
-- **Vidéos** (événements `video` du script) : un nouvel upload YouTube passe par Transcribing · Finding moments · Reframing · Writing captions (~40 s), puis les clips arrivent. Suggest : Juno demande avant de découper ; Draft : carte Desk ; Act : clips faits seuls. Si l'envoi est en Act, Juno envoie elle-même les clips à 80+ (Undo au journal).
+- **Vidéos** (événements `video` du script) : un nouvel upload YouTube passe par Transcribing · Finding moments · Reframing · Writing captions (~40 s), puis les clips arrivent. Suggest : Juno demande avant de découper ; Draft : carte Desk ; Act : clips faits seuls. Si l'envoi est en Act, Juno envoie elle-même les clips à 80+ (Undo au journal). Événement « Juno · product names misheard in captions » : relecture des sous-titres des clips à revoir, selon le cran de Fix captions. Un clip envoyé passe Published à l'heure de son premier post (« Skip to tomorrow 08:00 » pour le provoquer).
 - **Idées proactives** (événements `idea` du script, dans le même moteur) : **flux continu** (un post d'Iris qui repart, une tendance d'Echo, une mention client : l'idée arrive en haut d'Ideas, datée et sourcée) ; **lot du jeudi** (« Ideas for next week », jusqu'à 6 idées qui peuvent rejoindre Plan review) ; **urgent → Desk** (fenêtre courte, ex. première neige : carte Needs you qui ouvre l'idée ; traitée d'un côté, elle disparaît de l'autre) ; **trou du calendrier** (jour à moins de 2 posts ou pilier sous la cible). Le battement de cœur fait expirer les idées à fenêtre et revenir les « Not now ».
 - **Le temps avance** : l'horloge de l'app part de 08:12 et avance avec le temps réel. « Skip to tomorrow 08:00 » (panneau modérateur) génère un nouveau brief et une nouvelle file.
 
@@ -418,10 +434,10 @@ Un module de données par domaine, typé. Toutes les dates sont relatives au « 
 - 30 posts dans le calendrier de la semaine courante et passée, 14 dans le plan proposé, 30 médias ;
 - 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
 - 4 concurrents, 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions, 8 tendances, 12 recherches ;
-- 3 campagnes, 4 piliers ;
+- 3 campagnes (1 live, 1 terminée, 1 à valider), 4 piliers, 6 cibles de cadence, 3 propositions, 4 temps forts ;
 - 25 règles de Playbook, 3 règles proposées, 20 faits ;
 - 120 entrées de journal ;
-- 3 vidéos (2 traitées au départ, 1 qui arrive), 8 clips dont 6 à relire, 1 programmé, 1 publié.
+- 3 vidéos (2 traitées au départ, 1 qui arrive), 8 clips dont 6 à relire, 1 programmé, 1 publié ; 5 mots mal entendus par le speech-to-text ; 1 client à l'écran sans autorisation (Hugo, GR20) ; une version par réseau, une couverture et un « Track record » par clip.
 
 Tous les textes sont crédibles, spécifiques et variés : pas de lorem ipsum, pas deux brouillons identiques, des noms et des handles réalistes, des chiffres cohérents entre les écrans (le reach du brief = celui d'Explore).
 

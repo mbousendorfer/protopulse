@@ -1,15 +1,21 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
-import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment } from '../../data/strategy'
+import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment, MOMENTS, MOMENT_LEAD, type Moment } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
+import { arriveIdeas, receivePosts, withdrawPosts } from '../publishing/slice'
+import { reduceInbox } from '../inbox/slice'
+import { writeCampaignReport } from '../insights/slice'
+import type { IdeaSeed } from '../../data/ideas'
+import { T } from '../../app/time'
 import { DAY, dayLabel } from '../../app/time'
 
-export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[] }
+/** `moments`: calendar moments Sage watches; added ones show in Atlas's calendar (`themesOf`). */
+export type StrategyState = { campaigns: Campaign[]; pillars: Pillar[]; cadence: Cadence[]; proposals: Proposal[]; moments: Moment[] }
 
 export const initialStrategy = (): StrategyState => ({
-  campaigns: structuredClone(CAMPAIGNS), pillars: structuredClone(PILLARS), cadence: structuredClone(CADENCE), proposals: structuredClone(PROPOSALS),
+  campaigns: structuredClone(CAMPAIGNS), pillars: structuredClone(PILLARS), cadence: structuredClone(CADENCE), proposals: structuredClone(PROPOSALS), moments: structuredClone(MOMENTS),
 })
 
 export type StrategyAction =
@@ -24,6 +30,8 @@ export type StrategyAction =
   | { type: 'strategy/cadence'; network: Network; target: number }
   | { type: 'strategy/propose'; proposal: Proposal }
   | { type: 'strategy/pillars'; pillars: Pillar[] }
+  | { type: 'strategy/moment'; id: string; add: boolean }
+  | { type: 'strategy/label'; id: string }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
 const campaign = (s: State, id: string) => s.strategy.campaigns.find(c => c.id === id)
@@ -42,10 +50,10 @@ declare module '../../app/types' {
     sage?: SageUndo
   }
 }
-export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[] }
+export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[]; moments?: Moment[]; ideas?: string[]; novaRule?: string }
 
 /** What a Sage Desk card changes when it's approved (or its first option picked). */
-export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange }
+export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange; moment?: string }
 declare module '../../app/types' {
   interface Handoff { sage?: SageCard }
 }
@@ -58,18 +66,9 @@ export const cardOf = (h: Handoff): SageCard | undefined => h.sage ?? SEED_CARDS
 
 /* ---------- Atlas's calendar ---------- */
 
-// ponytail: Sage writes Atlas's posts inline until Atlas exports its entry point
-// (requests/atlas-from-sage-campaign-posts.md); swap these two for receivePosts / withdrawPosts then.
-function toAtlas(s: State, posts: Post[]): State {
-  const ids = new Set(posts.map(p => p.id))
-  const keep = s.publishing.posts.filter(p => !ids.has(p.id) || p.status === 'published')
-  const kept = new Set(keep.map(p => p.id))
-  return { ...s, publishing: { ...s.publishing, posts: [...keep, ...posts.filter(p => !kept.has(p.id))] } }
-}
-function fromAtlas(s: State, ids: string[]): State {
-  const drop = new Set(ids)
-  return { ...s, publishing: { ...s.publishing, posts: s.publishing.posts.filter(p => !drop.has(p.id) || p.status === 'published') } }
-}
+// Atlas's entry point for campaign posts (requests/atlas-from-sage-campaign-posts-done.md).
+const toAtlas = (s: State, posts: Post[]) => receivePosts(s, posts, 'sage')
+const fromAtlas = (s: State, ids: string[]) => withdrawPosts(s, ids)
 
 /** When a campaign post goes out: its day, at Atlas's best slot for the network. */
 export function slotOf(c: Campaign, p: CPost): number {
@@ -142,13 +141,16 @@ function approveCampaign(s: State, id: string, opts: { card?: Handoff; why?: str
   const cards = s.handoffs.filter(h => h.topic === 'Campaign plan' && h.ref === id)
   let next = updateCampaign(s, id, x => ({ ...x, status: 'live', diff: undefined, tasks: x.tasks.map((t, i) => (i < 2 && t.status === 'todo' ? { ...t, status: 'doing' } : t)) }))
   next = toAtlas({ ...next, handoffs: next.handoffs.filter(h => !cards.includes(h)) }, posts)
+  const hadRule = !!novaRuleFor(next, c)
+  next = askNovaToLabel(next, c)
+  const rule = hadRule ? undefined : novaRuleFor(next, c)?.id
   const byAgent = c.tasks.reduce<Record<string, number>>((m, t) => ({ ...m, [t.agent]: (m[t.agent] ?? 0) + 1 }), {})
   const tasks = Object.entries(byAgent).filter(([a]) => a !== 'atlas').map(([a, n]) => `${n} task${n > 1 ? 's' : ''} to ${cap(a)}`)
   return pushLog(next, {
     agent: 'sage', text: `Launched ${c.name}: ${posts.length} post${posts.length === 1 ? '' : 's'} in Atlas’s calendar${tasks.length ? `, ${list(tasks)}` : ''}`,
     status: opts.why ? 'done' : 'approved', reason: opts.why ?? 'You approved the campaign', link: `/strategy/campaigns/${id}`,
     undoMinutes: opts.card ? undefined : opts.why ? 30 : 10, restore: opts.card ? undefined : cards,
-    sage: { card: opts.card?.id, campaigns: [c], posts: { added: posts.map(p => p.id), before } },
+    sage: { card: opts.card?.id, campaigns: [c], posts: { added: posts.map(p => p.id), before }, novaRule: rule },
   })
 }
 
@@ -162,6 +164,10 @@ function reverse(s: State, u: SageUndo): State {
   if (u.posts) next = toAtlas(fromAtlas(next, u.posts.added), u.posts.before)
   if (u.targets) next = patch(next, u.targets)
   if (u.proposals) next = patch(next, { proposals: u.proposals })
+  if (u.moments) next = patch(next, { moments: u.moments })
+  if (u.novaRule) next = reduceInbox(next, { type: 'inbox/ruleDelete', id: u.novaRule })
+  // ponytail: Atlas's ideas from a moment leave his list by key; swap for an Atlas withdraw when he exposes one.
+  if (u.ideas) next = { ...next, publishing: { ...next.publishing, ideas: next.publishing.ideas.filter(i => !u.ideas!.includes(i.key)) } }
   return next
 }
 
@@ -304,6 +310,8 @@ export function endCampaign(s: State, id: string): State {
   const { recap, lesson } = recapOf(s, c)
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
   let next = updateCampaign(s, id, () => ({ ...c!, status: 'done', recap: c!.recap ?? recap, recapBy: c!.recap ? c!.recapBy : 'sage' }))
+  // Iris writes the full report (Report Studio), which “Full recap” opens.
+  if (!c.reportId) next = updateCampaign(writeCampaignReport(next, campaign(next, id)!), id, x => ({ ...x, reportId: `campaign-${id}` }))
   if (lesson) next = patch(next, { proposals: [lesson, ...next.strategy.proposals] })
   next = pushHandoff(next, {
     agent: 'sage', kind: 'news', group: pct >= 100 ? 'good' : 'look', urgency: 'week', topic: 'Campaign recap', ref: id, chain: ['iris', 'sage'],
@@ -344,7 +352,9 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       // A decline is taken back here; an applied change is undone from the journal.
       return a.adj
         ? updateCampaign(s, a.id, x => ({ ...x, adjustments: x.adjustments.map(y => (y.id === a.adj && y.status === 'declined' ? { ...y, status: 'proposed' } : y)) }))
-        : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
+        : s.strategy.moments.some(m => m.id === a.id)
+          ? patch(s, { moments: s.strategy.moments.map(m => (m.id === a.id && m.status === 'skipped' ? { ...m, status: undefined } : m)) })
+          : patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id && x.status === 'declined' ? { ...x, status: 'proposed' } : x)) })
     case 'strategy/proposal': {
       const p = s.strategy.proposals.find(x => x.id === a.id)
       if (!p || p.status !== 'proposed') return s
@@ -352,6 +362,14 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
     }
+    case 'strategy/label': {
+      const c = campaign(s, a.id)
+      if (!c || novaRuleFor(s, c)) return s
+      const next = askNovaToLabel(s, c)
+      return pushLog(next, { agent: 'sage', text: `Asked Nova to label ${c.name} conversations: ${labelStats(next, c).convs} so far`, status: 'done', reason: 'You asked for it', link: `/strategy/campaigns/${c.id}` })
+    }
+    case 'strategy/moment':
+      return a.add ? addMoment(s, a.id, {}) : skipMoment(s, a.id)
     case 'strategy/pillars': {
       const check = pillarCheck(s, a.pillars)
       if (!check.ok) return s
@@ -438,6 +456,7 @@ export function onResolveStrategy(s: State, h: Handoff, d: Decision): State {
   const yes = d.kind === 'approve' || d.kind === 'trial' || (d.kind === 'option' && d.index === 0)
   if (k?.adjust && k.campaign) return yes ? applyAdjust(s, k.campaign, k.adjust, true, h) : d.kind === 'reject' ? applyAdjust(s, k.campaign, k.adjust, false, h) : s
   if (k?.goal && k.campaign) return yes ? setGoal(s, k.campaign, k.goal, h) : s
+  if (k?.moment) return yes ? addMoment(s, k.moment, { card: h }) : d.kind === 'reject' || (d.kind === 'option' && d.index === 1) ? skipMoment(s, k.moment) : s
   if (k?.change) {
     if (!yes) return s
     const record: Proposal = { id: uid('pr'), text: h.title, why: h.context, status: 'accepted', change: k.change }
@@ -525,4 +544,84 @@ export function pillarCheck(s: State, draft: Pillar[]): { ok: boolean; total: nu
     return `${p.name} ${p.target}% is about ${n} ${d > 0 ? 'more' : 'fewer'} post${n === 1 ? '' : 's'} a week`
   })
   return { ok: total === 100 && !draft.some(p => p.target < 0 || !Number.isFinite(p.target)) && changes.length > 0, total, issues, changes, impact }
+}
+
+/* ---------- Calendar moments ---------- */
+
+/** Moments added to the calendar, for Atlas's calendar band. */
+export const themesOf = (s: State) => s.strategy.moments.filter(m => m.status === 'added').map(({ id, name, start, end, why }) => ({ id, name, start, end, why }))
+/** The next moment Sage should raise: undecided, starting within 3 weeks. */
+export const nextMoment = (s: State, t = now(s)) => s.strategy.moments.find(m => !m.status && m.start - MOMENT_LEAD <= t && m.end > t && !s.handoffs.some(h => cardOf(h)?.moment === m.id))
+const dateRange = (m: Moment) => (dateLabel(m.start) === dateLabel(m.end) ? dateLabel(m.start) : `${dateLabel(m.start)}–${dateLabel(m.end)}`)
+
+/** Atlas's ideas for a moment, through his entry point for ideas. */
+const momentSeeds = (m: Moment): IdeaSeed[] => m.ideas.map((x, n) => ({
+  key: `${m.id}-${n + 1}`, kind: 'post', title: x.title, why: m.why, confidence: 78, pillar: x.pillar, networks: [x.network], action: 'atlas-plan',
+  copy: { [x.network]: x.copy }, media: x.media, day: Math.round((m.start - T(0, 0, 0)) / DAY), topic: m.id,
+  sources: [{ type: 'calendar', agent: 'sage', label: m.name, proof: m.why, link: '/strategy' }],
+}))
+
+/** Sage raises a moment: a Desk card on Suggest and Draft, added on its own on Act. */
+export function raiseMoment(s: State, m: Moment): State {
+  if (actionOf(s, 'sage', 'sage-moments')?.autonomy === 'act') return addMoment(s, m.id, { why: 'Calendar moments, set to Act' })
+  return pushHandoff(s, {
+    agent: 'sage', kind: 'decision', urgency: 'week', topic: 'Calendar moment', action: 'sage-moments', ref: m.id, group: 'look',
+    title: `${m.name}: ${dateRange(m)}`, context: m.why, why: 'Calendar moments are set to Suggest: you decide what goes in the calendar.', confidence: 80, link: '/strategy',
+    preview: { type: 'plan', title: `Ideas for Atlas · ${m.pillars.join(', ')}`, lines: m.ideas.map(x => `${NETWORK_LABEL[x.network]}: ${x.title}`) },
+    options: [{ label: 'Add to the calendar', recommended: true }, { label: 'Not this year' }],
+    sources: [{ label: m.why, from: m.source }],
+    sage: { moment: m.id },
+  })
+}
+
+/** A moment goes in the calendar and Atlas gets its ideas. Undo takes both back. */
+function addMoment(s: State, id: string, o: { card?: Handoff; why?: string }): State {
+  const m = s.strategy.moments.find(x => x.id === id)
+  if (!m || m.status === 'added') return s
+  const before = s.strategy.moments
+  const cards = s.handoffs.filter(h => h.id !== o.card?.id && cardOf(h)?.moment === id)
+  let next = patch({ ...s, handoffs: s.handoffs.filter(h => !cards.includes(h)) }, { moments: before.map(x => (x.id === id ? { ...x, status: 'added' } : x)) })
+  const seeds = momentSeeds(m)
+  next = arriveIdeas(next, seeds, 'continuous', 'sage')
+  return pushLog(next, {
+    agent: 'sage', text: `Added “${m.name}” (${dateRange(m)}) to the calendar, with ${seeds.length} ideas for Atlas`, status: o.why ? 'done' : 'approved', reason: o.why ?? 'You added it',
+    link: '/strategy', undoMinutes: o.card ? undefined : o.why ? 30 : 10, restore: o.card ? undefined : cards,
+    sage: { card: o.card?.id, moments: before, ideas: seeds.map(x => x.key) },
+  })
+}
+
+function skipMoment(s: State, id: string): State {
+  const m = s.strategy.moments.find(x => x.id === id)
+  if (!m || m.status) return s
+  const next = patch({ ...s, handoffs: s.handoffs.filter(h => cardOf(h)?.moment !== id) }, { moments: s.strategy.moments.map(x => (x.id === id ? { ...x, status: 'skipped' } : x)) })
+  return pushLog(next, { agent: 'sage', text: `Left “${m.name}” out of the calendar this year`, status: 'rejected', reason: 'Your call', link: '/strategy' })
+}
+
+/* ---------- Campaign labels: Atlas's posts carry it, Nova labels the conversations ---------- */
+
+/** What Nova matches to label a campaign's conversations: its name, its hashtags, its product. */
+export function labelWords(c: Campaign): string[] {
+  const tags = c.messages.flatMap(m => m.match(/#\w+/g) ?? [])
+  return [...new Set([c.name.toLowerCase(), ...tags.map(t => t.toLowerCase()), ...(c.name.split(' ').length > 2 ? [c.name.split(' ').slice(0, 2).join(' ').toLowerCase()] : [])])]
+}
+export const novaRuleFor = (s: State, c: Campaign) => s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === c.name)
+
+/** Sage asks Nova, through her own Inbox rules, to label the campaign's conversations, now and as they come. */
+export function askNovaToLabel(s: State, c: Campaign): State {
+  if (novaRuleFor(s, c)) return s
+  let next = s.inbox.labels.includes(c.name) ? s : reduceInbox(s, { type: 'inbox/labelAdd', name: c.name })
+  next = reduceInbox(next, { type: 'inbox/ruleAdd', rule: { words: labelWords(c), then: { op: 'label', value: c.name } }, applyNow: true, origin: `Sage · ${c.name} campaign` })
+  return { ...next, notice: s.notice }
+}
+
+/** The campaign's label across agents: Atlas's posts and Nova's conversations that carry it. */
+export function labelStats(s: State, c: Campaign) {
+  const posts = s.publishing.posts.filter(p => p.campaignId === c.id || p.labels?.includes(c.name) || p.campaign === c.name)
+  const convs = s.inbox.convs.filter(x => x.labels?.includes(c.name))
+  const latest = [...convs].sort((a, b) => b.at - a.at)[0]
+  return {
+    posts: posts.length, published: posts.filter(p => p.status === 'published').length, convs: convs.length,
+    latest: latest && { author: latest.author, text: latest.messages.find(m => m.from === 'them')?.text ?? '' },
+    rule: novaRuleFor(s, c),
+  }
 }

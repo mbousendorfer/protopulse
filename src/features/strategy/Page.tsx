@@ -8,7 +8,7 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
+import { labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -18,6 +18,12 @@ const STATUS: Record<CampaignStatus, { label: string; tone?: 'ok' | 'caution' | 
   brief: { label: 'Brief' }, review: { label: 'Plan to review', tone: 'caution' }, live: { label: 'Live', tone: 'ok' }, done: { label: 'Done' },
 }
 const fmtDate = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+/** “28 Nov”, “10–14 Dec”, “30 Dec – 2 Jan”. */
+const fmtRange = (a: number, b: number) => {
+  const [x, y] = [new Date(a), new Date(b)]
+  if (x.toDateString() === y.toDateString()) return fmtDate(a)
+  return x.getMonth() === y.getMonth() ? `${x.getDate()}–${fmtDate(b)}` : `${fmtDate(a)} – ${fmtDate(b)}`
+}
 const fmtGoal = (c: Campaign, v: number) => (c.goal.label.includes('€') ? `€${v.toLocaleString('en-GB')}` : v.toLocaleString('en-GB'))
 
 export default function StrategyPage() {
@@ -49,8 +55,10 @@ function Campaigns() {
   const { s } = useStore()
   const order: CampaignStatus[] = ['review', 'live', 'brief', 'done']
   const list = [...s.strategy.campaigns].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
-  if (!list.length) return <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} />
   return (
+    <div className="stack lg">
+    <Moments />
+    {!list.length ? <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} /> : (
     <div className="campaigns">
       {list.map(c => {
         const pct = Math.round((c.goal.current / c.goal.target) * 100)
@@ -74,6 +82,40 @@ function Campaigns() {
         )
       })}
     </div>
+    )}
+    </div>
+  )
+}
+
+/** Dates worth planning for. Sage raises each one 3 weeks before; added ones show in Atlas's calendar. */
+function Moments() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const list = s.strategy.moments.filter(m => m.end > now)
+  if (!list.length) return null
+  return (
+    <section className="card">
+      <div className="card-head moments-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
+      <ul className="rows">
+        {list.map(m => (
+          <li key={m.id} className="moment">
+            <span className="mono faint moment-date">{fmtRange(m.start, m.end)}</span>
+            <div className="moment-body">
+              <b>{m.name}</b>
+              <p className="muted">{m.why} <span className="faint">{m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</span></p>
+            </div>
+            {m.status === 'added' ? <Pill tone="ok">In the calendar</Pill>
+              : m.status === 'skipped' ? <Reopen label="Not this year" onUndo={() => d({ type: 'strategy/reopen', id: m.id })} />
+              : (
+                <div className="row nowrap">
+                  <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add to the calendar</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
+                </div>
+              )}
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 
@@ -402,6 +444,8 @@ function CampaignView() {
         </div>
       </section>
 
+      {c.status !== 'review' && <LabelCard c={c} />}
+
       <section className="card pad">
         <div className="section-title">Who does what <span className="faint">· drag a task to another agent, or use its menu</span></div>
         <DelegateBoard c={c} />
@@ -418,6 +462,23 @@ function CampaignView() {
         <p className="muted">The plan and its Desk card go away. Sage keeps the brief in the journal.</p>
       </Modal>
     </div>
+  )
+}
+
+/** The campaign's label, shared by Atlas's posts and Nova's conversations. */
+function LabelCard({ c }: { c: Campaign }) {
+  const { s, d } = useStore()
+  const st = labelStats(s, c)
+  return (
+    <section className="card pad stack">
+      <div className="section-title flush">Campaign label <span className="faint">· shared by Atlas and Nova</span></div>
+      <p className="row tight"><Pill>{c.name}</Pill><span>{st.posts} post{st.posts === 1 ? '' : 's'} in Atlas’s calendar ({st.published} published) · {st.convs} conversation{st.convs === 1 ? '' : 's'} in the Inbox</span></p>
+      {st.latest && <p className="muted">Latest: {st.latest.author}, “{st.latest.text}”</p>}
+      {st.rule
+        ? <p className="faint">Nova labels every new conversation that mentions {labelWords(c).map(w => `“${w}”`).join(', ')}.</p>
+        : <div className="row"><Btn size="sm" onClick={() => d({ type: 'strategy/label', id: c.id })}>Ask Nova to label conversations</Btn><span className="faint">Through an Inbox rule you can edit or undo.</span></div>}
+      <div className="row tight"><Link to="/publishing/calendar" className="btn sm ghost">Posts in the calendar</Link><Link to={`/inbox?label=${encodeURIComponent(c.name)}`} className="btn sm ghost">Conversations in the Inbox</Link></div>
+    </section>
   )
 }
 

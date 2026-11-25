@@ -49,3 +49,15 @@ test('Iris: Atlas reads her best time; a TikTok post lands on Thursday 18:30', (
   const i = intentDef('post')!.parse('write a tiktok post about the ridge', { raw: '' }) as { slot: string }
   expect(i.slot).toBe('Thu 27, 18:30')
 })
+
+test('Sage: a new pillar works everywhere Atlas reads one, through its family', async () => {
+  const { pillarFamily } = await import('../../data/publishing')
+  const { variantsOf } = await import('./copilot')
+  const { pickVisual } = await import('./visuals')
+  expect(pillarFamily('Gift ideas')).toBe('Gear that lasts')
+  expect(pillarFamily('Repair & care')).toBe('Repair & care')
+  const v = variantsOf('A gift that lasts.', { pillar: 'Gift ideas', network: 'instagram', words: [], rules: [] })
+  expect(v[0].text.startsWith('Would you still trust it')).toBe(true)
+  const s = initialState()
+  expect(pickVisual({ ...s.publishing.posts[0], pillar: 'Gift ideas', text: 'Ridge for Christmas' }, (await import('../../data/publishing')).MEDIA, now(s))).toBeDefined()
+})

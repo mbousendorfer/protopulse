@@ -2,8 +2,10 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { COMPETITORS, CREATOR_INFO, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
 import type { Network } from '../../app/types'
+import { NET_SHARE, POSTS } from '../../data/insights'
+import { lastWeekOf } from '../strategy/slice'
 import type { Watched } from './slice'
 import type { Alert } from '../insights/alerts'
 
@@ -245,3 +247,60 @@ export function creatorsOf(s: State): Creator[] {
   }).sort((a, b) => Number(b.fit) - Number(a.fit) || b.followers - a.followers)
 }
 export const creatorOf = (s: State, handle: string) => creatorsOf(s).find(c => c.handle === handle)
+
+/* ---------- Benchmark per network ---------- */
+
+export type NetRow = NetStat & { id: string; name: string; us: boolean; rank: number }
+
+/** One competitor's numbers on a network: seeded for the four, split across their accounts for one you added. */
+function netStat(s: State, w: Watched, n: Network): NetStat | undefined {
+  const seededNet = COMP_NETWORKS[w.id as keyof typeof COMP_NETWORKS]
+  if (seededNet) return seededNet[n]
+  if (!w.accounts.some(a => a.network === n) || !competitorReady(s, w)) return
+  const c = generatedCompetitor(w)
+  return { followers: Math.round(c.followers / w.accounts.length), perWeek: Math.max(1, Math.round(c.cadence / w.accounts.length)), er: c.er }
+}
+
+/** Fernway's own numbers come from Iris (followers share, engagement) and Atlas's posts (posts last 7 days). */
+const ours = (s: State, n: Network): NetStat => ({ followers: Math.round(FERNWAY_ROW.followers * NET_SHARE[n].share), perWeek: lastWeekOf(s)[n] ?? 0, er: NET_SHARE[n].er })
+
+/** Networks where at least one watched competitor posts. */
+export const benchNetworks = (s: State): Network[] =>
+  (['instagram', 'tiktok', 'linkedin', 'facebook', 'youtube', 'x'] as Network[]).filter(n => s.listening.watch.some(w => w.tracking && netStat(s, w, n)))
+
+/** Fernway and the watched competitors on one network, ranked by engagement rate. */
+export function networkRows(s: State, n: Network): NetRow[] {
+  const rows = [{ id: 'fernway', name: 'Fernway', us: true, ...ours(s, n) }, ...s.listening.watch.filter(w => w.tracking).flatMap(w => { const x = netStat(s, w, n); return x ? [{ id: w.id, name: w.name, us: false, ...x }] : [] })]
+  return rows.sort((a, b) => b.er - a.er).map((r, i) => ({ ...r, rank: i + 1 }))
+}
+
+/** Our best post and theirs on a network. */
+export const ourTop = (n: Network) => POSTS.filter(p => p.network === n).sort((a, b) => b.er - a.er)[0]
+export const theirTop = (n: Network, id: string) => TOP_POSTS.filter(p => p.network === n && p.competitor === id).sort((a, b) => b.er - a.er)[0]
+
+/** Echo's reading of a network: who leads, why, what to do. Only numbers from networkRows. */
+export function networkRead(s: State, n: Network, rival?: string) {
+  const rows = networkRows(s, n)
+  const us = rows.find(r => r.us)!
+  const lead = rows[0]
+  const them = rows.find(r => r.id === rival) ?? (lead.us ? rows[1] : lead)
+  if (!them) return { text: `No competitor I watch posts on ${netLabel(n)}.`, them: undefined }
+  const top = theirTop(n, them.id)
+  const often = them.perWeek >= us.perWeek * 2 && us.perWeek > 0 ? ` They post ${Math.round(them.perWeek / us.perWeek)}× more often (${them.perWeek} a week, you ${us.perWeek}).` : ` They post ${them.perWeek} a week, you ${us.perWeek}.`
+  const head = them.er > us.er
+    ? `${them.name} beats you on ${netLabel(n)}: ${them.er}% engagement against your ${us.er}%, rank ${them.rank} to your ${us.rank}.`
+    : `You beat ${them.name} on ${netLabel(n)}: ${us.er}% engagement against ${them.er}%, rank ${us.rank} to their ${them.rank}.`
+  return { text: `${head}${often}${top ? ` Their best: “${top.title}” (${top.views} views, ${top.format.toLowerCase()}). ${top.takeaway}` : ''}`, them }
+}
+const NET_LABEL: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
+export const netLabel = (n: Network) => NET_LABEL[n] ?? n
+
+/* ---------- Seen / unseen ---------- */
+
+/** What needs a human: negative, at risk or a question, and nobody answered it yet. Echo files the rest on her own. */
+export const needsYou = (s: State, m: Mention) =>
+  !s.listening.mentions[m.id] && (sentimentOf(s, m) === 'negative' || !!m.risk || m.text.includes('?'))
+/** Seen: you opened it or marked it, it came before your last brief, or Echo handled it alone. */
+export const seenOf = (s: State, m: Mention) => !!s.listening.seen[m.id] || m.at <= s.brief.since || !needsYou(s, m)
+/** The Mentions badge: unseen mentions that need you. */
+export const unseenNeeds = (s: State, ms = visibleMentions(s)) => ms.filter(m => !seenOf(s, m))

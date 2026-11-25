@@ -24,3 +24,13 @@
 - 25/11/2026 · F1 search view · ratios (négatif, auteurs, reach) nommés « latest N filed » · les présenter comme des totaux 7 j · le flux est un échantillon, le libellé le dit
 - 25/11/2026 · F5 créateurs · nouvelle action `echo-creators` (safe, Draft) : Suggest note, Draft carte à trois choix, Act met sur la liste avec Undo ; le contact (DM de Nova) reste toujours une carte à approuver · Act qui envoie le DM · contacter un créateur engage la marque
 - 25/11/2026 · F5 créateurs · liste dérivée du flux (auteurs @ ≥ 5 000 personnes) + fiches seed pour 5 créateurs ; « fit » = positif, ≥ 10k, pas signé chez un concurrent · liste figée · même règle à l'écran, en ⌘K et en Chat ; la carte seed `h-creator` « Add her to the creator list » remplit maintenant la vraie liste
+- 25/11/2026 · Pitch F3 Requête avancée et filtrage · **Later** · – · réponse de l'humain
+- 25/11/2026 · Pitch F7 Benchmark par réseau · **Go** (tel que pitché) · – · réponse de l'humain
+- 25/11/2026 · Pitch F8 Tags et tagging auto · **Go** (tel que pitché) · – · réponse de l'humain
+- 25/11/2026 · Pitch F9 Rapport Listening · **Later** · – · réponse de l'humain
+- 25/11/2026 · F6 Mention → Inbox · skipped sans pitch · – · Nova affiche déjà en conversation (`virtualConvs`) toute carte de réponse née d'une mention ; rien à construire côté Echo
+- 25/11/2026 · F7 benchmark par réseau · chiffres de Fernway lus chez Iris (`NET_SHARE`, `POSTS`) et chez Sage (`lastWeekOf`, posts réels des 7 derniers jours), concurrents seedés par réseau (totaux = table All) · demande à Iris · le contrat existe déjà en lecture, pas besoin d'attendre ; rang par taux d'engagement · rang par abonnés · c'est la question que pose le SMM (« who works better »)
+- 25/11/2026 · F8 tags · cinq règles seed (produit, créateur, presse, mots « support », concurrent) appliquées au flux seed ; les nouvelles mentions passent par `echo-file` (Act : tag + Undo, Draft : carte « Tag N new mentions? », Suggest : boutons « + tag » sur la mention) · tags calculés à l'affichage · un tag d'Echo doit pouvoir s'annuler et s'approuver ; une règle créée ou modifiée par Sam s'applique tout de suite (c'est sa demande), avec Undo
+- 25/11/2026 · Pitch F10 Vu / non vu · **Go** (tel que pitché) · – · réponse de l'humain
+- 25/11/2026 · F10 vu / non vu · « needs you » = négatif, à risque ou question, sans réponse ; vu = ouvert, marqué, antérieur au dernier brief, ou traité seul par Echo ; non vu = graisse (convention Inbox) · pastille de couleur · le badge de l'onglet veut dire « needs you » (décision prise)
+- 25/11/2026 · ⌘K concurrent · réponse lue dans les événements ouverts (même état que Listening › Competitors) · texte Peakline figé · « les chiffres cités en ⌘K sont ceux de l'écran »

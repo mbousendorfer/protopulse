@@ -4,6 +4,7 @@ import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/cor
 import { DAY, hhmm } from '../../app/time'
 import type { Post, Queue } from '../../data/publishing'
 import { withFormat } from './formats'
+import { isQuiet } from './notes'
 
 const MIN = 60_000
 const monday = (t: number) => { const d = new Date(t); const dow = (d.getDay() + 6) % 7; return new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow).getTime() }
@@ -49,7 +50,7 @@ export function fillQueues(s: State, opts: { queue?: string; days?: number; from
   for (const q of queues) {
     const taken: string[] = []
     for (const at of occurrences(q, from, from + (opts.days ?? 14) * DAY)) {
-      if (at <= now(s) || inSlot(next.publishing.posts, q, at)) continue
+      if (at <= now(s) || inSlot(next.publishing.posts, q, at) || isQuiet(next.publishing.notes ?? [], at)) continue
       const text = nextCopy(q, next.publishing.posts, taken)
       taken.push(text)
       const post = withFormat({ id: uid('p'), network: q.network, at, text, media: q.media, pillar: q.pillar, author: 'atlas', queue: q.id, labels: [q.name], status: level === 'act' ? 'scheduled' : 'needs', note: `${q.name} queue` })

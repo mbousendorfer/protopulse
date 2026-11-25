@@ -2,7 +2,16 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 import { bestTime } from '../features/insights/metrics'
 
-export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** The four pillars Fernway started with. Tables keyed by pillar use these; any other pillar falls back to its family (`pillarFamily`). */
+export type BasePillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** Pillars are Sage's and can be added or renamed (requests/atlas-from-sage-open-pillars.md). */
+export type Pillar = BasePillar | (string & {})
+const BASES: BasePillar[] = ['Gear that lasts', 'Trail stories', 'Repair & care', 'Community']
+/** The base pillar a new or renamed one belongs to, from its name, until Sage exposes `pillarBase`. */
+export function pillarFamily(p: Pillar): BasePillar {
+  if ((BASES as string[]).includes(p)) return p as BasePillar
+  return /repair|care|fix|workshop/i.test(p) ? 'Repair & care' : /gear|product|gift|kit|shop/i.test(p) ? 'Gear that lasts' : /community|people|customer|ugc|team/i.test(p) ? 'Community' : 'Trail stories'
+}
 export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused' | 'unapproved'
 
 export type Post = {
@@ -19,7 +28,7 @@ export type Post = {
   campaignId?: string
   /** Shared contract for every agent; no UI yet. */
   labels?: string[]
-  link?: { url: string; utm?: Record<string, string> }
+  link?: { url: string; utm?: Record<string, string>; short?: string }
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
   /** Published as the first comment, on networks that allow it. */
   firstComment?: string
@@ -33,6 +42,8 @@ export type Post = {
   comments?: { from: 'atlas' | 'claire' | 'you'; text: string; at: number }[]
   /** Why the network refused it, while it is Failed. */
   failure?: { at: number; text: string }
+  /** The profile it goes out on; without it, the network's main Fernway account (see publishing/accounts.ts). */
+  account?: string
   /** The queue whose slot this post fills. */
   queue?: string
   /** Held for something Sam said they'd provide. */
@@ -70,9 +81,9 @@ export const POSTS: Post[] = [
   P('p-05', 'instagram', -6, 18, 30, 'Storm Jacket vs. a garden hose. Spoiler: you stay dry.', 'Gear that lasts', 'jacket', st(26100, 4.6)),
   P('p-06', 'youtube', -6, 17, 0, 'How to adjust the Ridge back system in 30 seconds.', 'Gear that lasts', 'pack', st(9800, 5.2)),
   P('p-07', 'tiktok', -5, 18, 30, 'Lac Blanc at 5am. Worth every step.', 'Trail stories', 'sunrise', st(41000, 5.9)),
-  P('p-08', 'instagram', -5, 12, 0, 'Inside the Annecy workshop: one zip, four minutes, one bag saved.', 'Repair & care', 'workshop', st(12800, 3.1)),
+  P('p-08', 'instagram', -5, 12, 0, 'Inside the Annecy workshop: one zip, four minutes, one bag saved.', 'Repair & care', 'workshop', { ...st(12800, 3.1), account: 'ig-repair' }),
   P('p-09', 'x', -4, 12, 0, 'We repair every Fernway bag for free, forever. Yes, even the old ones.', 'Repair & care', undefined, st(3100, 1.8)),
-  P('p-10', 'instagram', -3, 10, 0, 'Sunday reset: how to clean your jacket the right way.', 'Repair & care', 'rain', st(14900, 3.8)),
+  P('p-10', 'instagram', -3, 10, 0, 'Sunday reset: how to clean your jacket the right way.', 'Repair & care', 'rain', { ...st(14900, 3.8), account: 'ig-repair' }),
   P('p-11', 'tiktok', -3, 18, 30, 'Packing for a 2-day hut trip in 20 seconds.', 'Trail stories', 'pack', st(9200, 2.9)),
   P('p-12', 'facebook', -2, 19, 0, 'Meet Léa: 6 trips, one Ridge, zero regrets.', 'Community', 'trail', st(8800, 2.6)),
   // This week
@@ -94,7 +105,7 @@ export const POSTS: Post[] = [
   P('p-25', 'instagram', 4, 10, 0, 'Sunrise at Lac Blanc by @julien_trail.', 'Community', 'lake', { campaign: 'Trail Week' }),
   P('p-sale', 'facebook', 4, 16, 0, 'Weekend sale: 15% off bottles with code [code] until Sunday.', 'Gear that lasts', 'bottle', { status: 'needs', handoff: 'h-code', note: 'Atlas needs the promo code.' }),
   P('p-27', 'tiktok', 4, 18, 30, 'Bottle drop test, part 2: 5 metres.', 'Gear that lasts', 'bottle'),
-  P('p-28', 'instagram', 5, 11, 0, 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'Repair & care', 'jacket'),
+  P('p-28', 'instagram', 5, 11, 0, 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'Repair & care', 'jacket', { account: 'ig-repair' }),
   // Drafts
   P('p-d1', 'instagram', 3, 12, 0, 'Gift guide: one Fernway piece for every kind of hiker.', 'Gear that lasts', 'fleece', { status: 'draft' }),
   P('p-d2', 'linkedin', 6, 8, 30, 'Why we say no to Black Friday, again.', 'Repair & care', 'workshop', { status: 'draft', author: 'you' }),
@@ -133,7 +144,7 @@ export const PLAN_B: PlanItem[] = [
   I('n-b08', 3, '18:30', 'tiktok', 'Morning stove ritual at 2,000 m, Trail Week edition.', 'Recycled', 'Recycled: “Morning routine” got 41k views in October.', 'Trail stories', 'stove'),
   I('n-b09', 4, '08:00', 'instagram', 'Story quiz: which knot holds a tarp in the wind?', 'New', 'Quizzes get 2.4× the taps of plain stories on your account.', 'Community', 'map'),
   I('n-b10', 4, '18:30', 'tiktok', 'Storm Jacket vs. a garden hose, 15-second cut.', 'Recycled', 'Recycled: 26k reach on Instagram, TikTok never saw it.', 'Gear that lasts', 'jacket'),
-  I('n-b11', 5, '10:00', 'instagram', 'Camille’s bivouac above Chamonix, in her words.', 'New', 'Creator photo licensed until March (Media).', 'Community', 'tent'),
+  I('n-b11', 5, '10:00', 'instagram', 'Camille’s bivouac above Chamonix, in her words.', 'New', 'Creator photo licensed until December (Media).', 'Community', 'tent'),
   I('n-b12', 5, '16:00', 'facebook', 'Winter hiking questions? Drop them below, our guides answer on Monday.', 'New', 'Community pillar: question posts get 3× the comments on Facebook.', 'Community', 'snow'),
   I('n-b13', 6, '11:00', 'instagram', 'Sunday reset: re-proofing your Storm Jacket in 3 steps.', 'New', 'Repair & care pillar, Sunday slot performs well.', 'Repair & care', 'jacket'),
   PLAN[13],
@@ -160,7 +171,7 @@ export const MEDIA: Media[] = [
   { id: 'md-07', name: 'workshop', title: 'Annecy repair workshop', tags: ['Repair', 'Behind the scenes'], rights: 'Fernway', used: 3, added: '14 Oct' },
   { id: 'md-08', name: 'sunrise', title: 'Col de la Forclaz, 6am', tags: ['Landscape'], rights: 'Fernway', used: 2, added: '2 Nov' },
   { id: 'md-09', name: 'trail', title: 'GR5 forest section', tags: ['Landscape', 'Trail'], rights: 'Fernway', used: 1, added: '18 Oct' },
-  { id: 'md-10', name: 'tent', title: 'Bivouac above Chamonix', tags: ['Camp'], rights: 'Creator · @camille.outdoors, licensed until Mar 2026', used: 1, added: '6 Nov' },
+  { id: 'md-10', name: 'tent', title: 'Bivouac above Chamonix', tags: ['Camp'], rights: 'Creator · @camille.outdoors, licensed until Dec 2025', used: 1, added: '6 Nov' },
   { id: 'md-11', name: 'camp', title: 'Camp at golden hour', tags: ['Camp', 'Landscape'], rights: 'Fernway', used: 0, added: '21 Nov' },
   { id: 'md-12', name: 'ridge', title: 'GR20 ridge line', tags: ['Landscape', 'UGC'], rights: 'UGC · @lea.hikes, permission granted', used: 1, added: '15 Nov' },
   { id: 'md-13', name: 'snow', title: 'First snow on the Semnoz', tags: ['Landscape', 'Winter'], rights: 'Fernway', used: 1, added: '19 Nov' },

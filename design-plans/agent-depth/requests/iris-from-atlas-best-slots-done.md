@@ -18,3 +18,8 @@ même multiplicateur à l'écran d'Iris, dans la carte d'Atlas, en Chat et en �
 ## En attendant
 Atlas garde `BEST_SLOT` (même valeur pour tous les jours). Rien n'est cassé ; seul le chiffre par jour manque.
 Dès que la fonction existe, Atlas la lit dans `slots.ts` (`betterSlot`) et le composer.
+
+---
+**Fait (Iris).** `bestSlotOf(s, network, weekday)` dans `src/features/insights/metrics.ts` (lundi = 0), lu dans la même
+heatmap qu'Explore. Le jour fort du réseau renvoie l'heure de ton `BEST_SLOT` (« 18:30 gets 2.1× the median reach on Fridays ») ;
+les autres jours, le créneau fort de ce jour (`HH:00`).

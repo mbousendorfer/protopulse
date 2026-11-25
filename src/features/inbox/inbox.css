@@ -206,3 +206,8 @@
 .ib-targets { display: grid; grid-template-columns: max-content auto; gap: var(--s2) var(--s4); align-items: center; }
 .ib-target-row { display: contents; }
 .ib-over { margin-left: auto; font-size: var(--t-xs); color: var(--alert-strong); font-weight: 600; white-space: nowrap; }
+
+/* Saved views made by Sam */
+.ib-saved-view { display: flex; align-items: center; gap: 2px; }
+.ib-saved-view .ib-view { flex: 1; min-width: 0; }
+.ib-saved-view .ib-view > .row { min-width: 0; overflow: hidden; }

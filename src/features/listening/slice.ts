@@ -3,7 +3,8 @@ import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
 import { DEMO_START, hhmm, MIN } from '../../app/time'
 import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
-import { creatorOf, competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
+import { acceptPending, deleteTag, saveTag, seedTags, TAG_BATCH, TAG_DEFS, tagNew, undoTags, type TagDef } from './tags'
+import { netLabel, theirTop, creatorOf, competitorName, eventsOf, firstEvent, FIRST_EVENT_MS, activeSearches, alertSentence, alertValue, alertWindow, competitorCap, mentionOf, negativeLastHour, searchCap, sentimentOf, spikeFactor, spikeMentions, USUAL_NEGATIVE_PER_HOUR, watchedCount } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -45,6 +46,14 @@ export type ListeningState = {
   customEvents: CompEvent[]
   /** Creators you (or Echo, on Act) shortlisted, and the ones Nova contacted. */
   creators: Record<string, 'listed' | 'proposed' | 'contacted'>
+  /** Sam's tags and their rules; mentions Echo already filed; tags waiting for Sam's OK (Draft/Suggest). */
+  tagDefs: TagDef[]
+  filed: Record<string, true>
+  /** Mentions you opened or marked as seen. */
+  seen: Record<string, true>
+  pendingTags: Record<string, string[]>
+  /** The last batch approved from the Desk, so its Undo can take the tags off again. */
+  lastBatch?: { before: Record<string, string[] | null>; pending: Record<string, string[]> }
 }
 
 const ALERTS: Alert[] = [
@@ -53,11 +62,10 @@ const ALERTS: Alert[] = [
   { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
 ]
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: seedTags({ listening: { watch: WATCH } as ListeningState }), tagDefs: structuredClone(TAG_DEFS), filed: {}, seen: {}, pendingTags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [],
   // The press mention on “PFAS rainwear” came in overnight: Echo already raised it (Nova's PFAS card).
   fired: { la3: DEMO_START }, hits: {}, customEvents: [], creators: {} })
 
-export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
 export type MentionOp = 'nova' | 'hide' | 'unhide' | 'tag' | 'sentiment' | 'atlas'
 
@@ -78,6 +86,11 @@ export type ListeningAction =
   | { type: 'listening/alertToggle'; id: string }
   | { type: 'listening/alertDelete'; id: string }
   | { type: 'listening/creator'; handle: string; op: 'list' | 'unlist' | 'propose' }
+  | { type: 'listening/testFormat'; network: Network; competitor: string }
+  | { type: 'listening/tagSave'; def: TagDef }
+  | { type: 'listening/seen'; ids: string[] }
+  | { type: 'listening/tagDelete'; id: string }
+  | { type: 'listening/tagAccept'; id?: string; tag?: string }
 
 const patch = (s: State, p: Partial<ListeningState>): State => ({ ...s, listening: { ...s.listening, ...p } })
 const setEvent = (s: State, id: string, e: Omit<EventState, 'at'>): State => patch(s, { events: { ...s.listening.events, [id]: { ...e, at: now(s) } } })
@@ -219,6 +232,11 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return patch(s, { alerts: s.listening.alerts.map(x => (x.id === a.id ? { ...x, on: !x.on } : x)) })
     case 'listening/alertDelete':
       return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
+    case 'listening/testFormat': return testFormat(s, a.network, a.competitor)
+    case 'listening/seen': return patch(s, { seen: { ...s.listening.seen, ...Object.fromEntries(a.ids.map(id => [id, true as const])) } })
+    case 'listening/tagSave': return saveTag(s, a.def)
+    case 'listening/tagDelete': return deleteTag(s, a.id)
+    case 'listening/tagAccept': return acceptPending(s, a.id && a.tag ? { id: a.id, tag: a.tag } : undefined)
     case 'listening/creator':
       return a.op === 'propose' ? proposeCollab(s, a.handle, 'You asked from Listening › Creators.') : setCreator(s, a.handle, a.op === 'list' ? 'listed' : undefined)
   }
@@ -315,6 +333,10 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
   if (h.agent === 'echo' && h.ref === SPIKE_REF && d.kind === 'option') return spikeMove(s, h, d.index)
   if (h.ref?.startsWith('statement:') && d.kind === 'approve') return resumeAtlas(s, 'Claire’s statement is out')
   if (h.ref === SPIKE_REPLIES && d.kind === 'approve') return markSpikeReplied(s, true)
+  if (h.ref === TAG_BATCH) {
+    if (d.kind === 'reject') return patch(s, { pendingTags: {} })
+    if (d.kind === 'approve') return acceptPending(s, undefined, true)
+  }
   if (h.ref?.startsWith('alert:') && d.kind === 'option' && d.index === 0) return mentionsBulk(s, { type: 'listening/mentions', ids: s.listening.hits[h.ref.slice('alert:'.length)] ?? [], op: 'nova' })
   if (h.topic === 'Competitor') {
     const ev = EVENT_OF(s, h)
@@ -434,7 +456,11 @@ function markSpikeReplied(s: State, on: boolean): State {
 
 /** Undo puts the spike back as it was: Atlas back on, the statement and the replies withdrawn. */
 export function onUndoListening(s: State, entry: LogEntry): State {
-  let next = s
+  let next = undoTags(s, entry.tagsBefore, entry.tagDef)
+  if (entry.restore?.some(h => h.ref === TAG_BATCH) && next.listening.lastBatch) {
+    const b = next.listening.lastBatch
+    next = patch(undoTags(next, b.before), { pendingTags: b.pending, lastBatch: undefined })
+  }
   if (entry.creator) next = setCreator(next, entry.creator, undefined)
   for (const h of entry.restore ?? []) {
     if (h.ref === SPIKE_REF) {
@@ -456,7 +482,7 @@ export function onUndoListening(s: State, entry: LogEntry): State {
 /** Every minute Echo checks her alert rules; two hours after “Monitor”, she reports what the thread did. */
 export const listeningDue = (s: State, t: number) => t >= (s.listening.checkedAt ?? 0) + MIN || (!!s.listening.watchSpike && s.listening.watchSpike.until <= t)
 export function tickListening(s: State, t: number): State {
-  const checked = t >= (s.listening.checkedAt ?? 0) + MIN ? newcomers(checkAlerts(patch(s, { checkedAt: t })), t) : s
+  const checked = t >= (s.listening.checkedAt ?? 0) + MIN ? tagNew(newcomers(checkAlerts(patch(s, { checkedAt: t })), t)) : s
   return watchTick(checked, t)
 }
 
@@ -607,4 +633,23 @@ export function creatorEvent(s: State, manual: boolean): State {
     title, context: c.history.join(' · '), why: c.fitWhy, confidence: 72, link: `/listening/creators?c=${encodeURIComponent(c.handle)}`,
     options: [{ label: 'Nova drafts a collab DM', recommended: true }, { label: 'Shortlist only' }, { label: 'Not a fit' }],
   })
+}
+
+/* ---------- Benchmark per network ---------- */
+
+/** Atlas drafts a post in the rival's best format on that network. Answering a competitor stays locked to Suggest: you publish. */
+function testFormat(s: State, n: Network, id: string): State {
+  const ref = `format:${n}:${id}`
+  if (s.handoffs.some(h => h.ref === ref)) return s
+  const top = theirTop(n, id)
+  const name = competitorName(s, id)
+  const format = top?.format.toLowerCase() ?? 'format'
+  const next = pushHandoff(s, {
+    agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-competitor', chain: ['echo', 'atlas'], ref,
+    title: `Test ${name}’s ${format} on ${netLabel(n)}`, context: top ? `Their best on ${netLabel(n)}: “${top.title}”, ${top.views} views. ${top.takeaway}` : `What works for ${name} on ${netLabel(n)}.`,
+    why: 'You asked from Listening › Benchmark. Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 64, link: `/listening/competitors/benchmark?net=${n}`,
+    rules: ['Never name a competitor in a post'],
+    preview: { type: 'post', network: n, slot: 'This week', text: [top ? `Our take on “${top.title.toLowerCase()}”, with the Ridge 28L and a real customer. Draft v1.` : `Our version of what works on ${netLabel(n)} right now. Draft v1.`] },
+  })
+  return notify(next, 'listening', `Atlas is drafting a ${format} for ${netLabel(n)}. It’s on your Desk.`, { link: { to: '/', label: 'Review on Desk' } })
 }

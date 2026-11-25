@@ -243,6 +243,8 @@ test('a campaign that ends gets Sage’s recap, a Desk card and the lesson as a 
   expect(tw.status).toBe('done')
   expect(tw.actual).toHaveLength(9)
   expect(tw.recapBy).toBe('sage')
+  expect(tw.reportId).toBe('campaign-trail-week')
+  expect(s.insights.reports.some(r => r.id === 'campaign-trail-week')).toBe(true)
   expect(tw.recap![0]).toMatch(new RegExp(`^${tw.goal.current} challenge sign-ups, \\d+% of the 300 goal\\.$`))
   expect(tw.recap!.join(' ')).toMatch(/You applied 1 adjustment: Move 2 Instagram posts to TikTok/)
   expect(s.handoffs.find(h => h.topic === 'Campaign recap' && h.ref === 'trail-week')?.cta?.label).toBe('Read the recap')
@@ -257,4 +259,51 @@ test('the live feed never ends a campaign or brings results early: only the mode
     expect(ev.run!(s, false)).toBe(s)
   }
   expect(fed.strategy.campaigns.find(c => c.id === 'trail-week')!.status).toBe('live')
+})
+
+test('a calendar moment: Sage raises it, adding it gives Atlas its ideas, Undo takes both back', async () => {
+  const { themesOf } = await import('./slice')
+  let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-moment' })
+  const h = s.handoffs.find(x => x.topic === 'Calendar moment')!
+  expect(h.sage?.moment).toBe('m-blackfriday')
+  const ideas = s.publishing.ideas.length
+  s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'option', option: h.options![0].label, index: 0 } })
+  expect(themesOf(s).map(x => x.id)).toEqual(['m-blackfriday'])
+  expect(s.publishing.ideas.filter(i => i.key.startsWith('m-blackfriday-'))).toHaveLength(2)
+  s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(x => x.id === h.id))!.id })
+  expect(themesOf(s)).toEqual([])
+  expect(s.publishing.ideas.some(i => i.key.startsWith('m-blackfriday-'))).toBe(false)
+  expect(s.publishing.ideas.length).toBeLessThanOrEqual(ideas)
+})
+
+test('on Act, Sage adds the moment itself; “Not this year” can be reopened', () => {
+  let s = reducer(initialState(), { type: 'core/autonomy', agent: 'sage', action: 'sage-moments', level: 'act' })
+  s = reducer(s, { type: 'core/fire', eventId: 'ev-moment' })
+  expect(s.strategy.moments.find(m => m.id === 'm-blackfriday')!.status).toBe('added')
+  s = reducer(s, { type: 'strategy/moment', id: 'm-snow', add: false })
+  expect(s.strategy.moments.find(m => m.id === 'm-snow')!.status).toBe('skipped')
+  s = reducer(s, { type: 'strategy/reopen', id: 'm-snow' })
+  expect(s.strategy.moments.find(m => m.id === 'm-snow')!.status).toBeUndefined()
+})
+
+test('a launched campaign gets its label: on Atlas’s posts, and on Nova’s conversations through her own rule', async () => {
+  const { labelStats } = await import('./slice')
+  let s = create(initialState(), 'cmp-a', 'Launch the Summit Bottle in March, goal 500 orders.')
+  s = reducer(s, { type: 'strategy/approve', id: 'cmp-a' })
+  const c = cmp(s, 'cmp-a')
+  const rule = s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === c.name)!
+  expect(rule.words).toContain('summit bottle')
+  expect(s.inbox.labels).toContain(c.name)
+  expect(labelStats(s, c).posts).toBe(c.posts.length)
+  expect(labelStats(s, c).convs).toBeGreaterThan(0)
+  s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.sage?.novaRule)!.id })
+  expect(s.inbox.rules.some(r => r.id === rule.id)).toBe(false)
+})
+
+test('Trail Week: asking Nova to label adds her rule once', () => {
+  let s = reducer(initialState(), { type: 'strategy/label', id: 'trail-week' })
+  const n = s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === 'Trail Week').length
+  expect(n).toBe(1)
+  s = reducer(s, { type: 'strategy/label', id: 'trail-week' })
+  expect(s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === 'Trail Week')).toHaveLength(1)
 })

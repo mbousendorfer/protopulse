@@ -83,6 +83,11 @@ const juno: AgentModule = {
     ['Dubs approved', ev.filter(e => e.kind === 'video/dub-approved').length],
   ],
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-video-captions', to: '/video' }],
+  // New upload: processing, then clips with a held one (Hugo, no release), captions fixed, dubs to review by level.
+  triggers: [
+    { event: 'ev-video-gr20', to: '/video', label: 'New upload: watch it being cut, one clip held for a missing release' },
+    { event: 'ev-video-captions', to: '/video' },
+    { event: 'ev-video-more', to: '/video?source=repair', label: '4 more moments: “Send all” hits the 5-a-week quota' },
+  ],
 }
 export default juno

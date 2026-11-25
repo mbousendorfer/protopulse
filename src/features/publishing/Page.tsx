@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, Upload } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, StickyNote, Upload, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
@@ -16,10 +16,13 @@ import PlanReview from './Plan'
 import Ideas from './Ideas'
 import Queues from './QueuesTab'
 import { isOpen, recommendNetwork } from './ideasModel'
-import { targetsOf } from '../strategy/slice'
+import { targetsOf, themesOf } from '../strategy/slice'
 import { uid } from '../../app/core'
 import { libraryOf, pickVisual, readImage, visualCardOf, waitingForVisual } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
+import { QUIET_WORDS, isQuiet, notesOn } from './notes'
+import { expiring, search } from './media'
+import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -104,7 +107,7 @@ function Calendar() {
   const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
 
   /** For a future day with fewer than 2 posts: the network Atlas recommends (cadence first, then the pillar behind target). */
-  const recommend = (day: number): Network | null => (view !== 'week' ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
+  const recommend = (day: number): Network | null => (view !== 'week' || isQuiet(s.publishing.notes ?? [], day) ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
   const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
@@ -152,6 +155,8 @@ function Calendar() {
               <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{items.length > 0 && <span className="faint num">{items.length}</span>}</h3>
+                <Themes day={day} />
+                <DayNotes day={day} past={past} />
                 {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
                 {(() => {
                   const idea = view === 'week' ? gapIdea(day) : undefined
@@ -186,6 +191,7 @@ function Calendar() {
               <div key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''}`}>
                 <button className="pub-cell-day num" onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }}
                   aria-label={`Open the week of ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${items.length} posts`}>{new Date(day).getDate()}</button>
+                <Themes day={day} compact />
                 {items.slice(0, 3).map(p => <button key={p.id} className={`cal-mini ${p.status}`} onClick={() => open(p.id)} aria-label={`Preview: ${p.text}`}><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span></button>)}
                 {items.length > 3 && <span className="faint cal-more">+{items.length - 3} more</span>}
               </div>
@@ -195,6 +201,42 @@ function Calendar() {
         ) : <PostTable posts={visible} sel={sel} onOpen={open} />
       )}
       <p className="faint cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>
+    </div>
+  )
+}
+
+/** Sage's moments on this day (Strategy › Moments ahead), read through her `themesOf`. */
+function Themes({ day, compact }: { day: number; compact?: boolean }) {
+  const { s } = useStore()
+  const on = themesOf(s).filter(m => m.start < day + DAY && m.end >= day)
+  return <>{on.map(m => (
+    <Link key={m.id} to="/strategy" className={`cal-theme ${compact ? 'compact' : ''}`} title={m.why}><Mark agent="sage" />{compact ? m.name : <>{m.name} <span className="faint">· Sage</span></>}</Link>
+  ))}</>
+}
+
+/** Notes on a day: what's on, and whether it's a quiet day Atlas keeps empty. */
+function DayNotes({ day, past }: { day: number; past: boolean }) {
+  const { s, d } = useStore()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [quiet, setQuiet] = useState(false)
+  const notes = notesOn(s.publishing.notes ?? [], day)
+  const add = () => { d({ type: 'publishing/noteAdd', day, text, quiet }); setText(''); setQuiet(false); setOpen(false) }
+  return (
+    <div className="cal-notes">
+      {notes.map(n => (
+        <div key={n.id} className={`cal-daynote ${n.quiet ? 'quiet' : ''}`}>
+          <StickyNote size={12} aria-hidden /><span className="grow">{n.quiet ? <><b>Quiet day:</b> {n.text}. Atlas keeps it empty.</> : n.text}</span>
+          <Btn size="xs" variant="ghost" icon aria-label={`Remove the note “${n.text}”`} onClick={() => d({ type: 'publishing/noteRemove', id: n.id })}><X size={12} /></Btn>
+        </div>
+      ))}
+      {!past && (open ? (
+        <form className="cal-noteform" onSubmit={e => { e.preventDefault(); add() }}>
+          <input autoFocus className="input" aria-label="Note" placeholder="Bank holiday" value={text} onChange={e => { setText(e.target.value); setQuiet(QUIET_WORDS.test(e.target.value)) }} />
+          <label className="row tight t-xs"><input type="checkbox" className="check" checked={quiet} onChange={e => setQuiet(e.target.checked)} />Quiet day: no posts</label>
+          <span className="row tight"><Btn size="xs" variant="ghost" onClick={() => setOpen(false)}>Cancel</Btn><Btn size="xs" type="submit" disabled={!text.trim()}>Add note</Btn></span>
+        </form>
+      ) : <button className="cal-addnote" onClick={() => setOpen(true)}><Plus size={12} />Note</button>)}
     </div>
   )
 }
@@ -210,6 +252,7 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
     { key: 'campaign', label: 'Campaign', options: campaigns.map(c => ({ value: c, label: c })) },
     { key: 'pillar', label: 'Pillar', options: s.strategy.pillars.map(p => ({ value: p.name, label: p.name })) },
     { key: 'author', label: 'Author', options: [{ value: 'atlas', label: 'Atlas' }, { value: 'you', label: 'You' }] },
+    { key: 'account', label: 'Profile', options: ACCOUNTS.map(a => ({ value: a.id, label: accountLabel(a) })) },
   ]
   const toggle = (k: Facet, v: string) => { const cur = value[k] ?? []; onChange({ ...value, [k]: cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v] }) }
   return (
@@ -237,7 +280,7 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
     <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
       <span className="pub-chip-check"><SelectBox checked={checked} visible={anySelected} onToggle={onToggle} label={`Select the ${NETWORK_LABEL[p.network]} post at ${hhmm(p.at)}`} /></span>
       <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
-        <div className="row nowrap tight"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
+        <div className="row nowrap tight"><Net n={p.network} />{p.account && <span className="faint t-xs">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}<span className="mono">{hhmm(p.at)}</span><span className="spacer" />{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}</div>
         {p.media && <span className="cal-photo"><Photo name={p.media} /></span>}
         <p>{p.text}</p>
         {p.stats && <span className="faint cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
@@ -342,11 +385,15 @@ function MediaLibrary() {
   const [tag, setTag] = useState('All')
   const [open, setOpen] = useState<Media | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [q, setQ] = useState('')
+  const [newTag, setNewTag] = useState('')
   const file = useRef<HTMLInputElement>(null)
   const forPost = useRef<string | undefined>(undefined)
   const library = libraryOf(s)
   const tags = useMemo(() => ['All', ...Array.from(new Set(library.flatMap(m => m.tags)))], [library])
-  const list = library.filter(m => tag === 'All' || m.tags.includes(tag))
+  const list = search(library.filter(m => tag === 'All' || m.tags.includes(tag)), q)
+  const ending = expiring(s, now)
+  const shownOpen = open && (library.find(m => m.id === open.id) ?? open)
   const waiting = waitingForVisual(s)
   const useCount = (m: Media) => m.used + s.publishing.posts.filter(p => p.media === m.name && p.status !== 'published').length
   const upload = (post?: string) => { forPost.current = post; setError(null); file.current?.click() }
@@ -379,7 +426,21 @@ function MediaLibrary() {
           </section>
         )
       })}
+      {ending.map(e => {
+        const card = s.handoffs.find(h => h.topic === 'Licence' && h.ref === e.media.name)
+        return (
+          <section key={e.media.id} className="media-missing card pad">
+            <ImageOff size={18} />
+            <div className="grow">
+              <b>The licence for “{e.media.title}” ends on {new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</b>
+              <p className="muted">{e.media.rights}. Used by {e.posts.map(p => `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${NETWORK_LABEL[p.network]}`).join(', ')}.{e.swap ? ` Atlas would put “${e.swap.title}” instead.` : ''}</p>
+            </div>
+            {e.swap && <Btn variant="primary" onClick={() => (card ? d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? 'Swap' } }) : d({ type: 'publishing/swapMedia', from: e.media.name, to: e.swap!.name }))}>Swap for “{e.swap.title}”</Btn>}
+          </section>
+        )
+      })}
       <div className="media-bar">
+        <input className="input media-search" type="search" aria-label="Search media" placeholder="Search media" value={q} onChange={e => setQ(e.target.value)} />
         <div className="grow"><Filters label="Filter media" value={tag} onChange={setTag} items={tags.map(t => ({ value: t, label: t }))} /></div>
         {error && <span className="cmp-error" role="alert">{error}</span>}
         <Btn onClick={() => upload()}><Upload size={14} />Upload</Btn>
@@ -403,7 +464,12 @@ function MediaLibrary() {
               <div><dt>Rights</dt><dd>{open.rights}</dd></div>
               <div><dt>Used in posts</dt><dd className="num">{useCount(open)}</dd></div>
               <div><dt>Added</dt><dd>{open.added}</dd></div>
-              <div><dt>Tags</dt><dd className="row tight">{open.tags.map(t => <span key={t} className="chip">{t}</span>)}</dd></div>
+              <div><dt>Tags</dt><dd className="pub-labels">
+                {shownOpen!.tags.map(t => <span key={t} className="chip">{t}<Btn size="xs" variant="ghost" icon aria-label={`Remove the tag ${t}`} onClick={() => d({ type: 'publishing/mediaTags', id: open.id, tags: shownOpen!.tags.filter(x => x !== t) })}><X size={12} /></Btn></span>)}
+                <form onSubmit={e => { e.preventDefault(); if (newTag.trim()) d({ type: 'publishing/mediaTags', id: open.id, tags: [...shownOpen!.tags, newTag] }); setNewTag('') }}>
+                  <input className="input" aria-label="Add a tag" placeholder="Add a tag" value={newTag} onChange={e => setNewTag(e.target.value)} />
+                </form>
+              </dd></div>
             </dl>
           </div>
         )}

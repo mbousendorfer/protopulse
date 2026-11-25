@@ -3,9 +3,10 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { useStore } from '../../app/store'
 import { AlertsTable } from '../insights/alerts'
 import { now } from '../../app/core'
+import type { Network } from '../../app/types'
 import { ago } from '../../app/time'
 import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
-import { creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
+import { competitorName, eventsOf, netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -13,6 +14,7 @@ declare module '../../data/command' {
     competitor: { name: string }
     mentions: object
     creators: { rival?: string }
+    benchmark: { network: Network; rival?: string }
   }
 }
 
@@ -63,16 +65,45 @@ const creators = defineIntent({
   },
 })
 
+const NETS: [RegExp, Network][] = [[/instagram|\big\b/, 'instagram'], [/tiktok/, 'tiktok'], [/linkedin/, 'linkedin'], [/facebook/, 'facebook'], [/youtube/, 'youtube']]
+const RIVAL_ID: Record<string, string> = { peakline: 'peakline', norro: 'norro', 'norrø': 'norro', trailkind: 'trailkind', basecamp: 'basecamp' }
+
+/** « How do we compare with Trailkind on TikTok? »: the same rows and reading as Benchmark › TikTok. */
+const benchmark = defineIntent({
+  kind: 'benchmark', owner: 'echo', order: 98,
+  parse: t => {
+    const n = NETS.find(([re]) => re.test(t))?.[1]
+    if (!n || !/compar|\bvs\.?\b|versus|benchmark|against|beat/.test(t)) return undefined
+    return { kind: 'benchmark', network: n, rival: RIVAL_ID[t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] ?? ''] }
+  },
+  bar: (i, { s, go }) => {
+    const r = networkRead(s, i.network, i.rival)
+    return { text: r.text, sources: [`Benchmark · ${netLabel(i.network)} · last 30 days`, 'Fernway’s numbers: Iris’s analytics'], ctas: [{ label: `Open the ${netLabel(i.network)} benchmark`, primary: true, run: () => go(`/listening/competitors/benchmark?net=${i.network}`) }] }
+  },
+  chat: (i, { s }) => {
+    const r = networkRead(s, i.network, i.rival)
+    const rows = networkRows(s, i.network)
+    return { replies: [{ from: 'echo', text: r.text, card: { type: 'list', items: rows.map(x => ({ title: `${x.rank}. ${x.name}`, agent: 'echo' as const, meta: `${x.er}% engagement · ${x.perWeek} posts a week · ${(x.followers / 1000).toFixed(0)}k followers`, link: `/listening/competitors/benchmark?net=${i.network}` })) } }], effects: [] }
+  },
+})
+
 const competitor = defineIntent({
   kind: 'competitor', owner: 'echo', order: 100,
   parse: t => (/peakline|norr[øo]|trailkind|basecamp|competitor|rival/.test(t) ? { kind: 'competitor', name: t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] ?? 'competitors' } : undefined),
-  bar: (i, { go }) => ({
-    text: /peak/.test(i.name)
-      ? 'Peakline cut the Aero 30 to €99 overnight, −29%. It’s their direct rival to the Ridge. Comments under their post are mixed: 31% ask about durability. I suggest not matching the price and posting about how long the Ridge lasts instead.'
-      : `This week: Peakline cut the Aero 30 to €99, Trailkind’s “bag vs. rain” reel hit 1.2M views, Norrø announced lifetime repairs, and Basecamp Co. recalled 8,000 bottles. ${i.name === 'competitors' ? '' : `Most of the noise around ${i.name} is in the Events feed.`}`,
-    sources: ['Competitor accounts, Instagram and LinkedIn', 'Echo’s event feed, last 7 days'],
-    ctas: [{ label: 'Open competitor events', primary: true, run: () => go('/listening/competitors') }],
-  }),
+  bar: (i, { s, go }) => {
+    // Same events and states as Listening › Competitors.
+    const id = RIVAL_ID[i.name]
+    const open = eventsOf(s).filter(e => (!id || e.competitor === id) && !s.listening.events[e.id] && !e.done).sort((a, b) => b.at - a.at)
+    const top = open[0]
+    const name = id ? competitorName(s, id) : 'your competitors'
+    return {
+      text: !top ? `Nothing open from ${name}: every move has an answer.`
+        : id ? `${top.title}. ${top.impactWhy} ${top.read}`
+        : `${open.length} competitor move${open.length > 1 ? 's' : ''} without an answer: ${open.slice(0, 4).map(e => e.title).join('; ')}.`,
+      sources: ['Competitor accounts Echo watches', `Echo’s event feed · ${open.length} open`],
+      ctas: [{ label: top && id ? 'Open the event' : 'Open competitor events', primary: true, run: () => go(top && id ? `/listening/competitors/${top.id}` : '/listening/competitors') }],
+    }
+  },
   chat: (_i, { s }) => {
     const events = s.handoffs.filter(h => !h.lane && h.topic === 'Competitor')
     return {
@@ -102,7 +133,7 @@ const echo: AgentModule = {
   onUndo: onUndoListening,
   due: listeningDue,
   tick: tickListening,
-  intents: [mentions, creators, competitor],
+  intents: [mentions, creators, benchmark, competitor],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.listening.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { competitor: { keep: ['h-peakline'], fire: ['ev-trailkind', 'ev-norro', 'ev-basecamp'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).

@@ -18,3 +18,6 @@ et donner ce ratio à la boîte média de l'aperçu (`aspect-ratio`) quand il ex
 
 **En attendant.** L'aperçu recadre la couverture du clip dans sa boîte habituelle : rien n'est cassé, seul le ratio
 diffère de l'éditeur.
+
+## Fait (Atlas, PR « Atlas: contracts for Juno and Sage (clip versions, moments, open pillars) »)
+L'aperçu du post (panneau du calendrier) lit `versionOf(clip, post.network).aspect` et l'applique à la boîte média LinkedIn, Facebook et X (`aspect` de `NetworkPreview`).
