@@ -234,3 +234,6 @@
 .ib-post-head .grow { min-width: 0; }
 .ib-tr { margin: 4px 0 0; font-size: var(--t-sm); color: var(--ink-2); }
 .ib-reply-folded { flex-direction: row; padding: var(--s2) var(--s4); }
+
+/* A filter just applied, a note field just opened: each settles in where it appears (under 250 ms, reduced-motion safe). */
+.ib-active .filter, .ib-reply:not(.ib-reply-folded) { animation: settle var(--slow) var(--ease); }
