@@ -6,6 +6,8 @@ import type { Playback } from './Player'
 import { fmt } from './parts'
 
 const TILE = 71 // px per 2 s on the 40 px-high filmstrip (160×90 tiles)
+/** Below this, a caption line is a few pixels wide and unreadable: on a phone the timeline scrolls instead of fitting. */
+const MIN_FIT = 24
 
 /** Drag helper: calls back with the horizontal distance, ends on release. */
 function drag(e: RPointerEvent, move: (dx: number) => void, end: (dx: number) => void) {
@@ -26,7 +28,7 @@ export default function Timeline({ clip, source, pb, onEdit }: { clip: Clip; sou
   const lane = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLDivElement>(null)
   // Opens fitted to the full width, however short the clip; zoom in from there.
-  useLayoutEffect(() => { const w = scroller.current?.clientWidth; if (w && total) { const f = Math.max(6, Math.floor((w - 56) / total)); setFit(f); setZoom(f) } }, [Math.round(total)]) // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => { const w = scroller.current?.clientWidth; if (w && total) { const f = Math.max(MIN_FIT, Math.floor((w - 56) / total)); setFit(f); setZoom(f) } }, [Math.round(total)]) // eslint-disable-line react-hooks/exhaustive-deps
   const lines = useMemo(() => captionLines(clip, tr), [clip, tr])
   const px = (sec: number) => sec * zoom
   const width = Math.max(px(total) + 48, 320)

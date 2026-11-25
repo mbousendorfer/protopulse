@@ -1,6 +1,6 @@
 import { useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Clapperboard, Plus } from 'lucide-react'
+import { ChevronDown, Clapperboard, Plus, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/video'
@@ -68,7 +68,8 @@ function NotNow({ c, size }: { c: Clip; size?: 'sm' }) {
 }
 export { NotNow as ClipNotNow }
 
-function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<typeof useSelection>; now: number }) {
+/** One clip as a card: the frame first (it's video), then what it says, why it's worth it, and what's left to check. */
+function ClipCard({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<typeof useSelection>; now: number }) {
   const { s, d } = useStore()
   const nav = useNavigate()
   const sc = clipScore(c, src)
@@ -86,49 +87,50 @@ function ClipRow({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<t
   const posts = c.posts?.map(id => s.publishing.posts.find(p => p.id === id)).filter(Boolean) ?? []
   const stop = (f: () => void) => (e: MouseEvent) => { e.stopPropagation(); f() }
   return (
-    <article className={`idea-row clip-row ${now - c.arrivedAt < 120_000 ? 'arrive' : ''} ${sel.has(c.id) ? 'picked' : ''}`}
+    <article className={`clip-card ${now - c.arrivedAt < 120_000 ? 'arrive' : ''} ${sel.has(c.id) ? 'picked' : ''}`}
       onClick={e => { if (!(e.target as Element).closest('a, button, input, label, [role="menu"]')) nav(`/video/clips/${c.id}`) }}>
-      <span className="idea-check">{c.status === 'ready' && <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select: ${c.title}`} />}</span>
-      <ClipThumb clip={c} source={src} size="sm" />
-      <div className="idea-text">
+      <span className="clip-card-thumb">
+        <ClipThumb clip={c} source={src} size="lg" />
+        {c.status === 'ready' && <span className="clip-card-check"><SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select: ${c.title}`} /></span>}
+      </span>
+      <div className="clip-card-body">
         <h3><Link to={`/video/clips/${c.id}`} className="idea-title">{c.title}</Link></h3>
-        <p className="idea-proof"><span>“{c.hook}”</span></p>
-        <p className="idea-meta">
+        <p className="clip-card-hook">“{c.hook}”</p>
+        <p className="clip-card-meta">
           <ScoreBadge value={sc.total} />
-          {proof && <span>{proof.value} {proof.label}</span>}
           <span className="row tight nowrap">{c.post.networks.map(n => <Net key={n} n={n} size={16} />)}</span>
-          <span>{src.title}</span>
           {c.audio.dubs.length > 0 && <span title={c.audio.dubs.map(l => LANG_LABEL[l]).join(', ')}>{c.audio.dubs.map(l => l.toUpperCase()).join(' ')}</span>}
           {c.edited && <span>Edited by you</span>}
-          {todo.map(t => <span key={t}>{t}</span>)}
         </p>
-      </div>
-      <div className="idea-acts">
-        {c.status === 'ready' && <><Btn size="sm" onClick={stop(() => nav(`/video/clips/${c.id}`))}>Review</Btn><Btn size="sm" variant="primary" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn><NotNow c={c} size="sm" /></>}
-        {c.status === 'snoozed' && <><Pill>Back tomorrow 08:00</Pill><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn></>}
-        {c.status === 'sent' && <Link className="link-btn" to="/publishing/calendar" onClick={e => e.stopPropagation()}>{posts.length ? `Scheduled ${posts.map(p => `${new Date(p!.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(p!.at)}`)[0]}${posts.length > 1 ? ` +${posts.length - 1}` : ''}` : 'In the calendar'}</Link>}
-        {c.status === 'published' && c.stats && <span className="muted t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span>}
+        {proof && !c.stats && <p className="clip-card-proof"><b className="num">{proof.value}</b> {proof.label}</p>}
+        <p className="clip-card-src">From {src.title}</p>
+        {todo.length > 0 && <ul className="clip-card-todo">{todo.map(t => <li key={t}><TriangleAlert size={12} aria-hidden />{t}</li>)}</ul>}
+        <div className="clip-card-acts">
+          {c.status === 'ready' && <><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn><NotNow c={c} size="sm" /></>}
+          {c.status === 'snoozed' && <><Pill>Back tomorrow 08:00</Pill><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn></>}
+          {c.status === 'sent' && <Link className="link-btn t-sm" to="/publishing/calendar" onClick={e => e.stopPropagation()}>{posts.length ? `Scheduled ${posts.map(p => `${new Date(p!.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(p!.at)}`)[0]}${posts.length > 1 ? ` +${posts.length - 1}` : ''}` : 'In the calendar'}</Link>}
+          {c.status === 'published' && c.stats && <span className="t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span>}
+        </div>
       </div>
     </article>
   )
 }
 
 /** A video Juno is still working on: the phase, and how far she is. */
-function MakingRow({ src, now }: { src: Source; now: number }) {
+function MakingCard({ src, now }: { src: Source; now: number }) {
   const nav = useNavigate()
   const elapsed = Math.max(0, now - (src.startedAt ?? now))
   const k = Math.min(PHASES.length - 1, Math.floor(elapsed / PHASE_MS))
   const pct = Math.min(99, Math.round((elapsed / (PHASES.length * PHASE_MS)) * 100))
   return (
-    <article className="idea-row clip-row making" onClick={() => nav(`/video/sources/${src.id}`)}>
-      <span />
-      <SourceThumb source={src} />
-      <div className="idea-text">
+    <article className="clip-card making" onClick={e => { if (!(e.target as Element).closest('a')) nav(`/video/sources/${src.id}`) }}>
+      <span className="clip-card-thumb"><SourceThumb source={src} /></span>
+      <div className="clip-card-body">
         <h3><Link to={`/video/sources/${src.id}`} className="idea-title">{src.title}</Link></h3>
-        <p className="idea-meta"><span>{PHASES[k]} · step {k + 1} of {PHASES.length}</span><span>{src.channel}</span></p>
+        <p className="clip-card-meta"><span>{PHASES[k]} · step {k + 1} of {PHASES.length}</span><span>{src.channel}</span></p>
         <div className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${src.title}: ${pct}%`}><span style={{ width: `${pct}%` }} /></div>
+        <span className="t-sm num">{pct}% done</span>
       </div>
-      <div className="idea-acts"><span className="muted t-sm num">{pct}%</span></div>
     </article>
   )
 }
@@ -155,7 +157,7 @@ function Clips() {
         <span className="spacer" />
         {key === 'ready' && list.length > 1 && !sel.count && <Btn size="sm" onClick={() => d({ type: 'video/send', ids: readyIds })}>Send {list.length} to Atlas</Btn>}
       </header>
-      <div className="ideas-rows">{extra}{list.map(c => <ClipRow key={c.id} c={c} src={srcOf(c)} sel={sel} now={now} />)}</div>
+      <div className="clip-grid">{extra}{list.map(c => <ClipCard key={c.id} c={c} src={srcOf(c)} sel={sel} now={now} />)}</div>
     </section>
   )
 
@@ -169,7 +171,7 @@ function Clips() {
       {sel.count > 0
         ? <BulkBar count={sel.count} noun={sel.count > 1 ? 'clips selected' : 'clip selected'} onClear={sel.clear} actions={[
           { label: `Send ${sel.count} to Atlas`, primary: true, onRun: () => { d({ type: 'video/send', ids: [...sel.selected] }); sel.clear() } },
-          { label: 'Back tomorrow', onRun: () => { d({ type: 'video/snooze', ids: [...sel.selected] }); sel.clear() } },
+          { label: 'Not now', onRun: () => { d({ type: 'video/snooze', ids: [...sel.selected] }); sel.clear() } },
         ]} />
         : <Notice scope="video" className="video-notice" />}
       {!clips.length && !making.length ? (
@@ -177,7 +179,7 @@ function Clips() {
       ) : (
         <>
           {group('ready', 'Ready to review', ready, readyIds.length > 0 && <SelectAll sel={sel} label="Select every ready clip" />)}
-          {group('making', 'Being made', [], undefined, making.length > 0 && making.map(x => <MakingRow key={x.id} src={x} now={now} />))}
+          {group('making', 'Being made', [], undefined, making.length > 0 && making.map(x => <MakingCard key={x.id} src={x} now={now} />))}
           {group('later', 'Later', by('snoozed'))}
           {group('sent', 'Sent to Atlas', by('sent'))}
           {group('published', 'Published', by('published'))}
