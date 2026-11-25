@@ -7,7 +7,9 @@ export type Phase = { name: 'Teasing' | 'Launch' | 'Follow-up'; start: number; e
 /** `postId`: the post in Atlas's calendar, when it isn't the same id. */
 export type CPost = { id: string; phase: Phase['name']; network: Network; day: number; title: string; published?: boolean; pillar?: PillarName; postId?: string }
 export type CTask = { id: string; label: string; agent: AgentId; status: 'todo' | 'doing' | 'done' }
-export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined' }
+/** What an adjustment does to the campaign's posts (and their copies in Atlas's calendar). */
+export type PostMove = { post: string; network?: Network; title?: string }
+export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined'; moves?: PostMove[] }
 export type Change = { kind: 'added' | 'removed' | 'changed'; text: string }
 
 export type Campaign = {
@@ -36,6 +38,8 @@ export type Campaign = {
   /** Post `day` values are days from this date. */
   base: number
   source?: string
+  /** Iris's recap report, under /insights/reports/:id. */
+  reportId?: string
 }
 
 export const CAMPAIGNS: Campaign[] = [
@@ -78,13 +82,13 @@ export const CAMPAIGNS: Campaign[] = [
     planned: [0, 45, 120, 165, 205, 240, 270, 290, 300],
     actual: [0, 61, 154],
     adjustments: [
-      { id: 'adj1', text: 'Instagram is at 41% of its target, TikTok at 118%. Move 2 Instagram posts to TikTok.', status: 'proposed' },
-      { id: 'adj2', text: 'Rain on Thursday: swap the Lac Blanc reel with “plan your trail from the sofa”.', status: 'proposed' },
+      { id: 'adj1', text: 'Instagram is at 41% of its target, TikTok at 118%. Move 2 Instagram posts to TikTok.', status: 'proposed', moves: [{ post: 'tw6', network: 'tiktok' }, { post: 'tw7', network: 'tiktok' }] },
+      { id: 'adj2', text: 'Rain on Thursday: swap the Lac Blanc reel with “plan your trail from the sofa”.', status: 'proposed', moves: [{ post: 'tw7', title: 'Plan your trail from the sofa' }] },
     ],
     version: 1,
   },
   {
-    id: 'repair-friday', name: 'Repair Friday', status: 'done', createdAt: T(10, 0, -45), base: DEMO_START,
+    id: 'repair-friday', name: 'Repair Friday', status: 'done', createdAt: T(10, 0, -45), base: DEMO_START, reportId: 'repair-friday',
     brief: 'Our answer to Black Friday, a month early: repair instead of buy. Goal: 800 repair requests.',
     goal: { label: 'repair requests', target: 800, current: 1180 },
     start: T(0, 0, -32), end: T(23, 59, -25),
@@ -174,15 +178,26 @@ export const CADENCE: Cadence[] = [
 
 /** Sage's targets as Atlas reads them: share of posts per pillar, posts a week per network. */
 export type Targets = { pillars: { name: PillarName; target: number }[]; cadence: Partial<Record<Network, number>> }
+/** Sage's targets after a change. Pillars stay as they are unless named; posts a week never go below 0. */
+export function applyChange<T extends { pillars: Pillar[]; cadence: Cadence[] }>(st: T, ch: TargetsChange): T {
+  return {
+    ...st,
+    pillars: st.pillars.map(p => (ch.pillars?.[p.name] !== undefined ? { ...p, target: ch.pillars[p.name]! } : p)),
+    cadence: st.cadence.map(c => ({ ...c, target: Math.max(0, (ch.cadence?.[c.network] ?? c.target) + (ch.add?.[c.network] ?? 0)) })),
+  }
+}
+
 export const targetsFrom = (st: { pillars: Pillar[]; cadence: Cadence[] }): Targets => ({
   pillars: st.pillars.map(({ name, target }) => ({ name, target })),
   cadence: Object.fromEntries(st.cadence.map(c => [c.network, c.target])),
 })
 
-export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined' }
+/** A change to Sage's targets: pillar shares and posts a week set to a value, or posts a week added (`add`, may be negative). */
+export type TargetsChange = { pillars?: Partial<Record<PillarName, number>>; cadence?: Partial<Record<Network, number>>; add?: Partial<Record<Network, number>> }
+export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined'; change?: TargetsChange }
 export const PROPOSALS: Proposal[] = [
-  { id: 'pr1', text: 'Raise Community from 20% to 25% of posts', why: 'Community posts have the best saves rate (4.1%) and cost nothing to produce.', status: 'proposed' },
-  { id: 'pr2', text: 'Cut X to 1 post a day', why: 'X brings 2% of reach and 0.8% engagement. The time goes to TikTok instead.', status: 'proposed' },
+  { id: 'pr1', text: 'Raise Community from 20% to 25% of posts, Gear that lasts from 35% to 30%', why: 'Community posts have the best saves rate (4.1%) and cost nothing to produce.', status: 'proposed', change: { pillars: { Community: 25, 'Gear that lasts': 30 } } },
+  { id: 'pr2', text: 'Cut X from 3 posts a week to 1, add 1 on TikTok', why: 'X brings 2% of reach and 0.8% engagement. The time goes to TikTok instead.', status: 'proposed', change: { cadence: { x: 1 }, add: { tiktok: 1 } } },
   { id: 'pr3', text: 'Add a weekly repair post on LinkedIn', why: 'Repair posts do 1.9× better than product posts on LinkedIn.', status: 'accepted' },
 ]
 
