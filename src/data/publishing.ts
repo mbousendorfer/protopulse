@@ -14,7 +14,13 @@ export type Post = {
   status: PostStatus
   author: 'atlas' | 'you'
   pillar: Pillar
+  /** Campaign name, as shown. `campaignId` points to Sage's campaign when there is one. */
   campaign?: string
+  campaignId?: string
+  /** Shared contract for every agent; no UI yet. */
+  labels?: string[]
+  link?: { url: string; utm?: Record<string, string> }
+  format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
   stats?: { reach: number; er: number }
   handoff?: string
   note?: string

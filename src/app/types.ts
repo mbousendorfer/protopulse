@@ -1,4 +1,5 @@
 // Shared domain types. Feature-specific types live next to their feature.
+import type { Pillar } from '../data/publishing'
 
 export type AgentId = 'nova' | 'atlas' | 'iris' | 'echo' | 'sage' | 'juno'
 export type Autonomy = 'suggest' | 'draft' | 'act'
@@ -106,6 +107,10 @@ export interface Handoff {
   sources?: { label: string; from: string }[]
   /** Good news: the one useful thing to do with it. */
   cta?: { label: string; to?: string }
+  /** A post card's pillar and campaign, kept when the approved post lands in the calendar. */
+  pillar?: Pillar
+  campaign?: string
+  campaignId?: string
 }
 
 export type RuleKind = 'do' | 'dont' | 'word' | 'fact' | 'escalate'

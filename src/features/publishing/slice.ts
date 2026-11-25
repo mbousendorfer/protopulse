@@ -309,7 +309,8 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
 
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
-    const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: 'Trail stories', handoff: h.id }
+    // The card's pillar and campaign follow the post. Trail stories stays the default for cards that don't say.
+    const post: Post = { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id }
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s

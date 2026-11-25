@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest'
+import { reducer } from '../../app/reducer'
 import { initialState } from '../../app/state'
 import { T } from '../../app/time'
 import { onResolvePublishing, parseSlot, reducePublishing } from './slice'
@@ -127,4 +128,13 @@ test('ideas: the same angle twice proposes a rule; accepting it adds it to the P
   expect(s.publishing.ideas.find(i => i.id === b.id)!.proposal?.key).toBe('angle:linkedin')
   s = reducePublishing(s, { type: 'publishing/ideaRule', id: b.id, accept: true })
   expect(s.playbook.rules[0].text).toBe('Add a LinkedIn version to every idea')
+})
+
+test('an approved post card keeps its pillar and campaign in the calendar', () => {
+  let s = initialState()
+  s = { ...s, handoffs: [{ id: 'h-test', agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Post', title: 'Test post', context: '', why: '', confidence: 90, at: s.clock.base,
+    pillar: 'Repair & care', campaign: 'Trail Week', campaignId: 'trail-week', preview: { type: 'post', network: 'instagram', slot: 'Fri 28, 18:30', text: ['Repair kit, packed.'] } }, ...s.handoffs] }
+  s = reducer(s, { type: 'core/resolve', id: 'h-test', decision: { kind: 'approve' } })
+  const post = s.publishing.posts.find(p => p.handoff === 'h-test')!
+  expect(post).toMatchObject({ pillar: 'Repair & care', campaign: 'Trail Week', campaignId: 'trail-week', status: 'scheduled' })
 })
