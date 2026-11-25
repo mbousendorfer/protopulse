@@ -14,11 +14,11 @@
 | F1 | Indicators (alertes sur variations) | Règles d'alerte jamais évaluées ; `ANOMALIES` constantes (`data/insights.ts:209`) | Anomalies en état ; Iris évalue chaque règle active au battement de cœur contre les séries ; une règle qui se déclenche crée l'anomalie et la remonte selon le cran de `iris-anomaly` | 3 | M | done (#34) |
 | F4 | idem | `ev-linkedin` `always: true` (`insights/script.ts:8`) : cran ignoré, pas d'anomalie | Événement `run` : crée l'anomalie, carte en Suggest/Draft, journal + Undo en Act | 3 | S | done (#34) |
 | F2 | Paid : budget boost | `insights.boosts` écrit (`slice.ts:76,121`) et lu nulle part ; garde-fou texte « €580 of €1,500 » (`data/agents.ts:91`) ; `h-boost` dit « €920 left » ; le boost du Chat ne passe pas par Iris (`chats/slice.ts:112`) | `boostBudget(s)` calcule l'utilisé depuis `boosts` ; garde-fou affiché calculé et appliqué (un boost au-delà du plafond est refusé avec la raison) ; Undo rend le budget | 3 | S | done (boost PR) |
-| F5 | Rapport hebdo en Act | `onResolveInsights` marque w47 partagé (`slice.ts:124`), testé (`reducer.test.ts:223`) | Vérifier en navigateur ; garder le test | 2 | S | todo |
-| F6 | Rapports réguliers | `REPORTS` constant (`data/insights.ts:21`) ; « Skip to tomorrow » écrit seulement une ligne de journal (`reducer.ts:425`) | Rapports en état ; au changement de jour, `tick` d'Iris écrit le brief du jour (et le rapport hebdo le lundi) depuis les sélecteurs | 3 | M | todo |
-| F8 | — | Types `'pillars' \| 'trail'` déclarés jamais rendus (`data/insights.ts:7`) | Rendre `pillars` (utilisé par les rapports générés), retirer `trail` | 1 | S | todo |
+| F5 | Rapport hebdo en Act | `onResolveInsights` marque w47 partagé (`slice.ts:124`), testé (`reducer.test.ts:223`) | Vérifier en navigateur ; garder le test | 2 | S | done (reports PR) |
+| F6 | Rapports réguliers | `REPORTS` constant (`data/insights.ts:21`) ; « Skip to tomorrow » écrit seulement une ligne de journal (`reducer.ts:425`) | Rapports en état ; au changement de jour, `tick` d'Iris écrit le brief du jour (et le rapport hebdo le lundi) depuis les sélecteurs | 3 | M | done (reports PR) |
+| F8 | — | Types `'pillars' \| 'trail'` déclarés jamais rendus (`data/insights.ts:7`) | Rendre `pillars` (utilisé par les rapports générés), retirer `trail` | 1 | S | done (reports PR) |
 | F9 | Période libre, tri, lignes cliquables (§6.4) | Périodes 7/30/90 seules, tri date/reach/ER/clics, lignes inertes (`Page.tsx:157-185`) | Période personnalisée (dates), tri réseau/pilier/auteur, ligne → panneau d'aperçu du post avec ses chiffres | 2 | M | todo |
-| F10 | Partage de rapport | « Seen » simulé par le temps (`Page.tsx:126`) | Le partage passe par le moteur de Claire (`CLAIRE['Weekly report']`, `core/heartbeat`) : sa réponse arrive dans le rapport | 2 | S | todo |
+| F10 | Partage de rapport | « Seen » simulé par le temps (`Page.tsx:126`) | Le partage passe par le moteur de Claire (`CLAIRE['Weekly report']`, `core/heartbeat`) : sa réponse arrive dans le rapport | 2 | S | done (reports PR) |
 
 ## Features (pitch avant construction)
 

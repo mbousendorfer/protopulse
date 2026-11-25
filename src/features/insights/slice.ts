@@ -2,12 +2,13 @@ import type { State } from '../../app/state'
 import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
 import { addRule, now, pushHandoff, pushLog, uid } from '../../app/core'
 import { T } from '../../app/time'
-import { ANOMALIES, type Anomaly } from '../../data/insights'
+import { ANOMALIES, REPORTS, type Anomaly, type Report } from '../../data/insights'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
 export type AnomalyState = { open: boolean; resolution?: string; at?: number }
-export type Share = { at: number }
+/** A report shared with Claire; `reply` is what she said once she read it. */
+export type Share = { at: number; reply?: string }
 /** A paid boost Sam decided. `card`: the Desk card it was decided on, so undoing that decision gives the money back. */
 export type Boost = { id: string; post: string; budget: number; days: number; at: number; card?: string }
 
@@ -30,6 +31,10 @@ export type InsightsState = {
   raised: Anomaly[]
   /** Signals a scripted event switched on (see SPIKES). */
   spikes: string[]
+  /** Reports Iris wrote this session (the seeded ones are in data/insights). */
+  reports: Report[]
+  /** The day the last morning brief was written for. */
+  briefDay: string
 }
 
 const ALERTS: Alert[] = [
@@ -50,6 +55,8 @@ export const initialInsights = (): InsightsState => ({
   followUps: [],
   raised: [],
   spikes: [],
+  reports: [],
+  briefDay: dayKey(T(7, 0)),
 })
 
 export type InsightsAction =
@@ -66,6 +73,22 @@ export type InsightsAction =
 const patch = (s: State, p: Partial<InsightsState>): State => ({ ...s, insights: { ...s.insights, ...p } })
 
 export const patchInsights = patch
+
+/** Seeded reports and the ones Iris wrote this session, newest first. */
+export const reportList = (s: State): Report[] => [...s.insights.reports, ...REPORTS].sort((a, b) => b.writtenAt - a.writtenAt)
+
+export const dayKey = (t: number) => new Date(t).toDateString()
+/** Share a report with Claire: it waits in her lane on the Desk until she has read it (Claire's engine answers). */
+export function shareWithClaire(s: State, r: Report, why: string): State {
+  const t = now(s)
+  const card: Omit<Handoff, 'at'> = {
+    id: `h-share-${r.id}`, agent: 'iris', kind: 'approval', urgency: 'week', topic: 'Weekly report', action: 'iris-report', ref: r.id,
+    title: `Claire is reading “${r.kind === 'brief' ? r.title : r.title}”`, context: r.summary, why, confidence: 90, link: `/insights/reports/${r.id}`,
+    lane: 'claire', claire: { askedAt: t, dueAt: t + 40_000 },
+  }
+  return pushHandoff(patchInsights(s, { shared: { ...s.insights.shared, [r.id]: { at: t } } }), card)
+}
+
 
 /** The monthly boost cap is Iris's guardrail, as Sam wrote it: its last euro amount (“€580 of €1,500 used” → 1,500). */
 export function boostBudget(s: State) {
@@ -166,7 +189,9 @@ export function answer(q: string): string {
 export function reduceInsights(s: State, a: InsightsAction): State {
   switch (a.type) {
     case 'insights/share': {
-      const next = patch(s, { shared: { ...s.insights.shared, [a.id]: { at: now(s) } } })
+      const r = reportList(s).find(x => x.id === a.id)
+      if (!r) return s
+      const next = shareWithClaire({ ...s, handoffs: s.handoffs.filter(h => !(h.agent === 'iris' && h.ref === a.id)) }, r, 'You shared it from Insights.')
       return pushLog(next, { agent: 'iris', text: `Shared “${a.title}” with Claire`, status: 'approved', reason: 'You shared it from Insights' })
     }
     case 'insights/anomaly': {
@@ -237,8 +262,16 @@ export function onResolveInsights(s: State, h: Handoff, d: Decision): State {
     if (r.refused) return pushHandoff(s, { ...h, why: `Not boosted: ${r.refused} Raise the cap or pick a smaller boost.`, urgency: 'today' })
     return setAnomaly(r.s, 'an-storm', `Boosted €${budget} for ${days} days`)
   }
-  if ((h.id === 'h-report' || h.topic === 'Weekly report') && (d.kind === 'approve' || d.kind === 'option')) {
-    return patch(s, { shared: { ...s.insights.shared, w47: { at: now(s) } } })
+  if (h.agent === 'iris' && h.topic === 'Brief' && h.ref) {
+    const reports = d.kind === 'reject' ? s.insights.reports.filter(r => r.id !== h.ref) : s.insights.reports.map(r => (r.id === h.ref ? { ...r, draft: false } : r))
+    return patch(s, { reports })
+  }
+  const report = h.agent === 'iris' && h.topic === 'Weekly report' ? reportList(s).find(r => r.id === (h.ref ?? (h.id === 'h-report' ? 'w47' : ''))) : undefined
+  if (report && (d.kind === 'approve' || d.kind === 'option')) {
+    // Claire read it (her engine approved the card): keep what she said. Sam approved a draft: Iris shares it now.
+    const reply = [...(h.thread ?? [])].reverse().find(m => m.from === 'claire')?.text
+    if (reply || h.lane === 'claire' || h.id.startsWith('h-share-')) return patch(s, { shared: { ...s.insights.shared, [report.id]: { at: s.insights.shared[report.id]?.at ?? now(s), reply } } })
+    return shareWithClaire(s, report, d.act ? 'Sharing the weekly report is set to Act.' : 'You approved it on the Desk.')
   }
   const an = h.topic === 'Anomaly' ? anomalyOf(s, h) : undefined
   if (an?.open) {
