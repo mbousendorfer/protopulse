@@ -10,10 +10,11 @@ import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
 import { briefSage, targetsOf } from '../strategy/slice'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
-import { PAUSE_TOPIC, fitCap, overCap, resumeAll } from './guards'
+import { PAUSE_TOPIC, fitCap, overCap, pauseFor, resumeAll } from './guards'
 import { approved, sendToClaire } from './approvals'
 import { withFormat } from './formats'
 import { fillQueues } from './queues'
+import { perfOf, recycleSeed } from './perf'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -75,6 +76,7 @@ export type PublishingAction =
   | { type: 'publishing/firstComment'; id: string; text: string }
   | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
   | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
+  | { type: 'publishing/recycle'; id: string }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -252,6 +254,18 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/fillQueue':
       return fillQueues(s, { queue: a.queue, days: a.days, from: a.from, why: 'You asked Atlas to fill the queue.' })
+    case 'publishing/recycle': {
+      const p = s.publishing.posts.find(x => x.id === a.id)
+      const perf = p && perfOf(s, p)
+      if (!p || !perf) return s
+      const seed = recycleSeed(s, p, perf)
+      const known = s.publishing.ideas.find(i => i.key === seed.key)
+      if (known) return notify(s, 'publishing', 'Atlas already has this one in Ideas.', { link: { to: `/publishing/ideas/${known.id}`, label: 'Open the idea' } })
+      const next = arriveIdeas(s, [seed], 'continuous', 'atlas')
+      const idea = next.publishing.ideas.find(i => i.key === seed.key)
+      return idea ? notify(next, 'publishing', `Atlas rewrote it as an idea for ${NET[perf.to] ?? perf.to}.`, { link: { to: `/publishing/ideas/${idea.id}`, label: 'Review the idea' } })
+        : notify(next, 'publishing', 'Ideas already has 8 open ideas, Atlas’s limit. Settle one and ask again.', { link: { to: '/publishing/ideas', label: 'Open Ideas' } })
+    }
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
     case 'publishing/restore': {
@@ -439,12 +453,39 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
   return s
 }
 
+/* ---------- Contracts for the other agents (requests/atlas-from-*.md) ---------- */
+
+/**
+ * Sage: posts of an approved campaign enter the calendar. Adds or replaces by id, never touches a published post.
+ * Atlas fills the format and first comment it would have written. No journal line: the caller writes it.
+ */
+export function receivePosts(s: State, posts: Post[], _from: Handoff['agent']): State {
+  const byId = new Map(s.publishing.posts.map(p => [p.id, p]))
+  for (const p of posts) { if (byId.get(p.id)?.status !== 'published') byId.set(p.id, withFormat(p)) }
+  return setPosts(s, [...byId.values()])
+}
+/** Sage: takes these posts back out, unless they are already published. */
+export const withdrawPosts = (s: State, ids: string[]): State =>
+  setPosts(s, s.publishing.posts.filter(p => !ids.includes(p.id) || p.status === 'published'))
+
+/** Echo: hold what goes out in the next 24 h (status Paused, with the reason). Idempotent; Atlas's guardrail does it too during a critical alert. */
+export const holdToday = (s: State, reason: string): State => pauseFor(s, { key: 'echo', label: reason })
+/** Echo: put back what was held. Their slot gone, they return to drafts. */
+export const releaseToday = (s: State): State => resumeAll(s, 'Echo lifted the hold')
+
+/** Juno and Iris: a scheduled post whose time has come is published. */
+export const publishDue = (s: State, t: number): State => {
+  if (!s.publishing.posts.some(p => p.status === 'scheduled' && p.at <= t)) return s
+  return setPosts(s, s.publishing.posts.map(p => (p.status === 'scheduled' && p.at <= t ? { ...p, status: 'published', history: [...(p.history ?? []), { at: p.at, text: 'Published' }] } : p)))
+}
+export const publishingDue = (s: State, t: number) => s.publishing.posts.some(p => p.status === 'scheduled' && p.at <= t)
+
 /* ---------- Ideas ---------- */
 
 type IdeaAct = Extract<PublishingAction, { type: 'publishing/ideaOpen' | 'publishing/ideaDraft' | 'publishing/ideaRedirect' | 'publishing/ideaRestoreVersion' | 'publishing/ideaSlot' | 'publishing/ideaSchedule' | 'publishing/ideaSnooze' | 'publishing/ideaDismiss' | 'publishing/ideaReopen' | 'publishing/ideaRule' | 'publishing/ideaToPlan' | 'publishing/ideaToSage' }>
 const setIdeas = (s: State, ideas: Idea[]): State => ({ ...s, publishing: { ...s.publishing, ideas } })
 const patchIdea = (s: State, id: string, f: (i: Idea) => Idea): State => setIdeas(s, s.publishing.ideas.map(i => (i.id === id ? f(i) : i)))
-const ctxOf = (s: State) => ({ now: now(s), posts: s.publishing.posts, rules: s.playbook.rules })
+const ctxOf = (s: State) => ({ now: now(s), posts: s.publishing.posts, rules: s.playbook.rules, competitors: s.listening?.watch?.map(w => w.name) ?? [] })
 /** An idea settled in Ideas leaves the Desk too. */
 const dropCard = (s: State, i: Idea) => (i.handoff && s.handoffs.some(h => h.id === i.handoff) ? removeHandoff(s, i.handoff) : s)
 const decided = (s: State, i: Idea, outcome: string, reason?: string) =>

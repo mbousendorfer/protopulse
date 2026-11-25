@@ -1,5 +1,6 @@
 import type { Network } from '../app/types'
 import { T } from '../app/time'
+import { bestTime } from '../features/insights/metrics'
 
 export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
 export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused' | 'unapproved'
@@ -46,15 +47,13 @@ export type PlanItem = { id: string; day: number; time: string; network: Network
 // Pillars and the weekly cadence are Sage's: `targetsOf(s)` in features/strategy/slice.ts.
 export const PUBLISH_NETWORKS: Network[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'youtube', 'x']
 
-/** Best slots per network, with Atlas's reason. */
-export const BEST_SLOT: Record<string, { time: string; reason: string }> = {
-  instagram: { time: '18:30', reason: 'Evening reels get 2.1× the reach of lunchtime ones on your account.' },
-  tiktok: { time: '18:30', reason: 'Your TikTok audience peaks between 18:00 and 20:00.' },
-  linkedin: { time: '08:30', reason: 'LinkedIn mornings perform 1.6× better for Fernway, especially Tuesday to Thursday.' },
-  facebook: { time: '19:00', reason: 'Facebook engagement is highest after 19:00 on weekdays.' },
-  youtube: { time: '17:00', reason: 'Shorts posted at 17:00 get the most views in the first 24 hours.' },
-  x: { time: '12:00', reason: 'X posts at 12:00 get 1.4× the replies of evening ones on your account.' },
-}
+/**
+ * Best slot per network: read from Iris's best time (requests/atlas-from-iris-besttime.md), never a table of Atlas's own.
+ * `day`: Iris's best weekday (0 = Monday). `reason`: her lift, worded the way Insights shows it.
+ */
+export const BEST_SLOT: Record<string, { time: string; day: number; dayName: string; reason: string }> = Object.fromEntries(
+  PUBLISH_NETWORKS.map(n => { const b = bestTime(n); return [n, { time: b.time, day: b.day, dayName: b.dayName, reason: `${b.lift}× the median reach on ${b.dayName}s, ${b.window}.` }] }),
+)
 
 const P = (id: string, network: Network, day: number, h: number, m: number, text: string, pillar: Pillar, media?: string, extra: Partial<Post> = {}): Post => {
   const at = T(h, m, day)

@@ -27,8 +27,11 @@ const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean)
 const stop = (t: string) => (/[.!?…:]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
 /** Text without its trailing emojis, and those emojis. */
 const tail = (t: string) => { const m = t.match(/(\s*(?:\p{Extended_Pictographic}️?\s*)+)$/u); return m ? { body: t.slice(0, -m[1].length), end: ' ' + m[1].trim() } : { body: t, end: '' } }
-const COMPETITORS = /\b(peakline|norrø|norro|trailkind|basecamp)\b/i
-export const namesCompetitor = (text: string) => COMPETITORS.test(text)
+/** Competitors Echo watches (Listening › Manage competitors), plus the seeded names. Read from state, never a fixed list. */
+const SEEDED = ['peakline', 'norrø', 'norro', 'trailkind', 'basecamp']
+const escape = (x: string) => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const rivals = (names: string[] = []) => new RegExp(`\\b(${[...new Set([...SEEDED, ...names.map(n => n.toLowerCase())])].map(escape).join('|')})\\b`, 'i')
+export const namesCompetitor = (text: string, names?: string[]) => rivals(names).test(text)
 
 /* ---------- Calendar gaps (was recommend() in Page.tsx) ---------- */
 
@@ -158,7 +161,7 @@ export function pickSlot(network: Network, day: number, posts: Post[], now: numb
   return T(h, m, day + 14)
 }
 
-type Ctx = { now: number; posts: Post[]; rules?: PlaybookRule[] }
+type Ctx = { now: number; posts: Post[]; rules?: PlaybookRule[]; competitors?: string[] }
 
 const baseDraft = (idea: Idea, network: Network, ctx: Ctx): IdeaDraft => {
   const first = idea.copy[network] ?? Object.values(idea.copy)[0] ?? idea.title
@@ -275,7 +278,7 @@ export function applyInstruction(idea: Idea, input: string, ctx: Ctx): { idea: I
   const t = input.toLowerCase()
   const no = (reply: string) => ({ idea, reply: `${reply} Nothing changed in the draft.`, changed: false })
   if (/40\s?l|ridge 40|bigger bag|larger bag/.test(t)) return no('I can’t mention the Ridge 40L: it isn’t announced.')
-  const rival = t.match(COMPETITORS)
+  const rival = t.match(rivals(ctx.competitors))
   if (rival) return no(`I won’t name ${rival[1][0].toUpperCase() + rival[1].slice(1)} in a post. Naming a competitor is always your call: write it yourself in the editor if you want to.`)
   const banned = BANNED.map(w => w.replace(/\s*\(.*\)$/, '')).find(w => t.includes(w))
   if (banned) return no(`“${banned}” is on the Playbook’s banned list.`)
