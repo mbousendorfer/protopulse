@@ -80,6 +80,8 @@ export type Clip = {
   sentFrom?: string
   /** When it went to Atlas: counts toward the weekly quota per video. */
   sentAt?: number
+  /** What your published clips of the same pillar did: moves the total, and names the clip to compare with. */
+  track?: Track
   arrivedAt: number
 }
 
@@ -278,6 +280,25 @@ export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90
 export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
 export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
 
+/* ---------- Track record ---------- */
+
+export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number } }
+export const median = (xs: number[]) => { if (!xs.length) return 0; const o = [...xs].sort((a, b) => a - b); const m = o.length >> 1; return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2 }
+/** The usual reach of a published post on this network: the median, so one viral post doesn't set the bar. */
+export const typicalReach = (posts: Post[], n: Network) => median(posts.filter(p => p.network === n && p.status === 'published' && p.stats).map(p => p.stats!.reach))
+
+/** How the published clips of this clip's pillar did against the usual reach of its first network. Up to ±6 on the total. */
+export function trackRecord(c: Clip, clips: Clip[], posts: Post[]): Track | undefined {
+  const net = c.post.networks[0]
+  const base = typicalReach(posts, net)
+  const past = clips.filter(x => x.id !== c.id && x.status === 'published' && x.stats && x.pillar === c.pillar).sort((a, b) => b.stats!.views - a.stats!.views)
+  if (!base || !past.length) return undefined
+  const lift = past.reduce((a, x) => a + x.stats!.views / base, 0) / past.length
+  const delta = Math.max(-6, Math.min(6, Math.round((lift - 1) * 4)))
+  const word = past.length === 1 ? `Your ${c.pillar} clip did` : `Your ${past.length} ${c.pillar} clips did`
+  return { delta, lift, why: `${word} ${lift.toFixed(1)}× your usual ${NETWORK_FIT[net] ?? net} reach`, like: { id: past[0].id, title: past[0].title, views: past[0].stats!.views } }
+}
+
 /* ---------- Score ---------- */
 
 export const SCORE_LABEL: Record<ScoreKey, string> = { hook: 'Hook', flow: 'Flow', value: 'Value', trend: 'Trend' }
@@ -285,7 +306,7 @@ const clamp = (n: number) => Math.max(0, Math.min(99, Math.round(n)))
 export const total = (s: Score) => clamp(s.hook * 0.35 + s.flow * 0.25 + s.value * 0.25 + s.trend * 0.15)
 
 /** Juno's score after your edits, with one reason per part. Deterministic: same clip, same score. */
-export function rescore(c: Clip, t: Transcript): { score: Score; total: number; reasons: Record<ScoreKey, string> } {
+export function rescore(c: Clip, t: Transcript): { score: Score; total: number; reasons: Record<ScoreKey, string>; track?: Track } {
   const kept = keptWords(c, t)
   const dur = duration(keptSegments(c, t))
   const first = kept[0]
@@ -308,7 +329,7 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
     value: c.evidence[0] ? `${c.evidence[0].value} ${c.evidence[0].label}` : 'Shows the product doing its job',
     trend: c.base.trend >= 70 ? 'The topic is rising on TikTok this week' : 'Steady topic, not trending',
   }
-  return { score, total: total(score), reasons }
+  return { score, total: clamp(total(score) + (c.track?.delta ?? 0)), reasons, track: c.track }
 }
 
 /* ---------- Ask Juno ---------- */

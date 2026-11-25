@@ -177,6 +177,7 @@
 .ed-score-total { font-size: var(--t-2xl); }
 .ed-score-row { display: grid; grid-template-columns: 56px 1fr 28px; gap: 2px var(--s2); align-items: center; font-size: var(--t-sm); }
 .ed-score-row p { grid-column: 1 / -1; margin: 0 0 4px; }
+.ed-score-wide { grid-column: 1 / 3; }
 .ed-bar { height: 6px; border-radius: 999px; background: var(--lift-2); overflow: hidden; }
 .ed-bar span { display: block; height: 100%; background: var(--chart); border-radius: inherit; }
 .ed-why { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--a-juno-wash); }

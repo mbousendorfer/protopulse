@@ -447,11 +447,20 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
             <p className="muted t-sm">{score.reasons[k]}</p>
           </div>
         ))}
+        {score.track && (
+          <div className="ed-score-row">
+            <span className="ed-score-wide">Track record</span><span className="num">{score.track.delta > 0 ? `+${score.track.delta}` : score.track.delta}</span>
+            <p className="muted t-sm">{score.track.why}</p>
+          </div>
+        )}
       </div>
       <div className="ed-why">
         <div className="row tight"><Mark agent="juno" /><b>Why this moment</b></div>
         <p>{clip.why}</p>
-        <ul className="ed-evidence">{clip.evidence.map(e => <li key={e.label}><b className="num">{e.value}</b> <span>{e.label}</span> {e.to ? <Link to={e.to} className="link-btn">{e.from} ↗</Link> : <span className="muted">· {e.from}</span>}</li>)}</ul>
+        <ul className="ed-evidence">
+          {clip.evidence.map(e => <li key={e.label}><b className="num">{e.value}</b> <span>{e.label}</span> {e.to ? <Link to={e.to} className="link-btn">{e.from} ↗</Link> : <span className="muted">· {e.from}</span>}</li>)}
+          {clip.track?.like && <li><b className="num">{(clip.track.like.views / 1000).toFixed(1)}k</b> <span>views on “{clip.track.like.title}”, the closest clip you published</span> <Link to={`/video/clips/${clip.track.like.id}`} className="link-btn">Video ↗</Link></li>}
+        </ul>
       </div>
       <Field label="Hook">
         <div className="choices" role="radiogroup" aria-label="Hook">

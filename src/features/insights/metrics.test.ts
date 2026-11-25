@@ -39,3 +39,23 @@ describe('Iris numbers', () => {
     expect(two.find(k => k.key === 'er')!.value).toBe(month.find(k => k.key === 'er')!.value)
   })
 })
+
+describe('Clip and post numbers for Juno and Atlas', () => {
+  it('reads measured stats first, else a first-day read tilted by the clip score; nothing before the post is out', async () => {
+    const { initialState } = await import('../../app/state')
+    const { postPerf, clipPerf, netAverage } = await import('./metrics')
+    const s = initialState()
+    const measured = s.publishing.posts.find(p => p.status === 'published' && p.stats)!
+    expect(postPerf(s, measured.id)).toEqual(measured.stats)
+    const future = s.publishing.posts.find(p => p.status === 'scheduled')!
+    expect(postPerf(s, future.id)).toBeUndefined()
+    const out = { ...future, at: 0 }
+    const st = { ...s, publishing: { ...s.publishing, posts: [out, ...s.publishing.posts.filter(p => p.id !== out.id)] } }
+    const avg = netAverage(st, out.network)!
+    expect(postPerf(st, out.id, 50)!.reach).toBe(Math.round(avg.reach * 0.5 / 100) * 100)
+    expect(postPerf(st, out.id, 80)!.reach).toBeGreaterThan(postPerf(st, out.id, 50)!.reach)
+    const clip = { ...st.video.clips[0], posts: [out.id] }
+    const withClip = { ...st, video: { ...st.video, clips: [clip, ...st.video.clips.slice(1)] } }
+    expect(clipPerf(withClip, clip.id, 80)).toMatchObject({ views: postPerf(st, out.id, 80)!.reach })
+  })
+})
