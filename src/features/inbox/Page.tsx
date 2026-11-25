@@ -15,6 +15,7 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { canModerate, deleteWarning, dur, NEEDS_YOU, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
+import { translate } from './translate'
 import { DATES, describe, fromSearch, isEmpty, matchFilters, postKey, toSearch, type Filters, type SavedView } from './filters'
 import { SavedSheet } from './SavedSheet'
 import { LabelsSheet } from './LabelsSheet'
@@ -388,7 +389,7 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
       <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
       <SocialAvatar name={c.author} network={c.network} size={32} />
       <div className="ib-need-main">
-        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</span></p>
+        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”{translate(c.messages.find(m => m.from === 'them')?.text ?? '') && <span className="faint"> · {translate(c.messages.find(m => m.from === 'them')!.text)!.lang}</span>}</span></p>
         {need === 'ready' && <p className="ib-need-line"><span className="ib-need-by">Nova</span>{draft}{extras && <span className="faint"> · with {extras}</span>}</p>}
         {need === 'check' && <>
           <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{flags[0].note}</p>
@@ -457,6 +458,13 @@ function PostHead({ post, convs, onAll, compact }: { post: string; convs: Conver
       <Btn size="sm" variant="ghost" onClick={onAll}>{compact ? 'All' : 'All posts'}</Btn>
     </div>
   )
+}
+
+/** Nova shows Sam the English of a foreign-language message or reply. */
+function English({ text, from }: { text: string; from?: boolean }) {
+  const tr = translate(text)
+  if (!tr) return null
+  return <p className="ib-tr"><span className="faint">{from ? `Translated from ${tr.lang}:` : `In English (sent in ${tr.lang}):`}</span> “{tr.en}”</p>
 }
 
 function ViewBtn({ on, label, n, onClick }: { on: boolean; label: ReactNode; n: number; onClick: () => void }) {
@@ -593,6 +601,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                     <span className="mono faint">{hhmm(x.m.at)}</span>
                   </div>
                   <p>{x.m.text}</p>
+                  <English text={x.m.text} from={x.m.from === 'them'} />
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
                   {x.m.from !== 'them' && !x.m.undone && <button className="link-btn t-xs" onClick={() => onSaveReply(toTemplate(x.m.text, c))}>Save as reply</button>}
                   {x.m.auto && x.m.undoUntil && x.m.undoUntil > now && !x.m.undone && (
@@ -615,6 +624,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
               </div>
               {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
+              {!editing && <English text={draftPlain} />}
               {!!c.attachments?.length && (
                 <ul className="ib-attach">
                   {c.attachments.map(a => (
