@@ -4,7 +4,7 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { flagged } from '../desk/parts'
-import { ideasDue, onResolvePublishing, tickIdeas, unscheduleIdea } from './slice'
+import { ideasDue, onResolvePublishing, tickIdeas, undoCards, unscheduleIdea } from './slice'
 import { SCRIPT } from './script'
 
 declare module '../../app/types' {
@@ -60,7 +60,7 @@ const atlas: AgentModule = {
   id: 'atlas',
   script: SCRIPT,
   onResolve: onResolvePublishing,
-  onUndo: (s, l) => (l.idea ? unscheduleIdea(s, l.idea) : s),
+  onUndo: (s, l) => undoCards(l.idea ? unscheduleIdea(s, l.idea) : s, l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back.
   due: ideasDue,
   tick: tickIdeas,
