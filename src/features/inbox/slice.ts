@@ -1,8 +1,8 @@
 import type { State } from '../../app/state'
-import type { Decision, Flagged, Handoff } from '../../app/types'
+import type { Decision, Flagged, Handoff, LogEntry } from '../../app/types'
 import { MIN } from '../../app/time'
 import { now, pushHandoff, pushLog, removeHandoff, uid, updateHandoff } from '../../app/core'
-import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type Conversation, type Sentiment } from '../../data/inbox'
+import { CONVERSATIONS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
@@ -29,38 +29,60 @@ export type InboxAction =
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
-/** Nova reply cards from the Desk that have no conversation yet show up in the Inbox as virtual conversations. */
 /** What waits on Sam in the Inbox. Shared by the Needs you view and the rail badge so they always agree. */
 export const NEEDS_YOU: Conversation['status'][] = ['draft', 'escalated', 'takeover']
 export const inboxNeedsCount = (s: State) => [...virtualConvs(s), ...s.inbox.convs].filter(c => NEEDS_YOU.includes(c.status)).length
 
+type Reply = Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
+const replyOf = (h: Pick<Handoff, 'preview'>) => (h.preview?.type === 'reply' ? h.preview : undefined)
+
+/** The conversation a Nova card carries: kind, mood and who it is. Old saved cards have none, so read the network and the topic. */
+export type CardConv = { type: ConvType; sentiment: Sentiment; contact?: string; stars?: number; intent?: number; post?: string; reply?: string }
+export function kindOf(h: Pick<Handoff, 'conv' | 'context' | 'topic' | 'title'>, p: Reply): CardConv {
+  if (h.conv) return h.conv
+  return {
+    type: p.network === 'google' || p.network === 'trustpilot' ? 'review' : /comment|reel|post/i.test(h.context) ? 'comment' : 'dm',
+    sentiment: /complaint|review|refund|wrong|late|broken|safety/i.test(`${h.topic} ${h.title}`) ? 'negative' : 'neutral',
+  }
+}
+
+/** A Nova reply card as a conversation: the customer's message and Nova's draft. */
+function cardConv(h: Omit<Handoff, 'id' | 'at'>, p: Reply, id: string, at: number, card?: string): Conversation {
+  const k = kindOf(h, p)
+  return {
+    id, contact: k.contact, author: p.author, network: p.network, type: k.type, sentiment: k.sentiment, stars: k.stars, intent: k.intent, post: k.post,
+    at, handoff: card, unread: true, labels: [],
+    status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
+    messages: [{ id: `${id}-q`, from: 'them', text: p.text, at: at - MIN }],
+    draft: p.draft, rules: h.rules,
+    attachments: p.attachments?.map((a, i) => ({ id: `${id}-a${i}`, kind: /refund/i.test(a) ? 'refund' : /code/i.test(a) ? 'code' : 'exchange', label: a.split(' · within')[0], limit: a.includes('within') ? a.slice(a.indexOf('within')) : 'within your limits' })),
+  }
+}
+
+const sayKey = (author: string, text: string) => `${author}|${text}`
+const lastThem = (c: Conversation) => c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
+
+/** Nova reply cards from the Desk that have no conversation yet show up in the Inbox as virtual conversations. */
 export function virtualConvs(s: State): Conversation[] {
   const known = new Set(s.inbox.convs.map(c => c.handoff).concat(s.inbox.convs.map(c => c.id)))
   // Same author + same message = same conversation, whatever card raised it.
-  const said = new Set(s.inbox.convs.map(c => `${c.author}|${c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''}`))
+  const said = new Set(s.inbox.convs.map(c => sayKey(c.author, lastThem(c))))
   const seen = new Set<string>()
   return s.handoffs
-    .filter(h => h.agent === 'nova' && h.preview?.type === 'reply' && !known.has(h.id) && !(h.ref && known.has(h.ref)))
+    .filter(h => h.agent === 'nova' && replyOf(h) && !known.has(h.id) && !(h.ref && known.has(h.ref)))
     .filter(h => {
-      const p = h.preview as Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
-      const key = `${p.author}|${p.text}`
+      const key = sayKey(replyOf(h)!.author, replyOf(h)!.text)
       if (said.has(key) || seen.has(key)) return false
       seen.add(key)
       return true
     })
-    .map(h => {
-      const p = h.preview as Extract<NonNullable<Handoff['preview']>, { type: 'reply' }>
-      return {
-        id: `h:${h.id}`, author: p.author, network: p.network, at: h.at, handoff: h.id, unread: true,
-        // Read the kind and the mood from the card instead of assuming an angry DM.
-        type: p.network === 'google' || p.network === 'trustpilot' ? 'review' : /comment|reel|post/i.test(h.context) ? 'comment' : 'dm',
-        sentiment: /complaint|review|refund|wrong|late|broken|safety/i.test(`${h.topic} ${h.title}`) ? 'negative' : /intent|question|warranty/i.test(`${h.topic} ${h.title}`) ? 'neutral' : 'neutral',
-        status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
-        messages: [{ id: `${h.id}-q`, from: 'them', text: p.text, at: h.at - MIN }],
-        draft: p.draft, rules: h.rules,
-        attachments: p.attachments?.map((a, i) => ({ id: `${h.id}-a${i}`, kind: /refund/i.test(a) ? 'refund' : /code/i.test(a) ? 'code' : 'exchange', label: a.split(' · within')[0], limit: a.includes('within') ? a.slice(a.indexOf('within')) : 'within your limits' })),
-      } satisfies Conversation
-    })
+    .map(h => cardConv(h, replyOf(h)!, `h:${h.id}`, h.at, h.id))
+}
+
+/** The stored conversation a card is about: linked by id, or the same person saying the same thing. */
+function convOf(s: State, h: Handoff): Conversation | undefined {
+  const p = replyOf(h)
+  return s.inbox.convs.find(x => x.handoff === h.id || x.id === h.ref) ?? (p ? s.inbox.convs.find(x => sayKey(x.author, lastThem(x)) === sayKey(p.author, p.text)) : undefined)
 }
 
 /** Turn a virtual conversation into a stored one so actions can apply to it. */
@@ -160,6 +182,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
     case 'inbox/send': {
       let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, messages: [...x.messages, { id: uid('m'), from: 'you', text: a.text, at: t }] }))
       next = settleCard(next, c, `You replied to ${c.author} yourself`, 'done')
+      if (!c.handoff || next === s) next = pushLog(next, { agent: 'nova', text: `You replied to ${c.author} yourself`, status: 'done', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
     }
     case 'inbox/takeover': {
@@ -189,9 +212,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
     }
     case 'inbox/undoAuto': {
       const msg = c.messages.find(m => m.id === a.msg)
-      if (!msg) return s
-      const next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], messages: x.messages.map(m => (m.id === a.msg ? { ...m, undone: true, undoUntil: undefined } : m)) }))
-      return pushLog(next, { agent: 'nova', text: `Undone: Nova’s reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
+      return msg ? undoAlone(s, c, msg) : s
     }
     case 'inbox/attach':
       return patch(s, c.id, x => ({ attachments: x.attachments?.map(at => (at.id === a.att ? { ...at, removed: !at.removed } : at)) }))
@@ -204,34 +225,87 @@ export function reduceInbox(s0: State, a: InboxAction): State {
   }
 }
 
-/** Desk decisions on cards linked to a conversation update that conversation. */
-export function onResolveInbox(s: State, h: Handoff, d: Decision): State {
-  const c = s.inbox.convs.find(x => x.handoff === h.id || x.id === h.ref)
+/** Nova's reply sent alone, taken back: the message stays crossed out, the text comes back as a draft, the journal says so. */
+function undoAlone(s: State, c: Conversation, msg: Msg): State {
+  let next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)) }))
+  if (msg.log) next = { ...next, log: next.log.map(l => (l.id === msg.log ? { ...l, status: 'undone' as const } : l)) }
+  if (msg.log && s.log.find(l => l.id === msg.log)?.status === 'undone') return next
+  return pushLog(next, { agent: 'nova', text: `Undone: Nova’s reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
+}
+
+/**
+ * A scripted Nova event handled alone (on Act): the conversation lands in Handled by Nova with her reply, and the journal
+ * line links to it. Undoing the line puts the reply back as a draft. Once per event.
+ */
+export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { text: string; reason: string }): State {
+  if (s.log.some(l => l.text === auto.text)) return s
+  const p = replyOf(h)
   const t = now(s)
-  const p = h.preview?.type === 'reply' ? h.preview : undefined
-  if (!c) {
-    // A Nova reply approved straight from the Desk: record the conversation so the Inbox stays the full history.
-    if (h.agent !== 'nova' || !p || (d.kind !== 'approve' && d.kind !== 'option')) return s
-    const conv: Conversation = {
-      id: uid('c'), author: p.author, network: p.network, type: 'dm', sentiment: 'negative', at: h.at, handoff: h.id, status: 'you',
-      messages: [{ id: uid('m'), from: 'them', text: p.text, at: h.at - MIN }, { id: uid('m'), from: 'nova', text: plain(p.draft), at: t, approved: true }],
-      rules: h.rules, note: p.attachments?.length ? `Sent with: ${p.attachments.join(' · ')}` : undefined,
-    }
-    return { ...s, inbox: { ...s.inbox, convs: [conv, ...s.inbox.convs] } }
+  const id = uid('c')
+  const next = pushLog(s, { agent: 'nova', text: auto.text, reason: auto.reason, status: 'done', undoMinutes: 10, link: p ? `/inbox/${id}` : '/inbox' })
+  if (!p) return next
+  const base = cardConv(h, p, id, t)
+  const sent = (base.attachments ?? []).map(a => a.label).join(' · ')
+  const conv: Conversation = {
+    ...base, status: 'auto', unread: false, draft: undefined, attachments: undefined, note: sent ? `Sent with: ${sent}` : undefined,
+    messages: [{ ...base.messages[0], at: t - 2 * MIN }, { id: uid('m'), from: 'nova', text: kindOf(h, p).reply ?? plain(p.draft), at: t, auto: true, undoUntil: t + 10 * MIN, log: next.log[0].id }],
   }
-  const draft = p ? plain(p.draft) : plain(c.draft)
-  const send = (status: ConvStatus, text = draft): Partial<Conversation> => ({ status, unread: false, draft: undefined, messages: [...c.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] })
+  return { ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }
+}
+
+/**
+ * Every settled Desk card updates its conversation: by Sam, Claire, a batch or Act (`d.act`: then the reply is Nova's own,
+ * in Handled by Nova). What it looked like before is kept, so the journal's Undo puts it back (see onUndoInbox).
+ */
+export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
+  const p = replyOf(h)
+  let s = s0
+  let c = convOf(s, h)
+  let created = false
+  if (!c) {
+    // A Nova reply settled straight from the Desk: record the conversation so the Inbox stays the full history.
+    if (h.agent !== 'nova' || !p || (d.kind !== 'approve' && d.kind !== 'option')) return s0
+    c = cardConv(h, p, uid('c'), h.at, h.id)
+    s = { ...s, inbox: { ...s.inbox, convs: [c, ...s.inbox.convs] } }
+    created = true
+  }
+  const conv = c
+  const t = now(s)
+  const draft = p ? plain(p.draft) : plain(conv.draft)
+  const extras = attachmentNote(conv)
+  const send = (status: ConvStatus, text = draft): Partial<Conversation> => ({
+    status: d.act ? 'auto' : status, unread: false, draft: undefined, note: extras ? `Sent with: ${extras}` : conv.note,
+    messages: text ? [...conv.messages, { id: uid('m'), from: 'nova', text, at: t, approved: !d.act, auto: d.act, card: h.id }] : conv.messages,
+  })
   let change: Partial<Conversation> | undefined
   switch (d.kind) {
     case 'approve': change = send('you', d.edited ?? draft); break
     case 'reject': change = { status: d.reason === 'Dismissed' ? 'auto' : 'takeover', note: `Nova’s draft rejected${d.reason ? `: ${d.reason.toLowerCase()}` : ''}. You’re handling it.` }; break
     case 'option':
-      if (/claire/i.test(d.option)) change = { ...send('claire'), note: 'Holding reply sent. Forwarded to Claire.' }
+      if (/claire/i.test(d.option)) change = { ...send('claire'), status: 'claire', note: draft ? 'Holding reply sent. Forwarded to Claire.' : 'Forwarded to Claire.' }
       else if (/holding/i.test(d.option)) change = send('you')
       else change = { status: 'takeover', note: 'You’re handling this one yourself.' }
       break
     case 'answer': change = { status: 'takeover' }; break
     case 'trial': break
   }
-  return change ? { ...s, inbox: { ...s.inbox, convs: s.inbox.convs.map(x => (x.id === c.id ? { ...x, ...change } : x)) } } : s
+  if (!change) return s0
+  const settled = { card: h.id, created, status: conv.status, draft: conv.draft, note: conv.note, unread: conv.unread }
+  return patch(s, conv.id, { ...change, settled })
+}
+
+/** The journal's Undo: a card's decision comes off its conversation, and a reply Nova sent alone comes back as a draft. */
+export function onUndoInbox(s: State, entry: LogEntry): State {
+  let next = s
+  for (const h of entry.restore ?? []) {
+    const c = next.inbox.convs.find(x => x.settled?.card === h.id)
+    if (!c?.settled) continue
+    const b = c.settled
+    next = b.created
+      ? { ...next, inbox: { ...next.inbox, convs: next.inbox.convs.filter(x => x.id !== c.id) } }
+      : patch(next, c.id, { status: b.status, draft: b.draft, note: b.note, unread: b.unread, settled: undefined, messages: c.messages.filter(m => m.card !== h.id) })
+  }
+  const alone = next.inbox.convs.find(x => x.messages.some(m => m.log === entry.id && !m.undone))
+  const msg = alone?.messages.find(m => m.log === entry.id)
+  return alone && msg ? undoAlone(next, alone, msg) : next
 }

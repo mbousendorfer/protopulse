@@ -1,11 +1,11 @@
-import { useMemo, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, Upload } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, MEDIA, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
+import { BEST_SLOT, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs } from '../../ui'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -16,6 +16,8 @@ import PlanReview from './Plan'
 import Ideas from './Ideas'
 import { isOpen, recommendNetwork } from './ideasModel'
 import { targetsOf } from '../strategy/slice'
+import { uid } from '../../app/core'
+import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { CountBadge } from '../../ui/Feedback'
 import './publishing.css'
 
@@ -53,7 +55,7 @@ export default function PublishingPage() {
         { value: 'calendar', label: 'Calendar' },
         { value: 'plan', label: <>Plan review{planPending && <span className="dot" style={{ color: 'var(--caution)' }} aria-label="waiting for you" />}</> },
         { value: 'drafts', label: 'Drafts', count: drafts },
-        { value: 'media', label: 'Media', count: MEDIA.length },
+        { value: 'media', label: 'Media', count: libraryOf(s).length },
       ]} />
       {tab === 'ideas' && <Ideas id={rest[1]} />}
       {tab === 'calendar' && <Calendar />}
@@ -294,36 +296,78 @@ function Drafts() {
 }
 
 /* ---------- Media ---------- */
+/** An uploaded image, scaled down so it fits in the saved state. */
+function readImage(f: File): Promise<string> {
+  return new Promise((ok, ko) => {
+    const img = new Image()
+    img.onload = () => {
+      const k = Math.min(1, 640 / Math.max(img.width, img.height))
+      const c = document.createElement('canvas')
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)
+      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
+      URL.revokeObjectURL(img.src)
+      ok(c.toDataURL('image/jpeg', 0.82))
+    }
+    img.onerror = () => ko(new Error('not an image'))
+    img.src = URL.createObjectURL(f)
+  })
+}
+
 function MediaLibrary() {
   const { s, d } = useStore()
   const nav = useNavigate()
+  const now = useNow(60000)
   const [tag, setTag] = useState('All')
   const [open, setOpen] = useState<Media | null>(null)
-  const tags = useMemo(() => ['All', ...Array.from(new Set(MEDIA.flatMap(m => m.tags)))], [])
-  const list = MEDIA.filter(m => tag === 'All' || m.tags.includes(tag))
-  const missing = s.handoffs.find(h => h.id === 'h-visual')
+  const [error, setError] = useState<string | null>(null)
+  const file = useRef<HTMLInputElement>(null)
+  const forPost = useRef<string | undefined>(undefined)
+  const library = libraryOf(s)
+  const tags = useMemo(() => ['All', ...Array.from(new Set(library.flatMap(m => m.tags)))], [library])
+  const list = library.filter(m => tag === 'All' || m.tags.includes(tag))
+  const waiting = waitingForVisual(s)
   const useCount = (m: Media) => m.used + s.publishing.posts.filter(p => p.media === m.name && p.status !== 'published').length
+  const upload = (post?: string) => { forPost.current = post; setError(null); file.current?.click() }
+  const picked = async (f?: File) => {
+    if (!f) return
+    try {
+      const name = await readImage(f)
+      const title = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || 'Your upload'
+      d({ type: 'publishing/upload', post: forPost.current, media: { id: uid('md'), name, title, tags: ['Upload'], rights: 'Fernway · uploaded by you', used: 0, added: new Date(now).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } })
+    } catch { setError(`“${f.name}” isn’t an image Atlas can read. Try a JPG or a PNG.`) }
+  }
 
   return (
     <div className="stack">
-      {missing && (
-        <section className="media-missing card pad">
-          <ImageOff size={18} />
-          <div className="grow">
-            <b>Atlas needs a visual for Wednesday’s LinkedIn post</b>
-            <p className="muted">“Our repair programme in numbers.” No photo shows a repair, and Atlas never uses stock photos.</p>
-          </div>
-          <Btn variant="primary" onClick={() => d({ type: 'core/resolve', id: missing.id, decision: { kind: 'option', index: 0, option: missing.options?.[0]?.label ?? 'Use the workshop photo' } })}>Use the workshop photo</Btn>
-          <Btn onClick={() => d({ type: 'core/resolve', id: missing.id, decision: { kind: 'option', index: 2, option: missing.options?.[2]?.label ?? 'Move the post to next week' } })}>Move the post</Btn>
-        </section>
-      )}
-      <Filters label="Filter media" value={tag} onChange={setTag} items={tags.map(t => ({ value: t, label: t }))} />
+      <input ref={file} type="file" accept="image/*" hidden onChange={e => { picked(e.target.files?.[0]); e.target.value = '' }} />
+      {waiting.map(p => {
+        const card = visualCardOf(s, p)
+        const m = card && pickVisual(p, library, now)
+        const when = new Date(p.at).toLocaleDateString('en-GB', { weekday: 'long' })
+        return (
+          <section key={p.id} className="media-missing card pad">
+            <ImageOff size={18} />
+            <div className="grow">
+              <b>Atlas needs a visual for {when}’s {NETWORK_LABEL[p.network]} post</b>
+              <p className="muted">“{p.text}” {m ? `Atlas would use “${m.title}”. It never uses stock photos.` : 'No photo in Media fits, and Atlas never uses stock photos.'}</p>
+            </div>
+            {card && m && <Btn variant="primary" onClick={() => d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? `Use ${m.title}` } })}>Use “{m.title}”</Btn>}
+            <Btn variant={card && m ? undefined : 'primary'} onClick={() => upload(p.id)}><Upload size={14} />Upload one</Btn>
+            {card && <Btn variant="ghost" onClick={() => d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 2, option: card.options?.[2]?.label ?? 'Move the post to next week' } })}>Move the post</Btn>}
+          </section>
+        )
+      })}
+      <div className="media-bar">
+        <div className="grow"><Filters label="Filter media" value={tag} onChange={setTag} items={tags.map(t => ({ value: t, label: t }))} /></div>
+        {error && <span className="cmp-error" role="alert">{error}</span>}
+        <Btn onClick={() => upload()}><Upload size={14} />Upload</Btn>
+      </div>
       <ul className="media-grid">
         {list.map(m => (
           <li key={m.id}>
             <button className="media-tile" onClick={() => setOpen(m)}>
               <span className="media-photo"><Photo name={m.name} alt={m.title} /></span>
-              <span className="media-meta"><b className="ellipsis">{m.title}</b><span className="faint">Used {useCount(m)} times · added {m.added}</span></span>
+              <span className="media-meta"><b className="ellipsis">{m.title}</b><span className="faint">Used {useCount(m)} time{useCount(m) === 1 ? "" : "s"} · added {m.added}</span></span>
             </button>
           </li>
         ))}

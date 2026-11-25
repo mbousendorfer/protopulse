@@ -2,12 +2,13 @@ import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
 import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
-import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, POSTS, type PlanItem, type Post } from '../../data/publishing'
+import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, PLAN_B, POSTS, type Media, type PlanItem, type Post } from '../../data/publishing'
 import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
 import { DEMO_START } from '../../app/time'
 import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
 import { briefSage, targetsOf } from '../strategy/slice'
+import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -23,11 +24,13 @@ export type PlanState = {
 }
 /** Last bulk change, kept 10 s so it can be undone in one click. */
 export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[] }
-export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number> }
+/** What one Desk card changed in Publishing, so its Undo restores exactly that (posts and ideas as they were, posts it added, the plan). */
+export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: PlanState }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[] }
 const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
 export const initialPublishing = (): PublishingState => ({
   posts: structuredClone(POSTS), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
-  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {},
+  ideas: spotIdeas(DEMO_START, POSTS, ATLAS_LEVELS, RULES), learned: {}, byCard: {}, uploads: [],
 })
 
 /** Monday 1 December, the plan's week. */
@@ -61,6 +64,7 @@ export type PublishingAction =
   | { type: 'publishing/ideaRule'; id: string; accept: boolean }
   | { type: 'publishing/ideaToPlan'; id: string }
   | { type: 'publishing/ideaToSage'; id: string }
+  | { type: 'publishing/upload'; media: Media; post?: string }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -161,9 +165,16 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const next = setPlan(s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(s, 'h-plan') : s, { status: 'rejected' })
       return pushLog(next, { agent: 'atlas', text: 'Next week’s plan rejected. Atlas will propose posts one by one.', status: 'rejected', link: '/publishing/plan' })
     }
-    case 'publishing/planReset':
-      // A fresh proposal after a rejection: no fake note, no diff.
-      return setPlan(s, { status: 'proposed', request: undefined, diff: undefined, items: s.publishing.plan.items.map(i => ({ ...i, included: true })) })
+    case 'publishing/planReset': {
+      // A new proposal after a rejection: Atlas swaps every post it chose itself. Sage's campaign posts stay.
+      const p = s.publishing.plan
+      const base = p.version % 2 ? PLAN_B : PLAN
+      const items = base.map(i => ({ ...structuredClone(i), id: uid('n'), included: true }))
+      const was = new Set(p.items.map(i => i.text)), will = new Set(items.map(i => i.text))
+      const diff = { added: items.filter(i => !was.has(i.text)).map(i => i.text), removed: p.items.filter(i => !will.has(i.text)).map(i => i.text), changed: [] }
+      const next = setPlan(s, { status: 'proposed', request: undefined, version: p.version + 1, items, diff })
+      return pushLog(next, { agent: 'atlas', text: `Plan v${p.version + 1} ready: ${diff.added.length} new posts, the Trail Week posts kept`, status: 'done', reason: 'You rejected the previous plan', link: '/publishing/plan' })
+    }
     case 'publishing/planRequest': {
       const next = reworkPlan(s, a.text)
       const v = next.publishing.plan.version
@@ -199,6 +210,16 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     case 'publishing/ideaSchedule': case 'publishing/ideaSnooze': case 'publishing/ideaDismiss': case 'publishing/ideaReopen':
     case 'publishing/ideaRule': case 'publishing/ideaToPlan': case 'publishing/ideaToSage':
       return reduceIdeas(s, a)
+    case 'publishing/upload': {
+      let next: State = { ...s, publishing: { ...s.publishing, uploads: [a.media, ...(s.publishing.uploads ?? [])] } }
+      const p = a.post ? next.publishing.posts.find(x => x.id === a.post) : undefined
+      if (!p) return notify(next, 'publishing', `Uploaded “${a.media.title}” to Media.`)
+      const card = visualCardOf(next, p)
+      if (card) next = removeHandoff(next, card.id)
+      next = patchPost(next, p.id, { media: a.media.name, status: 'scheduled', waiting: undefined, note: `Visual: your upload “${a.media.title}”.` })
+      next = pushLog(next, { agent: 'atlas', text: `Scheduled “${p.text.slice(0, 48)}…” with your upload`, status: 'approved', reason: 'Your call from Media', link: '/publishing/calendar' })
+      return notify(next, 'publishing', `Uploaded “${a.media.title}” and added it to the ${NET[p.network] ?? p.network} post for ${day(p.at)}. It’s scheduled.`)
+    }
     case 'publishing/restore': {
       const u = s.publishing.undo
       if (!u) return s
@@ -273,8 +294,56 @@ function bulk(s: State, a: Extract<PublishingAction, { type: 'publishing/bulk' }
 const NET: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
 
 
-/** Desk decisions that touch the calendar or the plan. */
+/** Desk decisions that touch the calendar or the plan. Whatever a card changed is kept so its Undo puts it back. */
 export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
+  const next = resolveCard(s, h, d)
+  const a = s.publishing, b = next.publishing
+  if (a === b || (a.posts === b.posts && a.ideas === b.ideas && a.plan === b.plan)) return next
+  const after = new Map(b.posts.map(p => [p.id, p]))
+  const before = new Set(a.posts.map(p => p.id))
+  const ideasAfter = new Map(b.ideas.map(i => [i.id, i]))
+  const u: CardUndo = {
+    posts: a.posts.filter(p => after.get(p.id) !== p),
+    added: b.posts.filter(p => !before.has(p.id)).map(p => p.id),
+    ideas: a.ideas.filter(i => ideasAfter.get(i.id) !== i),
+    plan: a.plan !== b.plan ? a.plan : undefined,
+  }
+  return { ...next, publishing: { ...b, byCard: { ...b.byCard, [h.id]: u } } }
+}
+
+/** On Act, Atlas picks a library photo for every post held for a visual, and says which. Without a photo that fits, the card stays. */
+export function actVisuals(s: State): State {
+  let next = s
+  for (const p of waitingForVisual(s)) {
+    const h = visualCardOf(next, p)
+    const m = h && !h.lane && pickVisual(p, libraryOf(next), now(next))
+    if (!h || !m) continue
+    next = onResolvePublishing(removeHandoff(next, h.id), h, { kind: 'option', index: 0, option: h.options?.[0]?.label ?? 'Use a library photo' })
+    next = pushLog(next, { agent: 'atlas', text: `Picked “${m.title}” for the ${NET[p.network] ?? p.network} post on ${day(p.at)} and scheduled it`, status: 'done', reason: `${actionOf(next, 'atlas', h.action)?.label ?? 'Fill a slot'}, set to Act. Rights: ${m.rights}. Never a stock photo.`, link: '/publishing/media', undoMinutes: 30, restore: [h] })
+  }
+  return next
+}
+export const visualsDue = (s: State) =>
+  agentOf(s, 'atlas').status === 'on' && actionOf(s, 'atlas', 'atlas-fill')?.autonomy === 'act' && waitingForVisual(s).some(p => { const h = visualCardOf(s, p); return !!h && !h.lane && !!pickVisual(p, libraryOf(s), now(s)) })
+
+/** Undo of a Desk decision: every restored card takes back what it changed in Publishing. */
+export function undoCards(s: State, cards: Handoff[]): State {
+  let next = s
+  for (const h of cards) {
+    const u = next.publishing.byCard?.[h.id]
+    if (!u) continue
+    const P = next.publishing
+    const back = new Map(u.posts.map(p => [p.id, p]))
+    const kept = P.posts.filter(p => !u.added.includes(p.id)).map(p => back.get(p.id) ?? p)
+    const posts = [...kept, ...u.posts.filter(p => !kept.some(k => k.id === p.id))]
+    const ideasBack = new Map(u.ideas.map(i => [i.id, i]))
+    const { [h.id]: _gone, ...byCard } = P.byCard
+    next = { ...next, publishing: { ...P, posts, ideas: P.ideas.map(i => ideasBack.get(i.id) ?? i), plan: u.plan ?? P.plan, byCard } }
+  }
+  return next
+}
+
+function resolveCard(s: State, h: Handoff, d: Decision): State {
   const ok = d.kind === 'approve' || d.kind === 'trial'
   if (h.id === 'h-plan') {
     if (ok || (d.kind === 'option' && d.index === 0)) return approvePlan(s)
@@ -296,10 +365,13 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
   const linked = s.publishing.posts.find(p => p.handoff === h.id || p.id === h.ref)
   const preview = h.preview?.type === 'post' ? h.preview : undefined
   if (linked) {
-    if (h.id === 'h-visual' && d.kind === 'option') {
-      if (d.index === 0) return patchPost(s, linked.id, { media: 'workshop', status: 'scheduled', note: 'Visual: Annecy workshop photo (October).' })
-      if (d.index === 1) return patchPost(s, linked.id, { note: 'Waiting for your upload. Drop it in Media.' })
-      return patchPost(s, linked.id, { at: linked.at + 7 * DAY, status: 'scheduled', note: 'Moved to next week, visual to find.' })
+    if (h.topic === 'Missing visual' && d.kind === 'option') {
+      if (d.index === 0) {
+        const m = pickVisual(linked, libraryOf(s), now(s))
+        return m ? patchPost(s, linked.id, { media: m.name, status: 'scheduled', waiting: undefined, note: `Visual: ${m.title} (${m.rights}).` }) : patchPost(s, linked.id, { waiting: 'visual', note: 'No photo in Media fits. Upload one.' })
+      }
+      if (d.index === 1) return patchPost(s, linked.id, { waiting: 'visual', note: 'Waiting for your upload. Upload it in Media.' })
+      return patchPost(s, linked.id, { at: linked.at + 7 * DAY, status: 'scheduled', waiting: undefined, note: 'Moved to next week, visual to find.' })
     }
     if (h.id === 'h-code' && d.kind === 'answer') return patchPost(s, linked.id, { text: linked.text.replace('[code]', d.text.toUpperCase()), status: 'scheduled', note: `Code ${d.text.toUpperCase()} added.` })
     if (ok) return patchPost(s, linked.id, { status: 'scheduled', text: preview ? plain(preview.text) : linked.text, note: undefined })
