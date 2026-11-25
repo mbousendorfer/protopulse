@@ -54,9 +54,13 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
             <text x={padL - 8} y={y(t) + 4} textAnchor="end" fontSize="10" fill="var(--ink-3)" fontFamily="var(--mono)">{format(t)}</text>
           </g>
         ))}
-        {labels.map((l, i) => (i % Math.ceil(n / 8) === 0 || i === n - 1) && (
-          <text key={i} x={x(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="var(--ink-3)" fontFamily="var(--mono)">{l}</text>
-        ))}
+        {labels.map((l, i) => {
+          // Every nth label plus the last; a stepped label too close to the last one is dropped so they never overlap,
+          // and the last one sits right-aligned on the edge instead of being cut.
+          const step = Math.ceil(n / 8), last = i === n - 1
+          if (!last && (i % step !== 0 || n - 1 - i < step / 2)) return null
+          return <text key={i} x={x(i)} y={H - 6} textAnchor={last && n > 1 ? 'end' : 'middle'} fontSize="10" fill="var(--ink-3)" fontFamily="var(--mono)">{l}</text>
+        })}
         {series.map(s => (
           <path key={s.name} fill="none" stroke={stroke(s)} strokeWidth={2} strokeDasharray={s.dashed ? '4 4' : undefined} strokeLinejoin="round"
             d={s.data.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join('')} />
