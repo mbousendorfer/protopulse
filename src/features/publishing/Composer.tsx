@@ -10,11 +10,10 @@ import { Btn, Mark, Menu, Net, Pop, Seg, Sheet, Thinking, Tip } from '../../ui'
 import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
 import { slotComment } from './slice'
+import { checkPost } from './checks'
+import { forLinkedIn, shorten } from './ideas'
 
-const LIMIT: Partial<Record<Network, number>> = { x: 280, instagram: 2200, tiktok: 2200, linkedin: 3000, facebook: 5000, youtube: 100 }
-const NEEDS_MEDIA: Network[] = ['instagram', 'tiktok', 'youtube']
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
-const EMOJI = /\p{Extended_Pictographic}/gu
 
 /** Banned words from the Playbook (rules of kind "word"), with a local fallback. */
 function useBannedWords() {
@@ -42,8 +41,6 @@ const variantsOf = (text: string): { label: string; text: string }[] => {
     { label: 'Story', text: `Last week above Chamonix, ${lower}` },
   ]
 }
-const shorten = (t: string) => { const first = t.split(/(?<=[.!?])\s/)[0]; return first.length > 100 ? first.slice(0, 97).replace(/\s\S*$/, '') + '…' : first }
-const forLinkedIn = (t: string) => `${t.replace(EMOJI, '').replace(/\s+/g, ' ').trim()}\n\nAt Fernway we build gear to last, and we repair what breaks. What would you add?`
 
 export default function Composer({ open, onClose, post, initial }: { open: boolean; onClose: () => void; post?: Post; initial?: { media?: string; text?: string; at?: number; network?: Network } }) {
   const { s, d } = useStore()
@@ -68,18 +65,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const textFor = (n: Network) => variants[n] ?? text
   const previewNet = accounts.includes(preview) ? preview : accounts[0]
 
-  const checks = accounts.flatMap(n => {
-    const t = textFor(n), out: { ok: boolean; label: string }[] = []
-    const hits = words.filter(w => t.toLowerCase().includes(w))
-    out.push(hits.length ? { ok: false, label: `${NETWORK_LABEL[n]}: “${hits.join('”, “')}” is not allowed by the Playbook` } : { ok: true, label: `${NETWORK_LABEL[n]}: no banned words` })
-    const limit = n === 'tiktok' && (s.playbook.rules ?? []).some(r => /tiktok captions under 100/i.test(r.text) && !r.paused) ? 100 : LIMIT[n] ?? 2000
-    out.push(t.length > limit ? { ok: false, label: `${NETWORK_LABEL[n]}: ${t.length} characters, limit ${limit}` } : { ok: true, label: `${NETWORK_LABEL[n]}: ${t.length} of ${limit} characters` })
-    const emojis = (t.match(EMOJI) ?? []).length
-    if (emojis > 1) out.push({ ok: false, label: `${NETWORK_LABEL[n]}: ${emojis} emojis, the Playbook allows one` })
-    if (n === 'linkedin' && emojis > 0 && (s.playbook.rules ?? []).some(r => /emoji/i.test(r.text) && /linkedin/i.test(r.text) && !r.paused)) out.push({ ok: false, label: 'LinkedIn: no emojis (Playbook rule)' })
-    if (NEEDS_MEDIA.includes(n) && !media) out.push({ ok: false, label: `${NETWORK_LABEL[n]} needs a visual` })
-    return out
-  })
+  const checks = accounts.flatMap(n => checkPost({ text: textFor(n), network: n, media, words, rules: s.playbook.rules ?? [] }))
   const blocking = checks.filter(c => !c.ok)
 
   const think = (label: string, fn: () => void) => { setBusy(label); setTimeout(() => { fn(); setBusy(null) }, 700) }
