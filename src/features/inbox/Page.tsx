@@ -227,22 +227,34 @@ const NEEDS: { id: Need; title: string; hint: string }[] = [
   { id: 'claire', title: 'Waiting on Claire', hint: 'She usually answers within the hour.' },
 ]
 
+const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, claire: UserRound }
+const SHOWN = 3
+
 function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string) => void }) {
   const { d } = useStore()
+  const [more, setMore] = useState<Need[]>([])
   return (
     <div className="ib-needs">
       {NEEDS.map(g => {
         const rows = list.filter(c => needOf(c) === g.id)
         if (!rows.length) return null
+        const I = NEED_ICON[g.id]
+        // Keep the open conversation visible even when its group is folded.
+        const open = more.includes(g.id)
+        const shown = open ? rows : rows.filter((c, i) => i < SHOWN || c.id === currentId)
         return (
           <section key={g.id} className={`ib-need-group ib-g-${g.id}`} aria-label={g.title}>
             <header className="ib-need-head">
-              <h3>{g.title}<span className="num">{rows.length}</span></h3>
+              <span className="ib-need-icon" aria-hidden><I size={14} /></span>
+              <h3>{g.title}</h3>
+              <span className="ib-need-n num">{rows.length}</span>
               <span className="faint">{g.hint}</span>
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
             </header>
-            <ul>{rows.map(c => <NeedRow key={c.id} c={c} need={g.id} sel={sel} current={c.id === currentId} onOpen={() => onOpen(c.id)} />)}</ul>
+            <ul>{shown.map(c => <NeedRow key={c.id} c={c} need={g.id} sel={sel} current={c.id === currentId} onOpen={() => onOpen(c.id)} />)}</ul>
+            {rows.length > shown.length && <button className="ib-need-more" onClick={() => setMore(m => [...m, g.id])}>Show {rows.length - shown.length} more<ChevronDown size={14} /></button>}
+            {open && rows.length > SHOWN && <button className="ib-need-more" onClick={() => setMore(m => m.filter(x => x !== g.id))}>Show less</button>}
           </section>
         )
       })}
@@ -261,28 +273,24 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
       <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
       <SocialAvatar name={c.author} network={c.network} size={32} />
       <div className="ib-need-main">
-        <div className="ib-need-them">
-          <b className="ellipsis">{c.author}</b>
-          <TypeTag t={c.type} />
-          {c.sentiment === 'negative' && <SentimentTag s="negative" />}
-          <span className="mono faint">{hhmm(c.at)}</span>
-        </div>
-        <p className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</p>
-        {need === 'ready' && <p className="ib-need-nova"><Mark agent="nova" /><span><b>Nova’s reply</b> {draft}{extras && <span className="faint"> · with {extras}</span>}</span></p>}
-        {need === 'check' && <p className="ib-need-ask"><CircleHelp size={15} aria-hidden /><span><b>Check “{flags[0].text}”.</b> {flags[0].note}</span></p>}
-        {need === 'call' && <p className="ib-need-ask"><Lock size={15} aria-hidden /><span><b>{c.note?.split(' · ')[0] ?? 'Locked topic'}.</b> {c.draft ? 'Nova suggests a holding reply only.' : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</span></p>}
-        {need === 'claire' && <p className="ib-need-ask"><Mark agent="claire" /><span>Claire is looking at it.</span></p>}
-        {need !== 'claire' && (
-          <div className="ib-need-acts">
-            {need === 'ready' && <><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send</Btn><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn></>}
-            {need === 'check' && <><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send as is</Btn><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit the passage</Btn></>}
-            {need === 'call' && <>
-              {c.draft && <Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send the holding reply</Btn>}
-              <Btn size="sm" variant="ghost" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />I’ll reply</Btn>
-              <Btn size="sm" variant="ghost" onClick={stop(() => d({ type: 'inbox/claire', id: c.id }))}><UserRound size={14} />Ask Claire</Btn>
-            </>}
-          </div>
-        )}
+        <p className="ib-need-them"><b>{c.author}</b><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</span></p>
+        {need === 'ready' && <p className="ib-need-line"><span className="ib-need-by">Nova</span>{draft}{extras && <span className="faint"> · with {extras}</span>}</p>}
+        {need === 'check' && <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{flags[0].note}</p>}
+        {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? 'Nova suggests a holding reply only.' : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
+        {need === 'claire' && <p className="ib-need-line">Claire is looking at it.</p>}
+      </div>
+      <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
+        <span className="mono faint">{hhmm(c.at)}</span>
+        {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send</Btn></>}
+        {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send as is</Btn></>}
+        {need === 'call' && <>
+          <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
+            { label: 'I’ll reply myself', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
+            { label: 'Ask Claire', icon: <UserRound size={14} />, onSelect: () => d({ type: 'inbox/claire', id: c.id }) },
+          ]} />
+          {c.draft ? <Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Holding reply</Btn>
+            : <Btn size="sm" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />I’ll reply</Btn>}
+        </>}
       </div>
     </li>
   )
