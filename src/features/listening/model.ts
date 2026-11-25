@@ -2,7 +2,9 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { MENTIONS, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { COMPETITORS, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import type { Network } from '../../app/types'
+import type { Watched } from './slice'
 import type { Alert } from '../insights/alerts'
 
 /** Every mention Echo has filed: the ones that arrived during the session first, then the seeded ones. */
@@ -125,3 +127,52 @@ export function alertValue(s: State, a: Alert): { value: number; ms: Mention[] }
 /** What an Echo alert rule can watch, as the rule editor lists it. */
 export const alertSubjects = (s: State) => [{ value: 'brand', label: 'Fernway mentions' }, { value: 'competitors', label: 'Competitor mentions' }, ...s.listening.searches.map(x => ({ value: x.id, label: `“${x.name}”` }))]
 export const alertSentence = (s: State, a: Alert) => `${alertSubjects(s).find(x => x.value === a.subject)?.label ?? a.subject} ${a.condition} ${a.threshold.toLocaleString('en-GB')}${a.unit}`
+
+/* ---------- Competitors, seeded or added ---------- */
+
+/** Echo reads an added competitor's last 30 days in 10 minutes; the first event comes within the hour. */
+export const BACKFILL_MS = 10 * MIN
+export const FIRST_EVENT_MS = 25 * MIN
+
+const FORMATS: Partial<Record<Network, string>> = { instagram: 'Reels, carousels', tiktok: 'Short video', linkedin: 'Text posts, carousels', youtube: 'Films, Shorts', facebook: 'Catalogue posts', x: 'Threads' }
+const pick = (n: number, lo: number, hi: number, step = 1) => lo + Math.round(((n % 1000) / 1000) * (hi - lo) / step) * step
+
+/** Credible public numbers for a competitor Sam added, the same every time for the same name. */
+export function generatedCompetitor(w: Watched): Competitor {
+  const h = hash(w.name.toLowerCase())
+  const main = w.accounts[0]?.network ?? 'instagram'
+  return {
+    id: w.id, name: w.name, handle: w.accounts[0]?.handle ?? w.name, positioning: `Added by you. Echo has read ${w.name}’s last 30 days on ${w.accounts.length} account${w.accounts.length > 1 ? 's' : ''}.`,
+    price: '€€', followers: pick(h, 20, 300) * 1000, growth: pick(h >> 3, 5, 40) / 10, cadence: pick(h >> 5, 4, 22), er: pick(h >> 7, 8, 48) / 10,
+    formats: FORMATS[main] ?? 'Posts', sov: pick(h >> 9, 3, 9), hero: 'Not known yet',
+  }
+}
+
+const seeded = (id: string) => COMPETITORS.find(c => c.id === id)
+/** Data is ready once Echo has backfilled it (always, for the seeded four). */
+export const competitorReady = (s: State, w: Watched) => !w.custom || now(s) >= w.since + BACKFILL_MS
+/** Every competitor with data: the seeded ones, plus the ones Sam added once backfilled. Paused ones included. */
+export const competitorsOf = (s: State): Competitor[] => s.listening.watch.filter(w => competitorReady(s, w)).map(w => seeded(w.id) ?? generatedCompetitor(w))
+export const competitorOf = (s: State, id: string) => competitorsOf(s).find(c => c.id === id)
+export const competitorName = (s: State, id: string) => s.listening.watch.find(w => w.id === id)?.name ?? seeded(id)?.name ?? id
+export const eventsOf = (s: State): CompEvent[] => [...s.listening.customEvents, ...EVENTS]
+
+/** Share of voice among what Echo watches: each brand's share, Fernway included, summing to 100. */
+export function shareOfVoice(s: State): Record<string, number> {
+  const watched = competitorsOf(s).filter(c => s.listening.watch.find(w => w.id === c.id)?.tracking)
+  const total = FERNWAY_ROW.sov + watched.reduce((n, c) => n + c.sov, 0)
+  return Object.fromEntries([['fernway', FERNWAY_ROW.sov], ...watched.map(c => [c.id, c.sov])].map(([id, v]) => [id, Math.round(((v as number) / total) * 100)]))
+}
+
+/** The first event Echo raises for a competitor you added. */
+export function firstEvent(w: Watched, at: number): CompEvent {
+  const c = generatedCompetitor(w)
+  const net = w.accounts[0]?.network ?? 'instagram'
+  return {
+    id: `e-${w.id}`, competitor: w.id, type: 'Viral post', at, title: `${w.name}’s best ${net === 'tiktok' || net === 'youtube' ? 'video' : 'post'} this month: ${(c.er * 2.4).toFixed(1)}% engagement`,
+    proof: { network: net, text: `${c.formats.split(',')[0]} from ${c.handle}, twice their usual engagement.`, metric: `${(c.er * 2.4).toFixed(1)}% engagement vs ${c.er}% usual` },
+    impact: 'Low', impactWhy: `${w.name} is smaller than you (${(c.followers / 1000).toFixed(0)}k followers). Worth knowing what works for them.`,
+    read: 'One post doesn’t make a trend. Echo will tell you if they repeat it.',
+    moves: [{ label: 'Add to Echo’s lessons only', agent: 'echo', kind: 'lesson' }, { label: 'Atlas tests the same format', agent: 'atlas', kind: 'counter' }, { label: 'Nothing to do', agent: 'echo', kind: 'none' }],
+  }
+}
