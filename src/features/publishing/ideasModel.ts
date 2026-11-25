@@ -2,7 +2,7 @@
 import type { Autonomy, Network, PlaybookRule } from '../../app/types'
 import { DAY, MIN, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, type Pillar, type Post } from '../../data/publishing'
+import { BEST_SLOT, type Pillar, type Post, pillarFamily } from '../../data/publishing'
 import { PILLAR_PERF } from '../../data/insights'
 import { BANNED, FACTS } from '../../data/playbook'
 import { CADENCE, PILLARS, targetsFrom, type Targets } from '../../data/strategy'
@@ -56,7 +56,7 @@ export function recommendNetwork(posts: Post[], day: number, now: number, t: Tar
   const week = posts.filter(p => p.at >= start && p.at < start + 7 * DAY && p.status !== 'draft')
   const taken = new Set(inDay.map(p => p.network))
   const gaps = (Object.keys(t.cadence) as Network[]).map(n => ({ n, gap: (t.cadence[n] ?? 0) - week.filter(p => p.network === n).length })).filter(g => g.gap > 0).sort((a, b) => b.gap - a.gap)
-  return gaps.find(g => !taken.has(g.n))?.n ?? PILLAR_NETWORK[behindPillar(t).pillar].find(n => !taken.has(n)) ?? null
+  return gaps.find(g => !taken.has(g.n))?.n ?? PILLAR_NETWORK[pillarFamily(behindPillar(t).pillar)].find(n => !taken.has(n)) ?? null
 }
 
 /** The next days that need a post, from tomorrow (or today before 16:00). */
@@ -204,9 +204,9 @@ function rewrite(idea: Idea, d: IdeaDraft, angle: Angle): { text: string; note: 
       return { text: keep, note: `Kept ${Math.ceil(s.length / 2)} of ${s.length} sentences: ${keep.length} characters instead of ${d.text.length}.` }
     }
     case 'playful': {
-      if (d.text.startsWith(OPENER[idea.pillar])) return null
+      if (d.text.startsWith(OPENER[pillarFamily(idea.pillar)])) return null
       const emoji = !end && d.network !== 'linkedin' && !(d.text.match(EMOJI) ?? []).length ? ' 🏔️' : ''
-      return { text: `${OPENER[idea.pillar]} ${d.text}${emoji}`, note: `Lighter opening${emoji ? ', one emoji' : ''}, same facts.` }
+      return { text: `${OPENER[pillarFamily(idea.pillar)]} ${d.text}${emoji}`, note: `Lighter opening${emoji ? ', one emoji' : ''}, same facts.` }
     }
     case 'customer': {
       const c = idea.customer
@@ -336,7 +336,7 @@ const GENERIC_HOOKS: Record<Pillar, { question: string; number: string; story: s
 export function variantsOf(idea: Idea, network: Network): Variant[] {
   const d = idea.drafts?.find(x => x.network === network) ?? idea.drafts?.[0]
   const text = d?.text ?? Object.values(idea.copy)[0] ?? idea.title
-  const h = idea.hooks ?? GENERIC_HOOKS[idea.pillar]
+  const h = idea.hooks ?? GENERIC_HOOKS[pillarFamily(idea.pillar)]
   const s = sentences(tail(text).body)
   const end = tail(text).end
   const rest = (s.length > 1 ? s.slice(1) : s).join(' ')

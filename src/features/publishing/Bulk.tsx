@@ -18,6 +18,11 @@ import { perfOf } from './perf'
 import { knownLabels } from './labels'
 import { captionOf, commentOf, query, shown } from './links'
 import { accountLabel, accountOf } from './accounts'
+import { versionOf } from '../video/model'
+import type { State } from '../../app/state'
+
+/** A clip post shows the clip's version for its network (Juno's contract: requests/atlas-from-juno-clip-version). */
+const clipAspect = (s: State, p: Post) => { const c = s.video.clips.find(x => `clip:${x.id}` === p.media); return c ? versionOf(c, p.network).aspect : undefined }
 
 const when = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })} · ${hhmm(t)}`
 
@@ -200,7 +205,7 @@ export function PostPreview() {
         )}
         {!p ? <p className="muted">This post no longer exists.</p> : (
           <div className="pub-prev">
-            <div className="pub-prev-net"><NetworkPreview network={p.network} who={accountOf(p)} text={captionOf(p)} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={commentOf(p)} /></div>
+            <div className="pub-prev-net"><NetworkPreview network={p.network} who={accountOf(p)} aspect={clipAspect(s, p)} text={captionOf(p)} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} format={p.format} firstComment={commentOf(p)} /></div>
             <dl className="pub-prev-meta">
               <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' || p.status === 'paused' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status === 'unapproved' ? 'To approve' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>
