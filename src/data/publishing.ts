@@ -20,6 +20,8 @@ export type Post = {
   labels?: string[]
   link?: { url: string; utm?: Record<string, string> }
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
+  /** Published as the first comment, on networks that allow it. */
+  firstComment?: string
   stats?: { reach: number; er: number }
   handoff?: string
   note?: string

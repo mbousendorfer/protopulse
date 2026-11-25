@@ -12,6 +12,7 @@ import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
 import { PAUSE_TOPIC, fitCap, overCap, resumeAll } from './guards'
 import { approved, sendToClaire } from './approvals'
+import { withFormat } from './formats'
 import {
   LEARNED_ORIGIN, applyAngle, applyInstruction, capIdeas, draftIdea, draftsAlone, expireIdeas, gapDays, gapSeed, heldByRules, ideaPosts,
   isOpen, learn, makeIdea, outcomeOf, setDraftText, spotIdeas, wakeIdeas, type Angle,
@@ -70,6 +71,7 @@ export type PublishingAction =
   | { type: 'publishing/upload'; media: Media; post?: string }
   | { type: 'publishing/retry'; id: string; mode: Retry }
   | { type: 'publishing/resume'; ids: string[] }
+  | { type: 'publishing/firstComment'; id: string; text: string }
 
 export type BulkOp = 'approve' | 'delete' | 'reschedule' | 'duplicate' | 'claire'
 
@@ -109,7 +111,7 @@ export function parseSlot(slot: string, base: number): number {
 function approvePlan(s: State): State {
   const included = s.publishing.plan.items.filter(i => i.included)
   const posts: Post[] = []
-  for (const i of included) posts.push(fitCap([...s.publishing.posts, ...posts], { id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined }))
+  for (const i of included) posts.push(fitCap([...s.publishing.posts, ...posts], withFormat({ id: uid('p'), network: i.network, at: planItemAt(i), text: i.text, media: i.media, status: 'scheduled', author: 'atlas', pillar: i.pillar, campaign: i.tag === 'Campaign' ? 'Trail Week' : undefined })))
   let next = setPlan(setPosts(s, [...s.publishing.posts, ...posts]), { status: 'approved' })
   next = notify(next, 'publishing', `${posts.length} posts scheduled for the week of 1 December. Atlas takes it from here.`)
   return next
@@ -234,6 +236,12 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const next = patchPost(card ? removeHandoff(s, card.id) : s, p.id, retried(p, a.mode, now(s), 'you'))
       const label = RETRY_OPTIONS.find(o => o.mode === a.mode)!.label
       return pushLog(next, { agent: 'atlas', text: `${label}: “${p.text.slice(0, 48)}…”`, status: 'approved', reason: 'Your call from the calendar', link: `/publishing/calendar?post=${p.id}` })
+    }
+    case 'publishing/firstComment': {
+      const p = s.publishing.posts.find(x => x.id === a.id)
+      if (!p) return s
+      const next = patchPost(s, p.id, note({ ...p, firstComment: a.text }, now(s), `First comment ${p.firstComment ? 'changed' : 'added'}`))
+      return pushLog(next, { agent: 'atlas', text: `First comment on the ${NET[p.network] ?? p.network} post for ${day(p.at)}: “${a.text}”`, status: 'done', reason: 'You asked Atlas', link: `/publishing/calendar?post=${p.id}` })
     }
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
@@ -416,7 +424,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
   // Generic rule: any approved post card (Atlas drafts, counter-posts, command bar briefs) lands in the calendar.
   if (ok && preview) {
     // The card's pillar and campaign follow the post. Trail stories stays the default for cards that don't say.
-    const post = fitCap(s.publishing.posts, { id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id })
+    const post = fitCap(s.publishing.posts, withFormat({ id: uid('p'), network: preview.network, at: parseSlot(preview.slot, now(s)), text: plain(preview.text), media: preview.media, status: 'scheduled', author: 'atlas', pillar: h.pillar ?? 'Trail stories', campaign: h.campaign, campaignId: h.campaignId, handoff: h.id }))
     return setPosts(s, [...s.publishing.posts, post])
   }
   return s
