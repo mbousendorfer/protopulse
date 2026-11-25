@@ -6,7 +6,7 @@ import { useStore } from '../../app/store'
 import { Net } from '../../ui'
 import Photo from '../../ui/Photo'
 import { TRANSCRIPT, mediaUrl, type Source } from '../../data/video'
-import { duration, keptSegments, rescore, type Clip } from './model'
+import { SWATCH, display, duration, keptSegments, rescore, type CapLine, type Captions, type Clip } from './model'
 
 /** A scene to draw while the poster loads, or when it's missing. */
 const SCENE: Record<string, string> = { repair: 'workshop', gr20: 'rain', live: 'workshop' }
@@ -31,6 +31,33 @@ export function ClipThumb({ clip, source, size = 'md' }: { clip: Clip; source: S
       {broken ? <Photo name={SCENE[source.media] ?? 'workshop'} /> : <img src={mediaUrl(`${source.media}/poster.jpg`)} alt="" style={{ objectPosition: `${focus * 100}% 50%` }} onError={() => setBroken(true)} loading="lazy" />}
       <span className="clip-thumb-len mono">{fmt(clipLength(clip, source))}</span>
     </span>
+  )
+}
+
+/** Uploaded files play for this session only: blob URLs die on reload. */
+export const SESSION_BLOBS = new Set<string>()
+export const playable = (src: Source) => src.kind !== 'upload' || (!!src.blob && SESSION_BLOBS.has(src.blob))
+export const videoUrl = (src: Source) => (src.kind === 'upload' ? src.blob! : mediaUrl(`${src.media}/video.mp4`))
+
+/** The source's poster, 16:9. */
+export function SourceThumb({ source }: { source: Source }) {
+  const [broken, setBroken] = useState(false)
+  return (
+    <span className="src-thumb" aria-hidden>
+      {broken || source.kind === 'upload' ? <Photo name={SCENE[source.media] ?? 'workshop'} /> : <img src={mediaUrl(`${source.media}/poster.jpg`)} alt="" onError={() => setBroken(true)} loading="lazy" />}
+    </span>
+  )
+}
+
+/** One caption line as it appears inside the video. Styles here are content (Fernway colours, capitals), not UI. */
+export function CaptionText({ c, line, active }: { c: Captions; line?: CapLine; active: number }) {
+  if (!line) return null
+  return (
+    <div className={`cap cap-${c.template} cap-f-${c.font}`} style={{ top: `${c.y}%`, fontSize: `${c.size * 0.75}cqh`, ['--hl' as string]: SWATCH[c.color] }}>
+      <span className="cap-line">
+        {line.words.map((w, k) => <span key={k} className={`cap-w ${k === active ? 'on' : ''} ${w.key ? 'key' : ''}`}>{display(c, w)}</span>)}
+      </span>
+    </div>
   )
 }
 

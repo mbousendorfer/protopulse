@@ -222,11 +222,11 @@ export const HANDOFFS: Handoff[] = [
   },
   { ...LIVE_CARD, id: 'h-clips-live', at: T(7, 20) } as Handoff,
   {
-    id: 'h-clip-win', agent: 'juno', kind: 'news', urgency: 'week', topic: 'Clip', group: 'good', ref: 'repair-brands',
+    id: 'h-clip-win', agent: 'juno', kind: 'news', urgency: 'week', topic: 'Clip', group: 'good', ref: 'clip-repair-brands',
     title: 'Your repair clip passed 48k views on TikTok',
     context: '“Most brands would sell you a new bag” · 7.1% engagement, 3× your TikTok average.',
     why: 'Juno cut it from yesterday’s repair video. Three more moments from that video are waiting in Video.',
-    confidence: 95, at: T(6, 45), link: '/video/clips/repair-brands',
+    confidence: 95, at: T(6, 45), link: '/video/clips/clip-repair-brands',
     cta: { label: 'Find more moments in that video', to: '/video/sources/repair' },
   },
 ]

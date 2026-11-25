@@ -7,7 +7,7 @@ import { PHASES, PHASE_MS } from '../../data/video'
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
 const done = (s: State) => run(later(s, PHASES.length * PHASE_MS + 1000), { type: 'core/heartbeat' })
-const clipPosts = (s: State, source: string) => s.publishing.posts.filter(p => p.media?.startsWith(`clip:${source}-`) && p.status === 'scheduled')
+const clipPosts = (s: State, source: string) => s.publishing.posts.filter(p => p.media?.startsWith(`clip:clip-${source}-`) && p.status === 'scheduled')
 
 test('a new upload is processed, its clips arrive with a Desk card; approving the card schedules them and Undo takes them back', () => {
   let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-gr20' })
@@ -86,7 +86,7 @@ test('editor: edits stack up, undo and redo walk through them', () => {
 
 test('find clips about a topic adds new clips; dismissing one can be undone', () => {
   let s = run(initialState(), { type: 'video/find', source: 'live', query: 'second-hand bags', len: 15, count: 2 })
-  const found = s.video.clips.filter(c => c.id.startsWith('live-find'))
+  const found = s.video.clips.filter(c => c.id.startsWith('clip-live-find'))
   expect(found.length).toBeGreaterThan(0)
   expect(found[0].why).toMatch(/second-hand/)
   s = run(s, { type: 'video/dismiss', id: found[0].id, reason: 'Off-brand' })

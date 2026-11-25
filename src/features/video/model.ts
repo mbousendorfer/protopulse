@@ -182,7 +182,7 @@ export function captionLines(c: Clip, t: Transcript, lang: Lang = c.audio.lang):
   const kept = keptWords(c, t)
   const tokens: (CapWord & { sent: number })[] = []
   if (lang === 'en') {
-    for (const w of kept) { const text = wordText(c, w); tokens.push({ text, s: toClipTime(segs, w.s), e: toClipTime(segs, w.e), i: w.i, key: KEY.test(text), sent: w.sent }) }
+    for (const w of kept) { const text = wordText(c, w); if (!text) continue; tokens.push({ text, s: toClipTime(segs, w.s), e: toClipTime(segs, w.e), i: w.i, key: KEY.test(text), sent: w.sent }) }
   } else {
     for (const sent of t.sentences) {
       const ws = kept.filter(w => w.sent === sent.i)
@@ -225,7 +225,7 @@ const srtTime = (x: number) => {
 export const toSRT = (lines: CapLine[]) => lines.map((l, k) => `${k + 1}\n${srtTime(l.s)} --> ${srtTime(l.e)}\n${l.words.map(w => w.text).join(' ')}\n`).join('\n')
 
 /** The clip's words as text: what the diff compares. */
-export const clipText = (c: Clip, t: Transcript) => keptWords(c, t).map(w => wordText(c, w)).join(' ')
+export const clipText = (c: Clip, t: Transcript) => keptWords(c, t).map(w => wordText(c, w)).filter(Boolean).join(' ')
 
 /* ---------- Finding moments (ClipAnything) ---------- */
 

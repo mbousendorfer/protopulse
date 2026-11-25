@@ -159,7 +159,7 @@ export function clipFromSeed(seed: ClipSeed, source: Source, arrivedAt: number, 
   const t = TRANSCRIPT[source.transcript]
   const { start, end } = anchor(t, seed.from, seed.to)
   return {
-    id: `${source.id}-${seed.key}`, source: source.id, title: seed.title, hook: seed.hooks[0], hooks: seed.hooks, start, end, cut: [], trimGaps: false, fixes: {}, overdub: {},
+    id: `clip-${source.id}-${seed.key}`, source: source.id, title: seed.title, hook: seed.hooks[0], hooks: seed.hooks, start, end, cut: [], trimGaps: false, fixes: {}, overdub: {},
     base: seed.base, why: seed.why, evidence: seed.evidence, aspect: '9:16', frame: 'track', captions: { ...kit.captions }, broll: [], brand: { ...kit.brand },
     audio: { studio: false, lang: 'en', dubs: [] }, post: { networks: seed.networks, text: Object.fromEntries(seed.networks.map(n => [n, seed.text])) },
     pillar: seed.pillar, status: seed.status ?? 'ready', stats: seed.stats, arrivedAt,
