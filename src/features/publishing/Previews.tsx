@@ -64,6 +64,8 @@ function Caption({ v, cut, more, tight, flat }: { v: View; cut: number; more: st
 export const short = (n: number) => (n < 1e3 ? `${n}` : n < 1e6 ? `${dec(n / 1e3)}K` : `${dec(n / 1e6)}M`)
 const dec = (x: number) => `${x >= 100 ? Math.round(x) : Math.round(x * 10) / 10}`
 const full = (n: number) => n.toLocaleString('en-US')
+/** A counter with no value prints nothing, like the networks do before a post has results. */
+const count = (n: number) => (n > 0 ? short(n) : null)
 const plural = (n: number, w: string) => `${full(n)} ${w}${n === 1 ? '' : 's'}`
 
 type Clock = 'ig' | 'tt' | 'li' | 'fb' | 'x' | 'g'
@@ -131,10 +133,10 @@ function TikTok(v: View) {
       <div className="tt-scrim" />
       <div className="tt-rail">
         <span className="tt-me"><Brand size={46} /><i><Plus size={12} strokeWidth={3.5} /></i></span>
-        <span><Ico n="ttLike" size={34} />{short(v.n(0.8))}</span>
-        <span><Ico n="ttComment" size={32} />{short(v.n(0.05))}</span>
-        <span><Ico n="ttSave" size={30} />{short(v.n(0.08))}</span>
-        <span><Ico n="ttShare" size={30} />{short(v.n(0.07))}</span>
+        <span><Ico n="ttLike" size={34} />{count(v.n(0.8))}</span>
+        <span><Ico n="ttComment" size={32} />{count(v.n(0.05))}</span>
+        <span><Ico n="ttSave" size={30} />{count(v.n(0.08))}</span>
+        <span><Ico n="ttShare" size={30} />{count(v.n(0.07))}</span>
         <span className="tt-disc"><Brand size={24} /></span>
       </div>
       <div className="tt-cap">
@@ -191,7 +193,6 @@ function Facebook(v: View) {
 }
 
 function XPost(v: View) {
-  const count = (n: number) => (n > 0 ? short(n) : null)
   return (
     <div className="x-row">
       <Brand size={40} />
@@ -219,9 +220,9 @@ function Shorts(v: View) {
       <div className="yt-top"><Search size={24} aria-label="Search" /><EllipsisVertical size={24} aria-label="More" /></div>
       <div className="yt-scrim" />
       <div className="yt-rail">
-        <span><i><Ico n="ytLike" size={22} /></i>{likes ? short(likes) : 'Like'}</span>
+        <span><i><Ico n="ytLike" size={22} /></i>{count(likes) ?? 'Like'}</span>
         <span><i><Ico n="ytDislike" size={22} /></i>Dislike</span>
-        <span><i><Ico n="ytComment" size={22} /></i>{short(comments)}</span>
+        <span><i><Ico n="ytComment" size={22} /></i>{count(comments) ?? 'Comment'}</span>
         <span><i><Ico n="ytShare" size={22} /></i>Share</span>
         <span><i><Ico n="ytMore" size={22} /></i></span>
         <span className="yt-sound"><Media name={v.media} /></span>

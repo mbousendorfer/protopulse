@@ -37,7 +37,8 @@
 .detail-stamp { position: absolute; top: 0; right: 0; z-index: 2; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: var(--r-ctl); border: 1px solid var(--ok); background: var(--panel); color: var(--ok); font: 600 var(--t-sm) var(--mono); transform: rotate(-2deg); animation: float-in 160ms var(--ease); }
 .flags-hint { font-size: var(--t-sm); margin-top: var(--s2); display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .sources { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: var(--s3); font-size: var(--t-sm); }
-.chip.source { gap: 6px; }
+.chip.source { display: inline; }
+.chip.source .faint { margin-left: 6px; }
 .wont-guess { margin-top: var(--s3); padding: 8px 10px; border-radius: var(--r-ctl); background: var(--sunk); border: 1px dashed var(--line-strong); color: var(--ink-2); font-size: var(--t-sm); }
 
 /* Batch */
