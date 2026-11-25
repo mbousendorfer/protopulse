@@ -32,7 +32,7 @@ img { display: block; max-width: 100%; }
 .row { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
 .row.tight { gap: var(--s1); }
 .row.nowrap { flex-wrap: nowrap; }
-.row.top { align-items: flex-start; }
+/* Not .top: that is the top bar. */
 .row.between { justify-content: space-between; }
 .grow { flex: 1; min-width: 0; }
 .push-end { margin-left: auto; }

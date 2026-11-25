@@ -38,7 +38,7 @@ export function Team() {
           const promo = s.handoffs.some(h => h.agent === a.id && h.kind === 'promotion')
           return (
             <article key={a.id} className="card agent-card">
-              <div className="row nowrap top">
+              <div className="row nowrap items-start">
                 <Mark agent={a.id} size="lg" state={a.status === 'on' ? 'on' : 'paused'} />
                 <div className="grow">
                   <h2><Link to={`/agents/${a.id}`} className="agent-link">{a.name}</Link></h2>
@@ -131,7 +131,7 @@ export function AgentProfile() {
       {tab === 'autonomy' && (
         <div className="stack lg">
           <section className="card pad-lg">
-            <div className="row between top">
+            <div className="row between items-start">
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
                 <p className="muted mw-62ch">A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
@@ -187,7 +187,7 @@ function AutonomyBoard({ agent }: { agent: Agent }) {
           <p className="faint acol-sub">{level === 'act' ? 'Runs on its own. You can undo.' : level === 'draft' ? 'Prepares it, waits for your approval.' : 'Points it out. You do it.'}</p>
           {agent.actions.filter(x => x.autonomy === level).map(x => (
             <article key={x.id} data-flip={x.id} className="aitem">
-              <div className="row nowrap top">
+              <div className="row nowrap items-start">
                 <h4>{x.label}</h4>
                 {x.locked && <Tip label={x.lockReason}><span className="lock" tabIndex={0} aria-label={`Locked: ${x.lockReason}`}><Lock size={13} /></span></Tip>}
               </div>

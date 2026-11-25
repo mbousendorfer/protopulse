@@ -47,7 +47,7 @@ export default function PlanReview() {
   return (
     <div className="plan">
       <section className="card pad-lg plan-head">
-        <div className="row between top">
+        <div className="row between items-start">
           <div>
             <div className="row tight"><Mark agent="atlas" /><span className="mono faint">Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
