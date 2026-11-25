@@ -144,6 +144,12 @@
 .pv-react { display: grid; place-items: center; width: 18px; height: 18px; margin-right: -4px; border: 1.5px solid var(--pv-bg); border-radius: 50%; color: var(--pv-on-color); }
 .pv-react:last-child { margin-right: 0; }
 
+.cmp-net { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.cmp-net-row { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--s2) var(--s3); align-items: center; }
+.cmp-net-row > :last-child { grid-column: 1 / -1; }
+@media (max-width: 640px) { .cmp-net-row { grid-template-columns: minmax(0, 1fr); gap: var(--s1); } }
+.pv-first { margin: 0; padding: 8px 12px 12px; color: var(--pv-ink); }
+.pv-first b { font-weight: 600; }
 .pv-instagram { --pv-bg: var(--pv-ig-bg); --pv-ink: var(--pv-ig-ink); --pv-muted: var(--pv-ig-muted); --pv-tag: var(--pv-ig-link); --pv-empty: var(--pv-ig-empty); --pv-empty-ink: var(--pv-ig-muted); font-family: var(--pv-font-apple); }
 .ig-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
 .ig-who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
