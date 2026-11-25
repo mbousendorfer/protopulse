@@ -4,7 +4,7 @@ import { initialState, type State } from '../../app/state'
 import { now, updateHandoff } from '../../app/core'
 import atlas from './agent'
 import { reducePublishing } from './slice'
-import { revise } from './approvals'
+import { actorOf, cardOfPost, revise } from './approvals'
 import { intentDef } from '../../app/agents-registry'
 
 const tick = (s: State) => (atlas.due!(s, now(s)) ? atlas.tick!(s, now(s)) : s)
@@ -33,6 +33,7 @@ test('Claire approves: scheduled, her comment on the post', () => {
   expect(post(s, 'p-27').status).toBe('scheduled')
   expect(post(s, 'p-27').approval!.state).toBe('approved')
   expect(post(s, 'p-27').comments!.at(-1)).toMatchObject({ from: 'claire', text: 'Go. Keep it short.' })
+  expect(post(s, 'p-27').history!.at(-1)!.text).toBe('Approved by Claire')
 })
 
 test('Claire asks for changes: back to draft, Atlas revises, Sam approves the revision', () => {
@@ -75,4 +76,20 @@ test('“Send Friday’s post to Claire for approval” finds Friday’s post', 
   const next = r.effects[0](s)
   const sent = next.publishing.posts.find(p => p.status === 'unapproved')!
   expect(new Date(sent.at).getDay()).toBe(5)
+})
+
+test('the card that decides a post: its own, the queue\'s, Claire\'s; never the failure card', () => {
+  const s = initialState()
+  expect(cardOfPost(s, post(s, 'p-trend'))?.id).toBe('h-trend')
+  expect(cardOfPost(s, post(s, 'p-27'))).toBeUndefined()
+  const sent = send()
+  expect(cardOfPost(sent, post(sent, 'p-27'))?.lane).toBe('claire')
+  const failed = { ...post(s, 'p-27'), status: 'failed' as const }
+  expect(cardOfPost({ ...s, handoffs: [{ ...s.handoffs[0], id: 'hf', topic: 'Publishing failed', ref: 'p-27' }] }, failed)).toBeUndefined()
+})
+
+test('a history line is credited to whoever it names first', () => {
+  expect(actorOf('Approved by you')).toBe('you')
+  expect(actorOf('Atlas sent it to Claire')).toBe('atlas')
+  expect(actorOf('X refused it: link flagged as a possible redirect')).toBeUndefined()
 })

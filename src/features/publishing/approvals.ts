@@ -37,6 +37,19 @@ export function sendToClaire(s: State, post: Post, why: string, by: 'you' | 'atl
   return { s: next, hid }
 }
 
+/**
+ * The open Desk card that decides a post: the one it was born with (`handoff`), the queue's or Claire's (`ref`),
+ * or the one Claire's answer came back on (`approval.card`). Failures have their own card (`failureCardOf`).
+ */
+export const cardOfPost = (s: State, p: Post): Handoff | undefined =>
+  s.handoffs.find(h => h.topic !== 'Publishing failed' && (h.id === p.handoff || h.id === p.approval?.card || h.ref === p.id))
+
+/** History lines are plain sentences: whoever they name first did it ("Approved by you", "Atlas sent it to Claire"). */
+export const actorOf = (text: string): 'you' | 'claire' | 'atlas' | undefined => {
+  const hits = ([['you', /\byou\b/i], ['claire', /\bClaire\b/], ['atlas', /\bAtlas\b/]] as const).map(([by, re]) => [by, text.search(re)] as const).filter(([, i]) => i >= 0)
+  return hits.sort((a, b) => a[1] - b[1])[0]?.[0]
+}
+
 /** What Atlas changes after "changes requested": the price out when Claire asks, otherwise a shorter cut. */
 export function revise(text: string, ask: string): string {
   if (/price|promo|code|discount/i.test(ask) && PRICED.test(text)) {
