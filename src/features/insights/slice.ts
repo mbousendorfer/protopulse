@@ -109,7 +109,7 @@ function followUpPost(s: State, about: string): State {
     agent: 'atlas', kind: 'approval', urgency: 'today', topic: tiktok ? 'Hook test' : 'Follow-up post', action: 'atlas-fill', chain: ['iris', 'atlas'],
     title: tiktok ? 'Hook test 1 of 3: product in the first 2 seconds' : `Follow-up post: ${about}`,
     context: tiktok ? 'Same Ridge 28L footage, recut so the bag appears at 0:01. Two more variants follow if this one beats 4,000 views.' : 'Atlas wrote a follow-up for the people who found you this week.',
-    why: 'Iris asked for it from an anomaly you acted on.', confidence: 74, link: '/publishing',
+    why: 'Iris asked for it from an anomaly you acted on.', confidence: 74, link: '/publishing/calendar',
     preview: tiktok
       ? { type: 'post', network: 'tiktok', slot: 'Today, 18:30', media: 'pack', text: ['3 days. 28 litres. Watch it all go in. #packingmybag'] }
       : { type: 'post', network: 'linkedin', slot: 'Thu 27, 08:30', text: ['1,200 bags repaired this year. Here’s what our workshop learned about what breaks first, and how we design around it.'] },

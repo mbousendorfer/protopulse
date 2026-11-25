@@ -197,7 +197,7 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 
 Onglets : **Calendar** · **Plan review** · **Drafts** · **Media**. Bouton « New post » partout.
 
-- **Ideas** (premier onglet, `/publishing/ideas`) : une phrase d'Atlas qui résume (« 7 ideas this week, 2 ready to schedule. Community is behind target, so 3 of them are Community. »), puis **Ready to review** (brouillons complets), **New ideas** (l'angle et la preuve), **Series** (3 à 5 posts : teaser, preuve, voix client, appel).
+- **Ideas** (premier onglet et page d'arrivée de Publishing : `/publishing` ; le calendrier est à `/publishing/calendar`) : une phrase d'Atlas qui résume (« 7 ideas this week, 2 ready to schedule. Community is behind target, so 3 of them are Community. »), puis **Ready to review** (brouillons complets), **New ideas** (l'angle et la preuve), **Series** (3 à 5 posts : teaser, preuve, voix client, appel).
   - carte : provenance (« Spotted by Echo → drafted by Atlas »), angle, pourquoi, sources cliquables avec leur chiffre, confiance, pilier, réseaux, fraîcheur (« Good until Fri 27 ») ; si rédigée, aperçu avec média ou brief visuel et créneau ;
   - actions dans cet ordre : principale (**Schedule** / **Draft it** / **Add to next week's plan** pour le lot du jeudi / **Send to Sage** pour une série), **Redirect**, **Not now**, **Dismiss** (raison en un clic : Off-brand, Not timely, Already covered, Wrong pillar ; « Dismissed · Undo ») ;
   - sélection et action groupée « Schedule N ready », avec Undo 10 s qui remet les idées dans Ideas ;

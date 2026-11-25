@@ -44,9 +44,9 @@ export const SCRIPT: ScriptEvent[] = [
     id: 'ev-recycle', label: 'Atlas · recycle the drop-test reel',
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Recycle', action: 'atlas-recycle',
       title: 'Recycle the “drop test” reel for Instagram', context: '210k views on TikTok in October. Instagram never saw it.',
-      why: 'Recycling is set to Draft.', confidence: 79, link: '/publishing',
+      why: 'Recycling is set to Draft.', confidence: 79, link: '/publishing/calendar',
       preview: { type: 'post', network: 'instagram', slot: 'Thu 27, 18:00', media: 'bottle', text: ['We dropped it from 3 metres. Then from 5. The bottle is fine, the floor isn’t.'] } },
-    auto: { text: 'Rewrote the “drop test” reel and scheduled it Thursday 18:00 on Instagram', reason: 'Recycling, set to Act', link: '/publishing' },
+    auto: { text: 'Rewrote the “drop test” reel and scheduled it Thursday 18:00 on Instagram', reason: 'Recycling, set to Act', link: '/publishing/calendar' },
   },
   { id: 'ev-idea-signal', label: 'Iris · knots carousel saved again (idea)', agent: 'iris', idea: { origin: 'continuous', agent: 'iris', seeds: ['knots-winter'] } },
   {
@@ -86,9 +86,9 @@ export const SCRIPT: ScriptEvent[] = [
     id: 'ev-fill', label: 'Atlas · empty Saturday slot',
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Empty slot', action: 'atlas-fill',
       title: 'Saturday 10:00 on Instagram is empty', context: 'Atlas wrote a Community pillar post from a customer photo you liked.',
-      why: 'Filling empty slots is set to Draft.', confidence: 81, link: '/publishing',
+      why: 'Filling empty slots is set to Draft.', confidence: 81, link: '/publishing/calendar',
       preview: { type: 'post', network: 'instagram', slot: 'Sat 29, 10:00', media: 'lake', text: ['Sunrise at Lac Blanc by @julien_trail. Ridge 28L, 4:30 alarm, zero regrets.'] } },
-    auto: { text: 'Filled Saturday 10:00 on Instagram with @julien_trail’s Lac Blanc photo', reason: 'Empty slots, set to Act', link: '/publishing' },
+    auto: { text: 'Filled Saturday 10:00 on Instagram with @julien_trail’s Lac Blanc photo', reason: 'Empty slots, set to Act', link: '/publishing/calendar' },
   },
   {
     id: 'ev-promo-exchange', label: 'Nova · promotion request (exchanges)', always: true,
@@ -140,7 +140,7 @@ export const SCRIPT: ScriptEvent[] = [
     id: 'ev-x-fail', label: 'Atlas · X rejected a post', always: true,
     handoff: { agent: 'atlas', kind: 'alert', urgency: 'today', topic: 'Publishing failed', action: 'atlas-slot',
       title: 'X rejected today’s 12:00 post', context: 'The link to fernway.co/trail-week was flagged as a possible redirect.',
-      why: 'Publishing failures always reach you.', confidence: 97, link: '/publishing',
+      why: 'Publishing failures always reach you.', confidence: 97, link: '/publishing/calendar',
       options: [{ label: 'Retry with a plain link', recommended: true }, { label: 'Publish without the link' }, { label: 'Skip X today' }] },
   },
   {

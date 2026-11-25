@@ -50,7 +50,7 @@ function approveCampaign(s: State, id: string): State {
     next = pushHandoff(next, {
       agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Campaign post', action: 'atlas-plan', chain: ['sage', 'atlas'], ref: id,
       title: `First ${c.name} post: ${first.title}`, context: `Sage handed ${c.posts.length} posts to Atlas. This is the first; the rest follow the plan.`,
-      why: 'Campaign posts go through you until the campaign is running.', confidence: 76, link: '/publishing',
+      why: 'Campaign posts go through you until the campaign is running.', confidence: 76, link: '/publishing/calendar',
       preview: { type: 'post', network: first.network, slot: `${dayLabel(c.base + first.day * 86_400_000, now(s))}, 18:00`, text: [`${first.title}. ${c.messages[0] ?? ''}`.trim()] },
     })
   }

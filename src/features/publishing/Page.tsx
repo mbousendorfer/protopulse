@@ -30,12 +30,13 @@ export default function PublishingPage() {
   const nav = useNavigate()
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
-  const tab: Tab = rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'media' ? rest[0] : 'calendar'
+  // /publishing lands on Ideas; the composer (new, post/:id) opens over the calendar.
+  const tab: Tab = !rest[0] ? 'ideas' : rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'media' ? rest[0] : 'calendar'
   const editId = rest[0] === 'post' ? rest[1] : undefined
   const creating = rest[0] === 'new'
   const query = new URLSearchParams(loc.search)
   const editPost = s.publishing.posts.find(p => p.id === editId)
-  const back = tab === 'calendar' ? '/publishing' : `/publishing/${tab}`
+  const back = `/publishing/${tab}`
   const planPending = s.publishing.plan.status === 'proposed'
   const drafts = s.publishing.posts.filter(p => p.status === 'draft').length
   // The badge means "needs you": ideas ready to review, not every idea.
@@ -46,7 +47,7 @@ export default function PublishingPage() {
       <PageHead agent="atlas" title="Publishing" lede="Atlas plans the week, writes the posts and picks the slots. You approve the plan, not each post.">
         <Btn variant="primary" onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>
       </PageHead>
-      <Tabs value={tab} onChange={t => nav(t === 'calendar' ? '/publishing' : `/publishing/${t}`)} items={[
+      <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
         { value: 'ideas', label: <>Ideas{readyIdeas > 0 && <CountBadge n={readyIdeas} needs label={`${readyIdeas} ready to review`} />}</> },
         { value: 'calendar', label: 'Calendar' },
         { value: 'plan', label: <>Plan review{planPending && <span className="dot" style={{ color: 'var(--caution)' }} aria-label="waiting for you" />}</> },
@@ -62,9 +63,9 @@ export default function PublishingPage() {
 
       {(creating || editId) && (
         editId && !editPost ? (
-          <Sheet open onOpenChange={() => nav(back)} title="Post not found"><Empty title="This post no longer exists" body="It may have been deleted or merged." action={<Btn onClick={() => nav('/publishing')}>Back to the calendar</Btn>} /></Sheet>
+          <Sheet open onOpenChange={() => nav(back)} title="Post not found"><Empty title="This post no longer exists" body="It may have been deleted or merged." action={<Btn onClick={() => nav('/publishing/calendar')}>Back to the calendar</Btn>} /></Sheet>
         ) : (
-          <Composer key={editId ?? `new${loc.search}`} open post={editPost} onClose={() => nav(editId ? '/publishing' : back === '/publishing/plan' ? back : '/publishing')}
+          <Composer key={editId ?? `new${loc.search}`} open post={editPost} onClose={() => nav(editId || back !== '/publishing/plan' ? '/publishing/calendar' : back)}
             initial={{ media: query.get('media') ?? undefined, text: query.get('text') ?? undefined, network: (query.get('network') as Network) ?? undefined, at: query.get('at') ? +query.get('at')! : undefined }} />
         )
       )}

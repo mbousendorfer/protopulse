@@ -140,7 +140,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       if (!p || p.at === a.at) return s
       const comment = slotComment(p.network, a.at)
       // Atlas's comment on the new slot stays on the post, not in a toast that vanishes.
-      const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: comment }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
+      const next = pushLog(setPosts(s, s.publishing.posts.map(x => (x.id === a.id ? note({ ...x, at: a.at, note: comment }, now(s), `Moved from ${day(p.at)} to ${day(a.at)}`) : x))), { agent: 'atlas', text: `You moved “${p.text.slice(0, 48)}…” to ${new Date(a.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(a.at)}`, status: 'done', reason: comment, link: '/publishing/calendar', detail: { before: new Date(p.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }), after: new Date(a.at).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) } })
       return next
     }
     case 'publishing/delete': {
@@ -154,7 +154,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const n = s.publishing.plan.items.filter(i => i.included).length
       let next = approvePlan(s)
       next = s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(next, 'h-plan') : next
-      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call from Plan review', link: '/publishing' })
+      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call from Plan review', link: '/publishing/calendar' })
     }
     case 'publishing/planReject': {
       const next = setPlan(s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(s, 'h-plan') : s, { status: 'rejected' })
@@ -200,7 +200,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const u = s.publishing.undo
       if (!u) return s
       const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, ideas: u.ideas ?? s.publishing.ideas, undo: undefined } }
-      return pushLog(next, { agent: 'atlas', text: `Undone: ${u.label}`, status: 'undone', link: '/publishing' })
+      return pushLog(next, { agent: 'atlas', text: `Undone: ${u.label}`, status: 'undone', link: '/publishing/calendar' })
     }
   }
 }
@@ -215,7 +215,7 @@ function toClaire(s: State, post: Post): { s: State; hid: string } {
   let next = setPosts(s, s.publishing.posts.some(p => p.id === post.id) ? s.publishing.posts.map(p => (p.id === post.id ? held : p)) : [...s.publishing.posts, held])
   const hid = uid('h')
   next = pushHandoff(next, {
-    id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Post', action: 'atlas-fill', ref: post.id, link: `/publishing?post=${post.id}`,
+    id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Post', action: 'atlas-fill', ref: post.id, link: `/publishing/calendar?post=${post.id}`,
     title: `Post for ${day(post.at)}`, context: post.text, why: 'You sent this post to Claire.', confidence: 85,
     preview: { type: 'post', network: post.network, slot: `${new Date(post.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(post.at)}`, text: [post.text], media: post.media },
   })
@@ -264,7 +264,7 @@ function bulk(s: State, a: Extract<PublishingAction, { type: 'publishing/bulk' }
       break
   }
   next = { ...next, publishing: { ...next.publishing, undo: { label, posts: snapshot, handoffs, until: t + 10_000 } } }
-  return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason: 'Your call from Publishing', link: '/publishing' })
+  return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason: 'Your call from Publishing', link: '/publishing/calendar' })
 }
 
 const NET: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X' }
@@ -378,7 +378,7 @@ export function reduceIdeas(s: State, a: IdeaAct, fromDesk = false): State {
         ? `Scheduled “${picked[0].title}”${made.length === 1 ? ` for ${slotLabel(made[0].at)}` : `: ${made.length} posts`}`
         : `${picked.length} ideas scheduled: ${made.length} posts in the calendar`
       next = { ...next, publishing: { ...next.publishing, undo: { label, posts: before.posts, ideas: before.ideas, handoffs: [], until: t + 10_000 } } }
-      return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason, link: '/publishing' })
+      return pushLog(next, { agent: 'atlas', text: label, status: 'approved', reason, link: '/publishing/calendar' })
     }
     case 'publishing/ideaSnooze': {
       const picked = s.publishing.ideas.filter(i => a.ids.includes(i.id) && isOpen(i))
@@ -465,7 +465,7 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
       const posts = ideaPosts(i, () => uid('p'))
       i = { ...i, status: 'scheduled', posts: posts.map(p => p.id) }
       next = setPosts(next, [...next.publishing.posts, ...posts])
-      next = pushLog(next, { agent: 'atlas', text: `Scheduled on its own: “${i.title}” for ${slotLabel(posts[0].at)}`, reason: `${act.label}, set to Act`, status: 'done', undoMinutes: 10, link: '/publishing', idea: i.id })
+      next = pushLog(next, { agent: 'atlas', text: `Scheduled on its own: “${i.title}” for ${slotLabel(posts[0].at)}`, reason: `${act.label}, set to Act`, status: 'done', undoMinutes: 10, link: '/publishing/calendar', idea: i.id })
     } else if (origin === 'urgent') {
       const hid = uid('h')
       const d0 = i.drafts?.[0]

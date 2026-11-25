@@ -197,7 +197,7 @@ export default function Ideas({ id }: { id?: string }) {
             { label: `Schedule ${sel.count} ready`, primary: true, onRun: () => { d({ type: 'publishing/ideaSchedule', ids: [...sel.selected] }); sel.clear() } },
             { label: 'Not now', onRun: () => { [...sel.selected].forEach(settled); d({ type: 'publishing/ideaSnooze', ids: [...sel.selected] }); sel.clear() } },
           ]} />
-        ) : undo ? <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })} action={<Btn size="xs" variant="ghost" onClick={() => nav('/publishing')}>Open the calendar</Btn>}>{undo.label}</UndoBar>
+        ) : undo ? <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })} action={<Btn size="xs" variant="ghost" onClick={() => nav('/publishing/calendar')}>Open the calendar</Btn>}>{undo.label}</UndoBar>
           : <Notice scope="publishing" className="mb-3" />}
         {!shown.length ? <Empty icon={<Lightbulb size={18} />} title="No ideas waiting" body="Atlas brings the next one as soon as a signal is worth it: a post that takes off, a trend, a customer photo, an empty day." /> : (
           <>
@@ -208,8 +208,8 @@ export default function Ideas({ id }: { id?: string }) {
         )}
         <span className="sr-only">{behind} ideas ready to review</span>
       </div>
-      {current && <IdeaPanel key={current.id} i={current} onClose={() => nav('/publishing/ideas')} />}
-      {id && !current && <aside className="card idea-panel"><Empty title="This idea is gone" body="It may have expired or been cleared by a reset." action={<Btn onClick={() => nav('/publishing/ideas')}>Back to Ideas</Btn>} /></aside>}
+      {current && <IdeaPanel key={current.id} i={current} onClose={() => nav('/publishing')} />}
+      {id && !current && <aside className="card idea-panel"><Empty title="This idea is gone" body="It may have expired or been cleared by a reset." action={<Btn onClick={() => nav('/publishing')}>Back to Ideas</Btn>} /></aside>}
     </div>
   )
 }
@@ -270,7 +270,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
 
         {!open && (
           <div className="idea-state">
-            {i.status === 'scheduled' && !i.inPlan && <p><Check size={14} aria-hidden />In the calendar. <Link to="/publishing">Open the calendar</Link></p>}
+            {i.status === 'scheduled' && !i.inPlan && <p><Check size={14} aria-hidden />In the calendar. <Link to="/publishing/calendar">Open the calendar</Link></p>}
             {i.inPlan && <p><Check size={14} aria-hidden />Added to next week’s plan. <Link to="/publishing/plan">See the plan</Link></p>}
             {i.status === 'sent-to-sage' && i.campaign && <p><Check size={14} aria-hidden />Sage turned it into a campaign plan. <Link to={`/strategy/campaigns/${i.campaign}`}>See the campaign</Link></p>}
             {i.status === 'expired' && <p><Clock size={14} aria-hidden />Expired: {i.expires?.reason}.</p>}
@@ -407,7 +407,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
       {open && (
         <footer className="idea-panel-foot">
           <span className="spacer" />
-          <Btn variant="ghost" onClick={() => { d({ type: 'publishing/ideaSnooze', ids: [i.id] }); nav('/publishing/ideas') }}>Not now</Btn>
+          <Btn variant="ghost" onClick={() => { d({ type: 'publishing/ideaSnooze', ids: [i.id] }); nav('/publishing') }}>Not now</Btn>
           <DismissMenu i={i} size="md" />
           {i.kind === 'series' && <Btn onClick={() => d({ type: 'publishing/ideaSchedule', ids: [i.id] })}>Schedule the series</Btn>}
           <Primary i={i} />

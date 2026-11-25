@@ -72,7 +72,7 @@ export function gapSeed(gap: { day: number; network: Network }, posts: Post[]): 
     key: `gap-${offsetOf(gap.day)}-${gap.network}`, kind: 'post', topic: copy.text.split(' ').slice(0, 3).join(' '),
     title: `For ${long}: ${shorten(copy.text).replace(/\.$/, '')}`,
     why: `${long} has ${count === 0 ? 'nothing planned' : `${count} post`}${pillarSource.length ? `, and ${behind.pillar} is your pillar furthest below target` : ` and ${NETWORK_LABEL[gap.network]} is behind its weekly rhythm`}.`,
-    sources: [{ type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing' }, ...pillarSource],
+    sources: [{ type: 'calendar', agent: 'atlas', label, proof: `${count} post${count === 1 ? '' : 's'} planned, 2 a day is your rhythm`, link: '/publishing/calendar' }, ...pillarSource],
     confidence: 84, pillar: copy.pillar, networks: [gap.network], action: 'atlas-fill', copy: { [gap.network]: copy.text }, media: copy.media, day: offsetOf(gap.day),
     expires: { at: gap.day + DAY - MIN, reason: `${label} has passed` },
   }

@@ -92,8 +92,8 @@ The existing `ev-fill` Desk card and the Composer UI (only its check function mo
 - [ ] Pas d'audit AA automatisé lancé : contrastes hérités des tokens existants, non mesurés un à un.
 
 Ouvert, volontairement :
-- `/publishing` ouvre toujours le Calendar : Ideas est le premier onglet mais pas la page d'arrivée. Changer l'arrivée
-  touche la navigation (liens existants vers le calendrier) : à valider avant.
+- ~~`/publishing` ouvre le Calendar~~ : validé, `/publishing` arrive sur Ideas ; le calendrier est à
+  `/publishing/calendar` et tous les liens qui voulaient dire « le calendrier » (journal, Desk, aperçus `?post=`) y pointent.
 - La carte urgente arrive sur le Desk dans le lot « N posts to approve » d'Atlas (regroupement existant du Desk), pas
   seule. La sortir du lot est un changement de motif du Desk : à valider avant.
 - Annuler la programmation d'une idée urgente la remet dans Ideas mais ne recrée pas sa carte Desk.
