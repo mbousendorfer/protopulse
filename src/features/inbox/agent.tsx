@@ -141,5 +141,7 @@ const nova: AgentModule = {
     calm: { keep: ['h-strap'] },
     trust: { keep: ['h-promo-nova', 'h-strap', 'h-review'], fire: ['ev-promo-exchange', 'ev-demote', 'ev-rule-emoji'] },
   },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-sla', to: '/inbox?sort=waiting' }, { event: 'ev-injury', to: '/inbox' }, { event: 'ev-refund-ask', to: '/activity' }, { event: 'ev-teach-rule', to: '/' }],
 }
 export default nova

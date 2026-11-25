@@ -105,5 +105,7 @@ const echo: AgentModule = {
   intents: [mentions, creators, competitor],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.listening.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { competitor: { keep: ['h-peakline'], fire: ['ev-trailkind', 'ev-norro', 'ev-basecamp'] } },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-spike', to: '/listening/mentions?sentiment=negative' }, { event: 'ev-creator-fit', to: '/listening/creators' }, { event: 'ev-idea-urgent', to: '/publishing/ideas' }],
 }
 export default echo
