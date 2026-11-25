@@ -127,6 +127,9 @@ export function videoEvent(s: State, sourceId: string, moderator: boolean): Stat
   return newSource(s, { ...def, at: now(s), status: 'processing' })
 }
 
+/** A script event: a new video on a watched channel. Juno clips it in Video (and raises a Desk card on Draft). */
+export const videoScript = (source: string) => ({ tag: 'video', run: (s: State, manual: boolean) => videoEvent(s, source, manual) })
+
 function startSource(s: State, id: string): State {
   const src = sourceOf(s, id)
   if (!src) return s

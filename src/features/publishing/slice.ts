@@ -1,7 +1,7 @@
 import type { State } from '../../app/state'
 import type { Decision, Flagged, Handoff, Network } from '../../app/types'
 import { DAY, T, hhmm } from '../../app/time'
-import { actionOf, addRule, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
+import { actionOf, addRule, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import { BEST_SLOT, PLAN, PLAN_ALTERNATIVES, POSTS, type PlanItem, type Post } from '../../data/publishing'
 import { AGENTS, agentName } from '../../data/agents'
 import { RULES } from '../../data/playbook'
@@ -502,6 +502,13 @@ export function ideaEvent(s: State, ev: { seeds?: string[]; origin: IdeaOrigin; 
     : (ev.seeds ?? []).map(k => IDEA_SEEDS[k]).filter(Boolean)
   return arriveIdeas(s, seeds, ev.origin, ev.agent)
 }
+
+/** A script event that brings ideas to Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it. */
+export const ideaScript = (ev: { seeds?: string[]; origin: IdeaOrigin; agent: Handoff['agent'] }) => ({
+  tag: ev.origin === 'urgent' ? 'idea + Desk' : 'idea',
+  run: (s: State, manual: boolean): State =>
+    !manual && (agentOf(s, ev.agent).status !== 'on' || agentOf(s, 'atlas').status !== 'on') ? s : ideaEvent(s, ev),
+})
 
 /** Undo of an idea Atlas scheduled on its own: the posts leave the calendar, the idea is back in Ideas. */
 export function unscheduleIdea(s: State, id: string): State {

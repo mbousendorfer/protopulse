@@ -1,5 +1,5 @@
 import type { State } from '../../app/state'
-import type { AgentId, Decision, Handoff, Network, PlaybookRule, RuleKind } from '../../app/types'
+import type { AgentId, Network, PlaybookRule, RuleKind } from '../../app/types'
 import { addRule, pushHandoff } from '../../app/core'
 import { BANNED, ESCALATIONS, FACTS, PREFERRED, RULES, VOICE, type Escalation, type Voice } from '../../data/playbook'
 
@@ -82,4 +82,3 @@ export function reducePlaybook(s: State, a: PlaybookAction): State {
 }
 
 /** Rule proposals are applied by core (h.proposal). Nothing extra here. */
-export function onResolvePlaybook(s: State, _h: Handoff, _d: Decision): State { return s }

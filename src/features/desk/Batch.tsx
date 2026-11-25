@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowUpRight, ChevronDown } from 'lucide-react'
-import type { AgentId, Handoff, Urgency } from '../../app/types'
+import type { Handoff, Urgency } from '../../app/types'
+import { registry } from '../../app/agents-registry'
+import type { Batch, BatchDef } from '../../app/agent-module'
 import { useStore } from '../../app/store'
 import { NETWORK_LABEL, agentName } from '../../data/agents'
 import { Btn, Mark, Net, Pill, Sheet, Tabs, TopicIcon } from '../../ui'
@@ -10,51 +12,23 @@ import Detail from './Detail'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NetworkPreview } from '../publishing/Previews'
 import { SocialAvatar } from '../../ui/SocialAvatar'
-import { draftText } from './parts'
+import { draftText, isLead } from './parts'
 
-export type BatchId = 'nova' | 'atlas' | 'rules'
-export type Batch = {
-  id: BatchId
-  agent: AgentId
-  title: string
-  meta: string
-  items: Handoff[]
-  ready: Handoff[]
-  urgency: Urgency
-  verb: { many: (n: number) => string; done: (n: number) => string }
-}
+export type { Batch }
 
-const flagged = (h: Handoff) => {
-  const p = h.preview
-  const parts = p?.type === 'reply' ? p.draft : p?.type === 'post' ? p.text : []
-  return parts.some(x => typeof x !== 'string')
-}
-const isLead = (h: Handoff) => /intent|lead|which bag|buy/i.test(`${h.topic} ${h.title}`)
 const worst = (xs: Handoff[]): Urgency => (xs.some(h => h.urgency === 'urgent') ? 'urgent' : xs.some(h => h.urgency === 'today') ? 'today' : 'week')
+
+/** Playbook rules proposed by any agent: core, after the agents' own batches. */
+const RULES: BatchDef = {
+  id: 'rules', agent: 'nova', match: h => !!h.proposal,
+  ready: () => true,
+  title: n => `${n} Playbook rules proposed`, meta: xs => `Learned from your edits · ${[...new Set(xs.map(h => h.agent))].map(a => a[0].toUpperCase() + a.slice(1)).join(', ')}`,
+  verb: { many: n => `Add ${n} to Playbook`, done: n => `Added ${n} rules to the Playbook` },
+}
 
 /** Group similar Desk cards so they can be approved in one go. Only groups of 2 or more become a batch. */
 export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] } {
-  const defs: { id: BatchId; agent: AgentId; match: (h: Handoff) => boolean; ready: (h: Handoff) => boolean; title: (n: number) => string; meta: (xs: Handoff[], r: number) => string; verb: Batch['verb'] }[] = [
-    {
-      id: 'nova', agent: 'nova', match: h => h.agent === 'nova' && h.kind === 'approval' && h.preview?.type === 'reply' && !h.proposal,
-      ready: h => h.confidence >= 80 && !flagged(h),
-      title: n => `${n} replies Nova drafted`, meta: (xs, r) => [xs.filter(isLead).length ? `${xs.filter(isLead).length} want to buy` : '', `${r} ready to send`].filter(Boolean).join(' · '),
-      verb: { many: n => `Send ${n} selected`, done: n => `Sent ${n} replies Nova drafted` },
-    },
-    {
-      // An idea with a short window stands on its own: it opens the idea, and its other networks live there.
-      id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal && h.topic !== 'Idea',
-      ready: h => h.confidence >= 75 && !flagged(h),
-      title: n => `${n} posts to approve`, meta: (_xs, r) => `${r} ready to schedule`,
-      verb: { many: n => `Schedule ${n} selected`, done: n => `Scheduled ${n} posts Atlas drafted` },
-    },
-    {
-      id: 'rules', agent: 'nova', match: h => !!h.proposal,
-      ready: () => true,
-      title: n => `${n} Playbook rules proposed`, meta: xs => `Learned from your edits · ${[...new Set(xs.map(h => h.agent))].map(a => a[0].toUpperCase() + a.slice(1)).join(', ')}`,
-      verb: { many: n => `Add ${n} to Playbook`, done: n => `Added ${n} rules to the Playbook` },
-    },
-  ]
+  const defs = [...registry().flatMap(m => m.batches ?? []), RULES]
   let rest = open
   const batches: Batch[] = []
   for (const def of defs) {

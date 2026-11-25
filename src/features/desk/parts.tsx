@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Paperclip } from 'lucide-react'
-import type { Handoff, Kind } from '../../app/types'
+import type { ReactNode } from 'react'
+import type { Handoff, Kind, Preview } from '../../app/types'
 import { useStore } from '../../app/store'
 import { hhmm, DAY, MIN } from '../../app/time'
 import { now as appTime } from '../../app/core'
@@ -9,7 +10,7 @@ import { Confidence, FlagText, Mark, Net, Pill } from '../../ui'
 import { Spark } from '../../ui/charts'
 import Photo from '../../ui/Photo'
 import { SocialAvatar } from '../../ui/SocialAvatar'
-import { ClipPreview } from '../video/parts'
+import { registry } from '../../app/agents-registry'
 
 export const KIND_LABEL: Record<Kind, string> = { approval: 'Approval', decision: 'Decision', info: 'Missing info', alert: 'Alert', promotion: 'Autonomy request', news: 'Good news' }
 export const URGENCY_LABEL = { urgent: 'Urgent', today: 'Today', week: 'This week' } as const
@@ -92,7 +93,12 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
       <ul className="plan-lines">{p.lines.map(l => <li key={l}>{l}</li>)}</ul>
     </div>
   )
-  if (p.type === 'clip') return <ClipPreview id={p.clip} />
+  // Preview types an agent adds render from its registry module.
+  for (const m of registry()) {
+    const render = m.previews?.[p.type] as ((p: Preview, h: Handoff) => ReactNode) | undefined
+    if (render) return <>{render(p, h)}</>
+  }
+  if (p.type !== 'text') return null
   return <div className="well preview"><div className="faint">{p.label}</div><p>{p.body}</p></div>
 }
 
@@ -174,6 +180,16 @@ export const draftText = (h: Handoff) => {
   const parts = p?.type === 'reply' ? p.draft : p?.type === 'post' ? p.text : undefined
   return parts ? parts.map(x => (typeof x === 'string' ? x : x.text)).join('') : ''
 }
+
+/** The agent flagged a passage it isn't sure about. */
+export const flagged = (h: Handoff) => {
+  const p = h.preview
+  const parts = p?.type === 'reply' ? p.draft : p?.type === 'post' ? p.text : []
+  return parts.some(x => typeof x !== 'string')
+}
+
+/** A customer asking before they buy. */
+export const isLead = (h: Handoff) => /intent|lead|which bag|buy/i.test(`${h.topic} ${h.title}`)
 
 export const editable = (h: Handoff) => h.preview?.type === 'reply' || h.preview?.type === 'post'
 
