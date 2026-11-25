@@ -47,6 +47,10 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
 - Met à jour `consistency-matrix.md` seulement si une règle ou exception change.
 
 ## 5. Vérifier
+- Balayage systématique (demandé après les bugs Queues et Insights du 25/11) : remplis d'abord les données qui
+  peuvent être vides (Publishing › Queues « Ask Atlas to fill »), puis visite TOUS les onglets de tous les modules à
+  375, 1000 et 1440, et signale tout élément qui dépasse de sa carte sans conteneur de défilement, et tout scroll
+  horizontal de page. Un onglet ou un état vide n'est pas une preuve.
 - `npm test` et `npm run build` verts.
 - `preview_start` `protopulse`, chaque surface touchée en 1440×900 et 375×812, clair et sombre : pas d'erreur console,
   pas de scroll horizontal, focus visible, contraste AA du texte, fix visible. Screenshots avant/après.
