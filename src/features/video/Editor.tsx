@@ -7,21 +7,21 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BROLL, MUSIC, PEOPLE, speakerName, type Source } from '../../data/video'
-import { holdReason, unreleased } from './slice'
+import { BROLL, MUSIC, PEOPLE, TRANSCRIPT, speakerName, type Source } from '../../data/video'
+import { holdReason, noRelease, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
 import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
-  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, captionSlips, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
+  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, captionSlips, coverFrames, coverText, shortsTitle, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
   silences, toSRT, wordText, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
 } from './model'
 import { Frame, usePlayback, type Playback } from './Player'
 import Timeline from './Timeline'
 import { TemplatePicker, SwatchPicker } from './BrandKit'
-import { ScoreBadge, fmt, useClip } from './parts'
+import { CoverFrame, ScoreBadge, fmt, focusAt, useClip } from './parts'
 import { ClipNotNow } from './Page'
 
 const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow', dismissed: 'Dismissed' }
@@ -473,6 +473,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
           <Btn size="sm" type="submit" disabled={!own.trim()}>Use it</Btn>
         </form>
       </Field>
+      <CoverField clip={clip} edit={edit} />
       <Field label="Where it goes">
         <div className="row">{CLIP_NETWORKS.map(n => <label key={n} className="check-row"><input type="checkbox" className="check" checked={clip.post.networks.includes(n)} onChange={e => setNets(n, e.target.checked)} /><Net n={n} size={16} />{NETWORK_FIT[n]}</label>)}</div>
         {clip.post.networks.filter(n => !fitsLength(n, dur)).map(n => <p key={n} className="muted t-sm">{NETWORK_FIT[n]}: {Math.round(dur)} s is outside {lengthSpec(n).min}–{lengthSpec(n).max} s, so Atlas won’t post it there.</p>)}
@@ -497,12 +498,45 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
   )
 }
 
+/* ---------- Cover ---------- */
+
+function CoverField({ clip, edit }: { clip: Clip; edit: (p: Partial<Clip>) => void }) {
+  const { s } = useStore()
+  const source = s.video.sources.find(x => x.id === clip.source)
+  if (!source || source.kind === 'upload') return null
+  const frames = coverFrames(clip, TRANSCRIPT[source.transcript], noRelease(s, source.transcript))
+  const at = (x: number) => fmt(Math.max(0, x - clip.start))
+  const pick = (x: number) => edit({ cover: { at: x, text: clip.cover?.text ?? coverText(clip.hook), by: 'you' } })
+  return (
+    <>
+      <Field label="Cover">
+        {!clip.cover && frames[0] && <p className="t-sm row tight"><Mark agent="juno" />Juno suggests the frame at {at(frames[0].at)}: {frames[0].why.toLowerCase()}. Pick one to use it.</p>}
+        <div className="row" role="radiogroup" aria-label="Cover frame">
+          {frames.map(f => (
+            <button key={f.at} type="button" role="radio" aria-checked={clip.cover?.at === f.at} className="cover-pick" onClick={() => pick(f.at)} aria-label={`Frame at ${at(f.at)}: ${f.why}`} title={f.why}>
+              <CoverFrame source={source} at={f.at} focus={focusAt(clip, source, f.at)} text={clip.cover?.at === f.at ? clip.cover.text : undefined} /><span className="mono">{at(f.at)}</span>
+            </button>
+          ))}
+        </div>
+        {clip.cover && frames[0] && <p className="muted t-sm">{clip.cover.by === 'juno' ? `Juno’s pick: ${frames[0].why.toLowerCase()}, the hook reads over it.` : `Your pick. Juno’s was ${at(frames[0].at)}, ${frames[0].why.toLowerCase()}.`}</p>}
+        {clip.cover && <input className="input" aria-label="Cover text" defaultValue={clip.cover.text} key={clip.cover.text} maxLength={60} onBlur={e => { const v = e.target.value.trim(); if (v !== clip.cover!.text) edit({ cover: { ...clip.cover!, text: v, by: 'you' } }) }} />}
+      </Field>
+      {clip.post.networks.includes('youtube') && (
+        <Field label="YouTube title">
+          <input className="input" aria-label="YouTube title" defaultValue={clip.ytTitle ?? shortsTitle(clip)} key={clip.ytTitle} maxLength={100} onBlur={e => { const v = e.target.value.trim(); if (v && v !== clip.ytTitle) edit({ ytTitle: v }) }} />
+        </Field>
+      )}
+    </>
+  )
+}
+
 /* ---------- Ask Juno ---------- */
 
-const ASKS = ['Shorter, 30 s', 'Start with the strap', 'Remove the ums', 'Punchier captions', 'French version']
+const ASKS = ['Shorter, 30 s', 'Start with the strap', 'Remove the ums', 'Punchier captions', 'Pick a better cover', 'French version']
 
 function AskJuno({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Partial<Clip>) => void }) {
-  const { d } = useStore()
+  const { s, d } = useStore()
+  const avoid = noRelease(s, s.video.sources.find(x => x.id === clip.source)?.transcript ?? '')
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState<{ ask: string; reply: string; diff?: DiffPart[] } | null>(null)
@@ -510,7 +544,7 @@ function AskJuno({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Parti
     if (!text.trim() || busy) return
     setBusy(true); setQ('')
     setTimeout(() => {
-      const r = applyAsk(clip, pb.tr, text)
+      const r = applyAsk(clip, pb.tr, text, avoid)
       if (r.changed) {
         const { id: _, status: __, ...patch } = r.clip
         edit(patch)

@@ -248,3 +248,13 @@ test('the score learns: published clips of the same pillar move the total, and t
   s = run(later(s, first - now(s) + 1000), { type: 'core/heartbeat' })
   expect(s.video.clips.find(c => c.id === 'clip-live-bottle')?.track?.like?.id).toBe('clip-live-zips')
 })
+
+test('covers follow the reframe level: Juno picks one (Act, Draft), only suggests (Suggest); never a frame with Hugo', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  const act = cut('act')
+  expect(act.every(c => c.cover?.by === 'juno')).toBe(true)
+  expect(act.every(c => c.cover!.at >= 6)).toBe(true)
+  expect(act.find(c => c.post.networks.includes('youtube'))?.ytTitle).toMatch(/#Shorts$/)
+  expect(cut('suggest').every(c => !c.cover)).toBe(true)
+  expect(initialState().video.clips.find(c => c.id === 'clip-repair-strap')?.cover?.by).toBe('juno')
+})

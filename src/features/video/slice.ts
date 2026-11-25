@@ -9,7 +9,7 @@ import {
   BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
 import { TRENDS } from '../../data/listening'
-import { LANG_LABEL, NETWORK_FIT, captionSlips, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
+import { LANG_LABEL, NETWORK_FIT, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, median, trackRecord, typicalReach, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -29,7 +29,7 @@ const ARRIVED = T(17, 52, -1)
 export function initialVideo(): VideoState {
   const sources: Source[] = [{ ...SOURCE_DEFS.repair, status: 'ready' }, { ...SOURCE_DEFS.live, status: 'ready' }]
   const seeded = sources.flatMap(src => SEEDS[src.media].map(seed => clipFromSeed(seed, src, src.id === 'live' ? T(19, 10, -4) : ARRIVED)))
-  const clips = withTrack(seeded, seeded, POSTS)
+  const clips = withTrack(seeded, seeded, POSTS).map(c => withCover(c, TRANSCRIPT[c.source], (ON_SCREEN[c.source] ?? []).filter(p => !RELEASES[p.who])))
   return { sources, clips, kit: structuredClone(BRAND_KIT), editor: { past: [], future: [] }, opened: {}, releases: { ...RELEASES } }
 }
 
@@ -218,7 +218,7 @@ function prepare(s: State, clips: Clip[]): Clip[] {
   const dub = levelOf(s, 'juno-dub')
   const langs: Lang[] = s.video.kit.langs
   return clips.map(c => ({
-    ...c,
+    ...(frame === 'suggest' ? c : withCover(c, trOf(s, c), noRelease(s, sourceOf(s, c.source)?.transcript ?? ''))),
     ...(frame === 'suggest' ? { frame: 'fit' as const, brand: BARE_BRAND(c.brand), framing: 'suggested' as const } : frame === 'draft' ? { framing: 'check' as const } : {}),
     audio: dub === 'suggest' ? c.audio : { ...c.audio, dubs: langs, review: dub === 'draft' ? langs : [] },
   }))
@@ -239,6 +239,16 @@ export function undoVideoWork(s: State, captionFixes?: Record<string, number[]>,
     return { ...c, audio: { ...c.audio, dubs: left, review: c.audio.review?.filter(l => left.includes(l)), lang: left.includes(c.audio.lang) ? c.audio.lang : 'en' } }
   })
   return next
+}
+
+/* ---------- Cover ---------- */
+
+/** Source ranges showing someone without a signed release: never a cover. */
+export const noRelease = (s: { video: { releases: Record<string, boolean> } }, transcript: string) => (ON_SCREEN[transcript] ?? []).filter(p => !s.video.releases[p.who])
+/** Juno's pick: the best frame, the hook on it, the Shorts title. */
+export function withCover(c: Clip, tr: Transcript, avoid: { s: number; e: number }[]): Clip {
+  const best = coverFrames(c, tr, avoid)[0]
+  return { ...c, cover: best ? { at: best.at, text: coverText(c.hook), by: 'juno' } : undefined, ytTitle: c.post.networks.includes('youtube') ? shortsTitle(c) : undefined }
 }
 
 /* ---------- Track record ---------- */

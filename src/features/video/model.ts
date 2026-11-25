@@ -82,6 +82,10 @@ export type Clip = {
   sentAt?: number
   /** What your published clips of the same pillar did: moves the total, and names the clip to compare with. */
   track?: Track
+  /** The cover: a frame of the source (seconds), the text on it, who picked it. Without one, the source's poster. */
+  cover?: { at: number; text: string; by: 'juno' | 'you' }
+  /** YouTube Shorts title, when YouTube is one of the networks. */
+  ytTitle?: string
   arrivedAt: number
 }
 
@@ -280,6 +284,24 @@ export const lengthSpec = (n: Network) => ({ min: 15, max: n === 'linkedin' ? 90
 export const fitsLength = (n: Network, dur: number) => dur >= lengthSpec(n).min - 0.5 && dur <= lengthSpec(n).max + 0.5
 export const clipLengthOf = (c: Clip, t: Transcript) => duration(keptSegments(c, t))
 
+/* ---------- Cover ---------- */
+
+const COVER_WORDS = /strap|ridge|jacket|bottle|bag|zip|slider|hands|léa|camille|léo|machine|stitch|bar tack|patch|hood|shell/i
+export type CoverFrame = { at: number; why: string }
+
+/** Juno's 3 cover frames, best first: shots inside the clip that show the product or a person, never one in `avoid` (no release). */
+export function coverFrames(c: Clip, t: Transcript, avoid: { s: number; e: number }[] = []): CoverFrame[] {
+  const shots = t.shots.filter(x => x.e > c.start + 0.5 && x.s < c.end - 0.5 && !avoid.some(a => a.s < x.e && a.e > x.s))
+  return shots
+    .map((x, k) => ({ x, rank: (COVER_WORDS.test(x.label) ? 2 : 0) + (k === 0 ? 1 : 0) + Math.min(1, (Math.min(x.e, c.end) - Math.max(x.s, c.start)) / 6) }))
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, 3)
+    .map(({ x }) => ({ at: Math.round(((Math.max(x.s, c.start) + Math.min(x.e, c.end)) / 2) * 10) / 10, why: x.label }))
+}
+/** Text on the cover: the hook, short enough to read on a phone. */
+export const coverText = (hook: string) => (hook.length > 42 ? `${hook.slice(0, 40).replace(/\s\S*$/, '')}…` : hook)
+export const shortsTitle = (c: Pick<Clip, 'title' | 'hook'>) => `${c.title}: ${c.hook}`.slice(0, 95).replace(/\s\S*$/, s => (`${c.title}: ${c.hook}`.length > 95 ? '…' : s)) + ' #Shorts'
+
 /* ---------- Track record ---------- */
 
 export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number } }
@@ -337,9 +359,17 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
 const LANG_WORDS: [RegExp, Lang][] = [[/french|fran[cç]ais/, 'fr'], [/german|deutsch/, 'de'], [/spanish|espa[nñ]ol/, 'es'], [/italian|italiano/, 'it'], [/english|original/, 'en']]
 
 /** Juno's scripted understanding of a request on one clip. Never invents: an edit it can't make says so. */
-export function applyAsk(c: Clip, t: Transcript, raw: string): { clip: Clip; reply: string; changed: boolean } {
+export function applyAsk(c: Clip, t: Transcript, raw: string, avoid: { s: number; e: number }[] = []): { clip: Clip; reply: string; changed: boolean } {
   const q = raw.toLowerCase().trim()
   const same = (reply: string) => ({ clip: c, reply, changed: false })
+  if (/\bcover|thumbnail\b/.test(q)) {
+    const frames = coverFrames(c, t, avoid)
+    if (!frames.length) return same('No other frame in this clip works as a cover.')
+    const k = frames.findIndex(f => f.at === c.cover?.at)
+    const next = frames[(k + 1) % frames.length]
+    if (next.at === c.cover?.at) return same('That’s the only frame that works as a cover here.')
+    return { clip: { ...c, cover: { at: next.at, text: c.cover?.text ?? coverText(c.hook), by: 'you' } }, reply: `New cover at ${Math.floor((next.at - c.start) / 60)}:${String(Math.round((next.at - c.start) % 60)).padStart(2, '0')}: ${next.why.toLowerCase()}. The hook reads over it.`, changed: true }
+  }
   if (/\b(say|replace|change what|instead of)\b/.test(q) && !/caption/.test(q))
     return same('I won’t change what someone says on my own. Select the words in the transcript and use “Change the words”: you confirm, then I re-voice them.')
   const lang = LANG_WORDS.find(([re]) => re.test(q))?.[1]
@@ -382,7 +412,7 @@ export function applyAsk(c: Clip, t: Transcript, raw: string): { clip: Clip; rep
   if (/square|1:1/.test(q)) return { clip: { ...c, aspect: '1:1' }, reply: 'Square, for the Instagram and LinkedIn feeds.', changed: c.aspect !== '1:1' }
   if (/landscape|16:9|horizontal|wide/.test(q)) return { clip: { ...c, aspect: '16:9' }, reply: 'Landscape, for YouTube and LinkedIn.', changed: c.aspect !== '16:9' }
   if (/vertical|9:16|portrait/.test(q)) return { clip: { ...c, aspect: '9:16' }, reply: 'Vertical, for TikTok, Reels and Shorts.', changed: c.aspect !== '9:16' }
-  return same('I can make it shorter, open on a moment, remove the ums or the pauses, change the captions, the format or the language.')
+  return same('I can make it shorter, open on a moment, remove the ums or the pauses, change the captions, the format, the language or the cover.')
 }
 
 /* ---------- Hand-off to Atlas ---------- */
