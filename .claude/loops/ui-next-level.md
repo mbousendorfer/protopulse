@@ -51,6 +51,9 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
   peuvent être vides (Publishing › Queues « Ask Atlas to fill »), puis visite TOUS les onglets de tous les modules à
   375, 1000 et 1440, et signale tout élément qui dépasse de sa carte sans conteneur de défilement, et tout scroll
   horizontal de page. Un onglet ou un état vide n'est pas une preuve.
+  Signale aussi le texte coupé par son conteneur sans points de suspension (`scrollWidth > clientWidth`,
+  `overflow` ≠ visible/auto/scroll, `text-overflow` ≠ ellipsis), hors `.sr-only` : c'est ce qui avait caché
+  « Ridge 28L on the Écrins loo » / « 1 wa » dans l'Inbox (#121).
 - `npm test` et `npm run build` verts.
 - `preview_start` `protopulse`, chaque surface touchée en 1440×900 et 375×812, clair et sombre : pas d'erreur console,
   pas de scroll horizontal, focus visible, contraste AA du texte, fix visible. Screenshots avant/après.
