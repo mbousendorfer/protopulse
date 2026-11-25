@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, CalendarPlus, Check, ChevronDown, ImagePlus, Scissors, Send, Sparkles, Trash2, Wand2, X } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Check, ChevronDown, ImagePlus, Scissors, Send, Sparkles, Trash2, Users, Wand2, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BEST_SLOT, PUBLISH_NETWORKS, type Pillar, type Post } from '../../data/publishing'
+import { BEST_SLOT, type Pillar, type Post } from '../../data/publishing'
 import { Btn, Mark, Menu, Net, Pop, Seg, Sheet, Thinking, Tip } from '../../ui'
 import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
@@ -14,6 +14,7 @@ import { checkPost } from './checks'
 import { libraryOf } from './visuals'
 import { nextRoom, overCap } from './guards'
 import { variantsOf, type Variant } from './copilot'
+import { ACCOUNTS, GROUPS, ROUTE_REASON, accountById, accountLabel } from './accounts'
 import { FIRST_COMMENT, FORMATS, FORMAT_LABEL, firstCommentFor, formatFor, type Format } from './formats'
 import { LINK_IN_COMMENT, PLAIN_ONLY, UTM_CONVENTION, captionOf, commentOf, query, shown, track } from './links'
 import { forLinkedIn, shorten } from './ideasModel'
@@ -42,17 +43,18 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const words = useBannedWords()
   const editing = !!post
   const startAt = post?.at ?? initial?.at ?? (() => { const b = new Date(now + DAY); return new Date(b.getFullYear(), b.getMonth(), b.getDate(), 18, 30).getTime() })()
-  const [accounts, setAccounts] = useState<Network[]>(post ? [post.network] : [initial?.network ?? 'instagram'])
+  // Profile ids (see accounts.ts): a main account's id is its network.
+  const [accounts, setAccounts] = useState<string[]>(post ? [post.account ?? post.network] : [initial?.network ?? 'instagram'])
   const [text, setText] = useState(post?.text ?? initial?.text ?? '')
-  const [variants, setVariants] = useState<Partial<Record<Network, string>>>({})
+  const [variants, setVariants] = useState<Partial<Record<string, string>>>({})
   const [media, setMedia] = useState<string | undefined>(post?.media ?? initial?.media)
   const [date, setDate] = useState(toDate(startAt))
   const [time, setTime] = useState(hhmm(startAt))
   const [pillar, setPillar] = useState<Pillar>(post?.pillar ?? 'Trail stories')
-  const [preview, setPreview] = useState<Network>(post?.network ?? initial?.network ?? 'instagram')
+  const [preview, setPreview] = useState<string>(post?.account ?? post?.network ?? initial?.network ?? 'instagram')
   // Per network, what you chose; otherwise Atlas's pick. A first comment you clear stays cleared.
-  const [formats, setFormats] = useState<Partial<Record<Network, Format>>>(post?.format ? { [post.network]: post.format } : {})
-  const [comments, setComments] = useState<Partial<Record<Network, string>>>(post ? { [post.network]: post.firstComment ?? '' } : {})
+  const [formats, setFormats] = useState<Partial<Record<string, Format>>>(post?.format ? { [post.account ?? post.network]: post.format } : {})
+  const [comments, setComments] = useState<Partial<Record<string, string>>>(post ? { [post.account ?? post.network]: post.firstComment ?? '' } : {})
   const [link, setLink] = useState(post?.link?.url ?? '')
   const [busy, setBusy] = useState<string | null>(null)
   const [ideas, setIdeas] = useState<Variant[] | null>(null)
@@ -60,18 +62,23 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const [tried, setTried] = useState<boolean | null>(null)
 
   const at = useMemo(() => { const [y, m, dd] = date.split('-').map(Number); const [h, mi] = time.split(':').map(Number); return new Date(y, m - 1, dd, h || 0, mi || 0).getTime() }, [date, time])
-  const textFor = (n: Network) => variants[n] ?? text
-  const formatOf = (n: Network) => formats[n] ?? formatFor(n, textFor(n))
-  const commentFor = (n: Network) => (n in comments ? comments[n]! : firstCommentFor(n, textFor(n), pillar) ?? '')
-  const linkFor = (n: Network) => track(link, { network: n, campaign: post?.campaign, pillar })
-  const previewNet = accounts.includes(preview) ? preview : accounts[0]
+  const N = (a: string) => accountById(a).network
+  const L = (a: string) => accountLabel(accountById(a))
+  const textFor = (a: string) => variants[a] ?? text
+  const formatOf = (a: string) => formats[a] ?? formatFor(N(a), textFor(a))
+  const commentFor = (a: string) => (a in comments ? comments[a]! : firstCommentFor(N(a), textFor(a), pillar) ?? '')
+  const linkFor = (a: string) => track(link, { network: N(a), campaign: post?.campaign, pillar })
+  const previewAcc = accounts.includes(preview) ? preview : accounts[0]
+  const previewNet = previewAcc ? N(previewAcc) : 'instagram'
+  // Atlas routes repair content on Instagram to Fernway Repair; it says so when you pick the main account.
+  const suggestRepair = pillar === 'Repair & care' && accounts.includes('instagram') && !accounts.includes('ig-repair')
 
   // Guardrail: 3 posts per network per day. The post you are editing doesn't count against itself.
   const others = s.publishing.posts.filter(p => p.id !== post?.id)
-  const full = accounts.filter(n => overCap(others, { network: n, at }))
+  const full = accounts.filter(a => overCap(others, { network: N(a), account: a, at }))
   const checks = [
-    ...accounts.flatMap(n => checkPost({ text: textFor(n), network: n, media, words, rules: s.playbook.rules ?? [] })),
-    ...full.map(n => ({ ok: false, label: `${NETWORK_LABEL[n]} already has 3 posts on ${new Date(at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}. Atlas suggests ${new Date(nextRoom(others, { network: n, at })).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}.` })),
+    ...accounts.flatMap(a => checkPost({ text: textFor(a), network: N(a), media, words, rules: s.playbook.rules ?? [] })),
+    ...full.map(a => ({ ok: false, label: `${L(a)} already has 3 posts on ${new Date(at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}. Atlas suggests ${new Date(nextRoom(others, { network: N(a), account: a, at })).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}.` })),
   ]
   const blocking = checks.filter(c => !c.ok)
 
@@ -80,7 +87,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const build = (status: Post['status']): Post[] => {
     const group = accounts.length > 1 ? uid('g') : undefined
     return accounts.map((n, i) => ({
-      id: editing && i === 0 ? post!.id : uid('p'), network: n, at, text: textFor(n).trim(), media, status, author: post?.author ?? 'you', pillar, group,
+      id: editing && i === 0 ? post!.id : uid('p'), network: N(n), account: accountById(n).main ? undefined : n, at, text: textFor(n).trim(), media, status, author: post?.author ?? 'you', pillar, group,
       campaign: post?.campaign, note: undefined, handoff: post?.handoff, format: formatOf(n), firstComment: commentFor(n).trim() || undefined, link: linkFor(n),
     }))
   }
@@ -102,8 +109,8 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
     onClose()
   }
 
-  const toggle = (n: Network) => setAccounts(a => (a.includes(n) ? a.filter(x => x !== n) : [...a, n]))
-  const best = BEST_SLOT[previewNet ?? 'instagram']
+  const toggle = (n: string) => setAccounts(a => (a.includes(n) ? a.filter(x => x !== n) : [...a, n]))
+  const best = BEST_SLOT[previewNet]
 
   return (
     <Sheet open={open} onOpenChange={o => !o && onClose()} wide title={editing ? 'Edit post' : 'New post'}
@@ -122,12 +129,23 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           <fieldset className="cmp-accounts">
             <legend className="label">Accounts</legend>
             <div className="row tight">
-              {PUBLISH_NETWORKS.map(n => (
+              {ACCOUNTS.map(({ id: n }) => (
                 <button key={n} type="button" className={`cmp-acc ${accounts.includes(n) ? 'on' : ''}`} aria-pressed={accounts.includes(n)} onClick={() => !editing && toggle(n)} disabled={editing && !accounts.includes(n)}>
-                  <Net n={n} />{NETWORK_LABEL[n]}{accounts.includes(n) && <Check size={12} />}
+                  <Net n={N(n)} />{L(n)}{accounts.includes(n) && <Check size={12} />}
                 </button>
               ))}
             </div>
+            {!editing && (
+              <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Users size={12} />Profile groups<ChevronDown size={12} /></Btn>}
+                items={GROUPS.map(g => ({ label: g.name, hint: `${g.accounts.length} profiles`, onSelect: () => setAccounts(g.accounts) }))} />
+            )}
+            {suggestRepair && (
+              <div className="cmp-slot">
+                <Mark agent="atlas" />
+                <p><b>Atlas:</b> {ROUTE_REASON}</p>
+                <Btn size="xs" onClick={() => { setAccounts(a => a.map(x => (x === 'instagram' ? 'ig-repair' : x))); setPreview('ig-repair') }}>Use Fernway Repair</Btn>
+              </div>
+            )}
           </fieldset>
 
           <div className="field">
@@ -141,9 +159,9 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 <div key={n} className="cmp-variant">
                   <label className="switch">
                     <input type="checkbox" checked={variants[n] !== undefined} onChange={e => setVariants(v => ({ ...v, [n]: e.target.checked ? text : undefined }))} />
-                    <span className="track" aria-hidden /><span className="row tight"><Net n={n} />Customize for {NETWORK_LABEL[n]}</span>
+                    <span className="track" aria-hidden /><span className="row tight"><Net n={N(n)} />Customize for {L(n)}</span>
                   </label>
-                  {variants[n] !== undefined && <textarea className="textarea" rows={3} value={variants[n]} onChange={e => setVariants(v => ({ ...v, [n]: e.target.value }))} aria-label={`${NETWORK_LABEL[n]} version`} />}
+                  {variants[n] !== undefined && <textarea className="textarea" rows={3} value={variants[n]} onChange={e => setVariants(v => ({ ...v, [n]: e.target.value }))} aria-label={`${L(n)} version`} />}
                 </div>
               ))}
             </div>
@@ -158,7 +176,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 <div>
                   <p><b>Atlas</b> tracks it: {UTM_CONVENTION}.</p>
                   <ul>{accounts.map(n => { const l = linkFor(n)!; return (
-                    <li key={n} className="row tight"><Net n={n} /><span className="mono">{shown(l)}</span><span className="faint t-xs">{PLAIN_ONLY.includes(n) ? `plain link: ${NETWORK_LABEL[n]} refuses redirects` : LINK_IN_COMMENT.includes(n) ? 'in the first comment: captions aren’t clickable' : query(l)}</span></li>
+                    <li key={n} className="row tight"><Net n={N(n)} /><span className="mono">{shown(l)}</span><span className="faint t-xs">{PLAIN_ONLY.includes(N(n)) ? `plain link: ${L(n)} refuses redirects` : LINK_IN_COMMENT.includes(N(n)) ? 'in the first comment: captions aren’t clickable' : query(l)}</span></li>
                   ) })}</ul>
                 </div>
               </div>
@@ -167,16 +185,16 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
 
           {accounts.length > 0 && (
             <fieldset className="cmp-net">
-              <legend className="label">Per network <span className="faint">· Atlas pre-filled the format{accounts.some(n => FIRST_COMMENT.includes(n)) ? ' and the first comment' : ''}</span></legend>
+              <legend className="label">Per network <span className="faint">· Atlas pre-filled the format{accounts.some(n => FIRST_COMMENT.includes(N(n))) ? ' and the first comment' : ''}</span></legend>
               {accounts.map(n => (
                 <div key={n} className="cmp-net-row">
-                  <span className="row tight"><Net n={n} />{NETWORK_LABEL[n]}</span>
-                  {(FORMATS[n]?.length ?? 0) > 1
-                    ? <Seg name={`fmt-${n}`} label={`${NETWORK_LABEL[n]} format`} size="sm" value={formatOf(n)} onChange={v => setFormats(f => ({ ...f, [n]: v }))} options={FORMATS[n]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
+                  <span className="row tight"><Net n={N(n)} />{L(n)}</span>
+                  {(FORMATS[N(n)]?.length ?? 0) > 1
+                    ? <Seg name={`fmt-${n}`} label={`${L(n)} format`} size="sm" value={formatOf(n)} onChange={v => setFormats(f => ({ ...f, [n]: v }))} options={FORMATS[N(n)]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
                     : <span className="faint">{FORMAT_LABEL[formatOf(n)]}</span>}
-                  {FIRST_COMMENT.includes(n)
-                    ? <input className="input" aria-label={`${NETWORK_LABEL[n]} first comment`} placeholder="First comment (optional)" value={commentFor(n)} onChange={e => setComments(c => ({ ...c, [n]: e.target.value }))} />
-                    : <span className="faint t-xs">No first comment on {NETWORK_LABEL[n]}</span>}
+                  {FIRST_COMMENT.includes(N(n))
+                    ? <input className="input" aria-label={`${L(n)} first comment`} placeholder="First comment (optional)" value={commentFor(n)} onChange={e => setComments(c => ({ ...c, [n]: e.target.value }))} />
+                    : <span className="faint t-xs">No first comment on {L(n)}</span>}
                 </div>
               ))}
             </fieldset>
@@ -211,17 +229,17 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           </div>
           <div className="cmp-slot">
             <Mark agent="atlas" />
-            <p><b>Atlas:</b> {time === best.time ? slotComment(previewNet ?? 'instagram', at) : `${best.time} is the best slot on ${NETWORK_LABEL[previewNet ?? 'instagram']}. ${best.reason}`}</p>
+            <p><b>Atlas:</b> {time === best.time ? slotComment(previewNet, at) : `${best.time} is the best slot on ${NETWORK_LABEL[previewNet]}. ${best.reason}`}</p>
             {time !== best.time && <Btn size="xs" onClick={() => setTime(best.time)}>Use {best.time}</Btn>}
           </div>
 
           {full.length > 0 && (() => {
-            const room = nextRoom(others, { network: full[0], at })
+            const room = nextRoom(others, { network: N(full[0]), account: full[0], at })
             const label = new Date(room).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })
             return (
               <div className="cmp-slot">
                 <Mark agent="atlas" />
-                <p><b>Atlas:</b> {NETWORK_LABEL[full[0]]} already has 3 posts that day, the most Atlas schedules. {label} has room.</p>
+                <p><b>Atlas:</b> {L(full[0])} already has 3 posts that day, the most Atlas schedules. {label} has room.</p>
                 <Btn size="xs" onClick={() => setDate(toDate(room))}>Use {label}</Btn>
               </div>
             )
@@ -235,15 +253,15 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
         <div className="cmp-side">
           {accounts.length > 0 ? (
             <>
-              {accounts.length > 1 && <Seg name="pv" label="Preview network" size="sm" value={previewNet} onChange={setPreview} options={accounts.map(n => ({ value: n, label: NETWORK_LABEL[n] }))} />}
-              <NetworkPreview network={previewNet} text={captionOf({ text: textFor(previewNet), network: previewNet, link: linkFor(previewNet) })} media={media} words={words} at={at} format={formatOf(previewNet)} firstComment={commentOf({ network: previewNet, firstComment: commentFor(previewNet) || undefined, link: linkFor(previewNet) }) || undefined} />
+              {accounts.length > 1 && <Seg name="pv" label="Preview profile" size="sm" value={previewAcc} onChange={setPreview} options={accounts.map(n => ({ value: n, label: L(n) }))} />}
+              <NetworkPreview network={previewNet} who={accountById(previewAcc)} text={captionOf({ text: textFor(previewAcc), network: previewNet, link: linkFor(previewAcc) })} media={media} words={words} at={at} format={formatOf(previewAcc)} firstComment={commentOf({ network: previewNet, firstComment: commentFor(previewAcc) || undefined, link: linkFor(previewAcc) }) || undefined} />
             </>
           ) : <p className="faint">Pick an account to see the preview.</p>}
 
           <section className="cmp-copilot" aria-label="Atlas copilot">
             <div className="row tight"><Mark agent="atlas" /><b>Atlas</b><span className="faint">copilot</span></div>
             <div className="row tight">
-              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Writing 3 variants', () => setIdeas(variantsOf(text, { pillar, network: previewNet ?? 'instagram', words, rules: s.playbook.rules ?? [] })))}><Sparkles size={14} />3 variants</Btn>
+              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Writing 3 variants', () => setIdeas(variantsOf(text, { pillar, network: previewNet, words, rules: s.playbook.rules ?? [] })))}><Sparkles size={14} />3 variants</Btn>
               <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Shortening', () => setText(shorten(text)))}><Scissors size={14} />Shorten</Btn>
               <Tip label="Adds a LinkedIn version: no emoji, one line of context, a question to close.">
                 <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Adapting for LinkedIn', () => { setAccounts(a => (a.includes('linkedin') ? a : [...a, 'linkedin'])); setVariants(v => ({ ...v, linkedin: forLinkedIn(text) })); setPreview('linkedin') })}><Wand2 size={14} />Adapt for LinkedIn</Btn>

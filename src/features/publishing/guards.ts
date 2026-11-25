@@ -13,13 +13,14 @@ const sameDay = (a: number, b: number) => new Date(a).toDateString() === new Dat
 /** Posts that take a place that day: drafts and failed ones don't. */
 const counts = (p: Post) => p.status !== 'draft' && p.status !== 'failed'
 
-export const postsThatDay = (posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string }) =>
-  posts.filter(o => o.id !== p.id && o.network === p.network && counts(o) && sameDay(o.at, p.at)).length
+/** Per profile: Fernway Repair has its own three. */
+export const postsThatDay = (posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string; account?: string }) =>
+  posts.filter(o => o.id !== p.id && (o.account ?? o.network) === (p.account ?? p.network) && counts(o) && sameDay(o.at, p.at)).length
 
-export const overCap = (posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string }) => postsThatDay(posts, p) >= CAP
+export const overCap = (posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string; account?: string }) => postsThatDay(posts, p) >= CAP
 
 /** Same time on the next day that still has room on that network (two weeks at most). */
-export function nextRoom(posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string }): number {
+export function nextRoom(posts: Post[], p: Pick<Post, 'network' | 'at'> & { id?: string; account?: string }): number {
   for (let i = 1; i <= 14; i++) if (!overCap(posts, { ...p, at: p.at + i * DAY })) return p.at + i * DAY
   return p.at + 15 * DAY
 }
