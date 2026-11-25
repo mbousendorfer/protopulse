@@ -1,7 +1,9 @@
 import type { State } from '../../app/state'
-import type { Decision, Handoff, Network } from '../../app/types'
-import { now, pushHandoff, notify, pushLog, uid } from '../../app/core'
-import { EVENTS, LESSONS, MENTIONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
+import type { Decision, Handoff, LogEntry, Network } from '../../app/types'
+import { actionOf, agentOf, now, pushHandoff, notify, pushLog, removeHandoff, uid } from '../../app/core'
+import { hhmm, MIN } from '../../app/time'
+import { EVENTS, LESSONS, SEARCHES, TRENDS, type CompEvent, type Mention, type Move, type Search, type Sentiment } from '../../data/listening'
+import { mentionOf, negativeLastHour, sentimentOf, spikeMentions, SPIKE_FACTOR, USUAL_NEGATIVE_PER_HOUR } from './model'
 import type { Alert } from '../insights/alerts'
 import { briefSage } from '../strategy/slice'
 
@@ -28,6 +30,12 @@ export type ListeningState = {
   tags: Record<string, string[]>
   alerts: Alert[]
   watch: Watched[]
+  /** Mentions Echo filed during the session, newest first (see allMentions). */
+  live: Mention[]
+  /** The spike card that had Echo pause Atlas, while Atlas is still paused for it. */
+  pausedAtlas?: string
+  /** Echo keeps an eye on a spike until `until`, then reports. */
+  watchSpike?: { until: number; from: number; card: string }
 }
 
 const ALERTS: Alert[] = [
@@ -36,7 +44,7 @@ const ALERTS: Alert[] = [
   { id: 'la3', subject: 's9', condition: 'gets more than', threshold: 1, unit: ' mention from press', to: 'claire', on: true },
 ]
 
-export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH) })
+export const initialListening = (): ListeningState => ({ events: {}, lessons: {}, trends: {}, mentions: {}, searches: structuredClone(SEARCHES), sentiment: {}, tags: {}, alerts: structuredClone(ALERTS), watch: structuredClone(WATCH), live: [] })
 
 export const MENTION_TAGS = ['Product feedback', 'Creator', 'Press', 'Support', 'Competitor']
 export const MENTION_NET: Record<string, Network | undefined> = { Instagram: 'instagram', TikTok: 'tiktok', X: 'x', LinkedIn: 'linkedin', Facebook: 'facebook', YouTube: 'youtube' }
@@ -163,7 +171,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
     case 'listening/trend':
       return a.hand ? handTrend(s, a.id) : patch(s, { trends: { ...s.listening.trends, [a.id]: 'dismissed' } })
     case 'listening/mention': {
-      const m = MENTIONS.find(x => x.id === a.id)
+      const m = mentionOf(s, a.id)
       if (!m) return s
       const next = patch(s, { mentions: { ...s.listening.mentions, [a.id]: a.action } })
       return a.action === 'replied'
@@ -193,8 +201,7 @@ export function reduceListening(s: State, a: ListeningAction): State {
   }
 }
 
-/** The sentiment you see: your correction if you made one, Echo's otherwise. */
-export const sentimentOf = (s: State, m: Mention): Sentiment => s.listening.sentiment[m.id] ?? m.sentiment
+export { sentimentOf }
 
 const firstName = (author: string) => author.replace(/^@/, '').split(/[._\s]/)[0].replace(/^\w/, c => c.toUpperCase())
 
@@ -207,7 +214,7 @@ function novaDraft(m: Mention, mood: Sentiment) {
 }
 
 function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/mentions' }>): State {
-  const ms = MENTIONS.filter(m => a.ids.includes(m.id))
+  const ms = a.ids.map(id => mentionOf(s, id)).filter((m): m is Mention => !!m)
   if (!ms.length) return s
   const n = ms.length
   const noun = `${n} mention${n > 1 ? 's' : ''}`
@@ -273,6 +280,9 @@ const EVENT_OF = (h: Handoff): CompEvent | undefined => {
 }
 
 export function onResolveListening(s: State, h: Handoff, d: Decision): State {
+  if (h.agent === 'echo' && h.ref === SPIKE_REF && d.kind === 'option') return spikeMove(s, h, d.index)
+  if (h.ref?.startsWith('statement:') && d.kind === 'approve') return resumeAtlas(s, 'Claire’s statement is out')
+  if (h.ref === SPIKE_REPLIES && d.kind === 'approve') return markSpikeReplied(s, true)
   if (h.topic === 'Competitor') {
     const ev = EVENT_OF(h)
     if (!ev) return s
@@ -294,4 +304,122 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
       : d.index === 1 ? pushLog(s, { agent: 'echo', text: 'Added @camille.outdoors to the creator list', status: 'approved' }) : s
   }
   return s
+}
+
+/* ---------- Negative spike ---------- */
+
+export const SPIKE_REF = 'ev-spike'
+const SPIKE_REPLIES = 'spike-replies'
+const STATEMENT = 'We’ve seen your posts about the Storm Jacket seams. We’re sorry. Our workshop is checking the affected batch today. If yours leaks, send us your order number: we repair or replace it, free.'
+const CARE = 'Sorry about this. That’s not how the Storm Jacket should behave. Send us your order number in DM: we’ll repair or replace it for free. Until then, wash it at 30°C, no softener, and tumble dry low to reactivate the seam tape.'
+
+const spikeNow = (s: State) => s.listening.live.filter(m => m.id.startsWith('spike-') && sentimentOf(s, m) === 'negative' && m.at > now(s) - 60 * MIN)
+
+/**
+ * Script event: a Reddit thread about the Storm Jacket seams brings 27 negative mentions in 40 minutes.
+ * The mentions land in the feed; Echo's spike guardrail (3× her usual hourly volume) decides what reaches Sam,
+ * by her level on “Raise a negative spike”: Suggest notes it for the digest, Draft raises it, Act pauses Atlas herself.
+ */
+export function raiseSpike(s: State, manual: boolean): State {
+  if (!manual && agentOf(s, 'echo').status !== 'on') return s
+  if (s.handoffs.some(h => h.ref === SPIKE_REF)) return s
+  const live = [...spikeMentions(now(s)), ...s.listening.live.filter(m => !m.id.startsWith('spike-'))]
+  let next = patch(s, { live })
+  const { count, series, ratio } = negativeLastHour(next)
+  if (ratio < SPIKE_FACTOR) return next
+  const ms = spikeNow(next)
+  const nets = (n: string) => ms.filter(m => m.network === n).length
+  const top = [...ms].sort((x, y) => y.reach - x.reach)[0]
+  const level = actionOf(next, 'echo', 'echo-spike')?.autonomy ?? 'draft'
+  const times = `${ratio.toFixed(1)}×`
+  if (level === 'suggest') return pushLog(next, { agent: 'echo', text: `Negative mentions at ${count} an hour, ${times} usual: Storm Jacket seams. In tonight’s digest.`, status: 'done', reason: 'Negative spikes, set to Suggest', link: '/listening/mentions?sentiment=negative' })
+  const h: Omit<Handoff, 'id' | 'at'> = {
+    agent: 'echo', kind: 'alert', group: 'need', urgency: 'urgent', topic: 'Negative spike', action: 'echo-spike', ref: SPIKE_REF,
+    title: `${ms.length} negative mentions in 40 minutes about Storm Jacket seams`,
+    context: `${nets('Reddit')} on Reddit, ${nets('X')} on X, ${ms.length - nets('Reddit') - nets('X')} elsewhere. Loudest: ${top.author}, “${top.text}”`,
+    why: `${count} negative mentions in the last hour, ${times} my usual ${USUAL_NEGATIVE_PER_HOUR}. My spike threshold is ${SPIKE_FACTOR}×.`, confidence: 73,
+    link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket',
+    options: [{ label: 'Pause Atlas and ask Claire for a statement', recommended: true }, { label: 'Nova sends the care-instructions reply to each mention' }, { label: 'Monitor for 2 hours' }],
+    preview: { type: 'metric', label: 'Negative mentions per hour', value: String(count), delta: `${times} usual`, down: true, series },
+    sources: [{ label: `${ms.length} mentions`, from: 'Listening › Mentions · Storm Jacket · negative' }],
+  }
+  const id = uid('h')
+  next = pushHandoff(next, { ...h, id })
+  if (level !== 'act') return next
+  // On Act, Echo makes the recommended move herself, through the same effect as Sam's choice, with a real Undo.
+  const card = next.handoffs.find(x => x.id === id)!
+  next = removeHandoff(spikeMove(next, card, 0), id)
+  return pushLog(next, { agent: 'echo', text: `Handled on her own: ${card.title}`, status: 'done', reason: 'Negative spikes, set to Act', link: card.link, undoMinutes: 30, restore: [card] })
+}
+
+function spikeMove(s: State, h: Handoff, index: number): State {
+  const ms = spikeNow(s).length || s.listening.live.filter(m => m.id.startsWith('spike-')).length
+  if (index === 0) {
+    let next = s
+    if (agentOf(s, 'atlas').status === 'on') {
+      next = { ...next, agents: next.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'paused' as const, pausedUntil: 'Claire’s statement is out' } : a)) }
+      next = patch(next, { pausedAtlas: h.id })
+      const today = s.publishing.posts.filter(p => p.status === 'scheduled' && new Date(p.at).toDateString() === new Date(now(s)).toDateString()).length
+      next = pushLog(next, { agent: 'atlas', text: `Paused for the Storm Jacket spike. No new drafts or ideas until Claire’s statement is out${today ? `; ${today} post${today > 1 ? 's' : ''} already scheduled today ${today > 1 ? 'stay' : 'stays'} in the calendar` : ''}`, status: 'done', reason: 'Echo’s negative spike', link: '/publishing/calendar' })
+    }
+    const t = now(next)
+    return pushHandoff(next, {
+      agent: 'echo', kind: 'approval', urgency: 'urgent', topic: 'Negative spike', ref: `statement:${h.id}`, lane: 'claire', claire: { askedAt: t, dueAt: t + 90_000 },
+      title: 'Statement on the Storm Jacket seams', context: `${ms} negative mentions since ${hhmm(t - 40 * MIN)}. Atlas is paused until this is out.`,
+      why: 'Public statements go to Claire first (Playbook escalation).', confidence: 70, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket',
+      preview: { type: 'post', network: 'x', slot: 'As soon as Claire approves', text: [STATEMENT] },
+    })
+  }
+  if (index === 1) {
+    return pushHandoff(s, {
+      agent: 'nova', kind: 'approval', urgency: 'urgent', topic: 'Mention reply', action: 'nova-complaint', chain: ['echo', 'nova'], ref: SPIKE_REPLIES,
+      title: `Reply to the ${ms} mentions about Storm Jacket seams`, context: 'One reply, adapted to each author’s first name, on Reddit, X, Instagram and TikTok.',
+      why: 'You picked Echo’s second move on the spike.', confidence: 81, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket',
+      preview: { type: 'reply', network: 'x', author: `${ms} people`, text: 'Storm Jacket seams leak after 3 washes.', draft: [CARE] },
+    })
+  }
+  const t = now(s)
+  return pushLog(patch(s, { watchSpike: { until: t + 120 * MIN, from: t, card: h.id } }), { agent: 'echo', text: `Watching the Storm Jacket seams thread. I’ll report at ${hhmm(t + 120 * MIN)}.`, status: 'done', reason: 'You asked Echo to monitor' })
+}
+
+function resumeAtlas(s: State, why: string): State {
+  if (!s.listening.pausedAtlas || agentOf(s, 'atlas').status !== 'paused') return patch(s, { pausedAtlas: undefined })
+  const next = patch({ ...s, agents: s.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'on' as const, pausedUntil: undefined } : a)) }, { pausedAtlas: undefined })
+  return pushLog(next, { agent: 'atlas', text: 'Back on shift after the Storm Jacket spike', status: 'done', reason: why })
+}
+
+function markSpikeReplied(s: State, on: boolean): State {
+  const mentions = { ...s.listening.mentions }
+  for (const m of s.listening.live) if (m.id.startsWith('spike-')) { if (on && !mentions[m.id]) mentions[m.id] = 'replied'; else if (!on && mentions[m.id] === 'replied') delete mentions[m.id] }
+  return patch(s, { mentions })
+}
+
+/** Undo puts the spike back as it was: Atlas back on, the statement and the replies withdrawn. */
+export function onUndoListening(s: State, entry: LogEntry): State {
+  let next = s
+  for (const h of entry.restore ?? []) {
+    if (h.ref === SPIKE_REF) {
+      if (next.listening.pausedAtlas === h.id) next = resumeAtlas(next, 'You undid the spike decision')
+      next = { ...next, handoffs: next.handoffs.filter(x => x.ref !== `statement:${h.id}` && x.ref !== SPIKE_REPLIES) }
+      if (next.listening.watchSpike?.card === h.id) next = patch(next, { watchSpike: undefined })
+    }
+    if (h.ref === SPIKE_REPLIES) next = markSpikeReplied(next, false)
+    if (h.ref?.startsWith('statement:') && agentOf(next, 'atlas').status === 'on' && !next.listening.pausedAtlas) {
+      const spike = h.ref.slice('statement:'.length)
+      next = patch({ ...next, agents: next.agents.map(a => (a.id === 'atlas' ? { ...a, status: 'paused' as const, pausedUntil: 'Claire’s statement is out' } : a)) }, { pausedAtlas: spike })
+    }
+  }
+  return next
+}
+
+/** Two hours after “Monitor”, Echo reports what the thread did. */
+export const listeningDue = (s: State, t: number) => !!s.listening.watchSpike && s.listening.watchSpike.until <= t
+export function tickListening(s: State, t: number): State {
+  const w = s.listening.watchSpike
+  if (!w || w.until > t) return s
+  const since = s.listening.live.filter(m => m.product === 'Storm Jacket' && sentimentOf(s, m) === 'negative' && m.at > w.from).length
+  const next = patch(s, { watchSpike: undefined })
+  return pushHandoff(next, since >= USUAL_NEGATIVE_PER_HOUR * SPIKE_FACTOR
+    ? { agent: 'echo', kind: 'alert', urgency: 'urgent', topic: 'Negative spike', title: `Storm Jacket seams: ${since} more negative mentions in 2 hours`, context: 'The thread is still growing.', why: 'You asked me to monitor for 2 hours.', confidence: 75, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' }
+    : { agent: 'echo', kind: 'news', urgency: 'week', topic: 'Negative spike', title: `Storm Jacket seams calmed down: ${since} new negative mention${since === 1 ? '' : 's'} in 2 hours`, context: `Back under my usual ${USUAL_NEGATIVE_PER_HOUR} an hour. No move needed.`, why: 'You asked me to monitor for 2 hours.', confidence: 80, link: '/listening/mentions?sentiment=negative&product=Storm%20Jacket', cta: { label: 'See the mentions', to: '/listening/mentions?sentiment=negative&product=Storm%20Jacket' } })
 }
