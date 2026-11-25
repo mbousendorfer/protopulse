@@ -7,7 +7,7 @@ import { fmt } from './parts'
 
 const TILE = 71 // px per 2 s on the 40 px-high filmstrip (160×90 tiles)
 /** Below this, a caption line is a few pixels wide and unreadable: on a phone the timeline scrolls instead of fitting. */
-const MIN_FIT = 24
+const MIN_FIT = 40
 
 /** Drag helper: calls back with the horizontal distance, ends on release. */
 function drag(e: RPointerEvent, move: (dx: number) => void, end: (dx: number) => void) {
