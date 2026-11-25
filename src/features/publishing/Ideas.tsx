@@ -254,7 +254,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
           <section>
             {i.drafts!.length > 1 && <Seg name="idea-net" label="Network" size="sm" value={draft.network} onChange={setNet} options={i.drafts!.map(x => ({ value: x.network, label: NETWORK_LABEL[x.network] }))} />}
             <div className="idea-draft">
-              <div className="idea-pv"><NetworkPreview network={draft.network} text={draft.text} media={draft.media} words={words} /></div>
+              <div className="idea-pv"><NetworkPreview network={draft.network} text={draft.text} media={draft.media} words={words} at={draft.at} slides={Number(draft.format?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
               <dl className="idea-facts">
                 <div>
                   <dt>Caption</dt>
