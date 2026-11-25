@@ -6,6 +6,7 @@ import { ClipPreview } from './parts'
 import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent } from './slice'
 import type { Lang } from './model'
 import { SCRIPT } from './script'
+import { clipBest, clipFind, clipVersion, clipWhy } from './intents'
 
 declare module '../../app/types' {
   interface PreviewTypes { clip: { clip: string } }
@@ -70,7 +71,7 @@ const juno: AgentModule = {
   // Videos being processed move on; snoozed clips come back.
   due: videoDue,
   tick: tickVideo,
-  intents: [clip],
+  intents: [clipWhy, clipBest, clipVersion, clipFind, clip],
   previews: { clip: p => <ClipPreview id={p.clip} /> },
   testerStats: ev => [
     ['Clips opened', ev.filter(e => e.kind === 'video/open').length],
