@@ -37,3 +37,7 @@
 - 25/11/2026 · Liens et UTM · lien gardé à part du texte (ajouté à l'affichage), en premier commentaire sur Instagram, lien simple sur X ; convention UTM d'Atlas affichée dans le composer · coller le lien dans la légende · rééditer un post doublerait le lien ; la leçon de l'échec X s'applique d'elle-même
 - 25/11/2026 · Liens et UTM · clics demandés à Iris (`requests/iris-from-atlas-link-clicks.md`), rien d'affiché en attendant · inventer des clics · un chiffre appartient à Iris
 - 25/11/2026 · Notes de calendrier · « quiet day » coché d'office quand la note dit holiday/strike/closed… ; les posts déjà ce jour-là passent par l'action « Move a post to a better slot » (Act par défaut → déplacés seul avec Undo) ; plan, cartes Desk et files évitent le jour ; la recommandation du calendrier se tait · un garde-fou séparé · déplacer un post est déjà l'action de créneau d'Atlas
+- 25/11/2026 · Pitch B8 glisser-déposer horaire · **Later**
+- 25/11/2026 · Pitch B10 médiathèque · **Go, plus simple** (tags d'Atlas à l'upload, tags éditables, recherche, alerte de licence + remplacement ; pas de dossiers)
+- 25/11/2026 · Pitch B12 import CSV · **Later**
+- 25/11/2026 · Pitch B13 multi-profils · **Go** (version complète, avec demandes à Nova, Iris et Sage ; ma recommandation était Later)
