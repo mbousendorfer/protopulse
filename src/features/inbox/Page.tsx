@@ -10,6 +10,7 @@ import { ago, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, LABELS, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Switch, Tabs, type MenuItem } from '../../ui'
+import { CountBadge } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
@@ -134,11 +135,11 @@ export default function InboxPage() {
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
           <div className="ib-filters">
             <span className="ib-side-title">Filters</span>
-            <Menu align="start" trigger={<button className="ib-select">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
               items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...(Object.keys(NETWORK_LABEL) as Network[]).map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
-            <Menu align="start" trigger={<button className="ib-select">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{type === 'all' ? 'All types' : TYPE_LABEL[type]}<ChevronDown size={14} /></button>}
               items={[{ label: 'All types', onSelect: () => setType('all') }, ...(Object.keys(TYPE_LABEL) as ConvType[]).map(t => ({ label: TYPE_LABEL[t], onSelect: () => setType(t) }))]} />
-            <Menu align="start" trigger={<button className="ib-select">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
+            <Menu align="start" trigger={<button className="select-btn block">{sentiment === 'all' ? 'Any sentiment' : SENT[sentiment]}<ChevronDown size={14} /></button>}
               items={[{ label: 'Any sentiment', onSelect: () => setSentiment('all') }, ...(Object.keys(SENT) as Sentiment[]).map(t => ({ label: SENT[t], onSelect: () => setSentiment(t) }))]} />
             <Switch checked={intent} onChange={setIntent} label="Buying intent" />
             {filtersOn && <button className="link-btn" onClick={clear}>Clear filters</button>}
@@ -248,7 +249,7 @@ function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel
             <header className="ib-need-head">
               <span className="ib-need-icon" aria-hidden><I size={14} /></span>
               <h3>{g.title}</h3>
-              <span className="ib-need-n num">{rows.length}</span>
+              <CountBadge n={rows.length} />
               <span className="faint">{g.hint}</span>
               <span className="spacer" />
               {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
@@ -417,7 +418,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
             <div className="ib-draft">
               <div className="row tight ib-draft-by">
                 <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
-                {card && <Link to={`/?card=${card.id}`} className="link-btn" style={{ marginLeft: 'auto', fontSize: 12 }}>Also on your Desk</Link>}
+                {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Also on your Desk</Link>}
               </div>
               {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
@@ -432,7 +433,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   ))}
                 </ul>
               )}
-              {!!c.rules?.length && <div className="row tight"><span className="faint" style={{ fontSize: 12 }}>Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
+              {!!c.rules?.length && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
               <div className="row">
                 {editing ? (
                   <>
@@ -453,7 +454,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
           )}
 
           {c.status === 'hidden' && (
-            <div className="ib-draft row"><span className="muted" style={{ flex: 1 }}>Hidden from your public page. Nobody else sees it.</span><Btn onClick={() => d({ type: 'inbox/hide', id: c.id, hidden: false })}>Unhide</Btn></div>
+            <div className="ib-draft row"><span className="muted grow">Hidden from your public page. Nobody else sees it.</span><Btn onClick={() => d({ type: 'inbox/hide', id: c.id, hidden: false })}>Unhide</Btn></div>
           )}
           {c.status === 'claire' && !card?.claire?.reply && <div className="ib-draft"><span className="muted">Waiting on Claire. She usually replies in about a minute.</span></div>}
 
@@ -468,7 +469,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
               value={reply} onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!canReply) setMode('note'); submit() } }} />
             <div className="row">
-              <span className="faint" style={{ fontSize: 12 }}>{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
+              <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
               <Btn variant="primary" size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
                 {mode === 'note' || !canReply ? <><StickyNote size={14} />Add note</> : <><Send size={14} />Send</>}
@@ -507,7 +508,7 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
             {contact.orders.map(o => (
               <li key={o.id}>
                 <div className="row nowrap"><b className="mono">{o.id}</b><span className="faint">{o.date}</span><span className="spacer" /><b className="num">€{o.total}</b></div>
-                <div className="row nowrap"><span className="muted ellipsis" style={{ flex: 1 }}>{o.items}</span><Pill tone={o.status === 'Late' ? 'alert' : o.status === 'Returned' || o.status === 'Processing' ? 'caution' : o.status === 'Delivered' ? 'ok' : undefined}>{o.status}</Pill></div>
+                <div className="row nowrap"><span className="muted ellipsis grow">{o.items}</span><Pill tone={o.status === 'Late' ? 'alert' : o.status === 'Returned' || o.status === 'Processing' ? 'caution' : o.status === 'Delivered' ? 'ok' : undefined}>{o.status}</Pill></div>
               </li>
             ))}
           </ul>

@@ -56,7 +56,7 @@ export function NetworkPreview({ network, text, media, words }: { network: Netwo
     default: return frame('pv-x', <>
       <div className="pv-xrow">
         <Brand size={36} />
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="grow">
           <div className="pv-xname"><b>Fernway</b><span>@fernway · now</span></div>
           <p className="pv-text pv-pre">{caption}</p>
           {media && <div className="pv-xmedia">{img('16 / 9')}</div>}

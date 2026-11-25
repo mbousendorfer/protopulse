@@ -52,7 +52,7 @@ function Campaigns() {
         const pct = Math.round((c.goal.current / c.goal.target) * 100)
         return (
           <Link key={c.id} to={`/strategy/campaigns/${c.id}`} className="card campaign-row">
-            <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div className="row between">
               <h2>{c.name}</h2>
               <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}{c.status === 'review' && c.version > 1 ? ` · v${c.version}` : ''}</Pill>
             </div>
@@ -165,7 +165,7 @@ function CampaignView() {
 
   return (
     <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/strategy')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />Campaigns</Btn>
+      <Btn variant="ghost" size="sm" onClick={() => nav('/strategy')} className="self-start"><ArrowLeft size={14} />Campaigns</Btn>
       <header className="campaign-head">
         <div>
           <div className="row tight"><Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill><span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}{c.version > 1 ? ` · version ${c.version}` : ''}</span></div>
@@ -358,8 +358,8 @@ function Pillars() {
   return (
     <div className="stack lg">
       <section className="card pad">
-        <div className="row" style={{ justifyContent: 'space-between' }}>
-          <div className="section-title" style={{ margin: 0 }}>Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
+        <div className="row between">
+          <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
           <span className="row tight faint lock-note"><Lock size={13} />Locked: Sage suggests, you decide</span>
         </div>
         <div className="pillars">
@@ -367,7 +367,7 @@ function Pillars() {
             const off = p.actual - p.target
             return (
               <div key={p.id} className="pillar">
-                <div className="row" style={{ justifyContent: 'space-between' }}>
+                <div className="row between">
                   <b>{p.name}</b>
                   <span className="num">{p.actual}% <span className="faint">of posts · target {p.target}%</span></span>
                 </div>

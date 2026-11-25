@@ -128,7 +128,7 @@ export function ShiftBoard() {
   return (
     <section className="shift card" aria-label="Shift board, last 24 hours">
       <div className="card-head">
-        <h2>Shift board <span className="faint" style={{ fontWeight: 400 }}>· last 24 h</span></h2>
+        <h2>Shift board <span className="faint">· last 24 h</span></h2>
         <span className="legend" style={{ margin: 0 }}>
           <span><i style={{ height: 10, width: 3, borderRadius: 2, background: 'var(--a-nova)' }} />Acted alone, in each agent’s colour</span>
           <span><i style={{ height: 8, width: 8, borderRadius: 4, background: 'var(--alert)' }} />Raised to you</span>

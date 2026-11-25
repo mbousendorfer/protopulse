@@ -5,7 +5,7 @@
 
 /* Brief: greeting on the left, the scene on the right. */
 .brief-top { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: var(--s6); align-items: center; }
-.brief-scene { border-radius: 18px; overflow: hidden; }
+.brief-scene { border-radius: var(--r-card); overflow: hidden; }
 @media (max-width: 700px) {
   .brief-top { grid-template-columns: 1fr; }
   .brief-scene { display: none; }

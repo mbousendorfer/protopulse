@@ -7,6 +7,7 @@ import { ago } from '../../app/time'
 import type { AgentId } from '../../app/types'
 import type { Chat } from './slice'
 import { Btn, Mark, PageHead } from '../../ui'
+import { CountBadge } from '../../ui/Feedback'
 import ChatThread from './Thread'
 import './chats.css'
 
@@ -43,7 +44,7 @@ export default function ChatsPage() {
               <Link key={c.id} to={`/chats/${c.id}`} className={`chat-item ${c.id === chat?.id ? 'active' : ''}`}>
                 <span className="faces">{who.length ? who.slice(0, 3).map(a => <Mark key={a} agent={a} />) : <Mark agent="iris" />}</span>
                 <span className="txt">
-                  <span className="row tight nowrap"><b className="ellipsis">{c.title}</b>{c.unread > 0 && <span className="chat-unread" aria-label={`${c.unread} unread`}>{c.unread}</span>}</span>
+                  <span className="row tight nowrap"><b className="ellipsis">{c.title}</b>{c.unread > 0 && <CountBadge n={c.unread} needs label={`${c.unread} unread`} />}</span>
                   <span className="faint ellipsis">{last ? last.text : 'No messages yet'}</span>
                 </span>
                 <span className="faint when">{ago(c.updated, now)}</span>

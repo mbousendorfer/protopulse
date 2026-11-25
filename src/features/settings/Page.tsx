@@ -68,9 +68,9 @@ function Accounts() {
       {list.map(a => (
         <li key={a.id} className="set-acc">
           {a.net ? <Net n={a.net} /> : <span className="net">SH</span>}
-          <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="grow">
             <div className="row tight"><b>{a.name}</b><span className="faint">{a.handle}</span></div>
-            <div className="faint" style={{ fontSize: 12 }}>
+            <div className="faint t-xs">
               {[a.followers, a.note, busy === a.id ? null : `Synced ${ago(now - a.syncedMin * MIN, now)}`].filter(Boolean).join(' · ')}
             </div>
           </div>
@@ -145,7 +145,7 @@ function Approver() {
   return (
     <section className="card">
       <div className="card-head">
-        <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint" style={{ fontSize: 12 }}>Head of Brand · approves what you send her</span></div></div>
+        <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
         <Link to="/playbook?tab=escalation" className="btn sm ghost">All escalation rules</Link>
       </div>
       <p className="card-body muted" style={{ paddingBottom: 0 }}>Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>

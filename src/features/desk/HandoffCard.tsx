@@ -38,7 +38,7 @@ export default function HandoffCard({ h, onDiscuss }: { h: Handoff; onDiscuss: (
 
       <ClaireNote h={h} />
       <PreviewBlock h={h} editing={editing} draft={draft} setDraft={setDraft} />
-      {isRule && <div className="well preview"><div className="faint" style={{ fontSize: 12 }}>Proposed rule for {h.proposal!.agents.map(a => a[0].toUpperCase() + a.slice(1)).join(' and ')}</div><p style={{ fontWeight: 500 }}>“{h.proposal!.text}”</p></div>}
+      {isRule && <div className="well preview"><div className="faint t-xs">Proposed rule for {h.proposal!.agents.map(a => a[0].toUpperCase() + a.slice(1)).join(' and ')}</div><p className="strong">“{h.proposal!.text}”</p></div>}
       <WhyLine h={h} />
 
       {waiting ? (

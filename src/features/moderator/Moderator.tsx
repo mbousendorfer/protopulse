@@ -67,7 +67,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
               </button>
             ))}
           </div>
-          <p className="faint" style={{ fontSize: 12 }}>A scenario resets the demo, keeps the tester log.</p>
+          <p className="faint t-xs">A scenario resets the demo, keeps the tester log.</p>
         </section>
 
         <section className="stack">
@@ -77,7 +77,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
             <Seg name="cadence" label="Cadence" size="sm" value={String(s.engine.cadence)} onChange={v => d({ type: 'core/engine', cadence: +v })}
               options={[{ value: '10', label: 'Every 10 s' }, { value: '30', label: 'Every 30 s' }, { value: '60', label: 'Every 60 s' }]} />
           </div>
-          <p className="faint" style={{ fontSize: 12 }}>{s.engine.live ? `Next event at ${hhmm(s.engine.nextAt)} · ${s.engine.cursor % SCRIPT.length + 1} of ${SCRIPT.length} in the script` : 'Paused. Agents only act when you trigger an event.'}</p>
+          <p className="faint t-xs">{s.engine.live ? `Next event at ${hhmm(s.engine.nextAt)} · ${s.engine.cursor % SCRIPT.length + 1} of ${SCRIPT.length} in the script` : 'Paused. Agents only act when you trigger an event.'}</p>
           <ul className="mod-events">
             {SCRIPT.map(e => (
               <li key={e.id}>
@@ -91,7 +91,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
         </section>
 
         <section className="stack">
-          <div className="row" style={{ justifyContent: 'space-between' }}>
+          <div className="row between">
             <h3>Tester log <span className="faint num">{ev.length} events</span></h3>
             <div className="row">
               <Btn size="sm" onClick={exportJson} disabled={!ev.length}><Download size={14} />Export JSON</Btn>

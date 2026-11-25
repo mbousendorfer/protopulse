@@ -69,7 +69,7 @@ function Competitors({ view }: { view: 'events' | 'benchmark' }) {
   const { s } = useStore()
   return (
     <div className="stack lg">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
+      <div className="row between">
         <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
           items={[{ value: 'events', label: 'Events' }, { value: 'benchmark', label: 'Benchmark' }]} />
         <Link to="/listening/competitors/manage" className="btn sm"><Settings2 size={14} />Manage competitors<span className="faint num">{s.listening.watch.filter(w => w.tracking).length}</span></Link>
@@ -133,7 +133,7 @@ function EventView() {
   return (
     <div className="event-layout">
       <div className="stack">
-        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />All events</Btn>
+        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} className="self-start"><ArrowLeft size={14} />All events</Btn>
         <div className="row tight"><Link to={`/listening/competitors/profile/${c.id}`}><b>{c.name}</b></Link><span className="chip">{e.type}</span><span className="mono faint">{dayLabel(e.at, now)} · {ago(e.at, now)}</span></div>
         <h1 className="event-title">{e.title}</h1>
         <section className="card pad proof">
@@ -173,7 +173,7 @@ function EventView() {
             ))}
           </ol>
         )}
-        <p className="faint" style={{ fontSize: 12 }}>Anything that answers a competitor in public stays locked to Suggest: you publish it yourself.</p>
+        <p className="faint t-xs">Anything that answers a competitor in public stays locked to Suggest: you publish it yourself.</p>
       </aside>
     </div>
   )
@@ -190,7 +190,7 @@ function Benchmark() {
   return (
     <div className="stack lg">
       <section className="card">
-        <div className="card-head"><h2>Side by side <span className="faint" style={{ fontWeight: 400 }}>· last 30 days</span></h2></div>
+        <div className="card-head"><h2>Side by side <span className="faint">· last 30 days</span></h2></div>
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Brand</th><th className="r">Followers</th><th className="r">Growth per month</th><th className="r">Posts per week</th><th className="r">Engagement rate</th><th>Main formats</th><th className="r">Share of voice</th></tr></thead>
@@ -210,7 +210,7 @@ function Benchmark() {
           </table>
         </div>
         <div className="card-body">
-          <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Share of voice · mentions in the last 30 days</div>
+          <div className="faint caption">Share of voice · mentions in the last 30 days</div>
           <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
         </div>
       </section>
@@ -241,7 +241,7 @@ function Benchmark() {
 
       <section className="card">
         <div className="card-head">
-          <h2>Their top posts <span className="faint" style={{ fontWeight: 400 }}>· 30 days</span></h2>
+          <h2>Their top posts <span className="faint">· 30 days</span></h2>
           <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...tracked.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
         </div>
         <ul className="top-posts">
@@ -269,9 +269,9 @@ function Profile() {
   const events = EVENTS.filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
   return (
     <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} style={{ alignSelf: 'flex-start' }}><ArrowLeft size={14} />Benchmark</Btn>
+      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} className="self-start"><ArrowLeft size={14} />Benchmark</Btn>
       <header>
-        <h1 className="event-title">{c.name} <span className="faint mono" style={{ fontSize: 14 }}>{c.handle}</span></h1>
+        <h1 className="event-title">{c.name} <span className="faint mono t-md">{c.handle}</span></h1>
         <p className="muted" style={{ maxWidth: '70ch' }}>{c.positioning}</p>
       </header>
       <dl className="grid-4 comp-stats">
@@ -340,7 +340,7 @@ function Mentions() {
   return (
     <div className="stack">
       <section className="card pad">
-        <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Sentiment of the last {all.length} mentions</div>
+        <div className="faint caption">Sentiment of the last {all.length} mentions</div>
         <StackBar h={10} parts={[
           { label: 'Positive', value: count('positive'), color: 'var(--ok)' },
           { label: 'Neutral', value: count('neutral'), color: 'var(--ink-3)' },
@@ -442,7 +442,7 @@ function Trends() {
           const st = s.listening.trends[t.id]
           return (
             <article key={t.id} className="card pad trend">
-              <div className="row" style={{ justifyContent: 'space-between' }}>
+              <div className="row between">
                 <h3>{t.name}</h3>
                 <Pill tone={t.fit === 'High' ? 'ok' : t.fit === 'Medium' ? 'caution' : undefined}>{t.fit} fit</Pill>
               </div>
@@ -474,7 +474,7 @@ function Searches() {
   const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
   return (
     <div className="stack">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
+      <div className="row between">
         <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</p>
         <Btn variant="primary" onClick={() => setEdit(blank)}><Plus size={14} />New search</Btn>
       </div>
@@ -511,7 +511,7 @@ function Searches() {
         )}
         {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
       </section>
-      <p className="faint" style={{ fontSize: 13 }}>Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
+      <p className="faint t-sm">Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
       {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
     </div>
   )

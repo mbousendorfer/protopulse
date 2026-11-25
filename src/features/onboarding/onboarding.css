@@ -1,6 +1,6 @@
 .onb { min-height: 100vh; display: flex; flex-direction: column; background: var(--void); }
 .onb-top { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 var(--s5); border-bottom: 1px solid var(--line); background: var(--deck); }
-.onb-top .logo { width: 24px; height: 24px; border-radius: 6px; background: var(--ink); display: grid; place-items: center; }
+.onb-top .logo { width: 24px; height: 24px; border-radius: var(--r-sm); background: var(--ink); display: grid; place-items: center; }
 .onb-top b { font-weight: 600; }
 .onb-body { flex: 1; display: grid; grid-template-columns: 240px minmax(0, 760px); gap: var(--s8); justify-content: center; padding: var(--s8) var(--s5) var(--s10); }
 .onb-steps { position: sticky; top: var(--s8); align-self: start; display: flex; flex-direction: column; gap: var(--s4); }
@@ -27,7 +27,6 @@
 .onb-prop-text { font-size: var(--t-xl); font-weight: 600; line-height: 1.35; }
 .onb-summary { display: flex; align-items: center; gap: var(--s3); }
 .onb-summary span { flex: 1; }
-.ok { color: var(--ok); }
 .onb-team { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
 .onb-agent { display: flex; flex-direction: column; gap: var(--s2); }
 .onb-agent h2 { font-size: var(--t-lg); font-weight: 600; }

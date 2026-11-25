@@ -54,7 +54,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
       <p className="handoff-ctx">{h.context}</p>
       <ClaireNote h={h} />
       <PreviewBlock h={h} editing={mode === 'edit'} draft={draft} setDraft={setDraft} />
-      {h.proposal && <div className="well preview"><div className="faint" style={{ fontSize: 12 }}>Proposed rule</div><p style={{ fontWeight: 500 }}>“{h.proposal.text}”</p></div>}
+      {h.proposal && <div className="well preview"><div className="faint t-xs">Proposed rule</div><p className="strong">“{h.proposal.text}”</p></div>}
       <Sources h={h} />
       <WhyLine h={h} />
       <WontGuess h={h} />

@@ -188,9 +188,9 @@ function ClaireStatus() {
       </button>
     }>
       <div className="stack" style={{ width: 280 }}>
-        <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted" style={{ fontSize: 12 }}>Head of Brand · approves what you send her</div></div></div>
+        <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted t-xs">Head of Brand · approves what you send her</div></div></div>
         <div className="muted">Usually replies in about a minute.</div>
-        <div className="faint" style={{ fontSize: 12 }}>{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
+        <div className="faint t-xs">{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
       </div>
     </Pop>
   )
@@ -209,7 +209,7 @@ function Notifications() {
           {items.map(l => (
             <li key={l.id} className="row nowrap" style={{ padding: '8px 0', alignItems: 'flex-start' }}>
               <Mark agent={l.agent} />
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="grow">
                 <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
                 <div className="faint mono">{ago(l.at, now)}</div>
               </div>

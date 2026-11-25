@@ -175,7 +175,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             </div>
             <div className="field">
               <span className="label">Pillar</span>
-              <Menu align="start" trigger={<button className="ib-select cmp-select">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
+              <Menu align="start" trigger={<button className="select-btn block">{pillar}<ChevronDown size={14} /></button>} items={PILLARS.map(p => ({ label: p, onSelect: () => setPillar(p) }))} />
             </div>
           </div>
 

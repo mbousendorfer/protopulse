@@ -123,7 +123,7 @@ function AnswerView({ run, agentName: name, onReroute }: { run: Run; agentName: 
   const words = run.answer.text.split(' ')
   return (
     <div className="cmdk-answer" aria-live="polite">
-      <div className="cmdk-q"><span className="avatar" style={{ width: 22, height: 22, fontSize: 10 }}>SR</span><p>{run.query}</p></div>
+      <div className="cmdk-q"><span className="avatar sm">SR</span><p>{run.query}</p></div>
       <div className="cmdk-route mono">
         <span className="faint">Routed to</span>
         <Menu align="start" trigger={<button className="route-btn"><Mark agent={run.agent} />{name}<ChevronDown size={12} /></button>}
@@ -161,7 +161,7 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
       const text = draftPost(i.topic, i.network)
       return {
         text: `Drafted a ${NETWORK_LABEL[i.network]} post on “${i.topic}” for ${i.slot}, the best slot this week. It follows the Playbook: one call to action, one emoji max. It’s on your Desk for approval.`,
-        visual: <div className="well cmdk-post"><div className="faint" style={{ fontSize: 12 }}>{NETWORK_LABEL[i.network]} · {i.slot}</div><p>{text}</p></div>,
+        visual: <div className="well cmdk-post"><div className="faint t-xs">{NETWORK_LABEL[i.network]} · {i.slot}</div><p>{text}</p></div>,
         after: () => d({ type: 'playbook/briefAtlas', title: `${NETWORK_LABEL[i.network]} post: ${i.topic}`, network: i.network, slot: i.slot, text, brief: query }),
         ctas: [{ label: 'Open the Desk', primary: true, run: () => go('/') }, { label: 'Open Publishing', run: () => go('/publishing') }],
       }

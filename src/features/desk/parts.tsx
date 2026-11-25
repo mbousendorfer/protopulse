@@ -70,7 +70,7 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
   if (p.type === 'metric') return (
     <div className="well preview metric">
       <div>
-        <div className="faint" style={{ fontSize: 12 }}>{p.label}</div>
+        <div className="faint t-xs">{p.label}</div>
         <div className="row tight"><b className="num">{p.value}</b><span className={`delta ${p.down ? 'down' : 'up'}`}>{p.delta}</span></div>
       </div>
       <Spark data={p.series} w={180} h={40} tone={p.down ? 'alert' : 'ink'} color={`var(--a-${h.agent})`} label={p.label} />
@@ -78,8 +78,8 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
   )
   if (p.type === 'plan') return (
     <div className="well preview">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <b style={{ fontWeight: 600 }}>{p.title}</b>
+      <div className="row between">
+        <b>{p.title}</b>
         {h.link && <button className="link-btn row tight" onClick={() => nav(h.link!)}>Open <ArrowRight size={12} /></button>}
       </div>
       <ul className="plan-lines">{p.lines.map(l => <li key={l}>{l}</li>)}</ul>
@@ -87,7 +87,7 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
   )
   if (p.type === 'evidence') return (
     <div className="well preview">
-      <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Evidence</div>
+      <div className="faint caption">Evidence</div>
       <ul className="plan-lines">{p.lines.map(l => <li key={l}>{l}</li>)}</ul>
     </div>
   )

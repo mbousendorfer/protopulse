@@ -54,7 +54,7 @@ function Proposals() {
         {items.map(h => (
           <li key={h.id} className="pb-prop">
             <Mark agent={h.agent} />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="grow">
               <b>“{h.proposal!.text}”</b>
               <p className="muted">{h.context} <span className="faint">· for {h.proposal!.agents.map(agentName).join(' and ')}</span></p>
             </div>
@@ -88,8 +88,8 @@ function TryMessage() {
   )
   return (
     <section className="card pad pb-try" aria-labelledby="pb-try">
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 id="pb-try" className="section-title" style={{ margin: 0 }}>Try a message</h2>
+      <div className="row between">
+        <h2 id="pb-try" className="section-title flush">Try a message</h2>
         <div className="row">
           <Seg name="try-net" label="Network" size="sm" value={network} onChange={setNetwork} options={[{ value: 'instagram', label: 'Instagram' }, { value: 'linkedin', label: 'LinkedIn' }, { value: 'tiktok', label: 'TikTok' }]} />
           <Btn size="sm" variant="ghost" onClick={() => setText(SAMPLE)}>Paste an example</Btn>
@@ -174,7 +174,7 @@ function AddRule({ kinds }: { kinds: boolean }) {
   const [kind, setKind] = useState<'do' | 'dont'>('do')
   const [text, setText] = useState('')
   const [agents, setAgents] = useState<AgentId[]>(['nova', 'atlas'])
-  if (!open) return <Btn style={{ alignSelf: 'flex-start' }} onClick={() => setOpen(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>
+  if (!open) return <Btn className="self-start" onClick={() => setOpen(true)}><Plus size={14} />{kinds ? 'Add a rule' : 'Add a fact'}</Btn>
   const submit = () => {
     if (!text.trim() || !agents.length) return
     d({ type: 'playbook/addRule', kind: kinds ? kind : 'fact', text: text.trim(), agents, origin: 'Added by you' })
@@ -252,10 +252,10 @@ function VoicePanel() {
   return (
     <div className="grid-2">
       <section className="card pad stack">
-        <h2 className="section-title" style={{ margin: 0 }}>How Fernway sounds</h2>
+        <h2 className="section-title flush">How Fernway sounds</h2>
         {SLIDERS.map(x => (
           <label key={x.key} className="pb-slider">
-            <span className="row" style={{ justifyContent: 'space-between' }}><span className="muted">{x.left}</span><span className="muted">{x.right}</span></span>
+            <span className="row between"><span className="muted">{x.left}</span><span className="muted">{x.right}</span></span>
             <input type="range" min={0} max={100} step={5} value={v[x.key]} onChange={e => d({ type: 'playbook/voice', key: x.key, value: +e.target.value })}
               aria-label={`${x.left} to ${x.right}`} aria-valuetext={`${v[x.key]} out of 100`} />
           </label>
@@ -265,7 +265,7 @@ function VoicePanel() {
       <section className="card pad">
         <h2 className="section-title">Live example <span className="faint">· Nova replying to a complaint</span></h2>
         <div className="well">
-          <div className="faint" style={{ fontSize: 12 }}>@lea.hikes</div>
+          <div className="faint t-xs">@lea.hikes</div>
           <p>Strap snapped on day 2 of the GR20. For a €140 bag that’s not ok.</p>
           <div className="pb-sample"><Mark agent="nova" /><p aria-live="polite">{voiceSample(v)}</p></div>
         </div>
@@ -284,9 +284,9 @@ function Escalation() {
         {s.playbook.escalate.map(e => (
           <li key={e.id} className={`pb-esc ${e.on ? '' : 'off'}`}>
             <Switch checked={e.on} onChange={on => d({ type: 'playbook/escalate', id: e.id, on })} label={e.label} hideLabel />
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="grow">
               <b>{e.label}</b>
-              <div className="faint" style={{ fontSize: 12 }}>Watched by {e.agents.map(agentName).join(' and ')}</div>
+              <div className="faint t-xs">Watched by {e.agents.map(agentName).join(' and ')}</div>
             </div>
             <Seg name={`esc-${e.id}`} label={`Who decides: ${e.label}`} size="sm" value={e.to} onChange={to => d({ type: 'playbook/escalate', id: e.id, to })}
               options={[{ value: 'sam', label: 'You' }, { value: 'claire', label: 'Claire' }]} />
@@ -303,7 +303,7 @@ function Pillars() {
   return (
     <section className="card pad">
       <div className="row" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-        <div><h2 className="section-title" style={{ margin: 0 }}>Editorial pillars</h2><p className="faint">Target share of posts. Sage proposes changes in Strategy and you accept them there.</p></div>
+        <div><h2 className="section-title flush">Editorial pillars</h2><p className="faint">Target share of posts. Sage proposes changes in Strategy and you accept them there.</p></div>
         <Link to="/strategy/pillars" className="btn sm">Open in Strategy</Link>
       </div>
       <HBars items={s.strategy.pillars.map(p => ({ label: p.name, value: p.target }))} format={v => `${v}%`} />

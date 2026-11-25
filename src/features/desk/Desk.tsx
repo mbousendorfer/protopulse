@@ -12,6 +12,7 @@ import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
 import { KIND_LABEL, SNOOZE, byPriority, useHandoffActions } from './parts'
 import { BulkBar, SelectBox, useSelection } from '../../ui/Selection'
+import { CountBadge } from '../../ui/Feedback'
 import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
 import './desk.css'
 import './today.css'
@@ -154,7 +155,7 @@ export default function Desk() {
               const n = entries.filter(e => e.group === id).reduce((k, e) => k + (e.b ? e.b.items.length : 1), 0)
               return (
                 <button key={id} role="tab" aria-selected={tab === id} className={`day-tab ${tab === id ? 'on' : ''} ${id}`} onClick={() => { setTab(id); const first = entries.find(e => e.group === id); if (first) setSelected(first.key) }}>
-                  {label}<span className="num">{n}</span>
+                  {label}<CountBadge n={n} needs={id === 'need' && n > 0} />
                 </button>
               )
             })}
@@ -248,7 +249,7 @@ function Row({ e, active, onClick, select }: { e: Entry; active: boolean; onClic
         <TopicIcon agent={e.b.agent} topic={e.b.id === 'rules' ? 'rule' : e.b.id === 'nova' ? 'reply' : 'post'} />
         <span className="txt"><span className="ellipsis">{e.b.title}</span><span className="faint ellipsis">{e.b.meta}</span></span>
         {e.b.urgency === 'urgent' && <span className="dot urgent" aria-label="Contains urgent items" />}
-        <span className="badge num" aria-hidden>{e.b.items.length}</span>
+        <CountBadge n={e.b.items.length} label={`${e.b.items.length} items`} />
       </button>
     </li>
   )

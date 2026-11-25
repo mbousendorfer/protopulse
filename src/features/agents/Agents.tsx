@@ -37,9 +37,9 @@ export function Team() {
           const promo = s.handoffs.some(h => h.agent === a.id && h.kind === 'promotion')
           return (
             <article key={a.id} className="card agent-card">
-              <div className="row nowrap" style={{ alignItems: 'flex-start' }}>
+              <div className="row nowrap top">
                 <Mark agent={a.id} size="lg" state={a.status === 'on' ? 'on' : 'paused'} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="grow">
                   <h2><Link to={`/agents/${a.id}`} className="agent-link">{a.name}</Link></h2>
                   <div className="faint">{a.dept}</div>
                 </div>
@@ -48,7 +48,7 @@ export function Team() {
               <p className="muted">{a.role}</p>
               <div className="now-line"><span className="faint">Now</span> {a.status === 'on' ? a.now : `Paused${a.pausedUntil ? ` until ${a.pausedUntil}` : ''}`}</div>
               <div>
-                <div className="faint" style={{ fontSize: 12, marginBottom: 6 }}>Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</div>
+                <div className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</div>
                 <StackBar h={6} parts={[
                   { label: 'Acts alone', value: lv('act'), color: `var(--a-${a.id})` },
                   { label: 'Drafts', value: lv('draft'), color: `color-mix(in srgb, var(--a-${a.id}) 40%, transparent)` },
@@ -113,7 +113,7 @@ export function AgentProfile() {
       <Btn variant="ghost" size="sm" onClick={() => nav('/agents')} style={{ marginBottom: 12 }}><ArrowLeft size={14} />Team</Btn>
       <div className="profile-top">
       <div className="profile-scene"><AgentScene agent={a.id} /></div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="grow">
       <PageHead title={a.name} lede={<>{a.dept} · {a.role}</>}>
         {a.status === 'on' ? <Pill tone="ok" dot>On shift · {a.shift}</Pill> : <Pill tone="caution" dot>Paused{a.pausedUntil ? ` until ${a.pausedUntil}` : ''}</Pill>}
         {a.status === 'on' ? <PauseMenu id={a.id} big /> : <Btn variant="primary" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
@@ -130,7 +130,7 @@ export function AgentProfile() {
       {tab === 'autonomy' && (
         <div className="stack lg">
           <section className="card pad-lg">
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="row between top">
               <div>
                 <h2 className="h2">How much can {a.name} do alone?</h2>
                 <p className="muted" style={{ maxWidth: '62ch' }}>A preset moves every unlocked action by its risk. You can still move each action on its own. Locked actions always ask.</p>
@@ -189,7 +189,7 @@ function AutonomyBoard({ agent }: { agent: Agent }) {
           <p className="faint acol-sub">{level === 'act' ? 'Runs on its own. You can undo.' : level === 'draft' ? 'Prepares it, waits for your approval.' : 'Points it out. You do it.'}</p>
           {agent.actions.filter(x => x.autonomy === level).map(x => (
             <article key={x.id} data-flip={x.id} className="aitem">
-              <div className="row nowrap" style={{ alignItems: 'flex-start' }}>
+              <div className="row nowrap top">
                 <h4>{x.label}</h4>
                 {x.locked && <Tip label={x.lockReason}><span className="lock" tabIndex={0} aria-label={`Locked: ${x.lockReason}`}><Lock size={13} /></span></Tip>}
               </div>
