@@ -119,7 +119,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
           </ul>
         </section>
       ))}
-      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova also hid {hidden} spam on her own (set to Act). <button className="link-btn" onClick={() => nav('/inbox')}>See them</button></p>}
+      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova also hid {hidden} spam on her own (set to Act). <button className="link-btn" onClick={() => nav('/inbox?view=hidden')}>See them</button></p>}
 
       <footer className="detail-foot">
         <span className="faint">Nothing goes out until you confirm.</span>

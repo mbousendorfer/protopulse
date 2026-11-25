@@ -154,9 +154,13 @@ export type Notice = { scope: NoticeScope; text: string; undo?: string; link?: {
 export type TesterEvent = { t: number; app: number; kind: string; detail?: Record<string, unknown> }
 
 /** How the user settled a Desk card. */
-export type Decision =
+export type Decision = (
   | { kind: 'approve'; edited?: string }
   | { kind: 'reject'; reason?: string }
   | { kind: 'option'; option: string; index: number }
   | { kind: 'answer'; text: string }
   | { kind: 'trial' }
+) & {
+  /** Set when the agent settled the card alone, on Act (see `resolve`): the same decision, not taken by Sam. */
+  act?: true
+}
