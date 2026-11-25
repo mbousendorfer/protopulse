@@ -30,8 +30,8 @@
 | F5 | Créateurs et influenceurs | Une carte `h-creator`, liste inexistante | Liste des auteurs influents (audience, affinité, sentiment, historique), fiche, collaboration via Nova | 2 | M | done (#74) |
 | F6 | Mention → Inbox | Une mention devient une carte Desk de Nova | Une mention à traiter devient une conversation chez Nova (contrat d'entrée de Nova) | 2 | S | skipped — déjà couvert : les cartes de réponse de Nova nées d’une mention apparaissent comme conversations dans l’Inbox (`virtualConvs`, inbox/slice.ts) |
 | F7 | Benchmark par réseau avec historique | Table 30 j statique | Par réseau, rang, nos top posts face aux leurs, lecture d'Echo | 2 | M | done (#96) |
-| F8 | Tags de mentions | 5 tags fixes | Tags éditables, tagging auto par règles (produit, sujet, risque) | 1 | S | done (PR suivante) |
+| F8 | Tags de mentions | 5 tags fixes | Tags éditables, tagging auto par règles (produit, sujet, risque) | 1 | S | done (#104) |
 | F9 | Export search (PDF) | CSV des mentions | Rapport Listening en Markdown téléchargé (Echo l'écrit) | 1 | S | later |
-| F10 | Mark as seen / unseen | Aucun | Non vus comptés « needs you » | 1 | S | todo |
+| F10 | Mark as seen / unseen | Aucun | Non vus comptés « needs you » | 1 | S | done (PR suivante) |
 | F11 | Search Screening (Topic focus) | Aucun | Echo écarte le hors-sujet et le montre (« 30 % parlent d'un sentier ») — couvert par F3 | 1 | S | later — fusionné dans le pitch de F3 |
 | F12 | Historical data | Aucun | Hors périmètre (pas de backend) ; les séries de F2 donnent 90 j | – | – | skipped — sans objet dans un mock, F2 le couvre |

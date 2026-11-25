@@ -336,3 +336,20 @@ describe('Echo · tags', () => {
     expect(s.listening.tags.m4).not.toContain('Press')
   })
 })
+
+describe('Echo · seen and unseen', () => {
+  it('only overnight mentions that need you are unseen; the spike adds its own; opening marks seen', async () => {
+    const { unseenNeeds, visibleMentions } = await import('./model')
+    let s = s0()
+    const before = unseenNeeds(s)
+    expect(before.length).toBeGreaterThan(0)
+    expect(before.length).toBeLessThan(visibleMentions(s).length / 3)
+    expect(before.every(m => m.sentiment === 'negative' || m.risk || m.text.includes('?'))).toBe(true)
+    s = fire(level(s, 'draft'))
+    expect(unseenNeeds(s).length).toBe(before.length + 27)
+    s = reducer(s, { type: 'listening/seen', ids: ['spike-1'] })
+    expect(unseenNeeds(s).length).toBe(before.length + 26)
+    s = reducer(s, { type: 'listening/mentions', ids: ['spike-2'], op: 'nova' })
+    expect(unseenNeeds(s).length).toBe(before.length + 25)
+  })
+})
