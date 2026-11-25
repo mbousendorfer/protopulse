@@ -199,3 +199,83 @@ describe('rules learned from Sam’s labels', () => {
     expect(s.handoffs.some(x => x.inboxRule)).toBe(false)
   })
 })
+
+describe('saved replies', () => {
+  it('⌘K “reply to Léa with the exchange saved reply” makes it her draft; sending it counts a use', async () => {
+    const { parse } = await import('../../data/command')
+    expect(parse('reply to léa with the exchange saved reply').intent).toMatchObject({ kind: 'reply', name: 'léa', saved: 'the exchange saved reply' })
+    const { savedNamed } = await import('./saved')
+    let s = initialState()
+    const r = savedNamed(s.inbox.saved, 'the exchange saved reply')!
+    expect(r.id).toBe('sr-exchange')
+    s = reducer(s, { type: 'inbox/savedUse', id: 'c-lea', saved: r.id })
+    expect(conv(s, 'c-lea').draft).toEqual(['Léa, sorry about that. We’re sending you a replacement today by express, no need to send the old one back first. Details in your DMs.'])
+    s = reducer(s, { type: 'inbox/approve', id: 'c-lea' })
+    expect(s.inbox.saved.find(x => x.id === 'sr-exchange')!.uses).toBe(32)
+  })
+
+  it('a reply typed from a saved one counts it; Save as reply keeps {name}', async () => {
+    const { toTemplate } = await import('./saved')
+    let s = reducer(initialState(), { type: 'inbox/send', id: 'c-tom', text: 'Tom, you have 30 days…', saved: 'sr-returns' })
+    expect(s.inbox.saved.find(x => x.id === 'sr-returns')!.uses).toBe(23)
+    expect(toTemplate('Thanks Tom, enjoy it', conv(s, 'c-tom'))).toBe('Thanks {name}, enjoy it')
+    s = reducer(s, { type: 'inbox/savedAdd', name: 'Enjoy', text: 'Thanks {name}, enjoy it' })
+    expect(s.inbox.saved.slice(-1)[0]).toMatchObject({ name: 'Enjoy', by: 'you', uses: 0 })
+  })
+})
+
+describe('response time', () => {
+  it('waiting time per conversation, longest first, and ⌘K says the same numbers', async () => {
+    const { waitingList, dur, responseStats } = await import('./slice')
+    const { now } = await import('../../app/core')
+    const s = initialState()
+    const list = waitingList(s, now(s))
+    expect(list.length).toBeGreaterThan(3)
+    expect(list.every((x, i) => i === 0 || list[i - 1].w.since <= x.w.since)).toBe(true)
+    const sophie = list.find(x => x.c.id === 'c-sophie')!
+    expect(sophie.w.target).toBe(60 * 60_000)
+    expect(sophie.w.over).toBe(true)
+    expect(responseStats(s, now(s)).waiting).toBe(list.length)
+    const { parse } = await import('../../data/command')
+    expect(parse('who is waiting longest?').intent.kind).toBe('waiting')
+    expect(dur(185 * 60_000)).toBe('3 h 05')
+  })
+
+  it('15 minutes before a target, Nova raises one Desk card; it goes once they are answered', async () => {
+    const { tickInbox, waitingList } = await import('./slice')
+    const { now } = await import('../../app/core')
+    let s = initialState()
+    const next = waitingList(s, now(s)).filter(x => !x.w.over && !['leo', 'yanis'].includes(x.c.assignee ?? '')).sort((a, b) => a.w.due - b.w.due)[0]
+    const t = next.w.due - 10 * 60_000
+    s = tickInbox(s, t)
+    const card = s.handoffs.find(h => h.sla?.includes(next.c.id))!
+    expect(card.title).toMatch(/response target at/)
+    expect(tickInbox(s, t).handoffs.filter(h => h.sla).length).toBe(1)
+    s = reducer(s, { type: 'inbox/send', id: next.c.id, text: 'On it' })
+    s = tickInbox(s, t)
+    expect(s.handoffs.some(h => h.id === card.id)).toBe(card.sla!.length > 1)
+  })
+})
+
+describe('team', () => {
+  it('what is with Léo or Yanis is not Sam’s, and they answer it when due', async () => {
+    const { needsYou, tickInbox, inboxNeedsCount } = await import('./slice')
+    let s = initialState()
+    expect(needsYou(conv(s, 'c-hotel'))).toBe(false)
+    const before = inboxNeedsCount(s)
+    s = reducer(s, { type: 'inbox/bulk', ids: ['c-ana'], op: 'assign', value: 'leo' })
+    expect(inboxNeedsCount(s)).toBe(before - 1)
+    s = tickInbox(s, Math.max(conv(s, 'c-ana').teamDue!, conv(s, 'c-hotel').teamDue!) + 1)
+    expect(conv(s, 'c-ana')).toMatchObject({ status: 'you', reviewedBy: 'leo' })
+    expect(conv(s, 'c-ana').messages.slice(-1)[0]).toMatchObject({ from: 'you', by: 'leo' })
+    expect(conv(s, 'c-hotel').messages.slice(-1)[0].text).toMatch(/I’m Yanis/)
+    expect(s.log.some(l => l.text === 'Yanis replied to Hôtel Les Cimes')).toBe(true)
+  })
+
+  it('the wholesale rule assigns to Yanis on arrival', async () => {
+    const { matches, RULES, didText } = await import('./rules')
+    const r = RULES.find(x => x.id === 'ir-wholesale')!
+    expect(matches(r, conv(initialState(), 'c-hotel'))).toBe(true)
+    expect(didText(r.then, 'Hôtel Les Cimes')).toBe('Assigned Hôtel Les Cimes to Yanis')
+  })
+})

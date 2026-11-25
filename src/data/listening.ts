@@ -259,3 +259,13 @@ export const SEARCHES: Search[] = [
   { id: 's11', name: 'Trail Week', keywords: '#FernwayTrailWeek, Trail Week Fernway', exclude: '', volume: 640 },
   { id: 's12', name: 'Gear repair', keywords: 'bag repair, repair outdoor gear, réparation sac', exclude: 'phone repair', volume: 970, paused: true },
 ]
+
+/** What Echo knows about the creators in the feed beyond their mentions. Followers come from the mention's reach. */
+export type CreatorInfo = { name: string; network: Network; also: { competitor: CompetitorId; n: number }[]; history: string[]; signed?: CompetitorId }
+export const CREATOR_INFO: Record<string, CreatorInfo> = {
+  '@camille.outdoors': { name: 'Camille Roux', network: 'instagram', also: [], history: ['3 unpaid stories with the Ridge this week, 2.4k replies', 'Has tagged Fernway 11 times since June'] },
+  '@theo.wild': { name: 'Théo Wild', network: 'instagram', also: [{ competitor: 'peakline', n: 6 }], history: ['Signed a 6-month series with Peakline in September', 'Asked Fernway for a collab last month, no answer'], signed: 'peakline' },
+  '@jeanne.paris': { name: 'Jeanne Martin', network: 'tiktok', also: [{ competitor: 'trailkind', n: 1 }], history: ['Weekly gorpcore fit checks, about 15k views each', 'Wore the Storm Jacket in 2 of her last 5 videos'] },
+  '@julien_trail': { name: 'Julien Favre', network: 'tiktok', also: [{ competitor: 'trailkind', n: 2 }], history: ['Sunrise hikes around Chamonix every weekend'] },
+  '@nadia.runs': { name: 'Nadia Benali', network: 'tiktok', also: [], history: ['Daily gym-bag routine, the Summit Bottle in every one'] },
+}

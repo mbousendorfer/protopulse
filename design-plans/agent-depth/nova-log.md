@@ -23,3 +23,17 @@
 - 25/11 · Inbox rules · une carte Nova qui arrive devient une conversation stockée (`land`) pour que les règles s'y appliquent · garder la conversation virtuelle · une étiquette posée sur une conversation virtuelle serait perdue.
 - 25/11 · Règle apprise · déclenchée par 3 étiquetages à la main du même label non couverts par une règle ; mots = ceux que partagent au moins 2 des 3 messages · apprendre aussi l'assignation · le pitch parlait des labels ; l'assignation suit le même chemin si besoin.
 - 25/11 · Règle apprise · carte Desk dans Needs you (comme les règles de Playbook proposées) · Worth a look · cohérence avec « 2 Playbook rules proposed ».
+- 25/11 · pitch Saved replies · **Go** · — · tel que pitché.
+- 25/11 · pitch Response time (SLA) · **Go** · — · tel que pitché.
+- 25/11 · pitch Team and assignment · **Go** · — · tel que pitché.
+- 25/11 · pitch CRM contacts · **Later** · — · reste au backlog.
+- 25/11 · Saved replies · une bibliothèque d'équipe (pas par profil social) · par profil comme Agorapulse · une seule marque ; le choix par profil n'apporte rien au test.
+- 25/11 · Saved replies · « Save as reply » ouvre le panneau prérempli (prénom → `{name}`) · formulaire dans la bulle · un seul endroit pour nommer et relire.
+- 25/11 · SLA · cibles par type modifiables dans le panneau Rules (menu de paliers 30 min → 24 h) · page Settings · un seul panneau de réglages Inbox.
+- 25/11 · SLA · la carte d'alerte est une carte `news` du groupe Needs you avec « Open them » (tri Waiting longest) et disparaît quand tout est répondu · une approbation · rien à approuver : c'est un rappel qui mène au travail.
+- 25/11 · SLA · « attend » = Needs you + Waiting on Claire, depuis le dernier message du client · depuis le premier message · c'est ce que le client ressent.
+- 25/11 · Contrat Iris · `responseStats` / `waitingList` exposés, demande `requests/iris-from-nova-response-times.md`.
+- 25/11 · Team · « takeover » généralisé : une personne a repris la main = l'assigné ; une conversation confiée à Léo ou Yanis sort des groupes de Sam vers « With your team » (hors badge) · nouveau statut · aucun écran existant à changer, le badge garde son sens.
+- 25/11 · Team · Léo et Yanis répondent seuls 4 min après assignation (scripté, heartbeat) ; Claire non · faire répondre Claire aussi · Claire garde son rôle d'approbatrice (circuit Ask Claire existant).
+- 25/11 · Team · section Team dans la barre latérale (ouvert + en retard par personne) à la place des vues « Assigned to me / to Claire » · vue « Team » séparée · même information, un clic de moins.
+- 25/11 · Team · l'alerte SLA ignore ce qui est chez Léo ou Yanis · alerter Sam pour tout · ils répondent d'eux-mêmes, l'alerte serait du bruit.

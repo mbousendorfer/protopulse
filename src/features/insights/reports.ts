@@ -1,12 +1,13 @@
 // Iris writes her reports from the state: the morning brief every day at 07:00, the weekly report on Mondays.
 import type { State } from '../../app/state'
-import { actionOf, pushHandoff, pushLog } from '../../app/core'
+import { actionOf, pushHandoff, pushLog, uid } from '../../app/core'
 import { groupOf } from '../../app/reducer'
 import { DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import type { Cited, Report } from '../../data/insights'
 import { change, fmt, kpi, tiktokViews } from './metrics'
-import { anomalyList, dayKey, patchInsights, reportList, shareWithClaire } from './slice'
+import { anomalyList, dayKey, patchInsights, reportList, shareWithClaire, type Schedule } from './slice'
+import { writeStudio } from './studio'
 
 export { reportList, dayKey }
 
@@ -75,7 +76,8 @@ export function tickReports(s: State, t: number): State {
   } else {
     next = patchInsights(next, { reports: [brief, ...next.insights.reports] })
   }
-  if (new Date(t).getDay() !== 1) return next
+  // A schedule of the weekly report takes over Monday's report (see tickSchedules).
+  if (new Date(t).getDay() !== 1 || s.insights.schedules.some(x => !x.paused && x.every === 'week' && x.name === 'Weekly report')) return next
   const weekly = writeWeekly(s, t)
   next = patchInsights(next, { reports: [weekly, ...next.insights.reports] })
   if (lvl('iris-report') === 'act') {
@@ -84,6 +86,46 @@ export function tickReports(s: State, t: number): State {
   }
   if (lvl('iris-report') === 'draft') {
     return pushHandoff(next, { id: `h-${weekly.id}`, agent: 'iris', kind: 'approval', urgency: 'today', topic: 'Weekly report', action: 'iris-report', ref: weekly.id, title: 'Weekly report ready to share with Claire', context: weekly.summary, why: 'Sharing reports with Claire is set to Draft.', confidence: 88, link: `/insights/reports/${weekly.id}` })
+  }
+  return next
+}
+
+/* ---------- Scheduled reports ---------- */
+
+const runsOn = (every: 'week' | 'month', t: number) => (every === 'week' ? new Date(t).getDay() === 1 : new Date(t).getDate() === 1)
+
+/** The next time a schedule runs, from `t`. */
+export function nextRun(sc: Schedule, t: number): number {
+  for (let i = 0; i < 40; i++) {
+    const d = new Date(t + i * DAY)
+    const at8 = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 8, 0).getTime()
+    if (runsOn(sc.every, at8) && at8 >= t && sc.lastRun !== dayKey(at8)) return at8
+  }
+  return Infinity
+}
+
+const dueSchedules = (s: State, t: number) => s.insights.schedules.filter(sc => !sc.paused && new Date(t).getHours() >= 8 && runsOn(sc.every, t) && sc.lastRun !== dayKey(t))
+export const schedulesDue = (s: State, t: number) => s.phase !== 'day1' && dueSchedules(s, t).length > 0
+
+/**
+ * Write each due scheduled report, then send it following “Share the weekly report with Claire”:
+ * Suggest = written, Sam sends it; Draft = a Desk card; Act = Iris sends it (journal line whose Undo takes it back).
+ */
+export function tickSchedules(s: State, t: number): State {
+  let next = s
+  for (const sc of dueSchedules(s, t)) {
+    const id = uid('r')
+    const r = { ...writeStudio(next, sc.recipe, id, t), title: sc.name }
+    next = patchInsights(next, { reports: [r, ...next.insights.reports], schedules: next.insights.schedules.map(x => (x.id === sc.id ? { ...x, lastRun: dayKey(t) } : x)) })
+    const lvl = actionOf(next, 'iris', 'iris-report')?.autonomy
+    if (sc.to === 'sam' || lvl === 'suggest') {
+      next = pushLog(next, { agent: 'iris', text: `Wrote “${sc.name}”${sc.to === 'claire' ? ', ready for you to send to Claire' : ''}`, reason: `Scheduled every ${sc.every === 'week' ? 'Monday' : 'month'}`, status: 'done', link: `/insights/reports/${id}` })
+    } else if (lvl === 'act') {
+      next = shareWithClaire(next, r, 'Sharing reports with Claire is set to Act.')
+      next = pushLog(next, { agent: 'iris', text: `Sent “${sc.name}” to Claire`, reason: `Scheduled every ${sc.every === 'week' ? 'Monday' : 'month'}; sharing is set to Act`, status: 'done', undoMinutes: 30, link: `/insights/reports/${id}`, unshare: id })
+    } else {
+      next = pushHandoff(next, { id: `h-${id}`, agent: 'iris', kind: 'approval', urgency: 'today', topic: 'Weekly report', action: 'iris-report', ref: id, title: `“${sc.name}” is ready to send to Claire`, context: r.summary, why: `You scheduled it every ${sc.every === 'week' ? 'Monday' : 'month'}. Sharing with Claire is set to Draft.`, confidence: 90, link: `/insights/reports/${id}` })
+    }
   }
   return next
 }

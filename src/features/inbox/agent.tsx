@@ -3,14 +3,17 @@ import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { flagged, isLead } from '../desk/parts'
 import type { State } from '../../app/state'
 import { CONTACTS, withTeam } from '../../data/inbox'
-import { NEEDS_YOU, onResolveInbox, reduceInbox, onUndoInbox, virtualConvs, type CardConv } from './slice'
+import { now } from '../../app/core'
+import { dueInbox, dur, NEEDS_YOU, onResolveInbox, reduceInbox, tickInbox, waitingList, onUndoInbox, virtualConvs, type CardConv } from './slice'
+import { fill, savedNamed } from './saved'
 import { matches, thenText, whenText, wordsOf, type InboxRule, type RuleOp } from './rules'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
   interface IntentTypes {
-    reply: { name: string }
+    reply: { name: string; saved?: string }
     inboxRule: { words: string[]; then: RuleOp }
+    waiting: object
   }
 }
 declare module '../../app/types' {
@@ -19,6 +22,8 @@ declare module '../../app/types' {
     conv?: CardConv
     /** Nova proposes this Inbox rule (learned from Sam's labels); approving the card adds it. */
     inboxRule?: Pick<InboxRule, 'words' | 'network' | 'type' | 'then'>
+    /** Nova's response-time warning: the conversations it is about (the card goes once they are answered). */
+    sla?: string[]
   }
 }
 
@@ -39,20 +44,31 @@ export function findConvo(s: State, name: string) {
 const reply = defineIntent({
   kind: 'reply', owner: 'nova', order: 60,
   parse: t => {
-    const m = t.match(/reply to\s+(\S+)/)
+    const m = t.match(/reply to\s+(\S+)(?:\s+with\s+(.+))?/)
     if (!m) return
-    return { kind: 'reply', name: m[1].replace(/^@/, '') }
+    return { kind: 'reply', name: m[1].replace(/^@/, ''), saved: m[2] }
   },
-  bar: (i, { s, go }) => {
+  bar: (i, { s, d, go }) => {
     const c = findConvo(s, i.name)
     if (!c) return { text: `I couldn’t find a conversation with “${i.name}” in the last 30 days. Try their handle, or search the Inbox.`, ctas: [{ label: 'Open the Inbox', run: () => go('/inbox') }] }
+    if (i.saved) {
+      const r = savedNamed(s.inbox.saved, i.saved)
+      if (!r) return { text: `I don’t have a saved reply called “${i.saved}”. You have: ${s.inbox.saved.map(x => x.name).join(', ')}.`, ctas: [{ label: 'See saved replies', run: () => go('/inbox?saved=1') }] }
+      return { text: `Opening the conversation with ${c.author}. I put the “${r.name}” saved reply in the draft, adapted to them: “${fill(r, c)}” It goes out when you send it.`, after: () => { d({ type: 'inbox/savedUse', id: c.id, saved: r.id }); setTimeout(() => go(`/inbox/${c.id}`), 500) } }
+    }
     return { text: `Opening the conversation with ${c.author}. ${c.draft?.length ? 'Nova’s draft is ready if you want it.' : 'There’s no draft waiting: you can reply from there.'}`, after: () => setTimeout(() => go(`/inbox/${c.id}`), 500) }
   },
   chat: (i, { s }) => {
     const conv = findConvo(s, i.name)
     if (!conv) return { replies: [{ from: 'nova', text: `I can’t find a conversation with ${cap(i.name)}. Try their handle, like @lea.hikes.` }], effects: [] }
-    const draft = (conv.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('') || `Thanks ${cap(i.name)}, we’re on it.`
-    return { replies: [{ from: 'nova', text: `Here’s my reply to ${conv.author}. It goes out when you send it.`, card: { type: 'reply', convo: conv.id, author: conv.author, network: conv.network, quote: conv.messages[conv.messages.length - 1]?.text ?? '', text: draft, status: 'draft' } }], effects: [] }
+    const r = i.saved ? savedNamed(s.inbox.saved, i.saved) : undefined
+    if (i.saved && !r) return { replies: [{ from: 'nova', text: `I don’t have a saved reply called “${i.saved}”. You have: ${s.inbox.saved.map(x => x.name).join(', ')}.` }], effects: [] }
+    const draft = r ? fill(r, conv) : (conv.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('') || `Thanks ${cap(i.name)}, we’re on it.`
+    const said = r ? `Here’s the “${r.name}” saved reply, adapted to ${conv.author}. It’s also the draft in the Inbox. It goes out when you send it.` : `Here’s my reply to ${conv.author}. It goes out when you send it.`
+    return {
+      replies: [{ from: 'nova', text: said, card: { type: 'reply', convo: conv.id, author: conv.author, network: conv.network, quote: conv.messages[conv.messages.length - 1]?.text ?? '', text: draft, status: 'draft' } }],
+      effects: r ? [st => reduceInbox(st, { type: 'inbox/savedUse', id: conv.id, saved: r.id })] : [],
+    }
   },
 })
 
@@ -91,12 +107,30 @@ const inboxRule = defineIntent({
   },
 })
 
+/** "Who is waiting longest?": the same list and numbers as the Inbox's Waiting longest sort. */
+function waitingAnswer(s: State) {
+  const list = waitingList(s, now(s))
+  if (!list.length) return { text: 'Nobody is waiting on you or Claire right now. Nova answered everything else.', top: list }
+  const over = list.filter(x => x.w.over).length
+  const top = list.slice(0, 3)
+  const lines = top.map(x => `${x.c.author}, ${dur(x.w.waited)} (target ${dur(x.w.target)}${x.w.over ? ', over' : ''})`).join('; ')
+  return { text: `${list.length} conversation${list.length > 1 ? 's' : ''} wait on the team, ${over} past target. Longest: ${lines}.`, top }
+}
+const waiting = defineIntent({
+  kind: 'waiting', owner: 'nova', order: 58,
+  parse: t => (/(who(?:’|')?s|who is|who has been)\s+(?:been\s+)?waiting|waiting (?:the )?longest|longest wait|overdue (?:messages|conversations|replies)/.test(t) ? { kind: 'waiting' } : undefined),
+  bar: (_i, { s, go }) => ({ text: waitingAnswer(s).text, ctas: [{ label: 'Open them, longest first', primary: true, run: () => go('/inbox?sort=waiting') }] }),
+  chat: (_i, { s }) => ({ replies: [{ from: 'nova', text: `${waitingAnswer(s).text} Sort the Inbox by “Waiting longest” to see them all.` }], effects: [] }),
+})
+
 const nova: AgentModule = {
   id: 'nova',
   script: SCRIPT,
   onResolve: onResolveInbox,
   onUndo: onUndoInbox,
-  intents: [reply, inboxRule],
+  intents: [reply, inboxRule, waiting],
+  due: dueInbox,
+  tick: tickInbox,
   batches: [{
     id: 'nova', agent: 'nova', match: h => h.agent === 'nova' && h.kind === 'approval' && h.preview?.type === 'reply' && !h.proposal,
     ready: h => h.confidence >= 80 && !flagged(h),
