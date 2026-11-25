@@ -307,3 +307,23 @@ test('Trail Week: asking Nova to label adds her rule once', () => {
   s = reducer(s, { type: 'strategy/label', id: 'trail-week' })
   expect(s.inbox.rules.filter(r => r.then.op === 'label' && r.then.value === 'Trail Week')).toHaveLength(1)
 })
+
+test('a renamed pillar keeps counting its posts; a new one gets a share; Atlas’s posts to come follow the rename', async () => {
+  const { mixOf, pillarCheck, targetsOf } = await import('./slice')
+  let s = initialState()
+  const draft = [
+    ...s.strategy.pillars.map(p => (p.name === 'Trail stories' ? { ...p, name: 'Places we go' } : p.name === 'Gear that lasts' ? { ...p, target: 25 } : p)),
+    { id: 'p-new', name: 'Gift ideas', desc: 'What to give', target: 10 },
+  ]
+  expect(pillarCheck(s, draft).changes).toEqual(expect.arrayContaining(['new pillar Gift ideas at 10%', 'Trail stories renamed Places we go']))
+  expect(pillarCheck(s, [...draft, { id: 'x', name: 'gift ideas', desc: '', target: 0 }]).issues).toContain('Two pillars have the same name.')
+  const upcoming = s.publishing.posts.filter(p => p.pillar === 'Trail stories' && p.status !== 'published').length
+  s = reducer(s, { type: 'strategy/pillars', pillars: draft })
+  expect(targetsOf(s).pillars.map(p => p.name)).toEqual(['Gear that lasts', 'Places we go', 'Repair & care', 'Community', 'Gift ideas'])
+  expect(mixOf(s)['Places we go']).toBe(32)
+  expect(mixOf(s)['Gift ideas']).toBe(0)
+  expect(s.publishing.posts.filter(p => p.pillar === 'Places we go').length).toBe(upcoming)
+  s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.some(p => p.pillar === 'Places we go')).toBe(false)
+  expect(targetsOf(s).pillars).toHaveLength(4)
+})

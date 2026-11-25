@@ -41,8 +41,10 @@ const updateCampaign = (s: State, id: string, f: (c: Campaign) => Campaign): Sta
 /** Sage's pillars and weekly cadence: the one source. Atlas (Ideas, plan review, calendar) and the Playbook read them here. */
 export const targetsOf = (s: State) => targetsFrom(s.strategy)
 /** What actually went out, per pillar (% of posts, 30 days) and per network (posts, 7 days), from Atlas's posts. */
-export const mixOf = (s: State, t = now(s)) => pillarMix(s.publishing.posts, s.strategy.pillars.map(p => p.name), t)
+export const mixOf = (s: State, t = now(s)) => pillarMix(s.publishing.posts, s.strategy.pillars, t)
 export const lastWeekOf = (s: State, t = now(s)) => postsLastWeek(s.publishing.posts, t)
+/** Posts out last week on one of Atlas's extra profiles (Fernway Repair); they count in their network's target. */
+export const accountLastWeek = (s: State, account: string, t = now(s)) => Object.values(postsLastWeek(s.publishing.posts.filter(p => p.account === account), t)).reduce<number>((n, v) => n + (v ?? 0), 0)
 
 declare module '../../app/types' {
   interface LogEntry {
@@ -373,9 +375,17 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
     case 'strategy/pillars': {
       const check = pillarCheck(s, a.pillars)
       if (!check.ok) return s
-      const before = s.strategy
-      const next = patch(s, { pillars: a.pillars })
-      return pushLog(next, { agent: 'sage', text: `You changed the pillars: ${check.changes.join(', ')}`, status: 'done', reason: 'Your edit, checked by Sage', link: '/strategy/pillars', undoMinutes: 10, sage: { targets: { pillars: before.pillars, cadence: before.cadence } } })
+      const was = new Map(s.strategy.pillars.map(p => [p.id, p]))
+      // A renamed pillar keeps its old name as an alias; Atlas's posts still to come take the new name.
+      const renamed = a.pillars.filter(p => was.get(p.id) && was.get(p.id)!.name !== p.name)
+      const pillars = a.pillars.map(p => {
+        const old = was.get(p.id)
+        return old && old.name !== p.name ? { ...p, name: p.name.trim(), aliases: [...new Set([...(old.aliases ?? []), old.name])] } : { ...p, name: p.name.trim() }
+      })
+      const before = s.publishing.posts.filter(p => p.status !== 'published' && renamed.some(r => was.get(r.id)!.name === p.pillar))
+      const moved = before.map(p => ({ ...p, pillar: renamed.find(r => was.get(r.id)!.name === p.pillar)!.name.trim() }))
+      const next = toAtlas(patch(s, { pillars }), moved)
+      return pushLog(next, { agent: 'sage', text: `You changed the pillars: ${check.changes.join(', ')}`, status: 'done', reason: 'Your edit, checked by Sage', link: '/strategy/pillars', undoMinutes: 10, sage: { targets: { pillars: s.strategy.pillars, cadence: s.strategy.cadence }, posts: { added: [], before } } })
     }
     case 'strategy/propose': {
       if (s.strategy.proposals.some(p => p.text === a.proposal.text && p.status === 'proposed')) return s
@@ -527,7 +537,11 @@ export function pillarProposal(s: State, pillar: string, more: boolean): Proposa
 export function pillarCheck(s: State, draft: Pillar[]): { ok: boolean; total: number; issues: string[]; changes: string[]; impact: string[] } {
   const total = draft.reduce((n, p) => n + p.target, 0)
   const weekly = Object.values(targetsOf(s).cadence).reduce<number>((n, v) => n + (v ?? 0), 0)
+  const names = draft.map(p => p.name.trim().toLowerCase())
+  const badName = names.some(n => !n) || new Set(names).size !== names.length
   const issues = [
+    ...(names.some(n => !n) ? ['Every pillar needs a name.'] : []),
+    ...(new Set(names).size !== names.length ? ['Two pillars have the same name.'] : []),
     ...(total !== 100 ? [`Shares add up to ${total}%: ${total < 100 ? `${100 - total} points to place` : `${total - 100} points too many`}.`] : []),
     ...draft.filter(p => p.target < 0 || !Number.isFinite(p.target)).map(p => `${p.name} needs a share between 0 and 100%.`),
     ...draft.filter(p => p.target === 0).map(p => `${p.name} at 0% means Atlas stops posting it.`),
@@ -535,15 +549,17 @@ export function pillarCheck(s: State, draft: Pillar[]): { ok: boolean; total: nu
   const was = new Map(s.strategy.pillars.map(p => [p.id, p]))
   const moved = draft.filter(p => was.get(p.id) && was.get(p.id)!.target !== p.target)
   const changes = [
+    ...draft.filter(p => !was.get(p.id) && p.name.trim()).map(p => `new pillar ${p.name.trim()} at ${p.target}%`),
+    ...draft.filter(p => was.get(p.id) && was.get(p.id)!.name !== p.name && p.name.trim()).map(p => `${was.get(p.id)!.name} renamed ${p.name.trim()}`),
     ...moved.map(p => `${p.name} ${was.get(p.id)!.target}% → ${p.target}%`),
     ...draft.filter(p => was.get(p.id) && was.get(p.id)!.desc !== p.desc).map(p => `${p.name}’s description`),
   ]
-  const impact = moved.map(p => {
-    const d = ((p.target - was.get(p.id)!.target) / 100) * weekly
+  const impact = draft.filter(p => (was.get(p.id)?.target ?? 0) !== p.target && Number.isFinite(p.target)).map(p => {
+    const d = ((p.target - (was.get(p.id)?.target ?? 0)) / 100) * weekly
     const n = Math.round(Math.abs(d) * 10) / 10
     return `${p.name} ${p.target}% is about ${n} ${d > 0 ? 'more' : 'fewer'} post${n === 1 ? '' : 's'} a week`
   })
-  return { ok: total === 100 && !draft.some(p => p.target < 0 || !Number.isFinite(p.target)) && changes.length > 0, total, issues, changes, impact }
+  return { ok: total === 100 && !badName && !draft.some(p => p.target < 0 || !Number.isFinite(p.target)) && changes.length > 0, total, issues, changes, impact }
 }
 
 /* ---------- Calendar moments ---------- */
