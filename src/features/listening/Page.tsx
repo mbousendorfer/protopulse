@@ -10,7 +10,7 @@ import {
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { inSearch, searchLive, searchMentions, searchRead, moodCount, pct, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -50,6 +50,7 @@ export default function ListeningPage() {
         <Route path="mentions" element={<Mentions />} />
         <Route path="trends" element={<Trends />} />
         <Route path="searches" element={<Searches />} />
+        <Route path="searches/:sid" element={<SearchView />} />
         <Route path="*" element={<Competitors view="events" />} />
       </Routes>
     </div>
@@ -323,7 +324,8 @@ function Profile() {
 /* ---------- Mentions ---------- */
 const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
 
-function Mentions() {
+/** The mention feed. `scope` narrows it to one search (search page). */
+function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
   const { s, d } = useStore()
   const now = useNow()
   const [params] = useSearchParams()
@@ -333,7 +335,7 @@ function Mentions() {
   const [hidden, setHidden] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
   const mood = (m: Mention) => sentimentOf(s, m)
-  const feed = allMentions(s)
+  const feed = scope ? allMentions(s).filter(scope) : allMentions(s)
   const all = feed.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
   const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk)).sort((a, b) => b.at - a.at)
   const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
@@ -496,10 +498,10 @@ function Searches() {
             <tbody>
               {s.listening.searches.map(x => (
                 <tr key={x.id} className={x.paused ? 'paused' : ''}>
-                  <td><b>{x.name}</b></td>
+                  <td><Link to={`/listening/searches/${x.id}`}><b>{x.name}</b></Link></td>
                   <td className="muted kw">{x.keywords}</td>
                   <td className="faint kw">{x.exclude || '–'}</td>
-                  {(() => { const v = searchVolume(x, now); return <>
+                  {(() => { const v = searchVolume(x, now, searchLive(s, x)); return <>
                     <td className="r num">{v.volume.toLocaleString('en-GB')}{v.collecting && <span className="faint"> so far</span>}</td>
                     <td>{x.paused ? <Pill>Paused</Pill> : v.collecting ? <Pill tone="caution" dot>Collecting · {Math.round(v.progress * 100)}%</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
                   </> })()}
@@ -536,9 +538,44 @@ function SearchForm({ search, onClose }: { search: Search; onClose: () => void }
       footer={<><span className="spacer" /><Btn variant="ghost" onClick={onClose}>Cancel</Btn><Btn variant="primary" onClick={save} disabled={!valid}>{search.id ? 'Save' : 'Start tracking'}</Btn></>}>
       <form className="stack" onSubmit={e => { e.preventDefault(); save() }}>
         <div className="field"><label htmlFor="sn">Name</label><input id="sn" className="input" autoFocus value={v.name} onChange={e => setV({ ...v, name: e.target.value })} placeholder="Winter campaign" /></div>
-        <div className="field"><label htmlFor="sk">Keywords</label><input id="sk" className="input" value={v.keywords} onChange={e => setV({ ...v, keywords: e.target.value })} placeholder="Storm Jacket, #fernwaywinter" /><span className="hint">Separate with commas. Echo matches any of them.</span></div>
+        <div className="field"><label htmlFor="sk">Keywords</label><input id="sk" className="input" value={v.keywords} onChange={e => setV({ ...v, keywords: e.target.value })} placeholder="Storm Jacket, #fernwaywinter" /><span className="hint">Separate with commas. Echo matches any of them; every word of a keyword must be there.</span></div>
         <div className="field"><label htmlFor="se">Exclude</label><input id="se" className="input" value={v.exclude} onChange={e => setV({ ...v, exclude: e.target.value })} placeholder="storm warning" /></div>
       </form>
     </Modal>
+  )
+}
+
+/* ---------- One search ---------- */
+function SearchView() {
+  const { sid } = useParams()
+  const { s } = useStore()
+  const now = useNow()
+  const nav = useNavigate()
+  const x = s.listening.searches.find(y => y.id === sid)
+  if (!x) return <Empty title="This search doesn’t exist" body="It may have been deleted." action={<Btn onClick={() => nav('/listening/searches')}>All searches</Btn>} />
+  const v = searchVolume(x, now, searchLive(s, x))
+  const ms = searchMentions(s, x)
+  const c = moodCount(s, ms)
+  const authors = new Set(ms.map(m => m.author)).size
+  const reach = ms.reduce((n, m) => n + m.reach, 0)
+  return (
+    <div className="stack lg">
+      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/searches')} className="self-start"><ArrowLeft size={14} />All searches</Btn>
+      <header>
+        <h1 className="event-title">{x.name}</h1>
+        <p className="muted">{x.keywords}{x.exclude && <span className="faint"> · excluding {x.exclude}</span>}{x.paused && <> · <Pill>Paused</Pill></>}</p>
+      </header>
+      <section className="card pad echo-read">
+        <Mark agent="echo" />
+        <div><div className="section-title mb-1">Echo’s read</div><p>{searchRead(s, x)}</p></div>
+      </section>
+      <dl className="grid-4 comp-stats">
+        <div className="card pad stat"><dd><b className="num">{v.volume.toLocaleString('en-GB')}</b></dd><dt className="label">Mentions, 7 days{v.collecting ? ` · collecting ${Math.round(v.progress * 100)}%` : ''}</dt></div>
+        <div className="card pad stat"><dd><b className="num">{pct(c.negative, c.total)}</b></dd><dt className="label">Negative · latest {c.total} filed</dt></div>
+        <div className="card pad stat"><dd><b className="num">{authors}</b></dd><dt className="label">Unique authors · latest {c.total}</dt></div>
+        <div className="card pad stat"><dd><b className="num">{reach >= 1000 ? `${Math.round(reach / 1000)}k` : reach}</b></dd><dt className="label">Reach · latest {c.total}</dt></div>
+      </dl>
+      {ms.length ? <Mentions scope={m => inSearch(x, m)} /> : <Empty title={v.collecting ? 'Echo is still collecting' : 'Nothing caught yet'} body={v.collecting ? 'Mentions show up here as Echo reads the last 7 days.' : 'Echo files every new match here, at most 15 minutes after it’s posted.'} />}
+    </div>
   )
 }
