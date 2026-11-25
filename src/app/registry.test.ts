@@ -50,6 +50,7 @@ describe('agent registry', () => {
 
   it('ticks every agent on the heartbeat, and the store wakes it when one is due', () => {
     const ticks = spyOn('tick')
+    // Agents add their own clocks: only check the original ones are still there.
     expect(ticks.map(t => t.id)).toEqual(expect.arrayContaining(['atlas', 'juno']))
     reducer(initialState(), { type: 'core/heartbeat' })
     for (const t of ticks) expect(t.spy, t.id).toHaveBeenCalledTimes(1)

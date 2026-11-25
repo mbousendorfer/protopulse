@@ -27,7 +27,7 @@ const clip = defineIntent({
     if (i.url) {
       const u = validUrl(i.url)
       if (!u) return { text: 'That link doesn’t look right. Paste the full address, starting with https://.', ctas: [{ label: 'Open Video', run: () => go('/video/sources') }] }
-      return { text: `Juno is opening the video from ${u.hostname.replace(/^www\./, '')}. Its clips land in Video in about 40 seconds, and nothing goes out until you send them to Atlas.`, after: () => d({ type: 'video/addLink', url: i.url! }), ctas: [{ label: 'Follow it in Video', primary: true, run: () => go('/video') }] }
+      return { text: `Juno is opening the video from ${u.hostname.replace(/^www\./, '')}. This prototype can’t open links, so she uses a sample video: its clips land in Video in about 40 seconds, and nothing goes out until you send them to Atlas.`, after: () => d({ type: 'video/addLink', url: i.url! }), ctas: [{ label: 'Follow it in Video', primary: true, run: () => go('/video') }] }
     }
     const gr20 = s.video.sources.find(x => x.id === 'gr20')
     const ready = s.video.clips.filter(c => c.status === 'ready')
@@ -39,7 +39,7 @@ const clip = defineIntent({
     }
   },
   chat: (i, { s }) => {
-    if (i.url && validUrl(i.url)) return { replies: [{ from: 'juno', text: 'On it. I’ll transcribe it, pick the best moments and caption them. They’ll be in Video in about 40 seconds.', card: { type: 'done', text: 'Video added to Juno’s queue' } }], effects: [(st: State) => reduceVideo(st, { type: 'video/addLink', url: i.url! })] }
+    if (i.url && validUrl(i.url)) return { replies: [{ from: 'juno', text: 'On it. This prototype can’t open links, so I’ll use a sample video: transcript, best moments, captions. They’ll be in Video in about 40 seconds.', card: { type: 'done', text: 'Video added to Juno’s queue' } }], effects: [(st: State) => reduceVideo(st, { type: 'video/addLink', url: i.url! })] }
     if (i.url) return { replies: [{ from: 'juno', text: 'That link doesn’t look right. Paste the full address, starting with https://.' }], effects: [] }
     const ready = s.video.clips.filter(c => c.status === 'ready')
     if (!s.video.sources.some(x => x.id === 'gr20')) return { replies: [{ from: 'juno', text: 'Your latest upload is “Storm Jacket: 3 days of GR20 rain”. I’m cutting it now and will tell you when the clips are ready.', card: { type: 'done', text: 'Juno is clipping the latest video' } }], effects: [(st: State) => videoEvent(st, 'gr20', true)] }
