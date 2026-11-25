@@ -125,6 +125,7 @@ function ReportView() {
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
             {sec.chart === 'reach' && (r.recipe ? <ReachChart days={r.recipe.days} networks={r.recipe.networks} />
               : <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>)}
+            {sec.chart === 'campaign' && <CampaignChart id={r.recipe?.campaign} />}
             {sec.chart === 'pillars' && <div className="report-chart"><HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} color="var(--a-iris)" /></div>}
             {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
           </section>
@@ -175,6 +176,16 @@ function ReportView() {
       </aside>}
     </div>
   )
+}
+
+/** A campaign's planned against actual progress, as Sage tracks it. */
+function CampaignChart({ id }: { id?: string }) {
+  const { s } = useStore()
+  const c = s.strategy.campaigns.find(x => x.id === id)
+  if (!c?.planned.length) return null
+  const labels = c.planned.map((_, i) => `Day ${i + 1}`)
+  return <div className="report-chart"><LineChart label={`${c.name}: ${c.goal.label}, planned and actual`} labels={labels} h={160}
+    series={[{ name: 'Actual', data: c.actual, color: 'var(--a-iris)' }, { name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }]} /></div>
 }
 
 /** A requested report's reach: its own window and networks. */
