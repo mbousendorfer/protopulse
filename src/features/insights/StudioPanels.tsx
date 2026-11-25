@@ -1,9 +1,12 @@
 // Report Studio, the agentic way: ask Iris for a report, then change it section by section.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarClock, Check, Link2, Pause, Play, Plus, Printer, Sparkles, Trash2 } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
-import { uid } from '../../app/core'
+import { actionOf, uid } from '../../app/core'
+import { dayLabel } from '../../app/time'
+import type { Schedule } from './slice'
+import { nextRun } from './reports'
 import type { Recipe, Report, ReportSection, SectionKind } from '../../data/insights'
 import { Btn, Mark, Menu } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
@@ -99,5 +102,58 @@ export function SaveTemplate({ r }: { r: Report }) {
       <input id="tpl-name" className="input" value={name} onChange={e => setName(e.target.value)} />
       <Btn type="submit" className="self-start" disabled={!name.trim()}>Save as template</Btn>
     </form>
+  )
+}
+
+const EVERY: Record<Schedule['every'], string> = { week: 'every Monday', month: 'on the 1st of each month' }
+
+/** Reports tab: what Iris writes on a schedule, when, and what she does with it. */
+export function Schedules() {
+  const { s, d } = useStore()
+  const now = useNow(60_000)
+  const lvl = actionOf(s, 'iris', 'iris-report')?.autonomy
+  if (!s.insights.schedules.length) return null
+  const does = (sc: Schedule) => (sc.to === 'sam' ? 'Iris writes it for you' : lvl === 'act' ? 'Iris sends it to Claire' : lvl === 'draft' ? 'It waits for you on the Desk, then goes to Claire' : 'Iris writes it, you send it')
+  return (
+    <section className="card">
+      <div className="card-head"><h2>Scheduled</h2></div>
+      <ul className="in-schedules">
+        {s.insights.schedules.map(sc => (
+          <li key={sc.id} className={sc.paused ? 'off' : ''}>
+            <div className="grow">
+              <b>{sc.name}</b>
+              <span className="muted"> · {EVERY[sc.every]} at 08:00 → {sc.to === 'claire' ? 'Claire' : 'you'}</span>
+              <p className="faint">{sc.paused ? 'Paused' : `Next: ${dayLabel(nextRun(sc, now), now)} · ${does(sc)}`}</p>
+            </div>
+            <Btn size="sm" onClick={() => d({ type: 'insights/schedulePause', id: sc.id })}>{sc.paused ? <><Play size={14} />Resume</> : <><Pause size={14} />Pause</>}</Btn>
+            <Btn size="sm" variant="ghost" icon aria-label={`Delete schedule ${sc.name}`} onClick={() => d({ type: 'insights/scheduleDelete', id: sc.id })}><Trash2 size={14} /></Btn>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** Report side panel: schedule it, print it to PDF, copy a read-only link. */
+export function ReportOut({ r }: { r: Report }) {
+  const { s, d } = useStore()
+  const [copied, setCopied] = useState(false)
+  const scheduled = s.insights.schedules.filter(x => x.name === r.title)
+  const plan = (every: Schedule['every'], to: Schedule['to']) => d({ type: 'insights/schedule', name: r.title, recipe: r.recipe!, every, to, via: 'You scheduled it from the report' })
+  const link = `${location.origin}${location.pathname}#/insights/reports/${r.id}?view=read`
+  return (
+    <div className="stack gap-2">
+      {r.recipe && (scheduled.length
+        ? <p className="muted">Scheduled {scheduled.map(x => `${EVERY[x.every]} for ${x.to === 'claire' ? 'Claire' : 'you'}`).join(' and ')}. Manage it in Insights › Reports.</p>
+        : <Menu align="start" trigger={<Btn className="self-start"><CalendarClock size={14} />Schedule</Btn>} items={[
+          { label: 'Every Monday, to Claire', onSelect: () => plan('week', 'claire') },
+          { label: 'Every month, to Claire', onSelect: () => plan('month', 'claire') },
+          { label: 'Every Monday, to me', onSelect: () => plan('week', 'sam') },
+        ]} />)}
+      <div className="row tight">
+        <Btn variant="ghost" onClick={() => { d({ type: 'insights/export', title: r.title }); window.print() }}><Printer size={14} />Download PDF</Btn>
+        <Btn variant="ghost" onClick={() => { navigator.clipboard?.writeText(link).catch(() => undefined); setCopied(true) }}>{copied ? <><Check size={14} />Link copied</> : <><Link2 size={14} />Copy read-only link</>}</Btn>
+      </div>
+    </div>
   )
 }

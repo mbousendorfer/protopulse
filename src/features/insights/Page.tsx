@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Network } from '../../app/types'
-import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from './alerts'
@@ -18,7 +18,7 @@ import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
-import { SaveTemplate, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
+import { ReportOut, SaveTemplate, Schedules, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -70,6 +70,7 @@ function Reports() {
   return (
     <div className="reports">
       <StudioAsk />
+      <Schedules />
       {reportList(s).map(r => {
         const shared = s.insights.shared[r.id]
         return (
@@ -99,6 +100,9 @@ function ReportView() {
   const now = useNow(5000)
   const nav = useNavigate()
   const [q, setQ] = useState('')
+  const [params] = useSearchParams()
+  // The read-only link: the report alone, without tools or side panels.
+  const readOnly = params.get('view') === 'read'
   const r = reportList(s).find(x => x.id === id)
   if (!r) return <Empty title="This report doesn’t exist" action={<Btn onClick={() => nav('/insights')}>All reports</Btn>} />
   const shared = s.insights.shared[r.id]
@@ -111,13 +115,13 @@ function ReportView() {
   return (
     <div className="report-layout">
       <article className="card report">
-        <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>
+        {readOnly ? <p className="faint">Read-only view of a report by Iris for Fernway.</p> : <Btn variant="ghost" size="sm" onClick={() => nav('/insights')}><ArrowLeft size={14} />All reports</Btn>}
         <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">{reportMeta(r)} · written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)}</span></div>
         <h1>{r.title}</h1>
         <p className="lede">{r.summary}</p>
         {r.sections.map((sec, i) => (
           <section key={sec.heading}>
-            {r.recipe ? <div className="row nowrap in-sec-head"><h2>{sec.heading}</h2><span className="spacer" /><SectionTools r={r} i={i} sec={sec} /></div> : <h2>{sec.heading}</h2>}
+            {r.recipe && !readOnly ? <div className="row nowrap in-sec-head"><h2>{sec.heading}</h2><span className="spacer" /><SectionTools r={r} i={i} sec={sec} /></div> : <h2>{sec.heading}</h2>}
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
             {sec.chart === 'reach' && (r.recipe ? <ReachChart days={r.recipe.days} networks={r.recipe.networks} />
               : <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>)}
@@ -127,10 +131,10 @@ function ReportView() {
         ))}
         {r.recipe && !r.sections.length && <p className="muted">Every section is gone. Add one back, or undo.</p>}
         <p className="faint hint-cite">Point at an underlined number to see where it comes from.</p>
-        {r.recipe && <StudioEdit r={r} />}
+        {r.recipe && !readOnly && <StudioEdit r={r} />}
       </article>
 
-      <aside className="report-side">
+      {!readOnly && <aside className="report-side">
         <section className="card pad stack">
           <h2 className="side-title">Share</h2>
           {r.draft && deskCard ? (
@@ -151,6 +155,7 @@ function ReportView() {
             </>
           )}
           <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${fullTitle(r).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: fullTitle(r) }) }}><Download size={14} />Download (.md)</Btn>
+          <ReportOut r={r} />
         </section>
         {r.recipe && <section className="card pad stack"><h2 className="side-title">Template</h2><SaveTemplate r={r} /></section>}
         <section className="card pad stack">
@@ -167,7 +172,7 @@ function ReportView() {
             <div className="row tight">{ASK_SUGGEST.map(x => <button key={x} type="button" className="filter" onClick={() => ask(x)}>{x}</button>)}</div>
           </form>
         </section>
-      </aside>
+      </aside>}
     </div>
   )
 }
