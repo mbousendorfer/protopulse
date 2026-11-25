@@ -13,7 +13,7 @@ import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tab
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
+import { dur, NEEDS_YOU, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { SavedSheet } from './SavedSheet'
 import { fill, toTemplate } from './saved'
@@ -36,8 +36,8 @@ const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) =>
   { id: 'negative', label: 'Negative today', match: (c, now) => c.sentiment === 'negative' && c.at >= DAY_START(now), saved: true },
 ]
 
-type Sort = 'newest' | 'oldest' | 'urgent' | 'intent'
-const SORTS: { id: Sort; label: string }[] = [{ id: 'newest', label: 'Newest first' }, { id: 'oldest', label: 'Oldest first' }, { id: 'urgent', label: 'Most urgent' }, { id: 'intent', label: 'Buying intent' }]
+type Sort = 'newest' | 'oldest' | 'urgent' | 'intent' | 'waiting'
+const SORTS: { id: Sort; label: string }[] = [{ id: 'waiting', label: 'Waiting longest' }, { id: 'newest', label: 'Newest first' }, { id: 'oldest', label: 'Oldest first' }, { id: 'urgent', label: 'Most urgent' }, { id: 'intent', label: 'Buying intent' }]
 const URGENCY: Record<ConvStatus, number> = { escalated: 0, draft: 1, claire: 2, takeover: 3, you: 4, auto: 5, hidden: 6 }
 
 const STATUS: Record<ConvStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
@@ -82,7 +82,9 @@ export default function InboxPage() {
   const [sentiment, setSentiment] = useState<Sentiment | 'all'>('all')
   const [intent, setIntent] = useState(false)
   const [q, setQ] = useState('')
-  const [sort, setSort] = useState<Sort>('newest')
+  const askedSort = SORTS.find(x => x.id === params2.get('sort'))?.id
+  const [sort, setSort] = useState<Sort>(askedSort ?? 'newest')
+  useEffect(() => { if (askedSort) setSort(askedSort) }, [askedSort])
 
   const all = useMemo(() => [...virtualConvs(s), ...s.inbox.convs.map(withTeam)], [s])
   const v = VIEWS.find(x => x.id === view)!
@@ -90,7 +92,7 @@ export default function InboxPage() {
     .filter(c => v.match(c, now) && (!label || c.labels?.includes(label)) && (network === 'all' || c.network === network) && (type === 'all' || c.type === type) &&
       (sentiment === 'all' || c.sentiment === sentiment) && (!intent || (c.intent ?? 0) >= 0.6) &&
       (!q || `${c.author} ${c.messages.map(m => m.text).join(' ')}`.toLowerCase().includes(q.toLowerCase())))
-    .sort((a, b) => sort === 'oldest' ? a.at - b.at : sort === 'urgent' ? URGENCY[a.status] - URGENCY[b.status] || b.at - a.at : sort === 'intent' ? (b.intent ?? 0) - (a.intent ?? 0) || b.at - a.at : b.at - a.at),
+    .sort((a, b) => sort === 'waiting' ? Number(waitingOn(b)) - Number(waitingOn(a)) || (waitingOn(a) ? waitSince(a) - waitSince(b) : b.at - a.at) : sort === 'oldest' ? a.at - b.at : sort === 'urgent' ? URGENCY[a.status] - URGENCY[b.status] || b.at - a.at : sort === 'intent' ? (b.intent ?? 0) - (a.intent ?? 0) || b.at - a.at : b.at - a.at),
   [all, v, now, label, network, type, sentiment, intent, q, sort])
   const ids = useMemo(() => list.map(c => c.id), [list])
   const sel = useSelection(ids, `${view}|${label}|${network}|${type}|${sentiment}|${intent}|${q}`)
@@ -220,7 +222,7 @@ export default function InboxPage() {
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
                   <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
+                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
                   <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
@@ -315,7 +317,7 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
         {need === 'claire' && <ClaireLine c={c} />}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
-        <span className="mono faint">{hhmm(c.at)}</span>
+        <WaitTag c={c} fallback />
         {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn></>}
         {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn></>}
         {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
@@ -340,6 +342,15 @@ function ClaireLine({ c }: { c: Conversation }) {
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const reply = card?.claire?.reply
   return <p className="ib-need-line"><span className="ib-need-by">Claire</span>{reply ? `“${reply}”` : card?.claire ? `Asked ${ago(card.claire.askedAt, now)}. She usually answers within a minute.` : c.note ?? 'Asked. She usually answers within a minute.'}</p>
+}
+
+/** How long the customer has waited on the team, named in words, and whether it is past the target for its type. */
+function WaitTag({ c, fallback }: { c: Conversation; fallback?: boolean }) {
+  const { s } = useStore()
+  const now = useNow(30_000)
+  const w = waitOf(s, c, now)
+  if (!w) return fallback ? <span className="mono faint">{hhmm(c.at)}</span> : null
+  return <span className={`ib-wait ${w.over ? 'over' : ''}`} title={`Waiting since ${hhmm(w.since)} · ${dur(w.target)} target`}>Waiting {dur(w.waited)}{w.over ? ` · over ${dur(w.target)}` : ''}</span>
 }
 
 function ViewBtn({ on, label, n, onClick }: { on: boolean; label: ReactNode; n: number; onClick: () => void }) {
