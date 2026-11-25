@@ -36,7 +36,7 @@
 | Volume crédible | 45 conversations, TikTok/YouTube maigres | ~80 conversations, fils plus longs, arrivées par le moteur | 2 | M | later — réponse au pitch |
 | Traduction | absent (Jonas en allemand sans traduction) | Message traduit à la volée ; Nova répond dans la langue du client et montre la version anglaise | 1 | S | done (PR Translation) |
 | Contrat → Iris (temps de réponse, volumes, taux traités seuls) | absent | Sélecteurs purs dans `inbox/slice.ts` + demande `requests/iris-from-nova-*.md` | 2 | S | done (PR SLA) |
-| Contrat ← Echo (mentions → conversation) | absent | Action publique `inbox/ingest` + demande `requests/echo-from-nova-*.md` | 2 | S | todo |
+| Contrat ← Echo (mentions → conversation) | absent | Action publique `inbox/ingest` + demande `requests/echo-from-nova-*.md` | 2 | S | done (PR contrats) |
 | Export CSV | absent | Export d'une sélection ou d'une vue, et depuis ⌘K | 1 | S | later — réponse au pitch |
 | Inbox approval workflows | — | Couvert par les crans : Draft = approbation, « Ask Claire » = approbateur | — | — | skipped — les crans Suggest · Draft · Act sont l'équivalent agentique |
 | Custom inboxes | — | Une seule marque, filtre réseau suffisant | — | — | skipped — hors périmètre multi-comptes |

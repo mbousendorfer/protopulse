@@ -57,3 +57,5 @@
 - 25/11 · pitch Translation · **Go** · — · tel que pitché.
 - 25/11 · pitch Export CSV · **Later** · — · reste au backlog.
 - 25/11 · Translation · table de traductions mockée par texte (`translate.ts`), affichée sous l'original (pas de bascule « Show original ») · bascule original/traduit · Sam voit les deux sans clic ; un vrai modèle est hors périmètre.
+- 25/11 · Contrat Echo · action publique `inbox/ingest` idempotente (`c-in-<id>`), escalades puis règles à l'arrivée ; demande `requests/echo-from-nova-mentions-to-inbox.md` · lire l'état d'Echo depuis l'Inbox · Echo garde la décision de ce qui mérite une réponse.
+- 25/11 · Demande d'Atlas (Fernway Repair) · `account` sur la conversation, seed et filtre Profile · une vue par profil · le filtre suffit et se sauvegarde en vue.

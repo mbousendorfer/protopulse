@@ -391,3 +391,22 @@ describe('translation', () => {
     expect(translate(p.draft.map(x => (typeof x === 'string' ? x : x.text)).join(''))).toBeDefined()
   })
 })
+
+describe('contracts', () => {
+  it('Echo hands a mention to the Inbox: once, escalations and rules applied', () => {
+    const m = { id: 'm1', author: '@trail.mag', network: 'instagram' as const, text: 'Journalist at Trail Mag here, writing a piece on repair programmes. Can we talk?', from: 'Echo' }
+    let s = reducer(initialState(), { type: 'inbox/ingest', mention: m })
+    expect(conv(s, 'c-in-m1')).toMatchObject({ type: 'mention', status: 'escalated', assignee: 'claire' })
+    expect(s.log.some(l => l.text.startsWith('Echo passed @trail.mag’s mention to the Inbox'))).toBe(true)
+    const n = s.inbox.convs.length
+    s = reducer(s, { type: 'inbox/ingest', mention: m })
+    expect(s.inbox.convs.length).toBe(n)
+  })
+
+  it('Fernway Repair conversations filter by profile', async () => {
+    const { matchFilters } = await import('./filters')
+    const s = initialState()
+    expect(s.inbox.convs.filter(c => matchFilters(c, { account: 'ig-repair' }, s.clock.base)).map(c => c.id).sort()).toEqual(['c-rep-dry', 'c-rep-free', 'c-rep-zip'])
+    expect(matchFilters(conv(s, 'c-lea'), { account: 'instagram' }, s.clock.base)).toBe(true)
+  })
+})

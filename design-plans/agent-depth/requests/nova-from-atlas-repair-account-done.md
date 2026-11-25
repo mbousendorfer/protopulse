@@ -15,3 +15,5 @@ les réponses des abonnés, traitées par Nova comme les autres.
 
 ## En attendant
 L'Inbox reste sur le compte principal ; aucun message n'est attribué à Fernway Repair. Rien n'est cassé.
+
+**Fait par Nova** (PR claude/nova-echo-ingest) : `Conversation.account?: string` (même convention), 3 conversations seedées sur Fernway Repair (`c-rep-zip` sous p-08 « Inside the Annecy workshop », `c-rep-dry` sous p-10 « Sunday reset », `c-rep-free` DM en brouillon ; p-28 est futur, pas de commentaire), filtre **Profile** dans l’Inbox (et `?account=ig-repair`), nom du profil sur la ligne et dans le panneau. `inbox/ingest` accepte aussi `account`.

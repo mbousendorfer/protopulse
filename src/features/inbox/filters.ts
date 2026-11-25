@@ -9,6 +9,8 @@ export type Filters = {
   date?: 'today' | '7d' | '30d'; who?: Assignee | 'none'; label?: string; review?: 'todo' | 'done'; q?: string
   /** One post: its comments only (see postKey). */
   post?: string
+  /** One profile (Atlas's account id; the network id is its main account). */
+  account?: string
 }
 
 /** The post a comment hangs under, without the per-comment details ("Reel · “The Ridge on the GR20”"). */
@@ -25,7 +27,7 @@ export function matchFilters(c: Conversation, f: Filters, now: number) {
   return (!f.network || c.network === f.network) && (!f.type || c.type === f.type) && (!f.sentiment || c.sentiment === f.sentiment) &&
     (!f.intent || (c.intent ?? 0) >= 0.6) && (!f.date || c.at >= since(f.date, now)) &&
     (!f.who || (f.who === 'none' ? !c.assignee : c.assignee === f.who)) && (!f.label || !!c.labels?.includes(f.label)) &&
-    (!f.review || (f.review === 'done') === !!c.reviewed) && (!f.post || postKey(c) === f.post) &&
+    (!f.review || (f.review === 'done') === !!c.reviewed) && (!f.post || postKey(c) === f.post) && (!f.account || (c.account ?? c.network) === f.account) &&
     (!f.q || `${c.author} ${c.messages.map(m => m.text).join(' ')}`.toLowerCase().includes(f.q.toLowerCase()))
 }
 
@@ -66,7 +68,7 @@ export function parseFilters(t: string): Filters | undefined {
 export const toSearch = (f: Filters) => new URLSearchParams(Object.entries(f).filter(([, v]) => v !== undefined && v !== false && v !== '').map(([k, v]) => [k, String(v)])).toString()
 export function fromSearch(p: URLSearchParams): Filters | undefined {
   const f: Filters = {}
-  for (const k of ['network', 'type', 'sentiment', 'date', 'who', 'review', 'q', 'post'] as const) { const v = p.get(k); if (v) (f as Record<string, string>)[k] = v }
+  for (const k of ['network', 'type', 'sentiment', 'date', 'who', 'review', 'q', 'post', 'account'] as const) { const v = p.get(k); if (v) (f as Record<string, string>)[k] = v }
   if (p.get('intent') === 'true') f.intent = true
   return isEmpty(f) ? undefined : f
 }
