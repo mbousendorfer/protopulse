@@ -6,7 +6,7 @@ export type ConvType = 'comment' | 'dm' | 'mention' | 'review' | 'ad'
 export type Sentiment = 'positive' | 'neutral' | 'negative'
 
 export type Attachment = { id: string; kind: 'exchange' | 'refund' | 'code'; label: string; limit: string; removed?: boolean }
-export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean
+export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; /** A teammate wrote it (from 'you' = the team). */ by?: Assignee; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean
   /** The Desk card this reply settled, and the journal entry Nova wrote when she sent it alone: their Undo deletes it. */
   card?: string; log?: string }
 
@@ -39,13 +39,24 @@ export type Conversation = {
   notes?: Note[]
   /** The saved reply Nova started her draft from (cited under the draft). */
   savedFrom?: string
+  /** When the teammate it is assigned to answers (Léo and Yanis reply on their own; app time). */
+  teamDue?: number
   /** Inbox rules that fit but that Nova only proposes (her rules action is on Suggest or Draft). */
   suggested?: string[]
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
   settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }
 
-export type Assignee = 'sam' | 'claire'
+export type Assignee = 'sam' | 'claire' | 'leo' | 'yanis'
+/** The team working the Inbox with Nova. Claire approves; Léo and Yanis answer what is assigned to them. */
+/** Teammates who answer on their own what is assigned to them. */
+export const TEAMMATES: Assignee[] = ['leo', 'yanis']
+export const ROSTER: Record<Assignee, { name: string; short: string; role: string }> = {
+  sam: { name: 'Sam Rivera', short: 'You', role: 'Social media manager' },
+  claire: { name: 'Claire Dubois', short: 'Claire', role: 'Head of brand · approves' },
+  leo: { name: 'Léo Marchand', short: 'Léo', role: 'Customer care · orders and returns' },
+  yanis: { name: 'Yanis Haddad', short: 'Yanis', role: 'Wholesale and B2B' },
+}
 export type Note = { id: string; at: number; text: string; by: Assignee }
 export const LABELS = ['Refund', 'Product issue', 'Press', 'Creator', 'Lead']
 
@@ -126,9 +137,13 @@ const fromQ = ([id, author, network, type, sentiment, at, q, a, extra]: Q): Conv
 const TEAM: Record<string, Partial<Conversation>> = {
   'c-lea': { labels: ['Product issue'] },
   'c-thomas': { labels: ['Refund'], assignee: 'sam' },
+  'c-tracking': { assignee: 'leo' },
+  'c-return': { assignee: 'leo' },
   'c-sophie': { labels: ['Refund'], assignee: 'claire', notes: [{ id: 'n1', at: T(7, 20), by: 'claire', text: 'Checked with finance: the refund left on 12 Nov. Fine to tell her it’s on its way.' }] },
   'c-ana': { labels: ['Product issue'] },
   'c-max': { assignee: 'sam' },
+  'c-parcel': { assignee: 'leo' },
+  'c-hotel': { assignee: 'yanis', labels: ['Lead'] },
   'c-marc': { labels: ['Press'], assignee: 'claire' },
   'c-pierre': { labels: ['Product issue'], notes: [{ id: 'n2', at: T(7, 5), by: 'sam', text: 'Called him yesterday evening, no injury. Product team has the clip photos.' }] },
   'c-lawyer': { assignee: 'claire' },
@@ -184,6 +199,16 @@ export const CONVERSATIONS: Conversation[] = ([
     messages: [m('them', 'Great bag, but delivery took 9 days and nobody told me why.', T(3, 38))],
     draft: ['Thanks Martine, and sorry about the silence. 9 days is too long and we should have told you. We’ve changed carriers for Annecy since. Glad the bag made it worth the wait.'],
     rules: ['Never blame the carrier publicly'],
+  },
+  {
+    id: 'c-parcel', author: '@nico.trail', network: 'instagram', type: 'dm', status: 'takeover', sentiment: 'negative', at: T(7, 30), teamDue: T(8, 15),
+    messages: [m('them', 'Order #48371 still says “label created” after 5 days. Is it lost?', T(7, 28))],
+    note: 'Order problem · assigned to Léo by rule.',
+  },
+  {
+    id: 'c-hotel', teamDue: T(8, 17), author: 'Hôtel Les Cimes', network: 'linkedin', type: 'dm', status: 'takeover', sentiment: 'positive', at: T(7, 2), intent: 0.92, unread: true,
+    messages: [m('them', 'Hello, we run a mountain hotel in Val d’Isère and would like to stock the Ridge 28L in our shop, about 40 units for the season. Do you do wholesale?', T(7, 0))],
+    note: 'Wholesale request · assigned to Yanis by rule.',
   },
   // Escalated: Nova never answers these herself
   {
