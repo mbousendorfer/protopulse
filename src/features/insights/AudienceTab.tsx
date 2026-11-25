@@ -46,7 +46,7 @@ export default function AudienceTab() {
       })}
       <section className="card pad">
         <div className="section-title">Followers <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, last 30 days</span></div>
-        <LineChart label="Followers, last 30 days" labels={series.map(x => new Date(x.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))} series={[{ name: 'Followers', data: series.map(x => x.v), color: 'var(--a-iris)' }]} h={180} format={v => `${(v / 1000).toFixed(1)}k`} />
+        <LineChart label="Followers, last 30 days" labels={series.map(x => new Date(x.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))} series={[{ name: 'Followers', data: series.map(x => x.v), color: 'var(--a-iris)' }]} h={180} format={v => `${+(v / 1000).toFixed(1)}k`} />
       </section>
       <div className="grid-2">
         <section className="card pad stack">
