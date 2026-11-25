@@ -18,7 +18,7 @@ import Queues from './QueuesTab'
 import { isOpen, recommendNetwork } from './ideasModel'
 import { targetsOf, themesOf } from '../strategy/slice'
 import { uid } from '../../app/core'
-import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
+import { libraryOf, pickVisual, readImage, visualCardOf, waitingForVisual } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
@@ -378,23 +378,6 @@ function Drafts() {
 }
 
 /* ---------- Media ---------- */
-/** An uploaded image, scaled down so it fits in the saved state. */
-function readImage(f: File): Promise<string> {
-  return new Promise((ok, ko) => {
-    const img = new Image()
-    img.onload = () => {
-      const k = Math.min(1, 640 / Math.max(img.width, img.height))
-      const c = document.createElement('canvas')
-      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k)
-      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height)
-      URL.revokeObjectURL(img.src)
-      ok(c.toDataURL('image/jpeg', 0.82))
-    }
-    img.onerror = () => ko(new Error('not an image'))
-    img.src = URL.createObjectURL(f)
-  })
-}
-
 function MediaLibrary() {
   const { s, d } = useStore()
   const nav = useNavigate()
