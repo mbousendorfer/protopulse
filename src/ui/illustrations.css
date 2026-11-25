@@ -18,3 +18,7 @@
 @media (max-width: 820px) { .profile-scene { display: none; } }
 @media (prefers-reduced-motion: reduce) { .all-clear-scene { animation: none; } }
 .profile-top { display: flex; align-items: center; gap: var(--s5); margin-bottom: var(--s2); }
+.trail-scene { border-radius: var(--r-card); }
+.trail-stop { animation: rise var(--slow) var(--ease) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .trail-stop { animation: none; } }

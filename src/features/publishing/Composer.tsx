@@ -185,7 +185,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           {accounts.length > 0 ? (
             <>
               {accounts.length > 1 && <Seg name="pv" label="Preview network" size="sm" value={previewNet} onChange={setPreview} options={accounts.map(n => ({ value: n, label: NETWORK_LABEL[n] }))} />}
-              <NetworkPreview network={previewNet} text={textFor(previewNet)} media={media} words={words} />
+              <NetworkPreview network={previewNet} text={textFor(previewNet)} media={media} words={words} at={at} />
             </>
           ) : <p className="faint">Pick an account to see the preview.</p>}
 

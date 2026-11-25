@@ -54,11 +54,16 @@ export default function SettingsPage() {
 
 function Accounts() {
   const now = useNow()
-  const [list, setList] = useState(ACCOUNTS)
+  const { s, d } = useStore()
+  // Day 1: accounts were connected minutes ago, so none is expiring yet; those skipped at sign-up can be connected here.
+  const day1 = s.phase === 'day1'
+  const [list, setList] = useState<Account[]>(() => (day1 ? ACCOUNTS.map(a => ({ ...a, state: 'ok', syncedMin: 1, note: a.id === 'shop' ? a.note : undefined })) : ACCOUNTS))
   const [busy, setBusy] = useState<string | null>(null)
+  const off = (a: Account) => day1 && !s.setup.connected.includes(a.id)
   const reconnect = (a: Account) => {
     setBusy(a.id)
     setTimeout(() => {
+      if (off(a)) d({ type: 'setup/connect', ids: [a.id] })
       setList(l => l.map(x => (x.id === a.id ? { ...x, state: 'ok', syncedMin: 0, note: x.id === 'shop' ? x.note : undefined } : x)))
       setBusy(null)
     }, 1400)
@@ -71,10 +76,10 @@ function Accounts() {
           <div className="grow">
             <div className="row tight"><b>{a.name}</b><span className="faint">{a.handle}</span></div>
             <div className="faint t-xs">
-              {[a.followers, a.note, busy === a.id ? null : `Synced ${ago(now - a.syncedMin * MIN, now)}`].filter(Boolean).join(' · ')}
+              {off(a) ? 'Not connected yet' : [a.followers, a.note, busy === a.id ? null : `Synced ${ago(now - a.syncedMin * MIN, now)}`].filter(Boolean).join(' · ')}
             </div>
           </div>
-          {busy === a.id ? <Thinking label="Reconnecting…" /> : (
+          {busy === a.id ? <Thinking label={off(a) ? 'Connecting…' : 'Reconnecting…'} /> : off(a) ? <Btn size="sm" onClick={() => reconnect(a)}>Connect</Btn> : (
             <>
               {a.state === 'ok' && <Pill tone="ok" dot>Connected</Pill>}
               {a.state === 'expiring' && <Pill tone="caution" dot>Expires soon</Pill>}

@@ -280,7 +280,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
             <>
               {(i.drafts?.length ?? 0) > 1 && <Seg name="idea-net" label="Network" size="sm" value={shownNet} onChange={setNet} options={i.drafts!.map(x => ({ value: x.network, label: NETWORK_LABEL[x.network] }))} />}
               <div className="idea-stage">
-                <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} /></div>
+                <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} at={draft?.at} slides={Number(fmt?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
               </div>
               {!draft && <p className="faint t-sm idea-note">Atlas’s first take, not written yet. Draft it to get the final caption, the visual check and the slot.</p>}
 

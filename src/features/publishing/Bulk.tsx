@@ -128,7 +128,7 @@ export function PostPreview() {
         </>}>
         {!p ? <p className="muted">This post no longer exists.</p> : (
           <div className="pub-prev">
-            <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} /></div>
+            <div className="pub-prev-net"><NetworkPreview network={p.network} text={p.text} media={p.media} words={[]} stats={p.stats} status={p.status} at={p.at} /></div>
             <dl className="pub-prev-meta">
               <div><dt>Status</dt><dd><Pill tone={p.status === 'published' ? 'ok' : p.status === 'needs' ? 'caution' : p.status === 'failed' ? 'alert' : undefined}>{p.status === 'needs' ? 'Needs you' : p.status[0].toUpperCase() + p.status.slice(1)}</Pill></dd></div>
               <div><dt>Author</dt><dd className="row tight">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={24} />You</>}</dd></div>

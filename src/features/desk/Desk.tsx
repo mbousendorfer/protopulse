@@ -17,6 +17,8 @@ import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
 import './desk.css'
 import './today.css'
 import { AllClearScene } from '../../ui/Illustrations'
+import { Checklist, Welcome } from './Day1'
+import { firstBriefAt } from '../onboarding/day1'
 
 type Entry = { key: string; group: 'need' | 'look' | 'good' | 'claire' | 'later'; h?: Handoff; b?: Batch }
 const GROUPS: { id: Entry['group']; label: string }[] = [
@@ -37,7 +39,8 @@ export default function Desk() {
   useEffect(() => {
     if (!cardParam) return
     const h = s.handoffs.find(x => x.id === cardParam)
-    if (h && !h.lane) { setTab(groupOf(h)); setSelected(`h:${h.id}`) }
+    // A card that sits in a batch opens its batch.
+    if (h && !h.lane) { setTab(groupOf(h)); setSelected(entries.find(e => e.b?.items.some(x => x.id === h.id))?.key ?? `h:${h.id}`) }
     setParams({}, { replace: true })
   }, [cardParam]) // eslint-disable-line react-hooks/exhaustive-deps
   const [thread, setThread] = useState<string | null>(null)
@@ -124,11 +127,14 @@ export default function Desk() {
   }
   const tomorrow = SNOOZE(useHandoffActions().now()).find(x => x.label.startsWith('tomorrow'))
 
+  const nowT = useNow(60000)
   const position = current ? `${Math.max(1, actionable.indexOf(current) + 1)} of ${actionable.length}` : undefined
 
   return (
     <div className="page today">
-      <Brief onPick={pick} />
+      {s.phase === 'day1' && nowT < firstBriefAt(s.setup.startedAt ?? nowT)
+        ? <div className="day1-top"><Welcome onPick={pick} /><Checklist side /></div>
+        : <>{<Brief onPick={pick} />}{s.phase === 'day1' && <Checklist />}</>}
       <div className="shift-wrap">
         <button className="lane-toggle" aria-expanded={shift} onClick={() => setShift(o => !o)}>
           {shift ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Shift board <span className="faint">· what your agents did in the last 24 h</span>

@@ -153,7 +153,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
               {isOpen && (
                 <div className="batch-open">
                   {p?.type === 'post' && (
-                    <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} /></div>
+                    <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} at={p.slot} /></div>
                   )}
                   <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
                 </div>

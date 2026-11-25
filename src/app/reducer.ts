@@ -14,6 +14,7 @@ import { onResolveListening, reduceListening, type ListeningAction } from '../fe
 import { onResolveStrategy, reduceStrategy, type StrategyAction } from '../features/strategy/slice'
 import { onResolvePlaybook, reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
 import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
+import { reduceSetup, type SetupAction } from '../features/onboarding/slice'
 
 export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
@@ -46,7 +47,7 @@ export type CoreAction =
   | { type: 'core/hydrate'; state: State }
   | { type: 'core/restore'; handoff: Handoff }
 
-export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction
+export type Action = CoreAction | InboxAction | PublishingAction | InsightsAction | ListeningAction | StrategyAction | PlaybookAction | ChatsAction | SetupAction
 
 const QUIET = new Set(['core/heartbeat', 'core/track', 'core/dropNotice', 'core/unfresh', 'core/hydrate', 'core/clearTracker'])
 
@@ -65,6 +66,7 @@ function reduceAll(s: State, a: Action): State {
   if (a.type.startsWith('strategy/')) return reduceStrategy(s, a as StrategyAction)
   if (a.type.startsWith('playbook/')) return reducePlaybook(s, a as PlaybookAction)
   if (a.type.startsWith('chats/')) return reduceChats(s, a as ChatsAction, resolve)
+  if (a.type.startsWith('setup/')) return reduceSetup(s, a as SetupAction, initialState)
   return reduceCore(s, a as CoreAction)
 }
 
@@ -156,6 +158,8 @@ function fire(s: State, eventId?: string): State {
   const ev = SCRIPT[idx]
   if (!ev) return s
   let next: State = eventId ? s : { ...s, engine: { ...s.engine, cursor: s.engine.cursor + 1 } }
+  // A Day 1 workspace has no history: no promotion earned, no rule learned, no campaign running.
+  if (ev.history && s.phase === 'day1' && !eventId) return next
   if (ev.idea) {
     // Ideas arrive in Publishing › Ideas. A paused agent spots nothing, unless the moderator triggers it.
     if (!eventId && (agentOf(next, ev.idea.agent).status !== 'on' || agentOf(next, 'atlas').status !== 'on')) return next
@@ -426,8 +430,12 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/unfresh':
       return s.handoffs.some(h => h.fresh) ? { ...s, handoffs: s.handoffs.map(h => (h.fresh ? { ...h, fresh: false } : h)) } : s
 
-    case 'core/track':
-      return track(s, a.kind, a.detail)
+    case 'core/track': {
+      // The getting-started list ticks pages off once you've been there.
+      const path = String(a.detail?.path ?? '')
+      const seen = a.kind === 'nav' && s.phase === 'day1' && ['/playbook', '/agents'].includes(path) && !s.setup.seen.includes(path)
+      return track(seen ? { ...s, setup: { ...s.setup, seen: [...s.setup.seen, path] } } : s, a.kind, a.detail)
+    }
 
     case 'core/takeBack': {
       // Sam takes a card back from Claire's lane and decides himself.

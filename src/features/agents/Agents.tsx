@@ -48,7 +48,7 @@ export function Team() {
               <dl className="agent-stats">
                 <div><dt>Handled alone · 30 days</dt><dd className="num">{a.record.handled.toLocaleString('en-GB')}</dd></div>
                 <div><dt>Raised to you</dt><dd className="num">{a.record.escalated}</dd></div>
-                <div><dt>Approved unchanged</dt><dd className="num">{a.record.approvedUnchanged}%</dd></div>
+                <div><dt>Approved unchanged</dt><dd className="num">{a.record.handled ? `${a.record.approvedUnchanged}%` : "–"}</dd></div>
                 <div><dt>Undone by you</dt><dd className="num">{a.record.undone}</dd></div>
               </dl>
               <div className="row">
@@ -263,7 +263,7 @@ function Record({ agent }: { agent: Agent }) {
       <dl className="grid-4 record-kpis">
         <div className="card pad stat"><dd><b className="num">{agent.record.handled.toLocaleString('en-GB')}</b></dd><dt className="label">Handled alone · 30 days</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.escalated}</b></dd><dt className="label">Raised to you</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.approvedUnchanged}%</b></dd><dt className="label">Approved unchanged</dt></div>
+        <div className="card pad stat"><dd><b className="num">{agent.record.handled ? `${agent.record.approvedUnchanged}%` : "–"}</b></dd><dt className="label">Approved unchanged</dt></div>
         <div className="card pad stat"><dd><b className="num">{agent.record.undone}</b></dd><dt className="label">Undone by you</dt></div>
       </dl>
       <section className="card pad">
