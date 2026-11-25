@@ -12,7 +12,7 @@ import {
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
 import { InlineConfirm } from '../../ui/Feedback'
-import { Heatmap, LineChart, Spark } from '../../ui/charts'
+import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, kpis as kpisOf } from './metrics'
 import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
