@@ -30,7 +30,7 @@
 | 4 | Rapport par réseau / campagne / label | Un seul rapport de campagne constant | Iris rédige par réseau, par campagne (lu chez Sage `targetsOf`), par label (posts d'Atlas) | 2 | M | done (campaign & label PR ; le rapport par réseau est dans le Report Studio) |
 | 5 | Community management (rapport) | Chiffres Nova recopiés en texte (`data/insights.ts:53`) | Temps de réponse, volumes par type/réseau, part traitée par Nova seule, lus dans `s.inbox` | 2 | M | later — décision de l’humain au pitch (25/11) |
 | 6 | Social Media ROI | Absent | UTM des liens d'Atlas → clics, sessions, conversions, revenu mockés GA4 par réseau et campagne | 2 | M | done (ROI PR) |
-| 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | todo |
+| 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | done (audience PR) |
 | 8 | Competitors (benchmark) | Texte dans `answer()` (`slice.ts:59`) | Section benchmark lue chez Echo (`s.listening`) dans les rapports | 2 | S | todo |
 | 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | done (contrat clipPerf, demande de Juno) |
 | 10 | Boost : résultat mesuré | — (le budget est F2) | Historique des boosts avec résultat (reach payé, coût par clic) dans Explore | 1 | S | todo |

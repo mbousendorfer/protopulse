@@ -1,12 +1,13 @@
 // Iris's anomaly engine: her alert rules, evaluated on every heartbeat against what she measures.
 import type { State } from '../../app/state'
-import type { Handoff } from '../../app/types'
+import type { Handoff, Network } from '../../app/types'
 import { actionOf, now, pushHandoff, pushLog } from '../../app/core'
 import { DAY } from '../../app/time'
 import { actDecision, resolve } from '../../app/reducer'
 import { ALERT_SUBJECTS, SIGNALS, SPIKES, type Anomaly, type Signal } from '../../data/insights'
 import { ruleSentence, type Alert } from './alerts'
 import { anomalyList, patchInsights } from './slice'
+import { audienceTips } from './audience'
 import { fmt } from './metrics'
 
 /** What Iris measures now: the base signals, with the ones a scripted event switched on. */
@@ -73,4 +74,26 @@ export function raise(s: State, x: Signal, r?: Alert): State {
     if (d) next = resolve(next, h.id, d, { act: '“Raise anomalies” is set to Act' })
   }
   return next
+}
+
+/**
+ * Iris spots an audience that doesn't match the content, following “Recommend content from the audience”:
+ * Suggest lists it in Insights › Audience; Draft brings a Desk card with the brief; Act briefs Atlas (journal + Undo).
+ */
+export function raiseAudienceTip(s: State, network: Network = 'tiktok'): State {
+  const tip = audienceTips().find(t => t.network === network)
+  if (!tip || s.insights.tips[network]) return s
+  let next = patchInsights(s, { tips: { ...s.insights.tips, [network]: 'open' } })
+  const level = actionOf(s, 'iris', 'iris-audience')?.autonomy
+  if (level === 'suggest') return pushLog(next, { agent: 'iris', text: `Spotted: ${tip.finding}`, status: 'done', reason: '“Recommend content from the audience” is set to Suggest', link: '/insights/audience' })
+  const id = `h-aud-${network}`
+  next = pushHandoff(next, {
+    id, agent: 'iris', kind: 'decision', urgency: 'week', group: 'look', topic: 'Audience', action: 'iris-audience', ref: `aud:${network}`,
+    title: `${tip.finding.split(',')[0]}: brief Atlas?`, context: `${tip.finding}.`, why: `Brief for Atlas: “${tip.brief}”.`, confidence: 76, link: '/insights/audience',
+    options: [{ label: 'Brief Atlas', recommended: true }, { label: 'Not now' }],
+    preview: { type: 'plan', title: `${network === 'x' ? 'X' : network[0].toUpperCase() + network.slice(1)} audience`, lines: [`${tip.under25}% under 25`, tip.posts[0].toUpperCase() + tip.posts.slice(1), `Brief: ${tip.brief}`] },
+  })
+  if (level !== 'act') return next
+  const d = actDecision(next.handoffs.find(h => h.id === id)!)
+  return d ? resolve(next, id, d, { act: '“Recommend content from the audience” is set to Act' }) : next
 }

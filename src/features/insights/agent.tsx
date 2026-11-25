@@ -4,7 +4,7 @@ import { useStore } from '../../app/store'
 import { net } from '../../data/command'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Heatmap, HBars, LineChart } from '../../ui/charts'
-import { ALERT_CONDITIONS, ALERT_SUBJECTS, ALERT_UNITS, BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
+import { AGE_BANDS, ALERT_CONDITIONS, ALERT_SUBJECTS, ALERT_UNITS, BEST_CELL, DAILY_REACH, HEAT_COLS, HEAT_ROWS, dayLabels } from '../../data/insights'
 import { bestTime, change, fmt, formats, heat, kpi, tiktokViews, type SocialNet } from './metrics'
 import { AlertsTable } from './alerts'
 import { onResolveInsights, onUndoInsights, reduceInsights, writeReport } from './slice'
@@ -16,6 +16,9 @@ import type { Recipe } from '../../data/insights'
 import { anomaliesDue, tickAnomalies } from './engine'
 import { reportsDue, schedulesDue, tickReports, tickSchedules } from './reports'
 import { bestReturn, roiByNetwork, roiTotals } from './roi'
+import { audienceOf, audienceTips } from './audience'
+
+const int = (v: number) => Math.round(v).toLocaleString('en-GB')
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -28,6 +31,7 @@ declare module '../../data/command' {
     reportEdit: { raw: string }
     schedule: { every: 'week' | 'month'; to: 'claire' | 'sam'; raw: string }
     roi: object
+    audience: { network: Network | 'all' }
   }
 }
 
@@ -194,6 +198,26 @@ const compare = defineIntent({
   },
 })
 
+/** “Who follows us on TikTok?”: the Audience tab's numbers. */
+const audience = defineIntent({
+  kind: 'audience', owner: 'iris', order: 112,
+  parse: t => (/who (follows|are our followers)|\baudience\b|demograph|followers? (by )?(age|country|countries|city|cities)|how old are/.test(t) ? { kind: 'audience', network: net(t) ?? 'all' } : undefined),
+  bar: (i, { s, d, go }) => {
+    const a = audienceOf(i.network), name = i.network === 'all' ? 'all networks' : NETWORK_LABEL[i.network]
+    const tip = audienceTips().find(t => i.network === 'all' || t.network === i.network)
+    return {
+      text: `${int(a.followers)} followers on ${name}: ${a.under25}% under 25, mostly ${a.peak}. Women ${a.gender.women}%, men ${a.gender.men}%. ${a.countries.slice(0, 3).map(([c, p]) => `${c} ${p}%`).join(', ')}; top cities ${a.cities.slice(0, 3).join(', ')}.${tip ? ` ${tip.finding}.` : ''}`,
+      visual: <HBars items={AGE_BANDS.map((b, k) => ({ label: b, value: a.age[k] }))} format={v => `${v}%`} />,
+      sources: [`${name} · native analytics · followers today`],
+      ctas: [{ label: 'Open Audience', run: () => go('/insights/audience') }, ...(tip && !s.insights.tips[tip.network] ? [{ label: 'Brief Atlas', run: () => d({ type: 'insights/audienceBrief', network: tip.network, via: 'You asked in the command bar' }) }] : [])],
+    }
+  },
+  chat: i => {
+    const a = audienceOf(i.network), name = i.network === 'all' ? 'all networks' : NETWORK_LABEL[i.network]
+    return { replies: [{ from: 'iris', text: `${int(a.followers)} followers on ${name}, ${a.under25}% under 25, mostly ${a.peak}. ${a.countries[0][0]} first (${a.countries[0][1]}%).`, card: { type: 'chart', label: `Followers by age, ${name} (%)`, value: `${a.under25}%`, delta: 'under 25', series: a.age, labels: AGE_BANDS, sources: [`${name} · native analytics`] } }], effects: [] }
+  },
+})
+
 /** “Which network brings sales?”: the ROI tab's numbers. */
 const roi = defineIntent({
   kind: 'roi', owner: 'iris', order: 115,
@@ -255,7 +279,7 @@ const iris: AgentModule = {
   onUndo: onUndoInsights,
   due: (s, t) => anomaliesDue(s) || reportsDue(s, t) || schedulesDue(s, t),
   tick: (s, t) => { const r = reportsDue(s, t) ? tickReports(s, t) : s; return tickAnomalies(schedulesDue(r, t) ? tickSchedules(r, t) : r) },
-  intents: [schedule, reportEdit, report, besttime, roi, tiktok, compare, performance],
+  intents: [schedule, reportEdit, report, besttime, audience, roi, tiktok, compare, performance],
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.insights.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { calm: { keep: ['h-tiktok', 'h-report'] }, competitor: { keep: ['h-report'] }, trust: { keep: ['h-report'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
