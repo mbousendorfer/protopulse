@@ -42,4 +42,4 @@ export function useElapsed(until: number, skip = false) {
   return ms
 }
 
-export const ShopifyMark = () => <span className="onb-shop" role="img" aria-label="Shopify" title="Shopify"><ShoppingBag size={13} /></span>
+export const ShopifyMark = () => <span className="onb-shop" role="img" aria-label="Shopify" title="Shopify"><ShoppingBag size={14} /></span>

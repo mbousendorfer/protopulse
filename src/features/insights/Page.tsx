@@ -89,7 +89,7 @@ function Reports() {
             </div>
             <div className="report-meta">
               <span className="mono faint">Written {ago(r.writtenAt, now)}</span>
-              {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
+              {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={12} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
             </div>
           </Link>
         )
@@ -245,7 +245,7 @@ function Explore() {
 
   const th = (key: SortKey, label: string) => (
     <th className={['date', 'network', 'pillar', 'author'].includes(key) ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
-      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={11} /></button>
+      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={12} /></button>
     </th>
   )
 

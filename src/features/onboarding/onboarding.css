@@ -47,7 +47,7 @@
 .onb-signup-side li:nth-child(2) { animation-delay: 60ms; } .onb-signup-side li:nth-child(3) { animation-delay: 120ms; }
 .onb-signup-side li:nth-child(4) { animation-delay: 180ms; } .onb-signup-side li:nth-child(5) { animation-delay: 240ms; }
 .onb-signup-side b { font-weight: 600; }
-.onb-signup-grid .onb-step h1 { font-size: 36px; }
+.onb-signup-grid .onb-step h1 { font-size: var(--t-3xl); }
 
 /* ---------- Website ---------- */
 .onb-site { display: flex; flex-direction: column; gap: var(--s2); }
