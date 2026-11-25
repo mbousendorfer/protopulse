@@ -216,7 +216,7 @@ export default function InboxPage() {
           {VIEWS.filter(x => x.saved).map(x => <ViewBtn key={x.id} on={view === x.id && !label} label={x.label} n={all.filter(c => x.match(c, now)).length} onClick={() => { setView(x.id); setLabel(null) }} />)}
           <span className="ib-side-title">By post</span>
           {posts.slice(0, 4).map(p => <ViewBtn key={p.key} on={post === p.key} n={p.n} onClick={() => apply(post === p.key ? {} : { post: p.key })}
-            label={<><Net n={p.network} /><span className="ellipsis">{p.key.replace(/^[^“]*“|”$/g, '')}</span>{p.waiting > 0 && <span className="ib-over">{p.waiting} waiting</span>}</>} />)}
+            label={<><Net n={p.network} /><span className="ellipsis" title={p.key.replace(/^[^“]*“|”$/g, '')}>{p.key.replace(/^[^“]*“|”$/g, '')}</span>{p.waiting > 0 && <span className="ib-over">{p.waiting} waiting</span>}</>} />)}
           <span className="ib-side-title row between nowrap">Labels<button className="link-btn t-xs" onClick={() => nav({ search: '?labels=1' })}>Manage</button></span>
           {labels.map(l => <ViewBtn key={l} on={label === l} label={<><Tag size={13} aria-hidden />{l}</>} n={all.filter(c => c.labels?.includes(l)).length} onClick={() => { setLabel(label === l ? null : l); setView('all') }} />)}
           </div>
