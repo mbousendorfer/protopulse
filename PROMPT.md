@@ -24,6 +24,10 @@ Pas de POC. La barre : un social media manager doit croire, pendant 45 minutes, 
 
 **Tâches du scénario de test (Ideas)** : « Find out why Atlas suggests this » · « Make this post about repair » · « Schedule the two ready ideas » · « Turn this series into a campaign ».
 
+6. **Juno prépare, Sam décide.** Sam accepte qu'un agent découpe ses vidéos en clips, comprend pourquoi un moment a été choisi, retouche le clip sans quitter l'éditeur et l'envoie à Atlas.
+
+**Tâches du scénario de test (Video)** : « Find out why Juno picked this moment » · « Remove the ums and start on the strap » · « Make the French version » · « Send the 3 ready clips to Atlas ».
+
 Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage d'autonomie lisible par l'utilisateur métier, la validation d'un plan, un journal de ce que l'agent a fait avec annulation, un brief livré avant la journée, une mémoire de marque visible. Anti-patterns à éviter : autopilote sans revue sur le contenu public, promesse « autopilot » opaque, crédits IA opaques, fonctions annoncées non livrées.
 
 ---
@@ -54,7 +58,7 @@ Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage 
 
 ## 4. Les agents
 
-Cinq agents préconfigurés, chacun responsable d'un département. Un agent a : un nom, une couleur et un avatar illustré (§10), un département, une ligne de rôle, un statut (`On shift` / `Paused` / `Off shift`), un planning, une activité en cours, des **actions** avec leur cran d'autonomie, des **garde-fous**, et un **track record** (géré seul, remonté, taux d'approbation sans modification, annulations).
+Six agents préconfigurés, chacun responsable d'un département. Un agent a : un nom, une couleur et un avatar illustré (§10), un département, une ligne de rôle, un statut (`On shift` / `Paused` / `Off shift`), un planning, une activité en cours, des **actions** avec leur cran d'autonomie, des **garde-fous**, et un **track record** (géré seul, remonté, taux d'approbation sans modification, annulations).
 
 ### Nova — Community (Inbox)
 Planning : 24/7. Activité type : « Watching 8 inboxes ».
@@ -126,13 +130,27 @@ Planning : revue mensuelle le 1er, à la demande pour les campagnes.
 
 Garde-fous : un objectif chiffré par campagne · jamais plus de 2 campagnes actives.
 
+### Juno — Video
+Planning : 24/7, vérifie la chaîne YouTube toutes les 15 min. Activité type : « Captioning the Repair Friday live ». Couleur : emerald ADS `#12A87A`, avatar avec un clap.
+
+| Action | Risque | Cran | Verrou |
+|---|---|---|---|
+| Draft clips from new videos | risky | Draft | |
+| Fix captions (product names, Playbook words) | safe | Act | |
+| Reframe and apply the brand kit | safe | Act | |
+| Translate and dub clips | risky | Draft | |
+| Send her best clips (80+) to Atlas's calendar | risky | Draft | |
+| Change words in someone's voice | destructive | Suggest | 🔒 |
+
+Garde-fous : 15–60 s (90 s sur LinkedIn) · sous-titres toujours · brand kit sur chaque clip · 5 clips max par vidéo et par semaine · invités et clients à l'écran seulement avec autorisation signée.
+
 ---
 
 ## 5. Shell et navigation
 
-- **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents, Activity, Playbook ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
+- **Barre latérale** (repliable) : logo Protopulse + espace « Fernway » ; **Desk** ; groupe **Departments** : Inbox (Nova), Publishing (Atlas), Insights (Iris), Listening (Echo), Strategy (Sage), Video (Juno), chacun avec l'avatar de l'agent, un point d'état et le nombre de remontées en attente ; groupe **Team** : Agents, Activity, Playbook ; en bas : Settings (comptes connectés, notifications in-app) et l'avatar de Sam.
 - **Barre supérieure** : fil d'Ariane, **barre de commande** (« Ask or brief an agent… » · ⌘K), état de Claire (« Claire · usually replies in ~1 min »), centre de notifications.
-- **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/A/Y pour naviguer · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
+- **Raccourcis globaux** : ⌘K commande · G puis D/I/P/N/L/S/V/A/Y pour naviguer · F mode Focus · ? aide des raccourcis · ⇧D panneau modérateur (non listé dans l'aide).
 - **Toasts** seulement pour les urgences et pour confirmer tes propres actions (avec Undo). Le travail des agents en arrière-plan arrive en silence dans la liste et le fil Live.
 
 ---
@@ -341,6 +359,17 @@ Pattern standard du marché (Hootsuite Wisdom, Sprout Trellis, Ask Vista, Emplif
 - **Suivis proactifs** : un agent revient dans la conversation plus tard (« Early read on the post Atlas scheduled… boost it with €100 ? »), sans toast : la conversation passe en non lu.
 - Deux conversations existent au départ (« Why is TikTok down? », « Weekend sale post »). Un état vide propose des exemples de demandes.
 
+### 6.14 Video — Juno
+
+Inspirations : Opus Clip (score de viralité, ClipAnything, auto-reframe, templates de sous-titres, B-roll, brand kit), ElevenLabs (doublage dans la même voix, Voice Isolator, overdub), Remotion (un clip est une composition : tout ce qui est à l'écran au temps t se calcule à partir du clip), Descript (on édite la vidéo en éditant le texte).
+
+- **Médias réels** : 3 vidéos MP4 (footage libre de droits + voix off générée), transcript horodaté au mot, pistes `clean` (studio sound) et doublages FR/DE/ES/IT dans la même voix, posters et bandes de vignettes. Régénérés par `scripts/media/build.mjs`. Le live « Repair Friday » est affiché 52 min avec chapitres ; le fichier ne contient que les chapitres retenus.
+- **Onglets** `/video` (Clips) · `/video/sources` · `/video/brand`. Phrase de Juno en tête.
+- **Clips** : Ready to review (ligne : poster 9:16 et durée, hook, « Virality 87 », preuve chiffrée, réseaux, vidéo d'origine ; Review, Send to Atlas, Not now ▾ avec raisons), Being made (phase et progression), Later, Sent to Atlas (créneau), Published (vues et engagement). Sélection et « Send N to Atlas » avec un Undo. Filtre par vidéo.
+- **Sources** : chaîne surveillée (switchs « Clip new uploads » et « Clip recorded lives and webinars »), Paste a link (validation, un lien privé échoue avec la raison et Retry), Upload a file (fichier réel lu dans le navigateur pour la session ; le transcript est un échantillon et l'écran le dit). Fiche vidéo : lecteur, transcript avec les moments choisis et leur score, chapitres, **Find clips about…** (sujet, longueur, nombre → nouveaux clips trouvés dans le transcript).
+- **Éditeur pleine page** `/video/clips/:id` : transcript à gauche (mots cliquables, Delete / Restore, Fix spelling pour les sous-titres seulement, Change the words verrouillé et confirmé par Sam, Remove fillers, Remove pauses, Start earlier / End later), lecteur au centre (9:16, 1:1, 16:9, zones de sécurité), inspecteur à droite (Captions : 5 templates, police, taille, position, mots par ligne, couleur, emoji, capitales, langue, export `.srt` réel · Layout : Auto-track, Fill, Fit, Split, position du sujet · Brand : logo, barre de progression, carte hook, carte de fin, B-roll suggéré sur les mots, musique et ducking · Audio : studio sound avec « Hear the original », doublages, mots re-voisés · Post : score et raisons, « Why this moment » sourcé, hooks, légende par réseau avec la vérification Playbook, créneaux d'Atlas), timeline en bas (vidéo, sous-titres, B-roll déplaçable, musique, poignées de trim calées sur les mots, zoom), **Ask Juno** ancré (Shorter, Start with…, Remove the ums, Punchier captions, French version ; refus franc pour changer les mots de quelqu'un). Undo/Redo ⌘Z.
+- **Desk** : carte « N clips from … are ready » (Juno → Atlas) dont l'approbation envoie les clips au calendrier ; Good news quand un clip performe. Undo d'une décision du Desk retire aussi les posts.
+
 ## 7. Proactivité simulée
 
 Le prototype vit sans qu'on touche à rien.
@@ -348,6 +377,7 @@ Le prototype vit sans qu'on touche à rien.
 - **Moteur d'événements** : toutes les 25 à 40 s (cadence réglable), un agent produit un événement scripté. Si l'action correspondante est en Act, il devient une entrée du journal avec toast et Undo. Sinon, il devient une remontée qui arrive en haut de la bonne file avec une animation.
 - **Script** (au moins 20 événements, joués dans l'ordre puis en boucle avec des variantes) couvrant : nouvelle plainte, question produit, DM presse, avis 1 étoile, créateur qui mentionne la marque, pic de mentions négatives, baisse de prix chez Peakline, post viral chez Trailkind, anomalie de reach, post qui surperforme (boost ?), visuel manquant, code promo manquant, **demande de promotion** de Nova, **rétrogradation** proposée par Nova, ajustement de cadence par Sage, campagne Trail Week qui dépasse sa trajectoire, Claire qui répond, règle proposée pour le Playbook.
 - **Agents en pause** : leurs événements ne se produisent pas, et la pilule Running now l'indique.
+- **Vidéos** (événements `video` du script) : un nouvel upload YouTube passe par Transcribing · Finding moments · Reframing · Writing captions (~40 s), puis les clips arrivent. Suggest : Juno demande avant de découper ; Draft : carte Desk ; Act : clips faits seuls. Si l'envoi est en Act, Juno envoie elle-même les clips à 80+ (Undo au journal).
 - **Idées proactives** (événements `idea` du script, dans le même moteur) : **flux continu** (un post d'Iris qui repart, une tendance d'Echo, une mention client : l'idée arrive en haut d'Ideas, datée et sourcée) ; **lot du jeudi** (« Ideas for next week », jusqu'à 6 idées qui peuvent rejoindre Plan review) ; **urgent → Desk** (fenêtre courte, ex. première neige : carte Needs you qui ouvre l'idée ; traitée d'un côté, elle disparaît de l'autre) ; **trou du calendrier** (jour à moins de 2 posts ou pilier sous la cible). Le battement de cœur fait expirer les idées à fenêtre et revenir les « Not now ».
 - **Le temps avance** : l'horloge de l'app part de 08:12 et avance avec le temps réel. « Skip to tomorrow 08:00 » (panneau modérateur) génère un nouveau brief et une nouvelle file.
 
@@ -364,6 +394,7 @@ Caché, pour l'animateur du test.
 - Reset demo (état initial Jour 30) · Start onboarding.
 - Proactive feed : on/off, cadence (10 s / 30 s / 60 s), **Trigger now** avec un menu de tous les événements scriptés.
 - Les quatre arrivées d'idées sont déclenchables une à une (marquées « idea » / « idea + Desk ») : knots carousel (flux), first snow (urgent), empty day (gap), Thursday batch (hebdo).
+- L'arrivée d'une vidéo est marquée « video » : new YouTube upload (Storm Jacket on the GR20).
 - Time : Skip to tomorrow 08:00.
 - Scenario presets : « Calm morning » (4 remontées), « Busy morning » (12), « Competitor day » (Peakline + Trailkind), « Trust test » (2 demandes de promotion + 1 rétrogradation).
 - **Tester log** : enregistre chaque action du testeur avec horodatage (navigation, approve/edit/reject/snooze/undo, changements d'autonomie, commandes tapées, temps passé par carte). Ideas : idée ouverte, réorientée (mode), décision `ideas/decision` (acceptée telle quelle / modifiée / rejetée avec la raison / envoyée à Sage) avec le temps jusqu'à la décision ; compteurs dédiés. Compteurs en direct. **Export JSON** et **Clear**. Stocké en localStorage.
@@ -380,7 +411,8 @@ Un module de données par domaine, typé. Toutes les dates sont relatives au « 
 - 4 concurrents, 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions, 8 tendances, 12 recherches ;
 - 3 campagnes, 4 piliers ;
 - 25 règles de Playbook, 3 règles proposées, 20 faits ;
-- 120 entrées de journal.
+- 120 entrées de journal ;
+- 3 vidéos (2 traitées au départ, 1 qui arrive), 8 clips dont 6 à relire, 1 programmé, 1 publié.
 
 Tous les textes sont crédibles, spécifiques et variés : pas de lorem ipsum, pas deux brouillons identiques, des noms et des handles réalistes, des chiffres cohérents entre les écrans (le reach du brief = celui d'Explore).
 
@@ -465,8 +497,9 @@ Un outil où l'on retrouve une équipe sympathique, pas un cockpit. Clair par d�
 - Une riposte concurrentielle confiée à Atlas apparaît comme brouillon dans Publishing et comme remontée sur le Desk.
 - Claire répond aux escalades.
 - Le panneau modérateur exporte un journal JSON exploitable.
+- Une vidéo déclenchée au modérateur produit des clips éditables (sous-titres, coupes, format, doublage audible) qui, envoyés à Atlas, apparaissent dans le calendrier et s'annulent d'un Undo.
 - Le site est en ligne sur GitHub Pages et fonctionne à 1440 px et 375 px.
 
 ## 14. Hors périmètre
 
-Agence multi-clients · agents Creative, Paid, Creators · Crisis room dédiée · vrai LLM ou backend · vue jouable côté Claire · constructeur de rapports · notifications hors de l'app (Slack, email, push) · thème clair.
+Agence multi-clients · agents Creative (images), Paid, Creators · rendu vidéo réel (l'export d'un clip est simulé) · Crisis room dédiée · vrai LLM ou backend · vue jouable côté Claire · constructeur de rapports · notifications hors de l'app (Slack, email, push) · thème clair.

@@ -16,11 +16,12 @@ export type Intent =
   | { kind: 'overnight'; agent: AgentId }
   | { kind: 'reply'; name: string; convo?: string }
   | { kind: 'mentions' }
+  | { kind: 'clip'; url?: string }
   | { kind: 'unknown' }
 
 export const OWNER: Record<Intent['kind'], AgentId> = {
   post: 'atlas', tiktok: 'iris', besttime: 'iris', compare: 'iris', performance: 'iris', competitor: 'echo', pause: 'sage', resume: 'sage',
-  rule: 'nova', campaign: 'sage', needs: 'iris', overnight: 'iris', reply: 'nova', mentions: 'echo', unknown: 'iris',
+  rule: 'nova', campaign: 'sage', needs: 'iris', overnight: 'iris', reply: 'nova', mentions: 'echo', clip: 'juno', unknown: 'iris',
 }
 
 const NAMES: AgentId[] = ['nova', 'atlas', 'iris', 'echo', 'sage', 'juno']
@@ -48,6 +49,8 @@ export function parse(raw: string): { intent: Intent; forced?: AgentId } {
     const body = never[2].replace(/\byou\b/g, 'we')
     return { intent: { kind: 'rule', rule: `Never ${body.replace(/^(ever\s+)/, '')}`, agent: forced ?? named ?? (/post|caption|publish|hashtag/.test(body) ? 'atlas' : 'nova') }, forced }
   }
+  const url = raw.match(/https?:\/\/\S+/)?.[0]
+  if (url || /\bclips?\b|latest video|\bshorts? from\b/.test(t)) return { intent: { kind: 'clip', url }, forced }
   if (/^brief\b|campaign|launch/.test(t)) return { intent: { kind: 'campaign', brief: raw.replace(/^\s*(sage[,:]?\s*)?(brief:?\s*)?/i, '').trim() }, forced }
   if (/reply to\s+(\S+)/.test(t)) {
     const name = t.match(/reply to\s+(\S+)/)![1].replace(/^@/, '')
@@ -108,4 +111,5 @@ export const EXAMPLES = [
   'What did Nova do overnight?',
   'Reply to Léa',
   'Show me negative mentions this week',
+  'Juno, clip the latest video',
 ]
