@@ -178,3 +178,30 @@ describe('Echo · searches, alert rules and guardrails', () => {
     expect(s.handoffs.some(x => x.ref?.startsWith('alert:'))).toBe(false)
   })
 })
+
+describe('Echo · a competitor you add', () => {
+  it('gets benchmark numbers after the backfill, then a first event on the Desk', async () => {
+    const { competitorsOf, shareOfVoice, BACKFILL_MS, FIRST_EVENT_MS } = await import('./model')
+    let s = reducer(s0(), { type: 'listening/watchSave', w: { id: 'c-wild', name: 'Wildroot', website: 'wildroot.eu', accounts: [{ network: 'tiktok', handle: '@wildroot' }], tracking: true, since: 0, custom: true } })
+    const since = s.listening.watch.find(w => w.id === 'c-wild')!.since
+    expect(competitorsOf(s).some(c => c.id === 'c-wild')).toBe(false)
+    s = at(s, since + BACKFILL_MS + MIN)
+    const c = competitorsOf(s).find(x => x.id === 'c-wild')!
+    expect(c.followers).toBeGreaterThan(0)
+    const sov = shareOfVoice(s)
+    expect(Object.values(sov).reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(99)
+    s = reducer(at(s, since + FIRST_EVENT_MS + MIN), { type: 'core/heartbeat' })
+    const h = s.handoffs.find(x => x.ref === 'e-c-wild')!
+    expect(h.title).toMatch(/Wildroot/)
+    s = reducer(s, { type: 'listening/move', event: 'e-c-wild', index: 0 })
+    expect(s.handoffs.some(x => x.ref === 'e-c-wild')).toBe(false)
+    expect(s.listening.events['e-c-wild'].status).toBe('done')
+  })
+
+  it('the competitor cap refuses a seventh one', () => {
+    let s = s0()
+    for (const n of ['A', 'B', 'C']) s = reducer(s, { type: 'listening/watchSave', w: { id: `c-${n}`, name: n, website: '', accounts: [{ network: 'x', handle: n }], tracking: true, since: 0, custom: true } })
+    expect(s.listening.watch).toHaveLength(6)
+    expect(s.notice?.text).toMatch(/your cap/)
+  })
+})
