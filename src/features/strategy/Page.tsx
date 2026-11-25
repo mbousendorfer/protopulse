@@ -8,7 +8,7 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Phase, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
+import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
 import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
@@ -549,17 +549,17 @@ function PillarEditor({ draft, onChange, onDone }: { draft: Pillar[]; onChange: 
         <tbody>
           {draft.map(p => (
             <tr key={p.id}>
-              <td><b>{p.name}</b></td>
+              <td><input className="input" aria-label="Pillar name" placeholder="New pillar" value={p.name} onChange={e => set(p.id, { name: e.target.value })} /></td>
               <td className="r">
                 <span className="row tight nowrap pct-input">
-                  <input className="input" type="number" min={0} max={100} step={5} aria-label={`${p.name} target share`} value={Number.isFinite(p.target) ? p.target : ''} onChange={e => set(p.id, { target: e.target.value === '' ? NaN : +e.target.value })} />%
+                  <input className="input" type="number" min={0} max={100} step={5} aria-label={`${p.name || 'New pillar'} target share`} value={Number.isFinite(p.target) ? p.target : ''} onChange={e => set(p.id, { target: e.target.value === '' ? NaN : +e.target.value })} />%
                 </span>
               </td>
-              <td><input className="input" aria-label={`${p.name} description`} value={p.desc} onChange={e => set(p.id, { desc: e.target.value })} /></td>
+              <td><input className="input" aria-label={`${p.name || 'New pillar'} description`} value={p.desc} onChange={e => set(p.id, { desc: e.target.value })} /></td>
             </tr>
           ))}
         </tbody>
-        <tfoot><tr><td>Total</td><td className={`r num ${check.total === 100 ? '' : 'warn'}`}>{check.total}%</td><td /></tr></tfoot>
+        <tfoot><tr><td colSpan={3}><Btn size="sm" variant="ghost" onClick={() => onChange([...draft, { id: uid('p'), name: '', desc: '', target: 0 }])}><Plus size={14} />Add a pillar</Btn></td></tr><tr><td>Total</td><td className={`r num ${check.total === 100 ? '' : 'warn'}`}>{check.total}%</td><td /></tr></tfoot>
       </table>
       <div className="sage-check" aria-live="polite">
         <Mark agent="sage" />
@@ -578,6 +578,7 @@ function Pillars() {
   const now = useNow()
   const mix = mixOf(s, now)
   const week = lastWeekOf(s, now)
+  const repair = accountLastWeek(s, 'ig-repair', now)
   return (
     <div className="stack lg">
       <section className="card pad">
@@ -622,7 +623,7 @@ function Pillars() {
               {s.strategy.cadence.map(c => (
                 <tr key={c.network}>
                   <td><Net n={c.network} size={20} /></td>
-                  <td className="r">{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}</td>
+                  <td className="r">{c.network === 'instagram' && repair > 0 && <span className="faint">incl. {repair} on Fernway Repair · </span>}{week[c.network] ?? 0}{(week[c.network] ?? 0) < c.target && <span className="off-target"> · {c.target - (week[c.network] ?? 0)} short</span>}</td>
                   <td className="r">
                     <span className="stepper">
                       <Btn size="xs" variant="ghost" icon aria-label={`Lower ${NETWORK_LABEL[c.network]} target`} onClick={() => d({ type: 'strategy/cadence', network: c.network, target: c.target - 1 })}><Minus size={12} /></Btn>

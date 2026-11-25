@@ -68,7 +68,7 @@ figcaption b { color: var(--ink); }
 
 <section>
   <div class="tiles">
-    <div class="tile"><b>13</b><span>Sage PRs merged, incl. this closing one</span></div>
+    <div class="tile"><b>15</b><span>Sage PRs merged</span></div>
     <div class="tile"><b>8 / 8</b><span>fixes listed in the prompt, done</span></div>
     <div class="tile"><b>7 Go · 6 Later · 1 Drop</b><span>feature pitches; every Go built</span></div>
     <div class="tile"><b>0 → 37</b><span>Strategy tests (slice, intents, generator)</span></div>
@@ -90,9 +90,9 @@ figcaption b { color: var(--ink); }
 <tr><td>Complete brief</td><td>Text and budget; Sage guessed the rest</td><td>Optional details; Sage asks for the goal and the date when they’re missing; assumptions shown on briefs from other agents</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/57">#57</a></td></tr>
 <tr><td>Credible plan generator</td><td>The same 10 posts for any brief; a regex v2</td><td>Template by goal, product angles, season, networks from the cadence; v2 applies every request in the note</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/63">#63</a></td></tr>
 <tr><td>Live goals</td><td>Trail Week frozen on day 2</td><td>Results come in with the days; Sage proposes real moves or a new goal off 85–120% of trajectory (Draft, or alone on Act)</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/69">#69</a></td></tr>
-<tr><td>Editable pillars</td><td>Read-only</td><td>Sam reweights and describes; Sage checks the sum and the posts-a-week impact; Undo</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/79">#79</a></td></tr>
+<tr><td>Editable pillars</td><td>Read-only</td><td>Sam reweights, renames, describes and adds pillars; Sage checks names, sum and posts-a-week impact; a renamed pillar keeps counting its posts; Undo</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/79">#79</a></td></tr>
 <tr><td>Campaign recap</td><td>Seeded on Repair Friday only</td><td>Written by Sage at the end, a Desk card, the lesson as a proposal, and Iris’s full report behind “Full recap”</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/86">#86</a> closing PR</td></tr>
-<tr><td>Calendar moments (≈ Calendar notes)</td><td>None</td><td>4 moments raised 3 weeks before, added with ideas for Atlas, new action Plan for calendar moments</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/95">#95</a></td></tr>
+<tr><td>Calendar moments (≈ Calendar notes)</td><td>None</td><td>4 moments raised 3 weeks before, added with ideas for Atlas and shown on their days in Atlas’s calendar, new action Plan for calendar moments</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/95">#95</a></td></tr>
 <tr><td>Campaign labels (≈ Labels)</td><td><code>labels</code> unused</td><td>Label on Atlas’s posts, and on conversations through Nova’s own Inbox rule; link to the filtered Inbox</td><td class="num"><a href="https://github.com/mbousendorfer/protopulse/pull/100">#100</a></td></tr>
     </tbody>
   </table></div>
@@ -144,8 +144,6 @@ figcaption b { color: var(--ink); }
 <section>
   <h2>Still open</h2>
   <ul class="list">
-    <li><h3>Moments in Atlas’s calendar</h3><p>Request <code>atlas-from-sage-calendar-themes.md</code>: <code>themesOf(s)</code> is exported; the band is Atlas’s to draw. Until then moments live in Strategy.</p></li>
-    <li><h3>Adding and renaming pillars</h3><p>Request <code>atlas-from-sage-open-pillars.md</code>: <code>Pillar</code> is a 4-name union keyed into Atlas’s and Juno’s tables. Reweighting and descriptions work today.</p></li>
     <li><h3>Simulated campaign results</h3><p>Results drift toward a pace per campaign (<code>ponytail:</code> in the slice) until Iris exposes attribution per campaign.</p></li>
     <li><h3>Later at pitch</h3><p>Tasks that move by themselves, monthly review on the 1st, campaign budget, campaign UTM. Dropped: Claire’s budget approval.</p></li>
   </ul>

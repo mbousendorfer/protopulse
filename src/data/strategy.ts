@@ -170,7 +170,8 @@ export const CAMPAIGNS: Campaign[] = [
   },
 ]
 
-export type Pillar = { id: string; name: PillarName; desc: string; target: number }
+/** `aliases`: the names it had before a rename, so posts already out still count for it. */
+export type Pillar = { id: string; name: PillarName; desc: string; target: number; aliases?: string[] }
 export const PILLARS: Pillar[] = [
   { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35 },
   { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30 },
@@ -192,11 +193,11 @@ export const CADENCE: Cadence[] = [
 export const PILLAR_HISTORY: Partial<Record<PillarName, number>> = { 'Gear that lasts': 20, 'Trail stories': 13, 'Repair & care': 5, Community: 2 }
 const out = (p: Post, from: number, t: number) => p.at >= from && p.at <= t && (p.status === 'published' || p.status === 'scheduled')
 /** Share of posts per pillar over the last 30 days, in %. */
-export function pillarMix(posts: Post[], names: PillarName[], t: number): Record<string, number> {
+export function pillarMix(posts: Post[], pillars: { name: PillarName; aliases?: string[] }[], t: number): Record<string, number> {
   const recent = posts.filter(p => out(p, t - 30 * DAY, t))
-  const count = (n: PillarName) => (PILLAR_HISTORY[n] ?? 0) + recent.filter(p => p.pillar === n).length
-  const total = names.reduce((sum, n) => sum + count(n), 0)
-  return Object.fromEntries(names.map(n => [n, total ? Math.round((count(n) / total) * 100) : 0]))
+  const count = ({ name, aliases = [] }: { name: PillarName; aliases?: string[] }) => [name, ...aliases].reduce((n, x) => n + (PILLAR_HISTORY[x as keyof typeof PILLAR_HISTORY] ?? 0) + recent.filter(p => p.pillar === x).length, 0)
+  const total = pillars.reduce((sum, p) => sum + count(p), 0)
+  return Object.fromEntries(pillars.map(p => [p.name, total ? Math.round((count(p) / total) * 100) : 0]))
 }
 /** Posts that went out per network over the last 7 days. */
 export function postsLastWeek(posts: Post[], t: number): Partial<Record<Network, number>> {
