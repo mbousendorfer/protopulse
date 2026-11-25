@@ -17,7 +17,7 @@ Trié par valeur ; les corrections « À corriger d'abord » passent en tête et
 | F7 | Quota 5 clips / vidéo / semaine | affiché `agents.ts:164`, jamais lu | Appliqué à l'envoi (Sam, Desk, Act) : au-delà, Juno garde les meilleurs et dit pourquoi les autres attendent ; compteur « n of 5 this week » sur la source | 3 | S | done |
 | F8 | Autorisation signée à l'écran | affiché `agents.ts:165`, jamais lu | Registre des personnes (staff / client, signé ou non) ; un clip où apparaît une personne sans autorisation ne part pas, avec la raison ; « Release signed » l'enregistre | 3 | M | done |
 | F9 | Durée par réseau | `model.ts:282` pénalise > 60 s partout, LinkedIn compris | Spec par réseau (15–60 s, 90 s LinkedIn) : score et envoi n'écartent que les réseaux hors spec, l'onglet Post le dit par réseau | 2 | S | done |
-| F10 | Boucle publiée | `h-clip-win` statique (`desk.ts:225`) ; un clip envoyé ne devient jamais « Published » | À l'heure du post, le clip passe Published avec ses chiffres (lus chez Iris, `clipPerf`, repli local en attendant) ; carte Good news réelle quand il bat la moyenne du réseau | 3 | M | done (en attente : clipPerf d’Iris, publication d’Atlas) |
+| F10 | Boucle publiée | `h-clip-win` statique (`desk.ts:225`) ; un clip envoyé ne devient jamais « Published » | À l'heure du post, le clip passe Published avec ses chiffres (lus chez Iris, `clipPerf`, repli local en attendant) ; carte Good news réelle quand il bat la moyenne du réseau | 3 | M | done (chiffres d’Iris lus ; publication des posts : demande à Atlas ouverte) |
 
 ## Nouvelles features (pitch avant de construire)
 

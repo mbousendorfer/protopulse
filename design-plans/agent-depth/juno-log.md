@@ -25,3 +25,4 @@
 - 25/11/2026 · Pitch N7 (labels et campagne sur les posts) · **Go**.
 - 25/11/2026 · Pitch N8 (clips pendant un live) · **Drop**.
 - 25/11/2026 · N7 labels et campagne · chaque post de clip porte le label du pilier ; la campagne de Sage s'y ajoute quand elle est en cours et compte déjà des posts Atlas de ce pilier (Trail Week : Trail stories, Gear that lasts, Community ; pas Repair & care) ; lu dans `s.strategy`, jamais écrit ; visible dans l'onglet Post · rattacher tout clip à toute campagne en cours · une campagne sans rapport avec le pilier fausserait les rapports de Sage et d'Iris.
+- 25/11/2026 · Boucle publiée, suite · Juno lit désormais `clipPerf` et `netAverage` d'Iris (demande traitée par Iris) : l'estimation locale `ponytail:` disparaît, les chiffres du clip, de la carte Good news et d'Insights sont les mêmes ; rétention affichée quand Iris la donne. Le « Track record » (N4) garde la médiane : c'est le jugement de Juno, pas un chiffre affiché comme mesure.

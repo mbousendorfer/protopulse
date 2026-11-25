@@ -72,7 +72,8 @@ export type Clip = {
   pillar: Pillar
   status: ClipStatus
   edited?: boolean
-  stats?: { views: number; er: number }
+  /** Iris's numbers once it's out (retention and shares when Iris has them). */
+  stats?: { views: number; er: number; retention?: number; shares?: number }
   posts?: string[]
   /** Snoozed until this app time. */
   back?: number
