@@ -53,3 +53,7 @@
 - 25/11 · Filters · nom de vue proposé = phrase des filtres (« Negative conversations from the last 7 days »), 40 caractères max · nom vide · Sam n'a qu'à valider.
 - 25/11 · Post threads · le post reste un texte de la conversation, la clé est la partie titre (`postKey`) · objet Post partagé avec Atlas · les posts publiés sont chez Atlas ; un lien vers son calendrier pourra suivre si Atlas expose un id.
 - 25/11 · Post threads · « By post » : 4 posts, ceux avec des commentaires en attente d'abord · liste complète · la barre latérale est déjà longue.
+- 25/11 · pitch Credible volume · **Later** · — · reste au backlog.
+- 25/11 · pitch Translation · **Go** · — · tel que pitché.
+- 25/11 · pitch Export CSV · **Later** · — · reste au backlog.
+- 25/11 · Translation · table de traductions mockée par texte (`translate.ts`), affichée sous l'original (pas de bascule « Show original ») · bascule original/traduit · Sam voit les deux sans clic ; un vrai modèle est hors périmètre.
