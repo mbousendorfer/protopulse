@@ -6,11 +6,11 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  COMPETITORS, EVENTS, FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
-  type CompEvent, type CompetitorId, type Mention, type Search, type Sentiment,
+  FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
+  type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
 import { MENTION_NET, MENTION_TAGS, type EventState, type MentionOp } from './slice'
-import { activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
+import { BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, visibleMentions } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -21,7 +21,6 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 
 
 type Tab = 'competitors' | 'mentions' | 'trends' | 'searches'
-const compName = (id: CompetitorId) => COMPETITORS.find(c => c.id === id)!.name
 
 export default function ListeningPage() {
   const loc = useLocation()
@@ -30,7 +29,7 @@ export default function ListeningPage() {
   const seg = loc.pathname.split('/')[2] ?? ''
   const tab: Tab = (['mentions', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
   const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
-  const openEvents = EVENTS.filter(e => watched.has(e.competitor) && eventState(s.listening.events[e.id], e) === null).length
+  const openEvents = eventsOf(s).filter(e => watched.has(e.competitor) && eventState(s.listening.events[e.id], e) === null).length
   return (
     <div className="page listening">
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
@@ -85,10 +84,10 @@ function Competitors({ view }: { view: 'events' | 'benchmark' }) {
 function Events() {
   const { s } = useStore()
   const now = useNow()
-  const [comp, setComp] = useState<'all' | CompetitorId>('all')
+  const [comp, setComp] = useState<string>('all')
   const [status, setStatus] = useState<'open' | 'handled' | 'all'>('open')
   const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
-  const list = EVENTS.filter(e => watched.has(e.competitor) && (comp === 'all' || e.competitor === comp))
+  const list = eventsOf(s).filter(e => watched.has(e.competitor) && (comp === 'all' || e.competitor === comp))
     .filter(e => { const st = eventState(s.listening.events[e.id], e); return status === 'all' || (status === 'open' ? !st : !!st) })
     .sort((a, b) => b.at - a.at)
   return (
@@ -96,7 +95,7 @@ function Events() {
       <div className="row">
         <Filters label="Status" value={status} onChange={setStatus} items={[{ value: 'open', label: 'Needs a move' }, { value: 'handled', label: 'Handled' }, { value: 'all', label: 'All' }]} />
         <span className="spacer" />
-        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...COMPETITORS.filter(c => watched.has(c.id)).map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...s.listening.watch.filter(w => watched.has(w.id)).map(w => ({ value: w.id, label: w.name }))]} />
       </div>
       {!list.length && <Empty icon={<Check size={18} />} title={status === 'open' ? 'Every competitor move has an answer' : 'Nothing here'} body="Echo raises launches, price changes, campaigns and viral posts as they happen." />}
       <ul className="events">
@@ -106,7 +105,7 @@ function Events() {
             <li key={e.id}>
               <Link to={`/listening/competitors/${e.id}`} className="card event-row">
                 <div className="event-top">
-                  <span className="row tight"><SocialAvatar name={compName(e.competitor)} network={e.proof.network} org size={24} /><b>{compName(e.competitor)}</b><span className="chip">{e.type}</span></span>
+                  <span className="row tight"><SocialAvatar name={competitorName(s, e.competitor)} network={e.proof.network} org size={24} /><b>{competitorName(s, e.competitor)}</b><span className="chip">{e.type}</span></span>
                   <span className="mono faint">{ago(e.at, now)}</span>
                 </div>
                 <h3>{e.title}</h3>
@@ -129,10 +128,10 @@ function EventView() {
   const { s, d } = useStore()
   const now = useNow()
   const nav = useNavigate()
-  const e = EVENTS.find(x => x.id === id)
+  const e = eventsOf(s).find(x => x.id === id)
   if (!e) return <Empty title="This event doesn’t exist" action={<Btn onClick={() => nav('/listening/competitors')}>All events</Btn>} />
   const st = eventState(s.listening.events[e.id], e)
-  const c = COMPETITORS.find(x => x.id === e.competitor)!
+  const c = competitorOf(s, e.competitor) ?? { id: e.competitor, name: competitorName(s, e.competitor), handle: competitorName(s, e.competitor) }
   return (
     <div className="event-layout">
       <div className="stack">
@@ -185,11 +184,14 @@ function EventView() {
 
 function Benchmark() {
   const { s, d } = useStore()
-  const [comp, setComp] = useState<'all' | CompetitorId>('all')
+  const now = useNow()
+  const [comp, setComp] = useState<string>('all')
   // Only competitors Echo still watches: a removed or paused one leaves the benchmark, as the Manage page promises.
   const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
-  const tracked = COMPETITORS.filter(c => watched.has(c.id))
-  const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...tracked.map(c => ({ ...c, us: false }))]
+  const tracked = competitorsOf(s).filter(c => watched.has(c.id))
+  const sov = shareOfVoice(s)
+  const rows = [{ id: 'fernway', ...FERNWAY_ROW, us: true }, ...tracked.map(c => ({ ...c, us: false }))].map(r => ({ ...r, sov: sov[r.id] ?? 0 }))
+  const backfilling = s.listening.watch.filter(w => w.tracking && !competitorReady(s, w))
   const posts = TOP_POSTS.filter(p => watched.has(p.competitor) && (comp === 'all' || p.competitor === comp))
   return (
     <div className="stack lg">
@@ -214,6 +216,7 @@ function Benchmark() {
           </table>
         </div>
         <div className="card-body">
+          {backfilling.map(w => <p key={w.id} className="row tight muted mb-2"><Mark agent="echo" />Echo is reading {w.name}’s last 30 days. Their row appears in about {Math.max(1, Math.ceil((w.since + BACKFILL_MS - now) / 60_000))} min.</p>)}
           <div className="faint caption">Share of voice · mentions in the last 30 days</div>
           <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
         </div>
@@ -246,12 +249,12 @@ function Benchmark() {
       <section className="card">
         <div className="card-head">
           <h2>Their top posts <span className="faint">· 30 days</span></h2>
-          <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...tracked.map(c => ({ value: c.id as 'all' | CompetitorId, label: c.name }))]} />
+          <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All' }, ...tracked.map(c => ({ value: c.id, label: c.name }))]} />
         </div>
         <ul className="top-posts">
           {posts.map(p => (
             <li key={p.id}>
-              <div className="row tight"><SocialAvatar name={compName(p.competitor)} network={p.network} org size={24} /><b>{compName(p.competitor)}</b><span className="faint">· {p.format}</span></div>
+              <div className="row tight"><SocialAvatar name={competitorName(s, p.competitor)} network={p.network} org size={24} /><b>{competitorName(s, p.competitor)}</b><span className="faint">· {p.format}</span></div>
               <p className="tp-title">{p.title}</p>
               <p className="mono faint">{p.views} views · {p.er}% engagement</p>
               <p className="tp-take"><Mark agent="echo" /><span>{p.takeaway}</span></p>
@@ -268,9 +271,10 @@ function Profile() {
   const { s } = useStore()
   const now = useNow()
   const nav = useNavigate()
-  const c = COMPETITORS.find(x => x.id === cid)
+  const c = cid ? competitorOf(s, cid) : undefined
+  const sov = shareOfVoice(s)
   if (!c) return <Empty title="Unknown competitor" action={<Btn onClick={() => nav('/listening/competitors')}>Competitors</Btn>} />
-  const events = EVENTS.filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
+  const events = eventsOf(s).filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
   return (
     <div className="stack lg">
       <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} className="self-start"><ArrowLeft size={14} />Benchmark</Btn>
@@ -282,7 +286,7 @@ function Profile() {
         <div className="card pad stat"><dd><b className="num">{(c.followers / 1000).toFixed(0)}k</b></dd><dt className="label">Followers · you have {(FERNWAY_ROW.followers / 1000).toFixed(0)}k</dt></div>
         <div className="card pad stat"><dd><b className="num">{c.er}%</b></dd><dt className="label">Engagement rate · you {FERNWAY_ROW.er}%</dt></div>
         <div className="card pad stat"><dd><b className="num">{c.cadence}</b></dd><dt className="label">Posts per week · you {FERNWAY_ROW.cadence}</dt></div>
-        <div className="card pad stat"><dd><b className="num">{c.sov}%</b></dd><dt className="label">Share of voice · you {FERNWAY_ROW.sov}%</dt></div>
+        <div className="card pad stat"><dd><b className="num">{sov[c.id] ?? 0}%</b></dd><dt className="label">Share of voice · you {sov.fernway}%</dt></div>
       </dl>
       <div className="grid-2">
         <section className="card">
@@ -302,6 +306,7 @@ function Profile() {
         <section className="card">
           <div className="card-head"><h2>Their top posts</h2><span className="faint">Hero product: {c.hero} · {c.price}</span></div>
           <ul className="rows">
+            {!TOP_POSTS.some(p => p.competitor === c.id) && <li className="faint">Echo ranks their top posts once she has 30 days of them.</li>}
             {TOP_POSTS.filter(p => p.competitor === c.id).map(p => (
               <li key={p.id} className="prof-ev">
                 <span className="row tight"><Net n={p.network} />{p.title}</span>

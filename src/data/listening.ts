@@ -4,7 +4,8 @@ import { T, MIN } from '../app/time'
 export type CompetitorId = 'peakline' | 'norro' | 'trailkind' | 'basecamp'
 
 export type Competitor = {
-  id: CompetitorId
+  /** One of the four seeded competitors, or the id of one Sam added (see competitorsOf). */
+  id: CompetitorId | string
   name: string
   handle: string
   positioning: string
@@ -32,7 +33,7 @@ export type Move = { label: string; agent: AgentId; kind: 'counter' | 'sage' | '
 
 export type CompEvent = {
   id: string
-  competitor: CompetitorId
+  competitor: CompetitorId | string
   type: EventType
   title: string
   at: number
