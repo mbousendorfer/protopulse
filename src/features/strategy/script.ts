@@ -17,10 +17,4 @@ export const SCRIPT: ScriptEvent[] = [
       preview: { type: 'plan', title: 'Proposed change', lines: ['Add 2 customer-photo posts per week on Instagram', 'Replace 1 product post per week on Facebook', 'Community reaches 19% within 3 weeks'] } },
     auto: { text: 'Added 2 Community posts per week to the cadence', reason: 'Cadence, set to Act', link: '/strategy/pillars' },
   },
-  {
-    id: 'ev-demo-sage', order: 265, label: 'Sage · demo: Trail Week budget check', agent: 'sage',
-    handoff: { agent: 'sage', kind: 'approval', urgency: 'week', topic: 'Campaign', action: 'sage-plan',
-      title: 'Trail Week has spent 62% of its budget on day 2', context: 'Demo event added from Sage’s module only.',
-      why: 'Campaign plans are set to Draft.', confidence: 80, link: '/strategy/campaigns/trail-week' },
-  },
 ]
