@@ -1,7 +1,7 @@
 // Nova's Inbox rules (Agorapulse's "Automated moderation"): when a message says some words, on some network or type,
 // Nova labels, assigns, hides, reviews or sets the sentiment. She applies them on Act; on Draft and Suggest she proposes.
 import type { Network } from '../../app/types'
-import type { Assignee, Conversation, ConvType, Sentiment } from '../../data/inbox'
+import { ROSTER, TEAMMATES, type Assignee, type Conversation, type ConvType, type Sentiment } from '../../data/inbox'
 import { NETWORK_LABEL } from '../../data/agents'
 
 export type RuleOp =
@@ -22,10 +22,16 @@ export type InboxRule = {
 export const RULES: InboxRule[] = [
   { id: 'ir-refund', words: ['refund', 'money back', 'reimburse'], then: { op: 'label', value: 'Refund' }, on: true, uses: 14, origin: 'Set up with you on Day 1' },
   { id: 'ir-order', words: ['where is my order', 'tracking', 'order #', 'processing'], then: { op: 'label', value: 'Order status' }, on: true, uses: 22, origin: 'Set up with you on Day 1' },
+  { id: 'ir-wholesale', words: ['wholesale', 'bulk order', 'retailer', 'stock the', 'for our shop'], then: { op: 'assign', value: 'yanis' }, on: true, uses: 6, origin: 'Yanis asked for B2B on 4 Nov' },
+  { id: 'ir-care', words: ['where is my order', 'not arrived', 'order #', 'processing', 'tracking'], type: 'dm', then: { op: 'assign', value: 'leo' }, on: true, uses: 27, origin: 'Set up with you on Day 1' },
   { id: 'ir-press', words: ['journalist', 'reporter', 'writing a piece', 'article'], then: { op: 'assign', value: 'claire' }, on: true, uses: 3, origin: 'Claire asked for press on 12 Nov' },
   { id: 'ir-spam', words: ['followers', 'crypto', 'claim here', '90% off', 'link in bio'], then: { op: 'hide' }, on: true, uses: 9, origin: 'Learned from your edits' },
+  { id: 'ir-trailweek', words: ['trail week', '#fernwaytrailweek'], then: { op: 'label', value: 'Trail Week' }, on: true, uses: 38, origin: 'Sage · Trail Week campaign' },
   { id: 'ir-thanks', words: ['thank you', 'thanks', 'love it', 'respect'], type: 'mention', then: { op: 'review' }, on: true, uses: 41, origin: 'Set up with you on Day 1' },
 ]
+
+/** A teammate answers what is assigned to them a few minutes later (scripted). */
+export const TEAM_DELAY = 4 * 60_000
 
 const SENT: Record<Sentiment, string> = { positive: 'positive', neutral: 'neutral', negative: 'negative' }
 const TYPE: Record<ConvType, string> = { comment: 'comments', dm: 'messages', mention: 'mentions', review: 'reviews', ad: 'ad comments' }
@@ -34,7 +40,7 @@ export const whenText = (r: Pick<InboxRule, 'words' | 'network' | 'type'>) =>
   [`says ${r.words.map(w => `“${w}”`).join(', ')}`, r.type && `in ${TYPE[r.type]}`, r.network && `on ${NETWORK_LABEL[r.network]}`].filter(Boolean).join(' ')
 
 export const thenText = (o: RuleOp) =>
-  o.op === 'label' ? `Label ${o.value}` : o.op === 'assign' ? `Assign to ${o.value === 'sam' ? 'you' : 'Claire'}` : o.op === 'hide' ? 'Hide' : o.op === 'review' ? 'Mark reviewed' : `Mark ${SENT[o.value]}`
+  o.op === 'label' ? `Label ${o.value}` : o.op === 'assign' ? `Assign to ${o.value === 'sam' ? 'you' : ROSTER[o.value].short}` : o.op === 'hide' ? 'Hide' : o.op === 'review' ? 'Mark reviewed' : `Mark ${SENT[o.value]}`
 
 const said = (c: Conversation) => c.messages.filter(m => m.from === 'them').map(m => m.text).join(' ').toLowerCase()
 
@@ -46,7 +52,7 @@ export const matches = (r: InboxRule, c: Conversation) =>
 export function effect(o: RuleOp, c: Conversation): Partial<Conversation> | undefined {
   switch (o.op) {
     case 'label': return c.labels?.includes(o.value) ? undefined : { labels: [...(c.labels ?? []), o.value] }
-    case 'assign': return c.assignee === o.value ? undefined : { assignee: o.value }
+    case 'assign': return c.assignee === o.value ? undefined : { assignee: o.value, teamDue: TEAMMATES.includes(o.value) ? c.at + TEAM_DELAY : undefined }
     case 'hide': return c.status === 'hidden' ? undefined : { status: 'hidden', note: 'Hidden by Nova · Inbox rule', reviewed: true, reviewedBy: 'nova' }
     case 'review': return c.reviewed ? undefined : { reviewed: true, reviewedBy: 'nova' }
     case 'sentiment': return c.sentiment === o.value ? undefined : { sentiment: o.value }
@@ -57,7 +63,7 @@ export function effect(o: RuleOp, c: Conversation): Partial<Conversation> | unde
 export function didText(o: RuleOp, who: string) {
   switch (o.op) {
     case 'label': return `Labelled ${who} “${o.value}”`
-    case 'assign': return `Assigned ${who} to ${o.value === 'sam' ? 'you' : 'Claire'}`
+    case 'assign': return `Assigned ${who} to ${o.value === 'sam' ? 'you' : ROSTER[o.value].short}`
     case 'hide': return `Hid ${who}`
     case 'review': return `Marked ${who} reviewed`
     case 'sentiment': return `Marked ${who} ${o.value}`

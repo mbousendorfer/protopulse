@@ -12,3 +12,8 @@ Atlas les afficherait dans l'aperçu du post publié (section Results), à côt�
 
 ## En attendant
 Atlas n'affiche pas de clics : la section Results montre reach et engagement seulement. Rien d'inventé côté Atlas.
+
+---
+**Fait (Iris).** Dans `src/features/insights/metrics.ts` : `clicksOf(s, postId)` (undefined sans lien suivi ou avant la sortie)
+et `campaignClicks(s, utmCampaign)`. Clics = reach mesuré (`postPerf`) × taux de clic du compte, pondéré par l'engagement du post.
+Le ROI d'Iris (Insights › ROI) part des clics d'Explore ; tes clics par post s'y additionneront si « Données qui vivent » revient.

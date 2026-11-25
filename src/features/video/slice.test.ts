@@ -4,6 +4,7 @@ import { reducer, type Action } from '../../app/reducer'
 import { now } from '../../app/core'
 import { PHASES, PHASE_MS, SEEDS, TRANSCRIPT } from '../../data/video'
 import { clipLengthOf, clipPosts as clipPosts2, rescore } from './model'
+import { clipPerf as irisClipPerf } from '../insights/metrics'
 
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
@@ -229,6 +230,8 @@ test('a sent clip becomes Published at its posts’ time, with numbers, and good
   const c = s.video.clips.find(x => x.id === 'clip-live-zips')!
   expect(c.status).toBe('published')
   expect(c.stats!.views).toBeGreaterThan(0)
+  // Iris's numbers: the same as Insights, Chat and ⌘K read.
+  expect(c.stats).toEqual(irisClipPerf(s, c.id, rescore(c, TRANSCRIPT.live).total))
   expect(s.log.some(l => l.text.startsWith('“Zips break, not fabric” is out:'))).toBe(true)
   const news = s.handoffs.find(h => h.ref === 'clip-live-zips')
   expect(news?.kind).toBe('news')
@@ -247,4 +250,70 @@ test('the score learns: published clips of the same pillar move the total, and t
   const first = Math.min(...s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips').map(p => p.at))
   s = run(later(s, first - now(s) + 1000), { type: 'core/heartbeat' })
   expect(s.video.clips.find(c => c.id === 'clip-live-bottle')?.track?.like?.id).toBe('clip-live-zips')
+})
+
+test('covers follow the reframe level: Juno picks one (Act, Draft), only suggests (Suggest); never a frame with Hugo', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  const act = cut('act')
+  expect(act.every(c => c.cover?.by === 'juno')).toBe(true)
+  expect(act.every(c => c.cover!.at >= 6)).toBe(true)
+  expect(act.find(c => c.post.networks.includes('youtube'))?.ytTitle).toMatch(/#Shorts$/)
+  expect(cut('suggest').every(c => !c.cover)).toBe(true)
+  expect(initialState().video.clips.find(c => c.id === 'clip-repair-strap')?.cover?.by).toBe('juno')
+})
+
+test('versions follow the reframe level: built on Act and Draft, not on Suggest', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  expect(cut('act').find(c => c.post.networks.includes('linkedin'))?.versions?.linkedin?.aspect).toBe('1:1')
+  expect(cut('draft').every(c => c.versions)).toBe(true)
+  expect(cut('suggest').every(c => !c.versions)).toBe(true)
+})
+
+test('posts carry the pillar label, and Sage’s running campaign when it already has posts of that pillar', () => {
+  let s = run(initialState(), { type: 'video/send', ids: ['clip-live-zips', 'clip-repair-strap'] })
+  const zips = s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips')
+  expect(zips.every(p => p.labels?.[0] === 'Gear that lasts' && p.campaign === 'Trail Week' && p.campaignId === 'trail-week')).toBe(true)
+  const strap = s.publishing.posts.filter(p => p.media === 'clip:clip-repair-strap')
+  expect(strap.every(p => p.labels?.[0] === 'Repair & care' && !p.campaign)).toBe(true)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.some(p => p.media === 'clip:clip-live-zips')).toBe(false)
+})
+
+test('language versions go out as their own posts: approved ones on Draft, all on Act; Undo takes them back', () => {
+  const id = 'clip-live-zips'
+  // Draft: French approved, German still to review.
+  let s = run(initialState(), { type: 'video/dub', id, lang: 'fr' }, { type: 'video/dub', id, lang: 'de' }, { type: 'video/approveDub', id, lang: 'fr' }, { type: 'video/send', ids: [id] })
+  const posts = s.publishing.posts.filter(p => p.media === `clip:${id}`)
+  const fr = posts.filter(p => p.labels?.includes('French'))
+  expect(fr.length).toBe(posts.length / 2)
+  expect(posts.some(p => p.labels?.includes('German'))).toBe(false)
+  expect(fr[0].text).not.toBe(posts.find(p => !p.labels?.includes('French'))!.text)
+  expect(s.log[0].text).toMatch(/French version included\. German waits for your review\./)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.publishing.posts.some(p => p.media === `clip:${id}`)).toBe(false)
+  // Act: every language made goes.
+  const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'de' }, { type: 'video/send', ids: [id] })
+  expect(act.publishing.posts.some(p => p.media === `clip:${id}` && p.labels?.includes('German'))).toBe(true)
+})
+
+test('the moderator can replay the GR20 upload once the feed played it, as long as none of its clips went out', () => {
+  let s = done(run(initialState(), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  expect(s.video.clips.filter(c => c.source === 'gr20' && c.status === 'ready')).toHaveLength(3)
+  s = run(s, { type: 'core/fire', eventId: 'ev-video-gr20' })
+  expect(s.video.sources.find(x => x.id === 'gr20')?.status).toBe('processing')
+  expect(s.video.clips.some(c => c.source === 'gr20')).toBe(false)
+  expect(s.handoffs.some(h => h.ref === 'gr20')).toBe(false)
+  s = done(s)
+  expect(s.video.clips.filter(c => c.source === 'gr20')).toHaveLength(3)
+  // Once a clip went out, the upload is history.
+  s = run(s, { type: 'video/send', ids: ['clip-gr20-dry'] }, { type: 'core/fire', eventId: 'ev-video-gr20' })
+  expect(s.video.sources.find(x => x.id === 'gr20')?.status).toBe('ready')
+})
+
+test('“4 more moments” sets up the weekly quota: sending them all keeps 3 and says why', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-more' })
+  const ready = s.video.clips.filter(c => c.source === 'repair' && c.status === 'ready').map(c => c.id)
+  expect(ready.length).toBeGreaterThan(3)
+  s = run(s, { type: 'video/send', ids: ready })
+  expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
 })

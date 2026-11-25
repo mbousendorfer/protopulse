@@ -127,3 +127,31 @@ export function clipPerf(s: State, clipId: string, score?: number): { views: num
   const er = Math.round(perf.reduce((a, x) => a + x.er, 0) / perf.length * 10) / 10
   return { views, er, retention: Math.round(Math.min(70, 30 + sc / 3)), shares: Math.round(views * er / 400) }
 }
+
+/**
+ * The best time to post on a network on one weekday (0 = Monday), from the same heatmap as Explore.
+ * `reason` quotes the reach against the network's median slot. For Atlas's slot moves (requests/iris-from-atlas-best-slots).
+ */
+export function bestSlotOf(_s: State, network: Network, weekday: number): { time: string; reason: string } | undefined {
+  if (!isSocial(network) || weekday < 0 || weekday > 6) return
+  const row = heat(network)[weekday]
+  const col = row.indexOf(Math.max(...row))
+  const b = BEST_CELL[network]
+  const time = col === b.col ? b.time : `${HEAT_COLS[col]}:00`
+  const lift = Math.round(b.lift * row[col] * 10) / 10
+  return { time, reason: `${time} gets ${lift}× the median reach on ${DAY_NAMES[weekday]}s` }
+}
+
+/** Link clicks per reach, by network: Explore's 7-day clicks over reach (they are shares of the same totals). */
+const clickRate = () => KPIS[7].find(k => k.key === 'clicks')!.value / KPIS[7].find(k => k.key === 'reach')!.value
+
+/** Clicks on a published post's tracked link (undefined without a link or before it's out). For Atlas (requests/iris-from-atlas-link-clicks). */
+export function clicksOf(s: State, postId: string): number | undefined {
+  const p = s.publishing.posts.find(x => x.id === postId)
+  const perf = p?.link ? postPerf(s, postId) : undefined
+  return perf && p ? Math.round(perf.reach * clickRate() * (perf.er / (NET_SHARE[p.network]?.er || perf.er))) : undefined
+}
+
+/** Clicks on every tracked link of a UTM campaign (utm_campaign). */
+export const campaignClicks = (s: State, utmCampaign: string) =>
+  s.publishing.posts.filter(p => p.link?.utm?.utm_campaign === utmCampaign).reduce((t, p) => t + (clicksOf(s, p.id) ?? 0), 0)

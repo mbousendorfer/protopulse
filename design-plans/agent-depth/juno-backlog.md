@@ -17,19 +17,19 @@ Trié par valeur ; les corrections « À corriger d'abord » passent en tête et
 | F7 | Quota 5 clips / vidéo / semaine | affiché `agents.ts:164`, jamais lu | Appliqué à l'envoi (Sam, Desk, Act) : au-delà, Juno garde les meilleurs et dit pourquoi les autres attendent ; compteur « n of 5 this week » sur la source | 3 | S | done |
 | F8 | Autorisation signée à l'écran | affiché `agents.ts:165`, jamais lu | Registre des personnes (staff / client, signé ou non) ; un clip où apparaît une personne sans autorisation ne part pas, avec la raison ; « Release signed » l'enregistre | 3 | M | done |
 | F9 | Durée par réseau | `model.ts:282` pénalise > 60 s partout, LinkedIn compris | Spec par réseau (15–60 s, 90 s LinkedIn) : score et envoi n'écartent que les réseaux hors spec, l'onglet Post le dit par réseau | 2 | S | done |
-| F10 | Boucle publiée | `h-clip-win` statique (`desk.ts:225`) ; un clip envoyé ne devient jamais « Published » | À l'heure du post, le clip passe Published avec ses chiffres (lus chez Iris, `clipPerf`, repli local en attendant) ; carte Good news réelle quand il bat la moyenne du réseau | 3 | M | done (en attente : clipPerf d’Iris, publication d’Atlas) |
+| F10 | Boucle publiée | `h-clip-win` statique (`desk.ts:225`) ; un clip envoyé ne devient jamais « Published » | À l'heure du post, le clip passe Published avec ses chiffres (lus chez Iris, `clipPerf`, repli local en attendant) ; carte Good news réelle quand il bat la moyenne du réseau | 3 | M | done (chiffres d’Iris lus ; publication des posts : demande à Atlas ouverte) |
 
 ## Nouvelles features (pitch avant de construire)
 
 | # | Capacité (Opus Clip / Descript / Agorapulse) | État actuel | Version agentique | Valeur | Taille | Statut |
 |---|---|---|---|---|---|---|
-| N1 | Versions par réseau | un clip = un ratio pour tous ses réseaux (`model.ts:58`) ; `clipPosts` envoie le même cadre partout | Un clip = une version par réseau (ratio, durée, sous-titres hors zones d'interface, légende) ; Juno les fait en Act (reframe) et signale celles hors spec | 3 | L | todo |
+| N1 | Versions par réseau | un clip = un ratio pour tous ses réseaux (`model.ts:58`) ; `clipPosts` envoie le même cadre partout | Un clip = une version par réseau (ratio, durée, sous-titres hors zones d'interface, légende) ; Juno les fait en Act (reframe) et signale celles hors spec | 3 | L | done (aperçu Atlas : demande ouverte) |
 | N2 | Juno en Chat et ⌘K | intent `clip` : seulement « latest video » et un lien (`agent.tsx:20-58`) | « Clip the best 3 moments about the strap », « Make a LinkedIn version », « Why is this clip not going out? », « Which clip did best last week? » — chiffres lus dans l'état | 3 | M | done |
-| N3 | Couverture et miniature | aucune (miniature = poster de la source) | Juno propose 3 cadres de couverture, texte de couverture au brand kit, titre YouTube ; « Pick a better cover » | 2 | M | todo |
+| N3 | Couverture et miniature | aucune (miniature = poster de la source) | Juno propose 3 cadres de couverture, texte de couverture au brand kit, titre YouTube ; « Pick a better cover » | 2 | M | done |
 | N4 | Score qui apprend | `rescore` ne lit que le clip (`model.ts:268`) | Le score intègre les perfs passées par pilier et réseau ; « Why this moment » cite le clip passé comparable | 2 | M | done |
-| N5 | Doublage publié | les doublages ne produisent aucun post | Une langue validée produit ses posts (légende traduite) ; en Act, Juno publie les langues que le Playbook autorise | 2 | M | todo |
-| N6 | Autorisations avancées | — (F8 bloque seulement) | Juno floute ou coupe le passage sans autorisation et le dit, au lieu de bloquer le clip | 2 | M | todo |
-| N7 | Labels et campagne sur les posts | `clipPosts` ne pose ni label ni campagne | Les posts envoyés portent le label du pilier et la campagne en cours de Sage (`targetsOf`) | 2 | S | todo |
-| N8 | Lives en direct | les lives arrivent enregistrés | Chapitres en direct, « moment fort à l'instant » remonté pendant le live | 1 | L | todo |
-| N9 | Intervenants nommés, recadrage qui suit celui qui parle | 3 noms en dur | Détection au-delà de 3, cadrage par intervenant | 1 | M | todo |
-| N10 | Bibliothèques élargies | 4 B-roll, 2 musiques | Plus de B-roll et musiques générés, suggestions par Juno | 1 | M | todo |
+| N5 | Doublage publié | les doublages ne produisent aucun post | Une langue validée produit ses posts (légende traduite) ; en Act, Juno publie les langues que le Playbook autorise | 2 | M | done |
+| N6 | Autorisations avancées | — (F8 bloque seulement) | Juno floute ou coupe le passage sans autorisation et le dit, au lieu de bloquer le clip | 2 | M | dropped — décision de l'humain au pitch (pas de commentaire) |
+| N7 | Labels et campagne sur les posts | `clipPosts` ne pose ni label ni campagne | Les posts envoyés portent le label du pilier et la campagne en cours de Sage (`targetsOf`) | 2 | S | done |
+| N8 | Lives en direct | les lives arrivent enregistrés | Chapitres en direct, « moment fort à l'instant » remonté pendant le live | 1 | L | dropped — décision de l'humain au pitch |
+| N9 | Intervenants nommés, recadrage qui suit celui qui parle | 3 noms en dur | Détection au-delà de 3, cadrage par intervenant | 1 | M | dropped — décision de l'humain au pitch |
+| N10 | Bibliothèques élargies | 4 B-roll, 2 musiques | Plus de B-roll et musiques générés, suggestions par Juno | 1 | M | dropped — décision de l'humain au pitch |

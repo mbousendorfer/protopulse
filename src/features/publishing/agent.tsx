@@ -198,5 +198,7 @@ const atlas: AgentModule = {
     ['Ideas rejected', ev.filter(e => e.kind === 'ideas/decision' && e.detail?.outcome === 'rejected').length],
   ],
   presets: { calm: { keep: ['h-plan'] }, competitor: { keep: ['h-plan'] } },
+  // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
+  triggers: [{ event: 'ev-x-fail', to: '/publishing/calendar' }, { event: 'ev-slot', to: '/publishing/calendar' }, { event: 'ev-queue', to: '/publishing/queues' }],
 }
 export default atlas

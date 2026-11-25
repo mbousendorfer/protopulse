@@ -223,3 +223,116 @@ describe('Echo · search view', () => {
     expect(searchVolume(x, 0, searchLive(s, x)).volume).toBe(310 + 27)
   })
 })
+
+it('a share reads as counts under 10, a percentage from 10', async () => {
+  const { share } = await import('./model')
+  expect(share(2, 3)).toBe('2 of 3')
+  expect(share(5, 10)).toBe('50%')
+})
+
+describe('Echo · creators', () => {
+  it('lists creators from the feed and flags the fits', async () => {
+    const { creatorsOf } = await import('./model')
+    const list = creatorsOf(s0())
+    expect(list.find(c => c.handle === '@camille.outdoors')?.fit).toBe(true)
+    expect(list.find(c => c.handle === '@theo.wild')?.fit).toBe(false)
+  })
+
+  it('a collab DM is a Nova card; approving marks the creator contacted', () => {
+    let s = reducer(s0(), { type: 'listening/creator', handle: '@camille.outdoors', op: 'propose' })
+    const h = s.handoffs.find(x => x.ref === 'collab:@camille.outdoors')!
+    expect(h.agent).toBe('nova')
+    expect(s.listening.creators['@camille.outdoors']).toBe('proposed')
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.listening.creators['@camille.outdoors']).toBe('contacted')
+  })
+
+  it('the creator event follows the level, and Act can be undone', () => {
+    const lv = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-creators', level: l })
+    const ev = (s: State) => reducer(s, { type: 'core/fire', eventId: 'ev-creator-fit' })
+    expect(ev(lv('draft')).handoffs.some(h => h.ref === 'ev-creator-fit')).toBe(true)
+    expect(ev(lv('suggest')).listening.creators['@jeanne.paris']).toBeUndefined()
+    let s = ev(lv('act'))
+    expect(s.listening.creators['@jeanne.paris']).toBe('listed')
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.listening.creators['@jeanne.paris']).toBeUndefined()
+  })
+
+  it('⌘K answers who talks about Peakline from the same list', () => {
+    const s = s0()
+    const text = intentDef('creators')!.bar({ kind: 'creators', rival: 'peakline' } as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toMatch(/@theo\.wild \(120k, signed with Peakline\)/)
+  })
+})
+
+describe('Echo · benchmark per network', () => {
+  it('ranks Fernway and the rivals on TikTok and reads it the same in ⌘K', async () => {
+    const { networkRows, benchNetworks } = await import('./model')
+    const s = s0()
+    expect(benchNetworks(s)).toContain('tiktok')
+    const rows = networkRows(s, 'tiktok')
+    expect(rows[0].name).toBe('Trailkind')
+    expect(rows.some(r => r.us)).toBe(true)
+    const def = intentDef('benchmark')!
+    const i = def.parse('how do we compare with trailkind on tiktok', { raw: '' })!
+    const text = def.bar(i as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toContain(`${rows[0].er}% engagement`)
+  })
+
+  it('“Atlas tests their format” drafts one locked post card', () => {
+    let s = reducer(s0(), { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    s = reducer(s, { type: 'listening/testFormat', network: 'tiktok', competitor: 'trailkind' })
+    const cards = s.handoffs.filter(h => h.ref === 'format:tiktok:trailkind')
+    expect(cards).toHaveLength(1)
+    expect(cards[0].agent).toBe('atlas')
+  })
+})
+
+describe('Echo · tags', () => {
+  const lvl = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-file', level: l })
+  const tick = (s: State) => reducer(at(s, s.clock.base + 2 * MIN), { type: 'core/heartbeat' })
+
+  it('the seeded feed comes tagged by the seeded rules', () => {
+    const s = s0()
+    expect(s.listening.tags.m4).toContain('Press')
+    expect(s.listening.tags.m1).toEqual(expect.arrayContaining(['Product feedback', 'Creator']))
+  })
+
+  it('on Act, Echo tags new mentions herself and Undo takes the tags off', () => {
+    let s = tick(fire(level(lvl('act'), 'draft')))
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    const line = s.log.find(l => /^Tagged \d+ new mentions/.test(l.text))!
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+  })
+
+  it('on Draft, the tags wait on a Desk card; on Suggest, only on Mentions', () => {
+    let s = tick(fire(level(lvl('draft'), 'draft')))
+    const card = s.handoffs.find(h => h.ref === 'tag-batch')!
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    s = reducer(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+    expect(s.listening.tags['spike-1']).toContain('Product feedback')
+    s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.restore?.some(h => h.id === card.id))!.id })
+    expect(s.listening.tags['spike-1']).toBeUndefined()
+    const sug = tick(fire(level(lvl('suggest'), 'draft')))
+    expect(sug.handoffs.some(h => h.ref === 'tag-batch')).toBe(false)
+    expect(sug.listening.pendingTags['spike-1']).toContain('Product feedback')
+  })
+
+  it('a new rule tags matching mentions at once; deleting a tag can be undone', () => {
+    let s = reducer(s0(), { type: 'listening/tagSave', def: { id: '', name: 'Repair', rule: { kind: 'word', value: 'repair' } } })
+    expect(Object.values(s.listening.tags).filter(t => t.includes('Repair')).length).toBeGreaterThan(1)
+    const id = s.listening.tagDefs.find(t => t.name === 'Repair')!.id
+    s = reducer(s, { type: 'listening/tagDelete', id })
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(false)
+    s = reducer(s, { type: 'core/undo', id: s.notice!.undo! })
+    expect(s.listening.tagDefs.some(t => t.name === 'Repair')).toBe(true)
+    expect(Object.values(s.listening.tags).some(t => t.includes('Repair'))).toBe(true)
+  })
+
+  it('renaming a tag renames it on every mention', () => {
+    const s = reducer(s0(), { type: 'listening/tagSave', def: { id: 'tg-press', name: 'Media', rule: { kind: 'press' } } })
+    expect(s.listening.tags.m4).toContain('Media')
+    expect(s.listening.tags.m4).not.toContain('Press')
+  })
+})
