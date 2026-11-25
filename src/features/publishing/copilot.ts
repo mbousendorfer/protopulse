@@ -1,6 +1,6 @@
 // Composer copilot: three rewrites of the caption you wrote, shaped by its pillar and checked against the Playbook.
 import type { Network, PlaybookRule } from '../../app/types'
-import type { Pillar } from '../../data/publishing'
+import { type Pillar, pillarFamily } from '../../data/publishing'
 import { shorten } from './ideasModel'
 
 const HOOK: Record<Pillar, string> = {
@@ -41,7 +41,7 @@ export function variantsOf(text: string, ctx: Ctx): Variant[] {
   const others = sentences.filter(x => x !== withNum).join(' ')
   const rest = sentences.length > 1 ? sentences.slice(1).join(' ') : ''
   const raw: { label: string; text: string }[] = [
-    { label: `Question hook · ${ctx.pillar}`, text: `${HOOK[ctx.pillar]} ${t}` },
+    { label: `Question hook · ${ctx.pillar}`, text: `${HOOK[pillarFamily(ctx.pillar)]} ${t}` },
     fromNum ? { label: 'Number first', text: `${fromNum} ${others}` }
       : { label: 'Fact first', text: rest ? `${rest} ${sentences[0]}` : `${sentences[0].replace(/[.!?]$/, '')}. Here’s why.` },
     { label: 'Shorter', text: shorten(t) },

@@ -2,7 +2,16 @@ import type { Network } from '../app/types'
 import { T } from '../app/time'
 import { bestTime } from '../features/insights/metrics'
 
-export type Pillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** The four pillars Fernway started with. Tables keyed by pillar use these; any other pillar falls back to its family (`pillarFamily`). */
+export type BasePillar = 'Gear that lasts' | 'Trail stories' | 'Repair & care' | 'Community'
+/** Pillars are Sage's and can be added or renamed (requests/atlas-from-sage-open-pillars.md). */
+export type Pillar = BasePillar | (string & {})
+const BASES: BasePillar[] = ['Gear that lasts', 'Trail stories', 'Repair & care', 'Community']
+/** The base pillar a new or renamed one belongs to, from its name, until Sage exposes `pillarBase`. */
+export function pillarFamily(p: Pillar): BasePillar {
+  if ((BASES as string[]).includes(p)) return p as BasePillar
+  return /repair|care|fix|workshop/i.test(p) ? 'Repair & care' : /gear|product|gift|kit|shop/i.test(p) ? 'Gear that lasts' : /community|people|customer|ugc|team/i.test(p) ? 'Community' : 'Trail stories'
+}
 export type PostStatus = 'scheduled' | 'published' | 'draft' | 'needs' | 'failed' | 'paused' | 'unapproved'
 
 export type Post = {

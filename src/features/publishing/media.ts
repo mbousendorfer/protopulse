@@ -1,7 +1,7 @@
 // The library's upkeep: tags (Atlas's at upload, yours after), search, and licences that end.
 import type { State } from '../../app/state'
 import { DAY } from '../../app/time'
-import { MEDIA, type Media, type Post } from '../../data/publishing'
+import { MEDIA, pillarFamily, type Media, type Post } from '../../data/publishing'
 import { libraryOf, usable } from './visuals'
 
 const PILLAR_TAG: Record<Post['pillar'], string> = { 'Repair & care': 'Repair', 'Gear that lasts': 'Product', 'Trail stories': 'Trail', Community: 'UGC' }
@@ -10,7 +10,7 @@ const PILLAR_TAG: Record<Post['pillar'], string> = { 'Repair & care': 'Repair', 
 export function tagsFor(title: string, post?: Post): string[] {
   const words = title.toLowerCase()
   const known = [...new Set(MEDIA.flatMap(m => m.tags))].filter(t => words.includes(t.toLowerCase()) || words.includes(t.toLowerCase().replace(/s$/, '')))
-  return [...new Set([...known, ...(post ? [PILLAR_TAG[post.pillar]] : []), 'Upload'])]
+  return [...new Set([...known, ...(post ? [PILLAR_TAG[pillarFamily(post.pillar)]] : []), 'Upload'])]
 }
 
 /** Media matching a search: title, tags or rights. */

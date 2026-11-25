@@ -170,6 +170,9 @@
 .pub-labels .input { width: 140px; }
 .cmp-link ul { margin: var(--s1) 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
 .cmp-link p { margin: 0; }
+.cal-theme { display: flex; align-items: center; gap: 4px; padding: 2px 6px; border: 1px solid var(--line); border-radius: var(--r-ctl); font-size: var(--t-xs); color: var(--ink); text-decoration: none; }
+.cal-theme.compact { padding: 0 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cal-theme:hover { border-color: var(--signal); text-decoration: none; }
 .cal-notes { display: flex; flex-direction: column; gap: 4px; }
 .cal-daynote { display: flex; align-items: flex-start; gap: 4px; padding: 4px 6px; border: 1px solid var(--line); border-radius: var(--r-ctl); font-size: var(--t-xs); color: var(--ink-2); }
 .cal-daynote.quiet { border-color: var(--caution-edge); }

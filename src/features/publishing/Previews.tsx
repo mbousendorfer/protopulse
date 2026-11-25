@@ -88,7 +88,7 @@ function stamp(at: number | string | undefined, published: boolean, now: number,
   }
 }
 
-type View = { who: string; text: string; words: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
+type View = { who: string; box?: React.CSSProperties; text: string; words: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
 
 const Brand = ({ size = 28, square }: { size?: number; square?: boolean }) => (
   <span className={`pv-brand ${square ? 'sq' : ''}`} style={{ width: size, height: size }} aria-hidden>
@@ -167,7 +167,7 @@ function LinkedIn(v: View) {
       <span className="li-follow"><Plus size={18} strokeWidth={2.5} />Follow</span>
     </header>
     <p className="li-text"><Caption v={v} cut={cutLines(v.text, v.media ? 3 : 5, 46)} more="more" tight /></p>
-    {v.media && <div className="li-media"><Media name={v.media} /></div>}
+    {v.media && <div className="li-media" style={v.box}><Media name={v.media} /></div>}
     {reactions > 0 && <div className="li-social"><span className="pv-reacts"><Bubble kind="like" /><Bubble kind="love" /><Bubble kind="idea" /></span>{full(reactions)}
       <span className="end">{[comments && plural(comments, 'comment'), reposts && plural(reposts, 'repost')].filter(Boolean).join(' • ')}</span></div>}
     <div className="li-acts"><span><Ico n="liLike" />Like</span><span><Ico n="liComment" />Comment</span><span><Ico n="liRepost" />Repost</span><span><Ico n="liSend" />Send</span></div>
@@ -185,7 +185,7 @@ function Facebook(v: View) {
       <Ellipsis size={20} /><Close size={20} />
     </header>
     <p className={`fb-text ${big ? 'big' : ''}`}><Caption v={v} cut={cutAt(v.text, 250, 5, 86)} more="See more" /></p>
-    {v.media && <div className="fb-media"><Media name={v.media} /></div>}
+    {v.media && <div className="fb-media" style={v.box}><Media name={v.media} /></div>}
     {reactions > 0 && <div className="fb-social"><span className="pv-reacts"><Bubble kind="like" /><Bubble kind="love" /></span>{short(reactions)}
       <span className="end">{comments > 0 && <span>{plural(comments, 'comment')}</span>}{shares > 0 && <span>{plural(shares, 'share')}</span>}</span></div>}
     <div className="fb-acts"><span><Ico n="fbLike" size={18} />Like</span><span><Ico n="fbComment" size={18} />Comment</span><span><Ico n="fbShare" size={18} />Share</span></div>
@@ -199,7 +199,7 @@ function XPost(v: View) {
       <div className="x-main">
         <p className="x-who"><b>Fernway</b><Ico n="verified" size={18} className="x-badge" /><span>@fernway · {v.when('x')}</span><Ellipsis size={18} className="x-more" /></p>
         <p className="x-text"><Caption v={v} cut={cutAt(v.text, 280)} more="Show more" /></p>
-        {v.media && <div className="x-media"><Media name={v.media} /></div>}
+        {v.media && <div className="x-media" style={v.box}><Media name={v.media} /></div>}
         <div className="x-acts">
           <span><Ico n="xReply" size={18} />{count(v.n(0.08))}</span>
           <span><Ico n="xRepost" size={18} />{count(v.n(0.14))}</span>
@@ -282,10 +282,12 @@ type Props = {
   firstComment?: string
   /** The profile it goes out on (Instagram: Fernway or Fernway Repair). */
   who?: { handle: string }
+  /** A clip's version for this network (Juno's `versionOf`): '1:1', '4:5', '9:16'… The media box follows it. */
+  aspect?: string
 }
 
 /** The post as it will look in each network's own app, in the mode that network is mostly used in. */
-export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment, who }: Props) {
+export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment, who, aspect }: Props) {
   const now = useNow(60_000)
   const [ref, zoom] = useFit(network !== 'trustpilot')
   if (network === 'trustpilot') return <Empty title="No preview for Trustpilot" body="Trustpilot only shows customer reviews and your replies. Brands can’t publish posts there." />
@@ -300,7 +302,7 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
   const carousel = kind === 'carousel' ? Math.min(10, Math.max(2, +(caption.match(/\b(\d{1,2})\b/)?.[1] ?? 5))) : 1
   const handle = (who?.handle ?? '@fernway').replace(/^@/, '')
   const v: View = {
-    who: handle, text: caption, words, media, live, reach: stats?.reach ?? 0,
+    who: handle, box: aspect ? { aspectRatio: aspect.replace(':', ' / '), height: 'auto' } : undefined, text: caption, words, media, live, reach: stats?.reach ?? 0,
     n: share => Math.round(engaged * share),
     when: style => stamp(at, published, now, style),
     slides: slides ?? carousel, reel: kind === 'reel',
