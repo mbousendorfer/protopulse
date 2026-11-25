@@ -22,13 +22,27 @@ export function useClip(id?: string) {
   return clip && source ? { clip, source } : undefined
 }
 
-/** The source's poster framed like the clip (9:16 by default), with its length. */
+/** One frame of the source video, cropped like the clip: the browser shows the frame at `#t`, no image needed. */
+export function CoverFrame({ source, at, focus, text }: { source: Source; at: number; focus: number; text?: string }) {
+  return (
+    <>
+      <video className="cover-frame" src={`${mediaUrl(`${source.media}/video.mp4`)}#t=${at}`} preload="metadata" muted playsInline tabIndex={-1} style={{ objectPosition: `${focus * 100}% 50%` }} />
+      {text && <span className="cover-text">{text}</span>}
+    </>
+  )
+}
+
+/** Focus of the shot on screen at a source time. */
+export const focusAt = (c: Clip, source: Source, at: number) => c.focus ?? TRANSCRIPT[source.transcript].shots.find(x => at >= x.s && at < x.e)?.focus ?? 0.5
+
+/** The clip's cover, or the source's poster, framed like the clip (9:16 by default), with its length. */
 export function ClipThumb({ clip, source, size = 'md' }: { clip: Clip; source: Source; size?: 'sm' | 'md' | 'lg' }) {
   const [broken, setBroken] = useState(false)
   const focus = clip.focus ?? TRANSCRIPT[source.transcript].shots[0]?.focus ?? 0.5
   return (
     <span className={`clip-thumb ${size} a-${clip.aspect.replace(':', 'x')}`} aria-hidden>
-      {broken ? <Photo name={SCENE[source.media] ?? 'workshop'} /> : <img src={mediaUrl(`${source.media}/poster.jpg`)} alt="" style={{ objectPosition: `${focus * 100}% 50%` }} onError={() => setBroken(true)} loading="lazy" />}
+      {clip.cover && source.kind !== 'upload' ? <CoverFrame source={source} at={clip.cover.at} focus={focusAt(clip, source, clip.cover.at)} text={size === 'lg' ? clip.cover.text : undefined} />
+        : broken ? <Photo name={SCENE[source.media] ?? 'workshop'} /> : <img src={mediaUrl(`${source.media}/poster.jpg`)} alt="" style={{ objectPosition: `${focus * 100}% 50%` }} onError={() => setBroken(true)} loading="lazy" />}
       <span className="clip-thumb-len mono">{fmt(clipLength(clip, source))}</span>
     </span>
   )

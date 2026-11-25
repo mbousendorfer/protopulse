@@ -95,3 +95,166 @@ describe('Echo · counts come from the state', () => {
     expect(visibleMentions(s).length).toBe(n - 1)
   })
 })
+
+describe('Echo · competitor moves', () => {
+  const sales = (s: State) => reducer(s, { type: 'listening/move', event: 'e-norro-repair', index: 2 })
+  const salesLevel = (s: State, l: 'suggest' | 'draft' | 'act') => reducer(s, { type: 'core/autonomy', agent: 'echo', action: 'echo-sales', level: l })
+
+  it('Tell sales on Draft puts the email on the Desk; approving sends it', () => {
+    let s = sales(s0())
+    const h = s.handoffs.find(x => x.ref === 'sales:e-norro-repair')!
+    expect(h.preview?.type).toBe('text')
+    expect(s.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(false)
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(true)
+    expect(s.listening.events['e-norro-repair'].status).toBe('done')
+  })
+
+  it('Tell sales on Act sends at once, on Suggest sends nothing', () => {
+    expect(sales(salesLevel(s0(), 'act')).log[0].text).toMatch(/Emailed the sales team \(sales@/)
+    const sug = sales(salesLevel(s0(), 'suggest'))
+    expect(sug.log.some(l => /Emailed the sales team \(sales@/.test(l.text))).toBe(false)
+    expect(sug.handoffs.some(x => x.ref === 'sales:e-norro-repair')).toBe(false)
+  })
+
+  it('acting on an event in Listening settles its Desk card, whatever the competitor', () => {
+    let s = reducer(s0(), { type: 'core/fire', eventId: 'ev-trailkind' })
+    expect(s.handoffs.some(h => /Trailkind/.test(h.title))).toBe(true)
+    s = reducer(s, { type: 'listening/move', event: 'e-trail-viral', index: 2 })
+    expect(s.handoffs.some(h => h.topic === 'Competitor' && /Trailkind/.test(h.title))).toBe(false)
+  })
+})
+
+describe('Echo · searches, alert rules and guardrails', () => {
+  const echo = (s: State) => s.agents.find(a => a.id === 'echo')!
+  const g = (s: State, id: string) => echo(s).guardrails.find(x => x.id === id)!.value
+
+  it('a new search collects for 10 minutes, then shows its volume', async () => {
+    const { searchVolume } = await import('./model')
+    const s = reducer(s0(), { type: 'listening/searchSave', search: { id: '', name: 'Seams', keywords: 'storm jacket seams', exclude: '', volume: 0 } })
+    const x = s.listening.searches[0]
+    expect(searchVolume(x, x.startedAt!).collecting).toBe(true)
+    const done = searchVolume(x, x.startedAt! + 11 * MIN)
+    expect(done.collecting).toBe(false)
+    expect(done.volume).toBeGreaterThan(0)
+  })
+
+  it('the search cap shown in the guardrail is the one applied', () => {
+    let s = s0()
+    expect(g(s, 'g3')).toBe('11 of 15')
+    s = reducer(s, { type: 'core/guardrail', agent: 'echo', id: 'g3', value: '11 of 11' })
+    const before = s.listening.searches.length
+    s = reducer(s, { type: 'listening/searchSave', search: { id: '', name: 'X', keywords: 'x', exclude: '', volume: 0 } })
+    expect(s.listening.searches.length).toBe(before)
+    expect(s.notice?.text).toMatch(/search slots/)
+    s = reducer(s, { type: 'listening/searchToggle', id: 's1' })
+    expect(g(s, 'g3')).toBe('10 of 11')
+  })
+
+  it('a rule that matches raises a card once, and Nova can reply to what it found', () => {
+    let s = reducer(s0(), { type: 'listening/alertSave', alert: { id: '', subject: 's3', condition: 'gets more than', threshold: 5, unit: ' mentions in 1 h', to: 'desk', on: true } })
+    s = fire(level(s, 'draft'))
+    const h = s.handoffs.find(x => x.ref?.startsWith('alert:'))!
+    expect(h.title).toMatch(/Storm Jacket/)
+    s = reducer(at(s, s.clock.base + 2 * MIN), { type: 'core/heartbeat' })
+    expect(s.handoffs.filter(x => x.ref === h.ref)).toHaveLength(1)
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'option', option: h.options![0].label, index: 0 } })
+    expect(s.handoffs.filter(x => x.agent === 'nova' && x.topic === 'Mention reply').length).toBeGreaterThan(5)
+  })
+
+  it('the brand negative rule joins the spike instead of a second card, and copies Claire', () => {
+    const s = fire(level(s0(), 'draft'))
+    expect(s.handoffs.some(x => x.ref === 'alert:la1')).toBe(false)
+    expect(s.log.some(l => /Copied Claire|Claire is copied/.test(l.text))).toBe(true)
+  })
+
+  it('raising the spike threshold in the guardrail keeps the spike off the Desk', () => {
+    const s = fire(reducer(level(s0(), 'draft'), { type: 'core/guardrail', agent: 'echo', id: 'g1', value: '5× usual negative volume in 1 h' }))
+    expect(spikeCard(s)).toBeUndefined()
+  })
+
+  it('nothing fires on a fresh workspace', () => {
+    const s = reducer(s0(), { type: 'core/heartbeat' })
+    expect(s.handoffs.some(x => x.ref?.startsWith('alert:'))).toBe(false)
+  })
+})
+
+describe('Echo · a competitor you add', () => {
+  it('gets benchmark numbers after the backfill, then a first event on the Desk', async () => {
+    const { competitorsOf, shareOfVoice, BACKFILL_MS, FIRST_EVENT_MS } = await import('./model')
+    let s = reducer(s0(), { type: 'listening/watchSave', w: { id: 'c-wild', name: 'Wildroot', website: 'wildroot.eu', accounts: [{ network: 'tiktok', handle: '@wildroot' }], tracking: true, since: 0, custom: true } })
+    const since = s.listening.watch.find(w => w.id === 'c-wild')!.since
+    expect(competitorsOf(s).some(c => c.id === 'c-wild')).toBe(false)
+    s = at(s, since + BACKFILL_MS + MIN)
+    const c = competitorsOf(s).find(x => x.id === 'c-wild')!
+    expect(c.followers).toBeGreaterThan(0)
+    const sov = shareOfVoice(s)
+    expect(Object.values(sov).reduce((a, b) => a + b, 0)).toBeGreaterThanOrEqual(99)
+    s = reducer(at(s, since + FIRST_EVENT_MS + MIN), { type: 'core/heartbeat' })
+    const h = s.handoffs.find(x => x.ref === 'e-c-wild')!
+    expect(h.title).toMatch(/Wildroot/)
+    s = reducer(s, { type: 'listening/move', event: 'e-c-wild', index: 0 })
+    expect(s.handoffs.some(x => x.ref === 'e-c-wild')).toBe(false)
+    expect(s.listening.events['e-c-wild'].status).toBe('done')
+  })
+
+  it('the competitor cap refuses a seventh one', () => {
+    let s = s0()
+    for (const n of ['A', 'B', 'C']) s = reducer(s, { type: 'listening/watchSave', w: { id: `c-${n}`, name: n, website: '', accounts: [{ network: 'x', handle: n }], tracking: true, since: 0, custom: true } })
+    expect(s.listening.watch).toHaveLength(6)
+    expect(s.notice?.text).toMatch(/your cap/)
+  })
+})
+
+describe('Echo · search view', () => {
+  it('a new search on the seams catches the spike, and Echo reads it', async () => {
+    const { searchMentions, searchRead } = await import('./model')
+    let s = fire(level(s0(), 'draft'))
+    s = reducer(s, { type: 'listening/searchSave', search: { id: '', name: 'Seams', keywords: 'storm jacket seams', exclude: '', volume: 0 } })
+    const x = s.listening.searches[0]
+    expect(searchMentions(s, x).filter(m => m.id.startsWith('spike-')).length).toBeGreaterThan(20)
+    expect(searchRead(s, x)).toMatch(/negative mentions in the last 24 hours, \d+ about the Storm Jacket/)
+  })
+
+  it('the search table and the search page give the same volume', async () => {
+    const { searchLive, searchVolume } = await import('./model')
+    const s = fire(level(s0(), 'draft'))
+    const x = s.listening.searches.find(y => y.id === 's3')!
+    expect(searchVolume(x, 0, searchLive(s, x)).volume).toBe(310 + 27)
+  })
+})
+
+describe('Echo · creators', () => {
+  it('lists creators from the feed and flags the fits', async () => {
+    const { creatorsOf } = await import('./model')
+    const list = creatorsOf(s0())
+    expect(list.find(c => c.handle === '@camille.outdoors')?.fit).toBe(true)
+    expect(list.find(c => c.handle === '@theo.wild')?.fit).toBe(false)
+  })
+
+  it('a collab DM is a Nova card; approving marks the creator contacted', () => {
+    let s = reducer(s0(), { type: 'listening/creator', handle: '@camille.outdoors', op: 'propose' })
+    const h = s.handoffs.find(x => x.ref === 'collab:@camille.outdoors')!
+    expect(h.agent).toBe('nova')
+    expect(s.listening.creators['@camille.outdoors']).toBe('proposed')
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.listening.creators['@camille.outdoors']).toBe('contacted')
+  })
+
+  it('the creator event follows the level, and Act can be undone', () => {
+    const lv = (l: 'suggest' | 'draft' | 'act') => reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-creators', level: l })
+    const ev = (s: State) => reducer(s, { type: 'core/fire', eventId: 'ev-creator-fit' })
+    expect(ev(lv('draft')).handoffs.some(h => h.ref === 'ev-creator-fit')).toBe(true)
+    expect(ev(lv('suggest')).listening.creators['@jeanne.paris']).toBeUndefined()
+    let s = ev(lv('act'))
+    expect(s.listening.creators['@jeanne.paris']).toBe('listed')
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.listening.creators['@jeanne.paris']).toBeUndefined()
+  })
+
+  it('⌘K answers who talks about Peakline from the same list', () => {
+    const s = s0()
+    const text = intentDef('creators')!.bar({ kind: 'creators', rival: 'peakline' } as never, { s, d: () => {}, go: () => {}, query: '', ask: () => {} }).text
+    expect(text).toMatch(/@theo\.wild \(120k, signed with Peakline\)/)
+  })
+})

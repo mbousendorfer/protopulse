@@ -1,6 +1,8 @@
 // Iris owns the performance numbers. Every screen, report, Chat answer and ⌘K answer reads them here, never typed again.
 import type { Network } from '../../app/types'
-import { BEST_CELL, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
+import type { State } from '../../app/state'
+import { appNow } from '../../app/time'
+import { BEST_CELL, DAILY_REACH, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
 
 export type SocialNet = keyof typeof BEST_CELL
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -61,6 +63,26 @@ export function kpis(period: Period, n: NetFilter) {
     return k
   })
 }
+/** A window of `days` days ending `offset` days ago (0 = today), within the 90 days Iris keeps. */
+export type Range = { days: number; offset: number }
+const sum = (xs: number[]) => xs.reduce((t, x) => t + x, 0)
+const windowOf = (r: Range) => DAILY_REACH.slice(DAILY_REACH.length - r.offset - r.days, DAILY_REACH.length - r.offset)
+
+/**
+ * KPIs for any window: counts follow daily reach in that window, against the same base period's totals; rates and
+ * times stay those of the base period (the shortest of 7, 30 or 90 days that covers it).
+ */
+export function rangeKpis(r: Range, n: NetFilter) {
+  const base = ([7, 30, 90] as Period[]).find(p => p >= r.days) ?? 90
+  if (r.offset === 0 && r.days === base) return kpis(base, n)
+  const total = sum(DAILY_REACH.slice(-base))
+  const f = sum(windowOf(r)) / total
+  const before = { days: r.days, offset: r.offset + r.days }
+  const g = before.offset + before.days <= DAILY_REACH.length ? sum(windowOf(before)) / total : undefined
+  return kpis(base, n).map(k => (['reach', 'followers', 'clicks', 'replies'].includes(k.key) ? { ...k, value: k.value * f, prev: g ? k.value * g : k.prev * f } : k))
+}
+export const reachSeries = (r: Range) => windowOf(r)
+
 export const kpi = (key: string, period: Period = 7, n: NetFilter = 'all') => kpis(period, n).find(k => k.key === key)!
 /** Change against the previous period: percent for counts, points for rates, minutes for times. */
 export const change = (k: { value: number; prev: number; fmt: string }) => (k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100)
@@ -71,4 +93,37 @@ export const fmt = {
   int: (v: number) => Math.round(v).toLocaleString('en-GB'),
   pct: (v: number) => `${v.toFixed(1)}%`,
   signed: (v: number, unit = '%') => `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(Math.round(v * 10) / 10)}${unit}`,
+}
+
+/* ---------- Published posts and clips (Atlas's posts, Juno's clips; the numbers are Iris's) ---------- */
+
+/** Average reach and engagement of a network's measured published posts. */
+export function netAverage(s: State, n: string): { reach: number; er: number } | undefined {
+  const ps = s.publishing.posts.filter(p => p.network === n && p.status === 'published' && p.stats)
+  if (!ps.length) return undefined
+  return { reach: ps.reduce((a, p) => a + p.stats!.reach, 0) / ps.length, er: ps.reduce((a, p) => a + p.stats!.er, 0) / ps.length }
+}
+
+/**
+ * A post's numbers once it is out: its measured stats, else Iris's first-day read, the network's average tilted by
+ * `score` (0–100, 50 = average; Juno's clip score when it's a clip).
+ * ponytail: a first-day estimate stands in for measurement until posts carry a daily series (“Data that lives”).
+ */
+export function postPerf(s: State, id: string, score = 50): { reach: number; er: number } | undefined {
+  const p = s.publishing.posts.find(x => x.id === id)
+  if (!p || p.at > appNow(s.clock) || p.status === 'failed' || p.status === 'draft') return undefined
+  if (p.stats) return p.stats
+  const avg = netAverage(s, p.network) ?? { reach: 8000, er: 4 }
+  return { reach: Math.round(avg.reach * (0.5 + (score - 50) / 30) / 100) * 100, er: Math.round(avg.er * (0.7 + (score - 50) / 60) * 10) / 10 }
+}
+
+/** A clip's numbers across its posts that are out. `score`: Juno's rescored total (0–100); 50 when not given. */
+export function clipPerf(s: State, clipId: string, score?: number): { views: number; er: number; retention: number; shares: number } | undefined {
+  const c = s.video.clips.find(x => x.id === clipId)
+  const sc = score ?? 50
+  const perf = (c?.posts ?? []).map(id => postPerf(s, id, sc)).filter((x): x is { reach: number; er: number } => !!x)
+  if (!perf.length) return undefined
+  const views = perf.reduce((a, x) => a + x.reach, 0)
+  const er = Math.round(perf.reduce((a, x) => a + x.er, 0) / perf.length * 10) / 10
+  return { views, er, retention: Math.round(Math.min(70, 30 + sc / 3)), shares: Math.round(views * er / 400) }
 }

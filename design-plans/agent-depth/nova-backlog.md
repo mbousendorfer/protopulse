@@ -8,27 +8,27 @@
 
 | # | Bug | État actuel (fichier:ligne) | Correction | Val. | Taille | Statut |
 |---|---|---|---|---|---|---|
-| B1 | Act ne fait pas suivre la conversation | `inbox/slice.ts:202` `onResolveInbox` ne sait pas qu'une carte est prise par Act : la conversation passe en « You replied » (approuvé par Sam), et l'Undo du journal ramène la carte sans rouvrir la conversation (aucun `onUndo`) | Le cœur passe `act: true` dans la décision ; la conversation passe en `auto` (réponse « Nova · auto ») et `onUndo` la remet en brouillon | 3 | S | todo |
-| B2 | Un événement Nova en Act ne crée aucune conversation | `reducer.ts:203` : seule une ligne de journal ; « Handled by Nova » ne grossit jamais | Les événements Nova portent leur `run` : en Act, conversation `auto` + journal lié à la conversation, Undo réel | 3 | S | todo |
-| B3 | Approuver depuis le Desk crée un DM négatif en dur | `inbox/slice.ts:216` (`type: 'dm', sentiment: 'negative'`) | Type, réseau et sentiment lus sur la carte (`conv` sur la carte) | 3 | S | todo |
-| B4 | Sentiment deviné par regex, ternaire mort | `inbox/slice.ts:57` | Champ explicite `conv: { type, sentiment }` sur les cartes Nova (événements) ; regex gardée en repli pour les vieux états | 2 | S | todo |
-| B5 | Pas de groupe « Waiting on Claire » | `inbox/Page.tsx:22` (commentaire), §6.2 | Groupe en bas de Needs you, hors compteur « needs you » | 2 | S | todo |
-| B6 | `inbox/send` sans carte n'écrit rien au journal | `inbox/slice.ts:150` | Ligne de journal « You replied to X » | 2 | S | todo |
-| B7 | « See them » du couloir Spam mène à `/inbox` | `desk/Batch.tsx:105` | `/inbox?view=hidden`, la page lit `view` | 2 | S | todo |
-| B8 | ⌘K « Reply to X » ne connaît que 7 noms | `inbox/agent.tsx:12` | Recherche dans les contacts et les auteurs réels | 3 | S | todo |
+| B1 | Act ne fait pas suivre la conversation | `inbox/slice.ts:202` `onResolveInbox` ne sait pas qu'une carte est prise par Act : la conversation passe en « You replied » (approuvé par Sam), et l'Undo du journal ramène la carte sans rouvrir la conversation (aucun `onUndo`) | Le cœur passe `act: true` dans la décision ; la conversation passe en `auto` (réponse « Nova · auto ») et `onUndo` la remet en brouillon | 3 | S | done (#31) |
+| B2 | Un événement Nova en Act ne crée aucune conversation | `reducer.ts:203` : seule une ligne de journal ; « Handled by Nova » ne grossit jamais | Les événements Nova portent leur `run` : en Act, conversation `auto` + journal lié à la conversation, Undo réel | 3 | S | done (#31) |
+| B3 | Approuver depuis le Desk crée un DM négatif en dur | `inbox/slice.ts:216` (`type: 'dm', sentiment: 'negative'`) | Type, réseau et sentiment lus sur la carte (`conv` sur la carte) | 3 | S | done (#31) |
+| B4 | Sentiment deviné par regex, ternaire mort | `inbox/slice.ts:57` | Champ explicite `conv: { type, sentiment }` sur les cartes Nova (événements) ; regex gardée en repli pour les vieux états | 2 | S | done (#31) |
+| B5 | Pas de groupe « Waiting on Claire » | `inbox/Page.tsx:22` (commentaire), §6.2 | Groupe en bas de Needs you, hors compteur « needs you » | 2 | S | done (#31) |
+| B6 | `inbox/send` sans carte n'écrit rien au journal | `inbox/slice.ts:150` | Ligne de journal « You replied to X » | 2 | S | done (#31) |
+| B7 | « See them » du couloir Spam mène à `/inbox` | `desk/Batch.tsx:105` | `/inbox?view=hidden`, la page lit `view` | 2 | S | done (#31) |
+| B8 | ⌘K « Reply to X » ne connaît que 7 noms | `inbox/agent.tsx:12` | Recherche dans les contacts et les auteurs réels | 3 | S | done (#31) |
 
 ## Parité Agorapulse → version agentique
 
 | Capacité Agorapulse | État actuel (fichier:ligne) | Version agentique (qui fait quoi, à quel cran) | Val. | Taille | Statut |
 |---|---|---|---|---|---|
-| Garde-fous appliqués | `data/agents.ts:41-45` affichés, jamais lus | Compteurs du jour réels (réponses publiques, remboursements cumulés) ; quiet hours LinkedIn → réponse programmée à 07:00 ; au plafond Nova repasse en Draft et le journal explique | 3 | M | todo |
-| Escalades du Playbook appliquées | `nova-sensitive` verrouillée, mais aucun test de mots (blessure, avocat, journaliste, créateur > 50k) sur les conversations entrantes | Nova lit les règles `escalate` du Playbook et passe en Your call ce qui matche, avec la règle citée | 3 | S | todo |
-| Automated moderation (« Inbox assistant ») : règles mot-clé / réseau / type → label, review, assign, hide | absent | Nova applique les règles en Act (journal « Labelled Refund · rule … ») ; propose une règle après 3 gestes identiques de Sam ; écran de règles avec compteur d'usages ; chaque règle s'annule | 3 | L | todo |
-| Review / To review / Review all | `reviewed` existe (`data/inbox.ts:35`, bouton panneau `Page.tsx:378`), pas de vue To review, Nova ne marque rien revu | Vues To review / Reviewed ; Nova marque revu ce qu'elle a traité en Act ; « Review all » groupé | 3 | M | todo |
-| Saved replies | absent | Bibliothèque ; Nova choisit et adapte la plus proche et la cite en source ; « Save as reply » depuis une réponse envoyée ; ⌘K « Reply to Léa with the exchange saved reply » | 3 | M | todo |
+| Garde-fous appliqués | `data/agents.ts:41-45` affichés, jamais lus | Compteurs du jour réels (réponses publiques, remboursements cumulés) ; quiet hours LinkedIn → réponse programmée à 07:00 ; au plafond Nova repasse en Draft et le journal explique | 3 | M | dropped — refusé au pitch (sans commentaire) |
+| Escalades du Playbook appliquées | `nova-sensitive` verrouillée, mais aucun test de mots (blessure, avocat, journaliste, créateur > 50k) sur les conversations entrantes | Nova lit les règles `escalate` du Playbook et passe en Your call ce qui matche, avec la règle citée | 3 | S | done (PR Escalations) |
+| Automated moderation (« Inbox assistant ») : règles mot-clé / réseau / type → label, review, assign, hide | absent | Nova applique les règles en Act (journal « Labelled Refund · rule … ») ; propose une règle après 3 gestes identiques de Sam ; écran de règles avec compteur d'usages ; chaque règle s'annule | 3 | L | done (#56 + PR règle apprise) |
+| Review / To review / Review all | `reviewed` existe (`data/inbox.ts:35`, bouton panneau `Page.tsx:378`), pas de vue To review, Nova ne marque rien revu | Vues To review / Reviewed ; Nova marque revu ce qu'elle a traité en Act ; « Review all » groupé | 3 | M | done (PR Review) |
+| Saved replies | absent | Bibliothèque ; Nova choisit et adapte la plus proche et la cite en source ; « Save as reply » depuis une réponse envoyée ; ⌘K « Reply to Léa with the exchange saved reply » | 3 | M | done (PR Saved replies) |
 | SLA / temps de réponse | absent | Délai qui court par conversation, seuils par type (DM 1 h, avis 24 h), tri « Waiting longest », Nova remonte avant dépassement ; chiffres exposés pour Iris | 3 | M | todo |
 | Équipe et assignation | `Assignee = 'sam' \| 'claire'` (`data/inbox.ts:39`) | Roster (Sam, Claire + 2 coéquipiers) ; Nova assigne par règle ; vue charge par personne | 2 | M | todo |
-| CRM contacts | onglet Contact en lecture seule (`Page.tsx:494`) | Liste de contacts, fiche éditable (tags, notes datées), timeline ; Nova crée la fiche d'un nouveau contact | 2 | L | todo |
+| CRM contacts | onglet Contact en lecture seule (`Page.tsx:494`) | Liste de contacts, fiche éditable (tags, notes datées), timeline ; Nova crée la fiche d'un nouveau contact | 2 | L | later — réponse au pitch |
 | Labels (gérer, renommer, supprimer) | création seule (`Page.tsx:317`) | Gestion dans la barre latérale ; Nova étiquette à l'arrivée ; labels lus par Iris | 2 | S | todo |
 | Modération : supprimer, bannir, spam, liker, répondre en privé | Hide seulement | Nova le fait en Act sur spam et bots ; chaque action dit avant si elle est réversible | 2 | M | todo |
 | Filtres (date, assigné, label, revue) et vues enregistrées par Sam | vues codées en dur (`Page.tsx:28-30`) | Filtres manquants + « Save view » | 2 | M | todo |

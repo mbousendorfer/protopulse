@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
-  Paperclip, Plus, Search, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  ListChecks, MessageSquareText, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -14,13 +14,19 @@ import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
+import { RulesSheet } from './RulesSheet'
+import { SavedSheet } from './SavedSheet'
+import { fill, toTemplate } from './saved'
+import { thenText, whenText } from './rules'
 import './inbox.css'
 
-type View = 'needs' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
+type View = 'needs' | 'review' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 const DAY_START = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
 const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) => boolean; count?: (c: Conversation) => boolean; saved?: boolean }[] = [
   // Needs you = what waits on Sam, then what waits on Claire at the bottom (not counted: it doesn't need him). A conversation Sam took over stays here until he replies.
   { id: 'needs', label: 'Needs you', match: c => NEEDS_YOU.includes(c.status) || c.status === 'claire', count: c => NEEDS_YOU.includes(c.status) },
+  // Agorapulse's core status: not looked at by anyone yet. Nova reviews what she settles alone.
+  { id: 'review', label: 'To review', match: c => !c.reviewed },
   { id: 'drafts', label: 'Nova’s drafts', match: c => c.status === 'draft' },
   { id: 'handled', label: 'Handled by Nova', match: c => c.status === 'auto' },
   { id: 'hidden', label: 'Hidden', match: c => c.status === 'hidden' },
@@ -119,7 +125,12 @@ export default function InboxPage() {
 
   const filtersOn = network !== 'all' || type !== 'all' || sentiment !== 'all' || intent || q || label
   const clear = () => { setNetwork('all'); setType('all'); setSentiment('all'); setIntent(false); setQ(''); setLabel(null) }
-  const labels = [...new Set([...LABELS, ...all.flatMap(c => c.labels ?? [])])]
+  const labels = [...new Set([...LABELS, ...s.inbox.rules.flatMap(r => (r.then.op === 'label' ? [r.then.value] : [])), ...all.flatMap(c => c.labels ?? [])])]
+  const rulesOpen = params2.get('rules') === '1'
+  const setRules = (o: boolean) => nav({ search: o ? '?rules=1' : '' })
+  const savedOpen = params2.get('saved') === '1'
+  const [savedSeed, setSavedSeed] = useState<string>()
+  const setSaved = (o: boolean) => { if (!o) setSavedSeed(undefined); nav({ search: o ? '?saved=1' : '' }) }
 
   const picked = list.filter(c => sel.has(c.id))
   const run = (op: BulkOp) => { d({ type: 'inbox/bulk', ids: picked.map(c => c.id), ...op }); sel.clear() }
@@ -129,7 +140,12 @@ export default function InboxPage() {
 
   return (
     <div className="page ib-page">
-      <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you." />
+      <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you.">
+        <Btn variant="ghost" onClick={() => setSaved(true)}><MessageSquareText size={14} />Saved replies</Btn>
+        <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
+      </PageHead>
+      <RulesSheet open={rulesOpen} onOpenChange={setRules} labels={labels} />
+      <SavedSheet open={savedOpen} onOpenChange={setSaved} seed={savedSeed} />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
@@ -177,6 +193,7 @@ export default function InboxPage() {
               <SelectAll sel={sel} label="Select every conversation in this view" />
               <div className="ib-search"><Search size={14} aria-hidden /><input className="input" placeholder="Search people and messages" value={q} onChange={e => setQ(e.target.value)} aria-label="Search conversations" /></div>
               <span className="faint num">{list.length}</span>
+              {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
               <Menu align="end" trigger={<Btn size="sm" variant="ghost"><ArrowUpDown size={14} />{SORTS.find(x => x.id === sort)!.label}</Btn>}
                 items={SORTS.map(x => ({ label: x.label, icon: sort === x.id ? <Check size={14} /> : <span style={{ width: 14 }} />, onSelect: () => setSort(x.id) }))} />
             </div>
@@ -187,6 +204,7 @@ export default function InboxPage() {
 
           {!list.length ? (
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
+              : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="Nova reviews what she handles on her own. New conversations land here until someone looks at them." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
           ) : view === 'needs' && !label ? (
             <NeedsList list={list} sel={sel} currentId={id} onOpen={(cid, edit) => nav(`/inbox/${cid}`, { state: edit ? { edit: true } : undefined })} />
@@ -202,7 +220,7 @@ export default function InboxPage() {
                     <p className="ellipsis">{lastText(c)}</p>
                   </div>
                   <div className="ib-cell-tags"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title="Reviewed"><CheckCheck size={14} /></span>}</div>
+                  <div className="ib-cell-status"><Pill tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Pill>{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
                   <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
                   <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
                   <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
@@ -213,7 +231,7 @@ export default function InboxPage() {
 
         </section>
 
-        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} /> : null}
+        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} onSaveReply={t => { setSavedSeed(t); setSaved(true) }} /> : null}
       </div>
     </div>
   )
@@ -287,7 +305,12 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
           {/* "Send as is" sends this whole text, so it is on the row. */}
           <p className="ib-need-line ib-need-draft"><span className="ib-need-by">Nova</span>{draft}</p>
         </>}
-        {need === 'call' && <p className="ib-need-line"><span className="ib-need-by">{c.note?.split(' · ')[0] ?? 'Locked topic'}</span>{c.draft ? <>Holding reply: {draft}</> : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</p>}
+        {need === 'call' && (() => {
+          const [by, ...rest] = (c.note ?? 'Locked topic').split(' · ')
+          const why = rest.join(' · ')
+          // An escalation quotes its Playbook rule before the holding reply.
+          return <p className="ib-need-line"><span className="ib-need-by">{by}</span>{why.startsWith('rule') && <>{cap(why)}. </>}{c.draft ? <>Holding reply: {draft}</> : cap(why)}</p>
+        })()}
         {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
         {need === 'claire' && <ClaireLine c={c} />}
       </div>
@@ -348,7 +371,7 @@ function LabelMenu({ trigger, labels, onPick }: { trigger: ReactNode; labels: st
 
 type PanelTab = 'conversation' | 'contact'
 
-function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: string[]; onClose: () => void }) {
+function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversation; labels: string[]; onClose: () => void; onSaveReply: (text: string) => void }) {
   const { s, d } = useStore()
   const now = useNow(10000)
   const [tab, setTab] = useState<PanelTab>('conversation')
@@ -356,6 +379,8 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
   const [text, setText] = useState('')
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [reply, setReply] = useState('')
+  const [picked, setPicked] = useState<string>()
+  const savedFrom = s.inbox.saved.find(r => r.id === c.savedFrom)
   const others = s.inbox.convs.filter(x => x.contact && x.contact === c.contact && x.id !== c.id)
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const draftPlain = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
@@ -363,15 +388,16 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
 
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
-  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setTab('conversation'); if (c.unread && !c.id.startsWith('h:')) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
   const thread = [...c.messages.map(m => ({ kind: 'msg' as const, at: m.at, m })), ...(c.notes ?? []).map(n => ({ kind: 'note' as const, at: n.at, n }))].sort((a, b) => a.at - b.at)
   const submit = () => {
     if (!reply.trim()) return
-    d(mode === 'note' ? { type: 'inbox/note', id: c.id, text: reply } : { type: 'inbox/send', id: c.id, text: reply.trim() })
+    d(mode === 'note' ? { type: 'inbox/note', id: c.id, text: reply } : { type: 'inbox/send', id: c.id, text: reply.trim(), saved: picked })
     setReply('')
+    setPicked(undefined)
   }
 
   return (
@@ -399,6 +425,13 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
         <LabelMenu trigger={<Btn size="xs" variant="ghost" aria-label="Add a label"><Plus size={13} />Label</Btn>} labels={labels.filter(l => !c.labels?.includes(l))} onPick={l => one({ op: 'label', value: l })} />
       </div>
 
+      {(c.suggested ?? []).map(id => s.inbox.rules.find(r => r.id === id && r.on)).filter(r => !!r).map(r => (
+        <div key={r.id} className="ib-suggest" role="status">
+          <Sparkles size={14} aria-hidden /><span className="grow"><b>Nova suggests: {thenText(r.then)}</b><span className="faint"> · rule: {whenText(r)}</span></span>
+          <Btn size="xs" onClick={() => d({ type: 'inbox/ruleApply', id: c.id, rule: r.id })}>Apply</Btn>
+          <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/ruleDismiss', id: c.id, rule: r.id })}>Dismiss</Btn>
+        </div>
+      ))}
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'conversation', label: 'Conversation', count: c.messages.length },
         { value: 'contact', label: 'Contact' },
@@ -427,6 +460,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   </div>
                   <p>{x.m.text}</p>
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
+                  {x.m.from !== 'them' && !x.m.undone && <button className="link-btn t-xs" onClick={() => onSaveReply(toTemplate(x.m.text, c))}>Save as reply</button>}
                   {x.m.auto && x.m.undoUntil && x.m.undoUntil > now && !x.m.undone && (
                     <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {left(x.m.undoUntil, now)}</Btn>
                   )}
@@ -458,6 +492,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   ))}
                 </ul>
               )}
+              {savedFrom && <div className="row tight"><span className="faint t-xs">Saved reply:</span><span className="chip">{savedFrom.name} · adapted by Nova</span></div>}
               {!!c.rules?.length && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
               <div className="row">
                 {editing ? (
@@ -494,6 +529,10 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
               value={reply} onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!canReply) setMode('note'); submit() } }} />
             <div className="row">
+              {canReply && mode === 'reply' && (
+                <Menu align="start" trigger={<Btn size="sm" variant="ghost"><MessageSquareText size={14} />Saved replies<ChevronDown size={12} /></Btn>}
+                  items={s.inbox.saved.map(r => ({ label: r.name, hint: <span className="num faint">{r.uses}</span>, onSelect: () => { setReply(fill(r, c)); setPicked(r.id) } }))} />
+              )}
               <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
               <Btn variant="primary" size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>

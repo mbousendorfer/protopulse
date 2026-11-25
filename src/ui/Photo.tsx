@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { useStore } from '../app/store'
 
 // Generated stand-in "photos": deterministic SVG scenes keyed by name. No downloads, no hotlinks.
 // Muted natural tones so they sit quietly on the dark UI.
@@ -67,9 +68,14 @@ function ClipPoster({ name, alt, className, style }: { name: string; alt: string
   const [broken, setBroken] = useState(false)
   // ponytail: the source is read from the id, so a pasted link's clips fall back to a scene; read the clip from the store if that matters.
   const source = name.slice(5).split('-')[1]
+  // The clip's cover, when it has one: that frame of the source (the browser shows it at `#t`).
+  let cover: number | undefined
+  try { cover = (useStore().s.video.clips.find(c => c.id === name.slice(5)) as { cover?: { at: number } } | undefined)?.cover?.at } catch { /* rendered outside the app's store */ }
   return (
     <span className={`photo clip-photo ${className}`} style={{ display: 'block', position: 'relative', width: '100%', height: '100%', overflow: 'hidden', background: '#000', ...style }} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
-      {broken ? <Photo name="workshop" /> : <img src={`${import.meta.env.BASE_URL}media/${source}/poster.jpg`} alt="" onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
+      {broken ? <Photo name="workshop" />
+        : cover !== undefined ? <video src={`${import.meta.env.BASE_URL}media/${source}/video.mp4#t=${cover}`} preload="metadata" muted playsInline tabIndex={-1} onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          : <img src={`${import.meta.env.BASE_URL}media/${source}/poster.jpg`} alt="" onError={() => setBroken(true)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
       <svg viewBox="0 0 24 24" width="22" height="22" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.6))' }} aria-hidden><path d="M8 5v14l11-7z" fill="#fff" /></svg>
     </span>
   )

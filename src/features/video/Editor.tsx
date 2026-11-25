@@ -7,20 +7,21 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
-import { BROLL, MUSIC, speakerName, type Source } from '../../data/video'
+import { BROLL, MUSIC, PEOPLE, TRANSCRIPT, speakerName, type Source } from '../../data/video'
+import { holdReason, noRelease, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
 import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
-  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, clipPosts, clipText, extend, fillers, keptWords, removeFillers, rescore, silenceSaved,
+  LANG_LABEL, LANGS, NETWORK_FIT, NET_SPEC, SCORE_LABEL, buildVersions, versionFor, versionIssues, versionOf, applyAsk, captionLines, captionSlips, coverFrames, coverText, shortsTitle, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
   silences, toSRT, wordText, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
 } from './model'
 import { Frame, usePlayback, type Playback } from './Player'
 import Timeline from './Timeline'
 import { TemplatePicker, SwatchPicker } from './BrandKit'
-import { ScoreBadge, fmt, useClip } from './parts'
+import { CoverFrame, ScoreBadge, fmt, focusAt, useClip } from './parts'
 import { ClipNotNow } from './Page'
 
 const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow', dismissed: 'Dismissed' }
@@ -46,6 +47,12 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
   const canUndo = s.video.editor.clip === clip.id && s.video.editor.past.length > 0
   const canRedo = s.video.editor.clip === clip.id && s.video.editor.future.length > 0
   const open = clip.status === 'ready' || clip.status === 'snoozed'
+  // Which version the frame shows: the clip as framed, or one network's version.
+  const [pick, setView] = useState<'all' | Network>('all')
+  const view = pick !== 'all' && clip.post.networks.includes(pick) ? pick : 'all'
+  const version = view === 'all' ? undefined : versionOf(clip, view)
+  const shown = version ? { ...clip, aspect: version.aspect, captions: { ...clip.captions, y: version.y } } : clip
+  const setAspect = (aspect: Clip['aspect']) => (view === 'all' ? edit({ aspect }) : edit({ versions: { ...clip.versions, [view]: { ...versionOf(clip, view), aspect } } }))
 
   useEffect(() => { d({ type: 'video/open', id: clip.id }) }, [clip.id, d])
 
@@ -96,20 +103,42 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
       <TranscriptPanel clip={clip} pb={pb} sel={sel} setSel={setSel} selected={selected} onCut={cutSelection} edit={edit} />
 
       <section className="ed-stage" aria-label="Preview">
-        <div className="ed-frame-wrap"><Frame clip={clip} source={source} pb={pb} safe={safe} outro={s.video.kit.outro} /></div>
+        {clip.post.networks.length > 1 && (
+          <Seg name="version" size="sm" label="Version" value={view} onChange={setView} options={[{ value: 'all', label: 'All' }, ...clip.post.networks.map(n => ({ value: n, label: NETWORK_FIT[n] ?? NETWORK_LABEL[n] }))]} />
+        )}
+        <div className="ed-frame-wrap"><Frame clip={shown} source={source} pb={pb} safe={safe && view !== 'all' ? NET_SPEC[view] ?? true : safe} outro={s.video.kit.outro} /></div>
         <div className="ed-transport">
           <Btn icon variant="ghost" onClick={pb.toggle} aria-label={pb.playing ? 'Pause' : 'Play'} kbd="Space">{pb.playing ? <Pause size={18} /> : <Play size={18} />}</Btn>
           <span className="mono t-sm">{fmt(pb.t)} / {fmt(pb.total)}</span>
           <span className="spacer" />
-          <Seg name="aspect" size="sm" label="Format" value={clip.aspect} onChange={aspect => edit({ aspect })} options={[{ value: '9:16', label: '9:16' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }]} />
+          <Seg name="aspect" size="sm" label="Format" value={shown.aspect} onChange={setAspect} options={[{ value: '9:16', label: '9:16' }, { value: '4:5', label: '4:5' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }]} />
           <Switch checked={safe} onChange={setSafe} label="Safe zones" />
         </div>
+        {view !== 'all' && <VersionBar clip={clip} n={view} edit={edit} />}
         {pb.elements}
       </section>
 
       <Inspector clip={clip} pb={pb} edit={edit} score={score} />
 
       <div className="ed-timeline"><Timeline clip={clip} source={source} pb={pb} onEdit={edit} /></div>
+    </div>
+  )
+}
+
+/* ---------- One network's version ---------- */
+
+function VersionBar({ clip, n, edit }: { clip: Clip; n: Network; edit: (p: Partial<Clip>) => void }) {
+  const v = versionOf(clip, n)
+  const issues = versionIssues(clip, n)
+  const name = NETWORK_FIT[n] ?? NETWORK_LABEL[n]
+  const set = (p: Partial<typeof v>) => edit({ versions: { ...clip.versions, [n]: { ...v, ...p } } })
+  const juno = versionFor(clip, n)
+  return (
+    <div className="ed-version" role="group" aria-label={`${name} version`}>
+      <Net n={n} size={16} />
+      <span>{issues.length ? <>{name}: {issues.join(', ')}.</> : <>{name}: {v.aspect}, captions clear of the app’s buttons.</>}</span>
+      <CommitRange label="Caption height" min={8} max={86} value={v.y} onCommit={y => set({ y })} format={x => `${x}% from the top`} />
+      {(v.aspect !== juno.aspect || v.y !== juno.y) && <Btn size="xs" variant="ghost" onClick={() => set(juno)}><Mark agent="juno" />Juno’s version</Btn>}
     </div>
   )
 }
@@ -126,6 +155,8 @@ function TranscriptPanel({ clip, pb, sel, setSel, selected, onCut, edit }: {
   const cut = new Set(clip.cut)
   const fill = fillers(clip, tr)
   const sil = silences(clip, tr)
+  const slips = captionSlips(clip, tr)
+  const slipIdx = Object.keys(slips).map(Number)
   const silAfter = new Map(sil.map(g => [g.at, g.dur]))
   const before = tr.sentences.filter(x => x.e <= clip.start + 0.01).at(-1)
   const after = tr.sentences.find(x => x.s >= clip.end - 0.01)
@@ -155,6 +186,13 @@ function TranscriptPanel({ clip, pb, sel, setSel, selected, onCut, edit }: {
         <Btn size="sm" disabled={!sil.length} onClick={() => edit({ trimGaps: true })}>{sil.length ? `Remove ${sil.length} pause${sil.length > 1 ? 's' : ''} · ${silenceSaved(clip, tr).toFixed(1)} s` : clip.trimGaps ? 'Pauses removed' : 'No long pauses'}</Btn>
         {clip.trimGaps && <Btn size="sm" variant="ghost" onClick={() => edit({ trimGaps: false })}>Keep the pauses</Btn>}
       </div>
+      {slipIdx.length > 0 && (
+        <div className="ed-flag" role="status">
+          <Mark agent="juno" />
+          <span className="grow">Juno flags {slipIdx.length === 1 ? 'a caption' : `${slipIdx.length} captions`}: {[...new Set(slipIdx.map(i => slipLabel(clip.heard![i], slips[i])))].join(', ')}, as the Playbook spells it.</span>
+          <Btn size="xs" onClick={() => edit({ fixes: { ...clip.fixes, ...slips } })}>Fix {slipIdx.length === 1 ? 'it' : 'them'}</Btn>
+        </div>
+      )}
       {selected.length > 0 && (
         <div className="ed-sel" role="toolbar" aria-label="Selected words">
           <b className="num">{selected.length} word{selected.length > 1 ? 's' : ''}</b>
@@ -186,8 +224,8 @@ function TranscriptPanel({ clip, pb, sel, setSel, selected, onCut, edit }: {
             return (
               <span key={w.i}>
                 {head && <b className="ed-speaker">{who(sp)}</b>}
-                <button className={`ed-w ${cut.has(w.i) ? 'cut' : ''} ${w.filler ? 'filler' : ''} ${inSel ? 'sel' : ''} ${activeWord === w.i ? 'now' : ''} ${clip.fixes[w.i] ? 'fixed' : ''} ${w.i in clip.overdub ? 'voiced' : ''}`}
-                  onClick={e => pick(w.i, e.shiftKey)} aria-pressed={inSel} title={w.filler ? 'Filler word' : clip.fixes[w.i] ? `Caption fixed: heard “${w.w}”` : w.i in clip.overdub ? `Re-voiced: was “${w.w}”` : undefined}>
+                <button className={`ed-w ${cut.has(w.i) ? 'cut' : ''} ${w.filler ? 'filler' : ''} ${inSel ? 'sel' : ''} ${activeWord === w.i ? 'now' : ''} ${clip.fixes[w.i] ? 'fixed' : ''} ${w.i in slips ? 'flag' : ''} ${w.i in clip.overdub ? 'voiced' : ''}`}
+                  onClick={e => pick(w.i, e.shiftKey)} aria-pressed={inSel} title={w.filler ? 'Filler word' : clip.fixes[w.i] ? `Caption fixed: heard “${clip.heard?.[w.i] ?? w.w}”` : w.i in slips ? `Juno: the Playbook says “${slips[w.i]}”` : w.i in clip.overdub ? `Re-voiced: was “${w.w}”` : undefined}>
                   {w.i in clip.overdub ? clip.overdub[w.i] || '·' : wordText(clip, w)}
                 </button>
                 {silAfter.has(w.e) && <span className="ed-pause">{silAfter.get(w.e)!.toFixed(1)} s pause</span>}{' '}
@@ -236,7 +274,7 @@ function Inspector({ clip, pb, edit, score }: { clip: Clip; pb: Playback; edit: 
         {tab === 'layout' && <LayoutTab clip={clip} pb={pb} edit={edit} />}
         {tab === 'brand' && <BrandTab clip={clip} pb={pb} edit={edit} />}
         {tab === 'audio' && <AudioTab clip={clip} pb={pb} edit={edit} />}
-        {tab === 'post' && <PostTab clip={clip} edit={edit} score={score} />}
+        {tab === 'post' && <PostTab clip={clip} edit={edit} score={score} dur={pb.total} />}
       </div>
       <AskJuno clip={clip} pb={pb} edit={edit} />
     </section>
@@ -281,9 +319,11 @@ const FRAMES: { value: FrameMode; label: string; note: string }[] = [
 ]
 
 function LayoutTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Partial<Clip>) => void }) {
+  const { s } = useStore()
   const shots = pb.tr.shots.filter(x => x.e > clip.start && x.s < clip.end)
   return (
     <div className="stack">
+      <FramingNote clip={clip} edit={edit} kit={s.video.kit.brand} />
       <div className="choices" role="radiogroup" aria-label="Framing">
         {FRAMES.map(f => (
           <label key={f.value} className={`choice-row ${clip.frame === f.value ? 'on' : ''}`}>
@@ -307,7 +347,26 @@ function LayoutTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Par
   )
 }
 
+/** Reframe and brand kit on Draft (applied, to check) or Suggest (Juno's proposal, not applied). */
+export function FramingNote({ clip, edit, kit }: { clip: Clip; edit: (p: Partial<Clip>) => void; kit: Clip['brand'] }) {
+  if (!clip.framing) return null
+  return (
+    <div className="ed-flag" role="status">
+      <Mark agent="juno" />
+      {clip.framing === 'check' ? <>
+        <span className="grow">Juno framed it on the speaker, made a version per network and applied the brand kit. Reframing is set to Draft: check it.</span>
+        <Btn size="xs" onClick={() => edit({ framing: undefined })}>Keep it</Btn>
+        <Btn size="xs" variant="ghost" onClick={() => edit({ framing: undefined, frame: 'fit', focus: undefined, versions: undefined, brand: { ...clip.brand, logo: false, progress: false, intro: false, outro: false, music: undefined } })}>Undo framing</Btn>
+      </> : <>
+        <span className="grow">Juno suggests auto-tracking the speaker, a version per network, and the brand kit: logo, progress bar, end card, music.</span>
+        <Btn size="xs" onClick={() => edit({ framing: undefined, frame: 'track', brand: { ...kit }, versions: buildVersions(clip) })}>Apply</Btn>
+      </>}
+    </div>
+  )
+}
+
 function BrandTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Partial<Clip>) => void }) {
+  const { s } = useStore()
   const b = clip.brand
   const brand = (p: Partial<Clip['brand']>) => edit({ brand: { ...b, ...p } })
   const kept = keptWords(clip, pb.tr)
@@ -315,6 +374,7 @@ function BrandTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
   const ideas = BROLL.filter(a => !used.has(a.id)).map(a => ({ a, w: kept.find(w => a.match.test(w.w)) })).filter(x => x.w)
   return (
     <div className="stack">
+      <FramingNote clip={clip} edit={edit} kit={s.video.kit.brand} />
       <Switch checked={b.logo} onChange={logo => brand({ logo })} label="Logo" />
       <Switch checked={b.progress} onChange={progress => brand({ progress })} label="Progress bar" />
       <Switch checked={b.intro} onChange={intro => brand({ intro })} label="Hook card for the first 2 seconds" />
@@ -334,14 +394,17 @@ function BrandTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
 }
 
 function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Partial<Clip>) => void }) {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const [making, setMaking] = useState<Lang | null>(null)
+  const level = s.agents.find(a => a.id === 'juno')?.actions.find(x => x.id === 'juno-dub')?.autonomy ?? 'draft'
   const order = [...new Set<Lang>([...s.video.kit.langs, ...LANGS.filter(l => l !== 'en')])]
+  const review = clip.audio.review ?? []
   const voiced = Object.entries(clip.overdub).filter(([, v]) => v)
   const make = (lang: Lang) => {
     setMaking(lang)
-    setTimeout(() => { edit({ audio: { ...clip.audio, lang, dubs: [...new Set([...clip.audio.dubs, lang])] } }); setMaking(null) }, 1500)
+    setTimeout(() => { d({ type: 'video/dub', id: clip.id, lang }); setMaking(null) }, 1500)
   }
+  const play = (lang: Lang) => edit({ audio: { ...clip.audio, lang } })
   return (
     <div className="stack">
       <Field label="Studio sound">
@@ -350,17 +413,29 @@ function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
       </Field>
       <Field label="Voice">
         <ul className="ed-list">
-          <li><span><b>English</b> · original voice</span>{clip.audio.lang === 'en' ? <Pill tone="ok">Playing</Pill> : <Btn size="xs" onClick={() => edit({ audio: { ...clip.audio, lang: 'en' } })}>Play</Btn>}</li>
-          {order.map(l => (
-            <li key={l}>
-              <span><b>{LANG_LABEL[l]}</b> · {clip.audio.dubs.includes(l) ? 'same voice, captions translated' : 'not made yet'}</span>
-              {making === l ? <Thinking label="Dubbing…" />
-                : clip.audio.dubs.includes(l) ? (clip.audio.lang === l ? <Pill tone="ok">Playing</Pill> : <Btn size="xs" onClick={() => edit({ audio: { ...clip.audio, lang: l } })}>Play</Btn>)
+          <li><span><b>English</b> · original voice</span>{clip.audio.lang === 'en' ? <Pill tone="ok">Playing</Pill> : <Btn size="xs" onClick={() => play('en')}>Play</Btn>}</li>
+          {order.map(l => {
+            const made = clip.audio.dubs.includes(l)
+            const toReview = made && review.includes(l)
+            const worth = !made && level === 'suggest' && s.video.kit.langs.includes(l as never)
+            return (
+              <li key={l}>
+                <span><b>{LANG_LABEL[l]}</b> · {toReview ? 'made by Juno, to review' : made ? 'same voice, captions translated' : worth ? 'Juno suggests it: a brand kit language' : 'not made yet'}</span>
+                {making === l ? <Thinking label="Dubbing…" />
+                  : made ? <span className="row tight nowrap">
+                    {clip.audio.lang === l ? <Pill tone="ok">Playing</Pill> : <Btn size="xs" variant={toReview ? 'ghost' : undefined} onClick={() => play(l)}>{toReview ? 'Listen' : 'Play'}</Btn>}
+                    {toReview && <Btn size="xs" onClick={() => d({ type: 'video/approveDub', id: clip.id, lang: l })}>Approve</Btn>}
+                  </span>
                   : <Btn size="xs" disabled={!!making} onClick={() => make(l)}>Make it</Btn>}
-            </li>
-          ))}
+              </li>
+            )
+          })}
         </ul>
-        <p className="muted t-sm">Translate and dub is set to Draft: Juno makes a version when you ask, and nothing in another language goes out without your review.</p>
+        <p className="muted t-sm">{level === 'act'
+          ? 'Translate and dub is set to Act: Juno makes your brand kit languages for every new clip, and you can undo it from the journal.'
+          : level === 'draft'
+            ? 'Translate and dub is set to Draft: Juno makes your brand kit languages for every new clip, and each one waits for your review.'
+            : 'Translate and dub is set to Suggest: Juno points out the languages worth making. You make them.'}</p>
       </Field>
       <Field label="Re-voiced words">
         {voiced.length ? <ul className="ed-list">{voiced.map(([i, v]) => <li key={i}><span>“{pb.tr.words[+i].w}” → “{v}”</span><Btn size="xs" variant="ghost" onClick={() => { const o = { ...clip.overdub }; for (const k of Object.keys(o)) if (+k >= +i && (+k === +i || o[+k] === '')) delete o[+k]; edit({ overdub: o }) }}>Revert</Btn></li>)}</ul>
@@ -370,18 +445,28 @@ function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
   )
 }
 
-function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) => void; score: ReturnType<typeof rescore> }) {
-  const { s } = useStore()
+function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Clip>) => void; score: ReturnType<typeof rescore>; dur: number }) {
+  const { s, d } = useStore()
+  const open = clip.status === 'ready' || clip.status === 'snoozed'
+  const held = open ? holdReason(s, clip) : undefined
+  const who = open ? unreleased(s, clip) : []
   const now = useNow(30000)
   const [own, setOwn] = useState('')
-  const slots = useMemo(() => clipPosts(clip, s.publishing.posts, now, () => 'preview'), [clip, s.publishing.posts, now])
+  const slots = useMemo(() => clipPosts(clip, s.publishing.posts, now, () => 'preview', dur), [clip, s.publishing.posts, now, dur])
   const setNets = (n: Network, on: boolean) => {
     const networks = on ? [...clip.post.networks, n] : clip.post.networks.filter(x => x !== n)
     if (!networks.length) return
-    edit({ post: { networks, text: on ? { ...clip.post.text, [n]: clip.post.text[clip.post.networks[0]] ?? clip.hook } : clip.post.text } })
+    edit({ post: { networks, text: on ? { ...clip.post.text, [n]: clip.post.text[clip.post.networks[0]] ?? clip.hook } : clip.post.text }, ...(on && clip.versions ? { versions: { ...clip.versions, [n]: versionFor(clip, n) } } : {}) })
   }
   return (
     <div className="stack">
+      {held && (
+        <div className="ed-flag" role="status">
+          <Mark agent="juno" />
+          <span className="grow">Not going out: {held}.</span>
+          {who.map(p => <Btn key={p} size="xs" onClick={() => d({ type: 'video/release', person: p, signed: true })}>{PEOPLE[p].name}’s release is signed</Btn>)}
+        </div>
+      )}
       <div className="ed-score">
         <div className="row between"><b>Virality score</b><b className="num ed-score-total">{score.total}</b></div>
         {(Object.keys(SCORE_LABEL) as ScoreKey[]).map(k => (
@@ -390,11 +475,20 @@ function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) =
             <p className="muted t-sm">{score.reasons[k]}</p>
           </div>
         ))}
+        {score.track && (
+          <div className="ed-score-row">
+            <span className="ed-score-wide">Track record</span><span className="num">{score.track.delta > 0 ? `+${score.track.delta}` : score.track.delta}</span>
+            <p className="muted t-sm">{score.track.why}</p>
+          </div>
+        )}
       </div>
       <div className="ed-why">
         <div className="row tight"><Mark agent="juno" /><b>Why this moment</b></div>
         <p>{clip.why}</p>
-        <ul className="ed-evidence">{clip.evidence.map(e => <li key={e.label}><b className="num">{e.value}</b> <span>{e.label}</span> {e.to ? <Link to={e.to} className="link-btn">{e.from} ↗</Link> : <span className="muted">· {e.from}</span>}</li>)}</ul>
+        <ul className="ed-evidence">
+          {clip.evidence.map(e => <li key={e.label}><b className="num">{e.value}</b> <span>{e.label}</span> {e.to ? <Link to={e.to} className="link-btn">{e.from} ↗</Link> : <span className="muted">· {e.from}</span>}</li>)}
+          {clip.track?.like && <li><b className="num">{(clip.track.like.views / 1000).toFixed(1)}k</b> <span>views on “{clip.track.like.title}”, the closest clip you published</span> <Link to={`/video/clips/${clip.track.like.id}`} className="link-btn">Video ↗</Link></li>}
+        </ul>
       </div>
       <Field label="Hook">
         <div className="choices" role="radiogroup" aria-label="Hook">
@@ -407,8 +501,11 @@ function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) =
           <Btn size="sm" type="submit" disabled={!own.trim()}>Use it</Btn>
         </form>
       </Field>
+      <CoverField clip={clip} edit={edit} />
       <Field label="Where it goes">
         <div className="row">{CLIP_NETWORKS.map(n => <label key={n} className="check-row"><input type="checkbox" className="check" checked={clip.post.networks.includes(n)} onChange={e => setNets(n, e.target.checked)} /><Net n={n} size={16} />{NETWORK_FIT[n]}</label>)}</div>
+        {clip.post.networks.filter(n => !fitsLength(n, dur)).map(n => <p key={n} className="muted t-sm">{NETWORK_FIT[n]}: {Math.round(dur)} s is outside {lengthSpec(n).min}–{lengthSpec(n).max} s, so Atlas won’t post it there.</p>)}
+        {clip.post.networks.flatMap(n => versionIssues(clip, n).map(x => <p key={n + x} className="muted t-sm">{NETWORK_FIT[n]}: {x}.</p>))}
       </Field>
       {clip.post.networks.map(n => {
         const text = clip.post.text[n] ?? ''
@@ -430,12 +527,45 @@ function PostTab({ clip, edit, score }: { clip: Clip; edit: (p: Partial<Clip>) =
   )
 }
 
+/* ---------- Cover ---------- */
+
+function CoverField({ clip, edit }: { clip: Clip; edit: (p: Partial<Clip>) => void }) {
+  const { s } = useStore()
+  const source = s.video.sources.find(x => x.id === clip.source)
+  if (!source || source.kind === 'upload') return null
+  const frames = coverFrames(clip, TRANSCRIPT[source.transcript], noRelease(s, source.transcript))
+  const at = (x: number) => fmt(Math.max(0, x - clip.start))
+  const pick = (x: number) => edit({ cover: { at: x, text: clip.cover?.text ?? coverText(clip.hook), by: 'you' } })
+  return (
+    <>
+      <Field label="Cover">
+        {!clip.cover && frames[0] && <p className="t-sm row tight"><Mark agent="juno" />Juno suggests the frame at {at(frames[0].at)}: {frames[0].why.toLowerCase()}. Pick one to use it.</p>}
+        <div className="row" role="radiogroup" aria-label="Cover frame">
+          {frames.map(f => (
+            <button key={f.at} type="button" role="radio" aria-checked={clip.cover?.at === f.at} className="cover-pick" onClick={() => pick(f.at)} aria-label={`Frame at ${at(f.at)}: ${f.why}`} title={f.why}>
+              <CoverFrame source={source} at={f.at} focus={focusAt(clip, source, f.at)} text={clip.cover?.at === f.at ? clip.cover.text : undefined} /><span className="mono">{at(f.at)}</span>
+            </button>
+          ))}
+        </div>
+        {clip.cover && frames[0] && <p className="muted t-sm">{clip.cover.by === 'juno' ? `Juno’s pick: ${frames[0].why.toLowerCase()}, the hook reads over it.` : `Your pick. Juno’s was ${at(frames[0].at)}, ${frames[0].why.toLowerCase()}.`}</p>}
+        {clip.cover && <input className="input" aria-label="Cover text" defaultValue={clip.cover.text} key={clip.cover.text} maxLength={60} onBlur={e => { const v = e.target.value.trim(); if (v !== clip.cover!.text) edit({ cover: { ...clip.cover!, text: v, by: 'you' } }) }} />}
+      </Field>
+      {clip.post.networks.includes('youtube') && (
+        <Field label="YouTube title">
+          <input className="input" aria-label="YouTube title" defaultValue={clip.ytTitle ?? shortsTitle(clip)} key={clip.ytTitle} maxLength={100} onBlur={e => { const v = e.target.value.trim(); if (v && v !== clip.ytTitle) edit({ ytTitle: v }) }} />
+        </Field>
+      )}
+    </>
+  )
+}
+
 /* ---------- Ask Juno ---------- */
 
-const ASKS = ['Shorter, 30 s', 'Start with the strap', 'Remove the ums', 'Punchier captions', 'French version']
+const ASKS = ['Shorter, 30 s', 'Start with the strap', 'Remove the ums', 'Punchier captions', 'Pick a better cover', 'French version']
 
 function AskJuno({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Partial<Clip>) => void }) {
-  const { d } = useStore()
+  const { s, d } = useStore()
+  const avoid = noRelease(s, s.video.sources.find(x => x.id === clip.source)?.transcript ?? '')
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [last, setLast] = useState<{ ask: string; reply: string; diff?: DiffPart[] } | null>(null)
@@ -443,7 +573,7 @@ function AskJuno({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Parti
     if (!text.trim() || busy) return
     setBusy(true); setQ('')
     setTimeout(() => {
-      const r = applyAsk(clip, pb.tr, text)
+      const r = applyAsk(clip, pb.tr, text, avoid)
       if (r.changed) {
         const { id: _, status: __, ...patch } = r.clip
         edit(patch)

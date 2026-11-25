@@ -4,7 +4,8 @@ import { T, MIN } from '../app/time'
 export type CompetitorId = 'peakline' | 'norro' | 'trailkind' | 'basecamp'
 
 export type Competitor = {
-  id: CompetitorId
+  /** One of the four seeded competitors, or the id of one Sam added (see competitorsOf). */
+  id: CompetitorId | string
   name: string
   handle: string
   positioning: string
@@ -32,7 +33,7 @@ export type Move = { label: string; agent: AgentId; kind: 'counter' | 'sage' | '
 
 export type CompEvent = {
   id: string
-  competitor: CompetitorId
+  competitor: CompetitorId | string
   type: EventType
   title: string
   at: number
@@ -217,8 +218,11 @@ const FILLER: [string, Sentiment, string?][] = [
 const NETS = ['Instagram', 'TikTok', 'X', 'Facebook', 'Reddit']
 const NAMES = ['@lea.m', '@paul_outdoor', '@emma.trail', '@yanis.hike', '@chloe.rando', '@romain.alps', '@ana.lisboa', '@kevin_fr', '@sofia.runs', '@nico.peaks', '@ella.bv', '@jules.gr', '@marie.ct', '@victor.ski', '@lina.trek', '@hugo_m', '@zoe.vertical', '@arthur.camp', '@manon.k', '@louis.trail', '@eva.mont', '@gab_alps', '@ines.rando', '@sam.lyon', '@noah.peak']
 
+/** The search that caught a seeded mention, by its number. */
+const SEARCH_OF: Record<number, string> = { 1: 's2', 2: 's5', 4: 's9', 5: 's2', 7: 's3', 9: 's11', 10: 's2', 11: 's4', 12: 's4', 16: 's3', 18: 's12', 19: 's10', 20: 's9', 21: 's4', 25: 's3' }
+
 export const MENTIONS: Mention[] = [
-  ...M.map(([author, network, text, sentiment, reach, product, risk], i) => ({ id: `m${i + 1}`, author, network, text, sentiment, reach, product, risk, at: T(8, 0) - (i * 47 + 12) * MIN })),
+  ...M.map(([author, network, text, sentiment, reach, product, risk], i) => ({ id: `m${i + 1}`, author, network, text, sentiment, reach, product, risk, search: SEARCH_OF[i + 1], at: T(8, 0) - (i * 47 + 12) * MIN })),
   ...NAMES.map((author, i) => {
     const [text, sentiment, product] = FILLER[i % FILLER.length]
     return { id: `m${M.length + i + 1}`, author, network: NETS[i % NETS.length], text, sentiment, product, reach: 200 + ((i * 397) % 2400), at: T(8, 0) - (i * 83 + 30) * MIN }
@@ -238,7 +242,8 @@ export const TRENDS: Trend[] = [
   { id: 't8', name: 'AI-generated trail maps', networks: 'X, Instagram', growth: '+120% this week', fit: 'Low', fitWhy: 'Nothing to do with your products, and your audience distrusts AI content.', examples: ['#aitrails · 40k posts'] },
 ]
 
-export type Search = { id: string; name: string; keywords: string; exclude: string; volume: number; paused?: boolean }
+/** A search created during the session fills up from `startedAt` (see searchVolume). */
+export type Search = { id: string; name: string; keywords: string; exclude: string; volume: number; paused?: boolean; startedAt?: number }
 
 export const SEARCHES: Search[] = [
   { id: 's1', name: 'Brand', keywords: 'Fernway, @fernway, fernway.co', exclude: 'fernway road, fernway farm', volume: 1840 },
@@ -254,3 +259,13 @@ export const SEARCHES: Search[] = [
   { id: 's11', name: 'Trail Week', keywords: '#FernwayTrailWeek, Trail Week Fernway', exclude: '', volume: 640 },
   { id: 's12', name: 'Gear repair', keywords: 'bag repair, repair outdoor gear, réparation sac', exclude: 'phone repair', volume: 970, paused: true },
 ]
+
+/** What Echo knows about the creators in the feed beyond their mentions. Followers come from the mention's reach. */
+export type CreatorInfo = { name: string; network: Network; also: { competitor: CompetitorId; n: number }[]; history: string[]; signed?: CompetitorId }
+export const CREATOR_INFO: Record<string, CreatorInfo> = {
+  '@camille.outdoors': { name: 'Camille Roux', network: 'instagram', also: [], history: ['3 unpaid stories with the Ridge this week, 2.4k replies', 'Has tagged Fernway 11 times since June'] },
+  '@theo.wild': { name: 'Théo Wild', network: 'instagram', also: [{ competitor: 'peakline', n: 6 }], history: ['Signed a 6-month series with Peakline in September', 'Asked Fernway for a collab last month, no answer'], signed: 'peakline' },
+  '@jeanne.paris': { name: 'Jeanne Martin', network: 'tiktok', also: [{ competitor: 'trailkind', n: 1 }], history: ['Weekly gorpcore fit checks, about 15k views each', 'Wore the Storm Jacket in 2 of her last 5 videos'] },
+  '@julien_trail': { name: 'Julien Favre', network: 'tiktok', also: [{ competitor: 'trailkind', n: 2 }], history: ['Sunrise hikes around Chamonix every weekend'] },
+  '@nadia.runs': { name: 'Nadia Benali', network: 'tiktok', also: [], history: ['Daily gym-bag routine, the Summit Bottle in every one'] },
+}

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import type { Network } from '../../app/types'
 import { Link, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
@@ -7,13 +8,17 @@ import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import {
-  ANOMALIES, DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, REPORTS, TIKTOK_VIEWS, dayLabels,
-  type Cited, type Kpi, type NetFilter, type Period, type PostRow, type Report,
+  DAILY_REACH, HEAT_COLS, HEAT_ROWS, NETWORKS_SOCIAL, NET_SHARE, PILLAR_PERF, POSTS, TIKTOK_VIEWS, dayLabels,
+  type Cited, type Kpi, type NetFilter, type PostRow, type Report,
 } from '../../data/insights'
-import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Tabs, Tip } from '../../ui'
+import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
 import { InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
-import { bestTime, heat, kpis as kpisOf } from './metrics'
+import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
+import { targetsOf } from '../strategy/slice'
+import { anomalyList, boostBudget } from './slice'
+import { reportList } from './reports'
+import { SaveTemplate, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
 import './insights.css'
 
 type Tab = 'reports' | 'explore' | 'anomalies'
@@ -24,13 +29,13 @@ export default function InsightsPage() {
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
   const tab: Tab = seg === 'explore' ? 'explore' : seg === 'anomalies' ? 'anomalies' : 'reports'
-  const openAnomalies = ANOMALIES.filter(a => (s.insights.anomalies[a.id]?.open ?? a.open)).length
+  const openAnomalies = anomalyList(s).filter(a => a.open).length
 
   return (
     <div className="page insights">
       <PageHead agent="iris" title="Insights" lede="Iris writes the story first. Dig into the numbers underneath whenever you want." />
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
-        { value: 'reports', label: 'Reports', count: REPORTS.length },
+        { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },
         { value: 'anomalies', label: 'Anomalies', count: openAnomalies },
       ]} />
@@ -54,7 +59,7 @@ export function CitedText({ parts }: { parts: Cited[] }) {
 }
 
 /* ---------- Reports ---------- */
-const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap' }
+const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap', custom: 'Asked by you' }
 /** The title says what's in it; the type sits in the meta. Out of context (journal, file name) it gets its type back. */
 const reportMeta = (r: Report) => (r.kind === 'weekly' ? KIND_LABEL.weekly : `${KIND_LABEL[r.kind]} · ${r.period}`)
 const fullTitle = (r: Report) => (r.kind === 'brief' ? r.title : `${KIND_LABEL[r.kind]} · ${r.title}`)
@@ -64,7 +69,8 @@ function Reports() {
   const now = useNow()
   return (
     <div className="reports">
-      {REPORTS.map(r => {
+      <StudioAsk />
+      {reportList(s).map(r => {
         const shared = s.insights.shared[r.id]
         return (
           <Link key={r.id} to={`/insights/reports/${r.id}`} className="card report-row">
@@ -76,7 +82,7 @@ function Reports() {
             </div>
             <div className="report-meta">
               <span className="mono faint">Written {ago(r.writtenAt, now)}</span>
-              {shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
+              {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
             </div>
           </Link>
         )
@@ -93,10 +99,12 @@ function ReportView() {
   const now = useNow(5000)
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const r = REPORTS.find(x => x.id === id)
+  const r = reportList(s).find(x => x.id === id)
   if (!r) return <Empty title="This report doesn’t exist" action={<Btn onClick={() => nav('/insights')}>All reports</Btn>} />
   const shared = s.insights.shared[r.id]
-  const seen = shared && now - shared.at > 45_000
+  // A card in Claire's lane means she hasn't read it yet; her engine answers on the Desk.
+  const reading = s.handoffs.find(h => h.agent === 'iris' && h.lane === 'claire' && (h.ref === r.id || (h.id === 'h-report' && r.id === 'w47')))
+  const deskCard = s.handoffs.find(h => h.agent === 'iris' && !h.lane && h.ref === r.id)
   const follow = s.insights.followUps.filter(f => f.report === r.id)
   const ask = (text: string) => { if (text.trim()) { d({ type: 'insights/ask', report: r.id, q: text.trim() }); setQ('') } }
 
@@ -107,25 +115,34 @@ function ReportView() {
         <div className="row tight report-by"><Mark agent="iris" /><span className="mono faint">{reportMeta(r)} · written by Iris · {dayLabel(r.writtenAt, now)} {hhmm(r.writtenAt)}</span></div>
         <h1>{r.title}</h1>
         <p className="lede">{r.summary}</p>
-        {r.sections.map(sec => (
+        {r.sections.map((sec, i) => (
           <section key={sec.heading}>
-            <h2>{sec.heading}</h2>
+            {r.recipe ? <div className="row nowrap in-sec-head"><h2>{sec.heading}</h2><span className="spacer" /><SectionTools r={r} i={i} sec={sec} /></div> : <h2>{sec.heading}</h2>}
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
-            {sec.chart === 'reach' && <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>}
+            {sec.chart === 'reach' && (r.recipe ? <ReachChart days={r.recipe.days} networks={r.recipe.networks} />
+              : <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>)}
+            {sec.chart === 'pillars' && <div className="report-chart"><HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} color="var(--a-iris)" /></div>}
             {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
           </section>
         ))}
+        {r.recipe && !r.sections.length && <p className="muted">Every section is gone. Add one back, or undo.</p>}
         <p className="faint hint-cite">Point at an underlined number to see where it comes from.</p>
+        {r.recipe && <StudioEdit r={r} />}
       </article>
 
       <aside className="report-side">
         <section className="card pad stack">
           <h2 className="side-title">Share</h2>
-          {shared ? (
+          {r.draft && deskCard ? (
             <>
-              <div className="row tight"><Check size={14} className="ok" /><span>Shared with Claire at {hhmm(shared.at)}</span></div>
-              {seen ? <div className="claire-seen"><Mark agent="claire" /><p>“{r.id === 'w47' ? 'Clear, thanks. Can we talk about the TikTok dip on Thursday?' : 'Thanks, read it.'}”</p></div>
-                : <span className="faint">Not opened yet</span>}
+              <p className="muted">Iris wrote this on Draft. It waits for you on the Desk.</p>
+              <Link to={`/?card=${deskCard.id}`} className="btn sm self-start">Review on Desk</Link>
+            </>
+          ) : shared || reading ? (
+            <>
+              <div className="row tight"><Check size={14} className="ok" /><span>Shared with Claire{shared ? ` ${dayLabel(shared.at, now)} at ${hhmm(shared.at)}` : ''}</span></div>
+              {shared?.reply ? <div className="claire-seen"><Mark agent="claire" /><p>“{shared.reply}”</p></div>
+                : reading ? <span className="faint">Claire hasn’t read it yet. Her answer will show here and on your Desk.</span> : null}
             </>
           ) : (
             <>
@@ -135,6 +152,7 @@ function ReportView() {
           )}
           <Btn variant="ghost" onClick={() => { downloadFile(`${r.id}-${fullTitle(r).toLowerCase().replace(/[^a-z0-9]+/g, '-')}.md`, reportMarkdown(r), 'text/markdown'); d({ type: 'insights/export', title: fullTitle(r) }) }}><Download size={14} />Download (.md)</Btn>
         </section>
+        {r.recipe && <section className="card pad stack"><h2 className="side-title">Template</h2><SaveTemplate r={r} /></section>}
         <section className="card pad stack">
           <h2 className="side-title">Ask Iris a follow-up</h2>
           {follow.map(f => (
@@ -154,37 +172,75 @@ function ReportView() {
   )
 }
 
+/** A requested report's reach: its own window and networks. */
+function ReachChart({ days, networks }: { days: number; networks: Network[] }) {
+  const share = networks.length ? networks.reduce((t, n) => t + NET_SHARE[n].share, 0) : 1
+  const data = reachSeries({ days, offset: 0 }).map(v => +(v * share).toFixed(1))
+  return <div className="report-chart"><LineChart label={`Daily reach, last ${days} days`} labels={dayLabels(days)} series={[{ name: 'Reach (k)', data, color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>
+}
+
 /* ---------- Explore ---------- */
 const fmtKpi = (k: Kpi, v: number) => k.fmt === 'k' ? (v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : `${Math.round(v / 1000)}k`) : k.fmt === 'pct' ? `${v.toFixed(1)}%` : k.fmt === 'min' ? `${v} min` : Math.round(v).toLocaleString('en-GB')
 
-type SortKey = 'date' | 'reach' | 'er' | 'clicks'
+type SortKey = 'date' | 'reach' | 'er' | 'clicks' | 'network' | 'pillar' | 'author'
+type PeriodChoice = '7' | '30' | '90' | 'custom'
+
+const iso = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
+const startOf = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
+const fromIso = (v: string) => { const [y, m, d] = v.split('-').map(Number); return new Date(y, m - 1, d).getTime() }
 
 function Explore() {
+  const { s } = useStore()
+  // Pillars: the top engagement rate is the one to read, against the share Sage targets for it.
+  const targets = targetsOf(s).pillars
+  const topPillar = PILLAR_PERF.reduce((a, b) => (b.er > a.er ? b : a))
+  const topTarget = targets.find(t => t.name === topPillar.pillar)?.target
   const now = useNow()
-  const [period, setPeriod] = useState<Period>(7)
+  const today = startOf(now)
+  const [choice, setChoice] = useState<PeriodChoice>('7')
+  const [custom, setCustom] = useState({ from: iso(today - 13 * DAY), to: iso(today) })
   const [net, setNet] = useState<NetFilter>('all')
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'reach', desc: true })
+  const [open, setOpen] = useState<PostRow | null>(null)
 
-  const kpis = kpisOf(period, net)
+  // A custom range is clamped to the 90 days Iris keeps, and never ends in the future.
+  const lo = today - 89 * DAY
+  const fromT = choice === 'custom' ? Math.min(Math.max(fromIso(custom.from) || lo, lo), today) : today - (+choice - 1) * DAY
+  const toT = choice === 'custom' ? Math.min(Math.max(fromIso(custom.to) || today, fromT), today) : today
+  const range: Range = { days: Math.round((toT - fromT) / DAY) + 1, offset: Math.round((today - toT) / DAY) }
+  const label = choice === 'custom' ? `${range.days} days` : `${choice} days`
+
+  const kpis = rangeKpis(range, net)
   const share = net === 'all' ? 1 : NET_SHARE[net].share
-  const cur = DAILY_REACH.slice(-period).map(v => +(v * share).toFixed(1))
-  const prev = period < 90 ? DAILY_REACH.slice(-period * 2, -period).map(v => +(v * share * 0.93).toFixed(1)) : []
-  const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= now - period * DAY)
-    .sort((a, b) => (sort.desc ? -1 : 1) * ((a[sort.key] as number) - (b[sort.key] as number))), [net, period, sort, now])
+  const cur = reachSeries(range).map(v => +(v * share).toFixed(1))
+  const before = { days: range.days, offset: range.offset + range.days }
+  const prev = before.offset + before.days <= 90 ? reachSeries(before).map(v => +(v * share * 0.93).toFixed(1)) : []
+  const labels = cur.map((_, i) => new Date(fromT + i * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }))
+  const rows = useMemo(() => POSTS.filter(p => (net === 'all' || p.network === net) && p.date >= fromT && p.date < toT + DAY)
+    .sort((a, b) => (sort.desc ? -1 : 1) * (typeof a[sort.key] === 'string' ? String(a[sort.key]).localeCompare(String(b[sort.key])) : (a[sort.key] as number) - (b[sort.key] as number))), [net, fromT, toT, sort])
   const best = bestTime(net)
   const ig = bestTime('instagram')
 
   const th = (key: SortKey, label: string) => (
-    <th className={key === 'date' ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
-      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : true }))}>{label}<ArrowUpDown size={11} /></button>
+    <th className={['date', 'network', 'pillar', 'author'].includes(key) ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={11} /></button>
     </th>
   )
 
   return (
     <div className="stack lg">
       <div className="row explore-bar">
-        <Seg name="period" label="Period" value={String(period) as '7' | '30' | '90'} onChange={v => setPeriod(+v as Period)}
-          options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]} />
+        <Seg name="period" label="Period" value={choice} onChange={v => setChoice(v as PeriodChoice)}
+          options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }, { value: 'custom', label: 'Custom' }]} />
+        {choice === 'custom' && (
+          <div className="row tight in-range">
+            <label htmlFor="ex-from" className="sr-only">From</label>
+            <input id="ex-from" type="date" className="input" min={iso(lo)} max={iso(today)} value={custom.from} onChange={e => setCustom(c => ({ ...c, from: e.target.value }))} />
+            <span className="faint" aria-hidden>to</span>
+            <label htmlFor="ex-to" className="sr-only">To</label>
+            <input id="ex-to" type="date" className="input" min={custom.from} max={iso(today)} value={custom.to} onChange={e => setCustom(c => ({ ...c, to: e.target.value }))} />
+          </div>
+        )}
         <Filters label="Network" value={net} onChange={setNet} items={[{ value: 'all', label: 'All networks' }, ...NETWORKS_SOCIAL.map(n => ({ value: n as NetFilter, label: NETWORK_LABEL[n] }))]} />
       </div>
 
@@ -197,7 +253,7 @@ function Explore() {
             <div key={k.key} className="kpi">
               <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
               <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
-              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {period} days</span>
+              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {label}</span>
             </div>
           )
         })}
@@ -205,8 +261,8 @@ function Explore() {
 
       <section className="card pad">
         <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
-        <LineChart label="Daily reach" labels={dayLabels(period)} h={220} format={v => `${Math.round(v)}k`}
-          series={[{ name: `Last ${period} days`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${period} days`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
+        <LineChart label="Daily reach" labels={labels} h={220} format={v => `${Math.round(v)}k`}
+          series={[{ name: choice === 'custom' ? 'This range' : `Last ${label}`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${label}`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
       </section>
 
       <div className="grid-2">
@@ -216,35 +272,47 @@ function Explore() {
           <p className="muted heat-note">Best window{net === 'all' ? '' : ` on ${NETWORK_LABEL[net]}`}: <b>{best.dayName} {best.window}</b>, {best.lift}× the median reach. {net === 'all' ? `Instagram brings most of your reach; Atlas posts there at ${ig.time}.` : `Atlas posts at ${best.time}, inside it.`}</p>
         </section>
         <section className="card pad">
-          <div className="section-title">By pillar <span className="faint">· engagement rate, 30 days</span></div>
-          <HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} highlight="Community" color="var(--a-iris)" />
+          <div className="section-title">By pillar <span className="faint">· 30 days</span></div>
           <table className="table pillar-table">
-            <thead><tr><th>Pillar</th><th className="r">Share of posts</th><th className="r">Saves rate</th></tr></thead>
-            <tbody>{PILLAR_PERF.map(p => <tr key={p.pillar}><td>{p.pillar}</td><td className="r">{p.share}%</td><td className="r">{p.saves}%</td></tr>)}</tbody>
+            <thead><tr><th>Pillar</th><th>Engagement rate</th><th className="r">Share · target</th><th className="r">Saves rate</th></tr></thead>
+            <tbody>{PILLAR_PERF.map(p => {
+              const t = targets.find(x => x.name === p.pillar)?.target
+              return (
+                <tr key={p.pillar} className={p === topPillar ? 'best' : undefined}>
+                  <td>{p.pillar}</td>
+                  <td><span className="pillar-er"><span className="track"><i style={{ width: `${(p.er / topPillar.er) * 100}%` }} /></span><b className="num">{p.er.toFixed(1)}%</b></span></td>
+                  <td className="r num">{p.share}%{t !== undefined && <span className="faint"> · {t}%</span>}</td>
+                  <td className="r num">{p.saves}%</td>
+                </tr>
+              )
+            })}</tbody>
           </table>
+          <p className="muted heat-note"><b>{topPillar.pillar}</b> engages best ({topPillar.er.toFixed(1)}%){topTarget !== undefined && topPillar.share < topTarget ? `, yet makes ${topPillar.share}% of posts for a ${topTarget}% target.` : '.'}</p>
         </section>
       </div>
 
       <section className="card">
         <div className="card-head"><h2>Posts <span className="faint num">{rows.length}</span></h2>
-          <Btn size="sm" disabled={!rows.length} onClick={() => downloadFile(`fernway-posts-${period}d.csv`, toCSV([['Date', 'Network', 'Post', 'Pillar', 'Author', 'Reach', 'Engagement rate %', 'Clicks'], ...rows.map(p => [new Date(p.date).toISOString().slice(0, 10), NETWORK_LABEL[p.network], p.title, p.pillar, p.author, p.reach, p.er, p.clicks])]))}><Download size={14} />Export CSV</Btn></div>
+          <Btn size="sm" disabled={!rows.length} onClick={() => downloadFile(`fernway-posts-${iso(fromT)}-${iso(toT)}.csv`, toCSV([['Date', 'Network', 'Post', 'Pillar', 'Author', 'Reach', 'Engagement rate %', 'Clicks'], ...rows.map(p => [iso(p.date), NETWORK_LABEL[p.network], p.title, p.pillar, p.author, p.reach, p.er, p.clicks])]))}><Download size={14} />Export CSV</Btn></div>
         {rows.length ? (
           <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Post</th>{th('date', 'Date')}<th>Pillar</th><th>Author</th>{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
-              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} />)}</tbody>
+            <table className="table in-posts">
+              <thead><tr><th>Post</th>{th('network', 'Network')}{th('date', 'Date')}{th('pillar', 'Pillar')}{th('author', 'Author')}{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
+              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} onOpen={() => setOpen(p)} />)}</tbody>
             </table>
           </div>
         ) : <Empty title="No posts in this period" body="Try a longer period or another network." />}
       </section>
+      <PostSheet p={open} onClose={() => setOpen(null)} now={now} />
     </div>
   )
 }
 
-function PostTr({ p, now }: { p: PostRow; now: number }) {
+function PostTr({ p, now, onOpen }: { p: PostRow; now: number; onOpen: () => void }) {
   return (
-    <tr>
-      <td><span className="row nowrap"><Net n={p.network} /><span className="ellipsis mw-320">{p.title}</span></span></td>
+    <tr onClick={onOpen}>
+      <td><button type="button" className="in-post-open ellipsis mw-320" onClick={e => { e.stopPropagation(); onOpen() }}>{p.title}</button></td>
+      <td><Net n={p.network} /></td>
       <td className="mono faint">{dayLabel(p.date, now)}</td>
       <td className="muted">{p.pillar}</td>
       <td className="muted">{p.author}</td>
@@ -255,13 +323,40 @@ function PostTr({ p, now }: { p: PostRow; now: number }) {
   )
 }
 
+/** One post's numbers, against its network's average: what Iris would say about it. */
+function PostSheet({ p, onClose, now }: { p: PostRow | null; onClose: () => void; now: number }) {
+  const avg = p ? NET_SHARE[p.network].er : 0
+  const x = p ? p.er / avg : 1
+  return (
+    <Sheet open={!!p} onOpenChange={o => !o && onClose()} title={p ? p.title : ''}>
+      {p && (
+        <div className="stack">
+          <div className="row tight"><Net n={p.network} /><span className="faint">{dayLabel(p.date, now)} {hhmm(p.date)} · {p.pillar} · by {p.author}</span></div>
+          <dl className="in-post-stats">
+            <div><dt>Reach</dt><dd className="num">{p.reach.toLocaleString('en-GB')}</dd></div>
+            <div><dt>Engagement rate</dt><dd className="num">{p.er.toFixed(1)}%</dd></div>
+            <div><dt>Link clicks</dt><dd className="num">{p.clicks.toLocaleString('en-GB')}</dd></div>
+            <div><dt>{NETWORK_LABEL[p.network]} average engagement</dt><dd className="num">{avg.toFixed(1)}%</dd></div>
+          </dl>
+          <div className="anomaly-cause"><Mark agent="iris" /><p>
+            {x >= 1.5 ? `${x.toFixed(1)}× the ${NETWORK_LABEL[p.network]} average. Worth recycling: Atlas can bring it back in a few weeks.`
+              : x <= 0.7 ? `${Math.round((1 - x) * 100)}% under the ${NETWORK_LABEL[p.network]} average.${p.network === 'tiktok' ? ' Like the other TikToks since Thursday, the hook is long.' : ''}`
+              : `Close to the ${NETWORK_LABEL[p.network]} average.`}
+          </p></div>
+        </div>
+      )}
+    </Sheet>
+  )
+}
+
 /* ---------- Anomalies ---------- */
 function Anomalies() {
   const { s, d } = useStore()
   const now = useNow()
   const [view, setView] = useState<'open' | 'closed'>('open')
   const [confirm, setConfirm] = useState<{ id: string; action: string } | null>(null)
-  const list = ANOMALIES.map(a => ({ ...a, ...(s.insights.anomalies[a.id] ?? {}) }))
+  const list = anomalyList(s)
+  const budget = boostBudget(s)
   const shown = list.filter(a => (view === 'open') === a.open)
   const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, view)
@@ -296,13 +391,14 @@ function Anomalies() {
             </div>
           </div>
           <div className="anomaly-cause"><Mark agent="iris" /><p><span className="faint">Likely cause:</span> {a.cause}</p></div>
+          {a.rule && <p className="faint">Raised by your alert rule “{a.rule}”. <Link to="/agents/iris?tab=alerts">Edit</Link></p>}
           <div className="row"><Confidence v={a.confidence} /></div>
           {a.open ? (
             <div className="row">
               {confirm?.id === a.id ? (
                 // Paid spend never goes out on one click.
                 <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
-                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account.
+                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
                 </InlineConfirm>
               ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
               {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}
