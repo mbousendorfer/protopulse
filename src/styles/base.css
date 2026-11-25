@@ -161,8 +161,9 @@ img { display: block; max-width: 100%; }
 .pill.ok { background: var(--ok-tint); color: var(--ok-strong); }
 .pill.signal { background: var(--brand-soft); color: var(--action-ink); }
 .pill .dot, .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none; display: inline-block; }
-/* Information, not an action: no surface, no border */
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; }
+/* Information, not an action: no surface, no border. Rows wrap whole chips; only a chip longer than a line
+   (a quoted source, a Playbook rule) wraps its text, so it never pushes the page sideways at 375 px. */
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; font-size: var(--t-sm); color: var(--ink-2); max-width: 100%; }
 .chip + .chip::before { content: '·'; color: var(--ink-off); margin-right: 4px; }
 .chip svg { color: var(--ink-3); }
 
