@@ -86,11 +86,37 @@ function verb(d: Decision, h: Handoff): { text: string; status: 'approved' | 'ed
   }
 }
 
+/**
+ * What an agent decides alone once its action is on Act: approve, or pick the option it recommends.
+ * A choice it never recommended, missing information and promotions stay with Sam.
+ */
+export function actDecision(h: Handoff): Decision | undefined {
+  if (h.kind === 'promotion' || h.kind === 'info' || h.field) return
+  if (!h.options) return { kind: 'approve' }
+  const index = h.options.findIndex(o => o.recommended)
+  return index < 0 ? undefined : { kind: 'option', option: h.options[index].label, index }
+}
+
+/**
+ * Change one action's level. Moving to Act has the agent do its pending Desk cards for that action, through the same
+ * path as Sam's approval (every agent's onResolve, the journal, a real Undo). The others stay on the Desk.
+ */
+function setLevel(s: State, agent: AgentId, action: string, level: Autonomy, why = 'You switched this action to Act'): State {
+  let next = setAutonomy(s, agent, action, level)
+  if (next === s || level !== 'act') return next
+  for (const h of s.handoffs) {
+    if (h.action !== action || h.lane) continue
+    const d = actDecision(h)
+    if (d) next = resolve(next, h.id, d, { act: why })
+  }
+  return next
+}
+
 /** Undo what a Desk decision changed outside the card: autonomy moves and Playbook rules added from it. */
 function reverseDecision(s: State, h: Handoff): State {
   let next = s
   if (h.kind === 'promotion' && h.promote) {
-    next = setAutonomy(next, h.agent, h.promote.action, h.promote.from, 'You undid this decision')
+    next = setLevel(next, h.agent, h.promote.action, h.promote.from, 'You undid this decision')
     next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === h.promote!.action ? { ...x, trialUntil: undefined, trialFrom: undefined } : x) }) }
   }
   const drop = (r: { text: string; origin?: string }) =>
@@ -98,7 +124,8 @@ function reverseDecision(s: State, h: Handoff): State {
   return { ...next, playbook: { ...next.playbook, rules: next.playbook.rules.filter(r => !drop(r)) } }
 }
 
-export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boolean; ms?: number } = {}): State {
+/** Settle a Desk card. `act`: the agent did it alone (on Act), with this reason; it stays off Sam's done list. */
+export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boolean; ms?: number; act?: string } = {}): State {
   const h = s.handoffs.find(x => x.id === id)
   if (!h) return s
   let next = removeHandoff(s, id)
@@ -107,7 +134,7 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     const { action, to, from } = h.promote
     const label = actionOf(s, h.agent, action)?.label ?? action
     if (d.kind === 'approve' || d.kind === 'trial') {
-      next = setAutonomy(next, h.agent, action, to, `You moved “${label}” to ${to}`)
+      next = setLevel(next, h.agent, action, to, `You moved “${label}” to ${to}`)
       if (d.kind === 'trial') next = { ...next, agents: next.agents.map(ag => ag.id !== h.agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === action ? { ...x, trialUntil: now(s) + 7 * DAY, trialFrom: from } : x) }) }
     }
   }
@@ -123,6 +150,7 @@ export function resolve(s: State, id: string, d: Decision, opts: { quiet?: boole
     next = addRule(next, { kind: 'fact', text: `${h.field?.label ?? h.topic}: ${d.text}`, agents: [h.agent], origin: `Your answer to ${agentOf(s, h.agent).name}` })
   }
 
+  if (opts.act) return pushLog(next, { agent: h.agent, text: `Handled on ${pronoun(h.agent)} own: ${h.title}`, status: 'done', reason: opts.act, link: h.link, undoMinutes: 30, restore: [h] })
   const v = verb(d, h)
   next = { ...next, desk: { done: [{ id: h.id, title: h.title, text: doneText(d, h), at: now(s), ms: opts.ms, h }, ...next.desk.done.filter(x => x.id !== h.id)] } }
   if (opts.quiet) return next
@@ -314,8 +342,8 @@ function reduceCore(s: State, a: CoreAction): State {
     }
 
     case 'core/autonomy': {
-      const next = setAutonomy(s, a.agent, a.action, a.level)
-      const n = s.handoffs.length - next.handoffs.length
+      const next = setLevel(s, a.agent, a.action, a.level)
+      const n = s.handoffs.filter(h => !next.handoffs.some(x => x.id === h.id)).length
       return n ? notify(next, 'agents', `${n} card${n > 1 ? 's' : ''} left your Desk. ${agentOf(s, a.agent).name} handles ${n > 1 ? 'them' : 'it'} now.`, { link: { to: '/activity', label: 'See in Activity' } }) : next
     }
 
@@ -324,7 +352,7 @@ function reduceCore(s: State, a: CoreAction): State {
       let next = s
       for (const x of ag.actions) {
         if (x.locked) continue
-        next = setAutonomy(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
+        next = setLevel(next, a.agent, x.id, levelFor(x.risk, a.preset), `You set ${ag.name} to ${a.preset}`)
       }
       return next
     }
@@ -368,7 +396,7 @@ function reduceCore(s: State, a: CoreAction): State {
       // Trials ending.
       for (const ag of next.agents) for (const x of ag.actions) {
         if (x.trialUntil && x.trialUntil <= t && x.trialFrom) {
-          next = setAutonomy(next, ag.id, x.id, x.trialFrom)
+          next = setLevel(next, ag.id, x.id, x.trialFrom)
           next = pushLog(next, { agent: ag.id, text: `Trial week on “${x.label}” is over. Back to ${x.trialFrom}.`, status: 'done', reason: 'The trial you started ended' })
         }
       }

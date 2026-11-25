@@ -198,3 +198,51 @@ describe('autonomy presets and weekly load', () => {
     for (const a of AGENTS) for (const x of a.actions) expect(x.perWeek && x.example, x.id).toBeTruthy()
   })
 })
+
+describe('Act does the action', () => {
+  const level = (s: ReturnType<typeof s0>, agent: string, action: string) => s.agents.find(a => a.id === agent)!.actions.find(x => x.id === action)!.autonomy
+
+  it('a card taken by Act goes through its agent like an approval, with a journal line that really undoes', () => {
+    let s = reducer(s0(), { type: 'core/autonomy', agent: 'atlas', action: 'atlas-plan', level: 'act' })
+    expect(level(s, 'atlas', 'atlas-plan')).toBe('act')
+    // Atlas's weekly plan is approved and its posts are in the calendar, as if Sam had approved it.
+    expect(s.publishing.plan.status).toBe('approved')
+    expect(s.publishing.posts.length).toBeGreaterThan(s0().publishing.posts.length)
+    const line = s.log.find(l => l.restore?.some(h => h.id === 'h-plan'))!
+    expect(line.text).toBe('Handled on its own: ' + s0().handoffs.find(h => h.id === 'h-plan')!.title)
+    expect(line.undoUntil).toBeGreaterThan(line.at)
+    expect(s.desk.done.some(x => x.id === 'h-plan')).toBe(false)
+    s = reducer(s, { type: 'core/undo', id: line.id })
+    expect(s.handoffs.some(h => h.id === 'h-plan')).toBe(true)
+    expect(s.log.find(l => l.id === line.id)!.status).toBe('undone')
+
+    // Iris shares the weekly report; Nova sends her reply and the conversation leaves Needs you.
+    // (Once Claire has answered: a card Sam sent to Claire waits for her.)
+    const back = s0()
+    expect(reducer(back, { type: 'core/autonomy', agent: 'iris', action: 'iris-report', level: 'act' }).insights.shared.w47).toBeUndefined()
+    s = reducer({ ...back, handoffs: back.handoffs.map(h => (h.id === 'h-report' ? { ...h, lane: undefined } : h)) }, { type: 'core/autonomy', agent: 'iris', action: 'iris-report', level: 'act' })
+    expect(s.insights.shared.w47).toBeDefined()
+    s = reducer(s0(), { type: 'core/autonomy', agent: 'nova', action: 'nova-complaint', level: 'act' })
+    expect(s.inbox.convs.find(c => c.id === 'c-lea')!.status).toBe('you')
+    // A recommended option is the agent's own call: Echo picks its counter-move.
+    s = reducer(s0(), { type: 'core/autonomy', agent: 'echo', action: 'echo-counter', level: 'act' })
+    expect(s.handoffs.some(h => h.id === 'h-peakline')).toBe(false)
+    expect(s.listening.events['e-peak-price']?.move).toMatch(/Counter-post/)
+  })
+
+  it('a choice the agent never recommended, or missing information, stays with Sam', () => {
+    // Atlas never invents a promo code: the question stays on the Desk while the plan goes out.
+    let s = reducer(s0(), { type: 'core/autonomy', agent: 'atlas', action: 'atlas-plan', level: 'act' })
+    expect(s.handoffs.some(h => h.id === 'h-code')).toBe(true)
+    // Missing visual (info, with options) stays too.
+    s = reducer(s0(), { type: 'core/autonomy', agent: 'atlas', action: 'atlas-fill', level: 'act' })
+    expect(s.handoffs.some(h => h.id === 'h-visual')).toBe(true)
+    // Same counter-move card, but no recommendation: Echo doesn't decide for Sam.
+    const open = s0()
+    const card = open.handoffs.find(h => h.id === 'h-peakline')!
+    const unsure = { ...open, handoffs: open.handoffs.map(h => (h.id === card.id ? { ...h, options: h.options!.map(o => ({ label: o.label })) } : h)) }
+    s = reducer(unsure, { type: 'core/autonomy', agent: 'echo', action: 'echo-counter', level: 'act' })
+    expect(s.handoffs.some(h => h.id === 'h-peakline')).toBe(true)
+    expect(s.listening.events['e-peak-price']).toBeUndefined()
+  })
+})

@@ -46,20 +46,16 @@ export function removeHandoff(s: State, id: string): State {
 }
 
 /**
- * Change one action's level. Moving to Act hands every pending Desk card for that action back to the agent:
- * they leave the Desk and show up in the journal as handled on its own.
+ * Change one action's level, nothing else. Locked actions never move past Suggest.
+ * The reducer's `setLevel` wraps it: moving to Act also has the agent do the pending Desk cards for that action.
  */
-export function setAutonomy(s: State, agent: AgentId, action: string, level: Autonomy, why = 'You switched this action to Act'): State {
+export function setAutonomy(s: State, agent: AgentId, action: string, level: Autonomy): State {
   const act = agentOf(s, agent).actions.find(x => x.id === action)
   if (!act || (act.locked && level !== 'suggest')) return s
-  let next: State = {
+  return {
     ...s,
     agents: s.agents.map(ag => ag.id !== agent ? ag : { ...ag, actions: ag.actions.map(x => x.id === action ? { ...x, autonomy: level, trialUntil: undefined, trialFrom: undefined } : x) }),
   }
-  if (level !== 'act') return next
-  const taken = s.handoffs.filter(h => h.action === action && h.kind !== 'promotion' && !h.lane)
-  for (const h of taken) next = pushLog(removeHandoff(next, h.id), { agent: h.agent, text: `Handled on ${pronoun(agent)} own: ${h.title}`, reason: why, status: 'done', undoMinutes: 30, link: h.link })
-  return next
 }
 
 export function addRule(s: State, rule: Omit<PlaybookRule, 'id' | 'addedAt' | 'uses'>): State {
