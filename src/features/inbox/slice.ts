@@ -18,15 +18,17 @@ declare module '../../app/types' {
     /** Inbox: rules and labels as they were before a label was renamed or deleted. */
     inboxRulesBefore?: import('./rules').InboxRule[]
     inboxLabelsBefore?: string[]
+    /** Inbox: banned authors before a ban. */
+    inboxBannedBefore?: string[]
   }
 }
 import { CONVERSATIONS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
-export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[] }
+export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[]; rules?: InboxRule[]; banned?: string[] }
 /** `taught`: conversations Sam labelled by hand, per label, not covered by a rule yet (3 make Nova propose one). */
 /** `targets`: response target per type, in minutes. `warned`: conversations Nova already raised before their target. */
-export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[]; labels: string[] }
+export type InboxState = { convs: Conversation[]; undo?: InboxUndo; rules: InboxRule[]; taught?: Record<string, string[]>; saved: SavedReply[]; targets: Record<ConvType, number>; warned?: string[]; labels: string[]; banned?: string[] }
 export const initialInbox = (): InboxState => ({ convs: structuredClone(CONVERSATIONS), rules: structuredClone(RULES), saved: structuredClone(SAVED), targets: { ...TARGETS }, labels: [...LABELS, 'Order status'] })
 
 export type BulkOp =
@@ -63,6 +65,8 @@ export type InboxAction =
   | { type: 'inbox/labelAdd'; name: string }
   | { type: 'inbox/labelRename'; from: string; to: string }
   | { type: 'inbox/labelDelete'; name: string }
+  | { type: 'inbox/moderate'; ids: string[]; op: ModOp }
+  | { type: 'inbox/private'; id: string }
 
 const plain = (p?: Flagged[]) => (p ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
 
@@ -218,13 +222,15 @@ function undoBulk(s: State): State {
     ...s,
     handoffs: [...u.cards.filter(h => !cardIds.has(h.id)), ...s.handoffs],
     log: s.log.map(l => (l.id === u.logId ? { ...l, status: 'undone' as const } : l)),
-    inbox: { ...s.inbox, convs, undo: undefined },
+    inbox: { ...s.inbox, convs, undo: undefined, rules: u.rules ?? s.inbox.rules, banned: u.banned ?? s.inbox.banned },
   }
 }
 
 export function reduceInbox(s0: State, a: InboxAction): State {
   if (isRule(a)) return reduceRules(s0, a)
   if (isSaved(a)) return reduceSaved(s0, a)
+  if (a.type === 'inbox/moderate') return moderate(s0, a.ids, a.op, 'sam')
+  if (a.type === 'inbox/private') return replyInPrivate(s0, a.id)
   if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)
   if (a.type === 'inbox/target') return { ...s0, inbox: { ...s0.inbox, targets: { ...s0.inbox.targets, [a.kind]: a.minutes } } }
   if (a.type === 'inbox/bulk') return bulk(s0, a)
@@ -321,6 +327,7 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
  * in Handled by Nova). What it looked like before is kept, so the journal's Undo puts it back (see onUndoInbox).
  */
 export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
+  if (h.inboxSpam) return d.kind === 'approve' ? moderate(s0, h.inboxSpam, 'spam', d.act ? 'nova' : 'sam') : s0
   if (h.inboxRule) return d.kind === 'approve' ? reduceRules(s0, { type: 'inbox/ruleAdd', rule: h.inboxRule, applyNow: true, origin: LEARNED }) : s0
   const p = replyOf(h)
   let s = s0
@@ -467,6 +474,9 @@ function applyRule(s: State, r: InboxRule, ids: string[], by: 'nova' | 'sam', re
 export function runRules(s: State, id: string): State {
   const c = s.inbox.convs.find(x => x.id === id)
   if (!c) return s
+  if (s.inbox.banned?.includes(c.author)) {
+    return pushLog(patch(s, id, { status: 'hidden', note: 'Author banned · hidden by Nova', reviewed: true, reviewedBy: 'nova' }), { agent: 'nova', text: `Hid ${c.author}’s new ${c.type === 'dm' ? 'message' : c.type}: author banned`, status: 'done', reason: 'You banned this author', undoMinutes: 30, link: `/inbox/${id}`, inboxBefore: [c] })
+  }
   const fits = s.inbox.rules.filter(r => matches(r, withTeam(c)) && effect(r.then, withTeam(c)))
   if (!fits.length) return s
   if (rulesLevel(s) !== 'act') return patch(s, id, { suggested: fits.map(r => r.id) })
@@ -524,6 +534,7 @@ function undoRules(s: State, entry: LogEntry): State {
   if (entry.inboxRule) next = setRules(next, next.inbox.rules.filter(r => r.id !== entry.inboxRule))
   if (entry.inboxRulesBefore) next = setRules(next, entry.inboxRulesBefore)
   if (entry.inboxLabelsBefore) next = { ...next, inbox: { ...next.inbox, labels: entry.inboxLabelsBefore } }
+  if (entry.inboxBannedBefore) next = { ...next, inbox: { ...next.inbox, banned: entry.inboxBannedBefore } }
   return next
 }
 export type { RuleOp }
@@ -726,5 +737,116 @@ function reduceLabels(s: State, a: Extract<InboxAction, { type: 'inbox/labelAdd'
     agent: 'nova', text: to ? `Renamed the label “${name}” to “${to}” on ${where}` : `Deleted the label “${name}”: removed from ${where}`,
     status: 'done', reason: 'You changed the labels', undoMinutes: 30, link: '/inbox?labels=1',
     inboxBefore: before, inboxRulesBefore: uses.length ? s.inbox.rules : undefined, inboxLabelsBefore: labels,
+  })
+}
+
+/* ---------- Moderation ---------- */
+
+export type ModOp = 'like' | 'unlike' | 'spam' | 'ban' | 'unban' | 'delete'
+const NET_NAME: Record<string, string> = { instagram: 'Instagram', tiktok: 'TikTok', linkedin: 'LinkedIn', facebook: 'Facebook', youtube: 'YouTube', x: 'X', google: 'Google', trustpilot: 'Trustpilot' }
+/** Deleting from the network can't be taken back: said before, in the confirmation. */
+export const deleteWarning = (c: Pick<Conversation, 'network'>) => `Deleting removes it from ${NET_NAME[c.network]} for good. Nova keeps a copy here.`
+/** Reviews can't be deleted, hidden or reported by the brand. */
+export const canModerate = (c: Pick<Conversation, 'type'>) => c.type !== 'review'
+
+/** The word that best marks this message as spam, for Nova's spam rule. */
+function spamWord(s: State, c: Conversation) {
+  const rule = s.inbox.rules.find(r => r.id === 'ir-spam')
+  return [...tokens(c.messages.filter(m => m.from === 'them').map(m => m.text).join(' '))].filter(w => w.length >= 5 && !rule?.words.includes(w)).sort((a, b) => b.length - a.length)[0]
+}
+
+/** Like, spam, ban, delete: one journal line, one Undo (except delete, said before). Nova uses it too, on Act. */
+export function moderate(s0: State, ids: string[], op: ModOp, by: 'nova' | 'sam'): State {
+  let s = s0
+  const targets: Conversation[] = []
+  for (const id of ids) { const [n, c] = materialize(s, id); s = n; if (c) targets.push(withTeam(c)) }
+  const picked = targets.filter(c => (op === 'like' ? !c.liked : op === 'unlike' ? c.liked : op === 'ban' || op === 'unban' ? true : canModerate(c) && !c.removed))
+  if (!picked.length) return s0
+  const authors = [...new Set(picked.map(c => c.author))]
+  const banned = s.inbox.banned ?? []
+  const nextBanned = op === 'ban' ? [...new Set([...banned, ...authors])] : op === 'unban' ? banned.filter(a => !authors.includes(a)) : banned
+  // Ban hides everything the author wrote, not only the picked conversations.
+  const hit = op === 'ban' || op === 'unban' ? s.inbox.convs.filter(c => authors.includes(c.author)) : picked
+  const ids2 = new Set(hit.map(c => c.id))
+  const learn = op === 'spam' ? [...new Set(picked.map(c => spamWord(s, c)).filter((w): w is string => !!w))] : []
+  const t = now(s)
+  const change = (c: Conversation): Partial<Conversation> => {
+    switch (op) {
+      case 'like': return { liked: true }
+      case 'unlike': return { liked: false }
+      case 'spam': return { status: 'hidden', note: `Reported as spam by ${by === 'nova' ? 'Nova' : 'you'}`, reviewed: true, reviewedBy: by === 'nova' ? 'nova' : 'sam' }
+      case 'ban': return { status: 'hidden', note: 'Author banned', reviewed: true, reviewedBy: by === 'nova' ? 'nova' : 'sam' }
+      case 'unban': return c.note === 'Author banned' || c.note === 'Author banned · hidden by Nova' ? { status: c.messages.some(m => m.from !== 'them') ? 'auto' : 'draft', note: undefined } : {}
+      case 'delete': return { status: 'hidden', removed: true, draft: undefined, note: `Deleted by ${by === 'nova' ? 'Nova' : 'you'} · removed from ${NET_NAME[c.network]}`, reviewed: true, reviewedBy: by === 'nova' ? 'nova' : 'sam' }
+    }
+  }
+  const rules = learn.length ? s.inbox.rules.map(r => (r.id === 'ir-spam' ? { ...r, words: [...r.words, ...learn], on: true } : r)) : s.inbox.rules
+  const cards = op === 'like' || op === 'unlike' ? [] : s.handoffs.filter(h => hit.some(c => c.handoff === h.id))
+  let next: State = {
+    ...s, handoffs: s.handoffs.filter(h => !cards.includes(h)),
+    inbox: { ...s.inbox, banned: nextBanned, rules, convs: s.inbox.convs.map(c => (ids2.has(c.id) ? { ...withTeam(c), ...change(withTeam(c)) } : c)) },
+  }
+  const n = picked.length, them = n === 1 ? picked[0].author : `${n} conversations`
+  const text = {
+    like: `Liked ${them}`, unlike: `Unliked ${them}`,
+    spam: `Reported ${them} as spam${learn.length ? `. Nova’s spam rule now also hides “${learn.join('”, “')}”` : ''}`,
+    ban: `Banned ${authors.join(', ')}: ${hit.length} item${hit.length > 1 ? 's' : ''} hidden, and anything new from ${authors.length > 1 ? 'them' : 'this author'}`,
+    unban: `Unbanned ${authors.join(', ')}`,
+    delete: `Deleted ${them} from the network`,
+  }[op]
+  const undoable = op !== 'delete'
+  next = pushLog(next, {
+    agent: 'nova', text, status: by === 'nova' ? 'done' : op === 'delete' ? 'done' : 'approved', reason: by === 'nova' ? 'Spam and bots, set to Act' : 'Your call from the Inbox',
+    undoMinutes: undoable ? 30 : undefined, link: n === 1 ? `/inbox/${picked[0].id}` : '/inbox',
+    inboxBefore: undoable ? hit : undefined, inboxRulesBefore: learn.length ? s.inbox.rules : undefined, inboxBannedBefore: op === 'ban' || op === 'unban' ? banned : undefined, restore: undoable && cards.length ? cards : undefined,
+  })
+  if (by === 'nova' || !undoable) return next
+  const undo: InboxUndo = { label: text, at: t, logId: next.log[0].id, before: hit, created: [], cards, rules: learn.length ? s.inbox.rules : undefined, banned: op === 'ban' || op === 'unban' ? banned : undefined }
+  return { ...next, inbox: { ...next.inbox, undo } }
+}
+
+/** A public comment answered in private: a new DM with the same person, drafted by Nova; the comment says where it went. */
+export function replyInPrivate(s0: State, id: string): State {
+  const [s, c] = materialize(s0, id)
+  if (!c || c.type === 'dm' || c.type === 'review') return s0
+  const dm = `${c.id}-dm`
+  if (s.inbox.convs.some(x => x.id === dm)) return s0
+  const t = now(s)
+  const quote = c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
+  const conv: Conversation = {
+    id: dm, contact: c.contact, author: c.author, network: c.network, type: 'dm', sentiment: c.sentiment, at: t, status: 'draft', labels: c.labels ?? [], assignee: c.assignee,
+    messages: [{ id: uid('m'), from: 'them', text: quote, at: c.at }],
+    draft: [`Hi ${firstName(c)}, following up here in private so we can sort this out properly. Could you send me your order number?`],
+    note: `From a public ${c.type} on ${NET_NAME[c.network]}${c.post ? ` · ${c.post}` : ''}`,
+  }
+  const next = patch({ ...s, inbox: { ...s.inbox, convs: [conv, ...s.inbox.convs] } }, c.id, { note: 'Continued in private messages', status: c.status === 'draft' ? 'you' : c.status, draft: c.status === 'draft' ? undefined : c.draft })
+  const line = `Moved ${c.author}’s ${c.type} to private messages. Nova drafted the DM.`
+  const settled = settleCard(next, c, line, 'done')
+  return settled !== next ? settled : pushLog(next, { agent: 'nova', text: line, status: 'done', reason: 'Your call from the Inbox', link: `/inbox/${dm}` })
+}
+
+const BOTS: [string, Conversation['network'], string][] = [
+  ['@followers.boost.24', 'instagram', 'Want 10k real followers? DM us, results in 48h 🔥'],
+  ['@crypto_wins_daily', 'instagram', 'I turned €200 into €4,000 this month, link in bio 👉'],
+  ['@giveaway.iphone17', 'instagram', 'Congrats! You were selected for a free iPhone 17, claim here'],
+]
+/**
+ * Three bot comments land under a post. On Act (Hide spam and bots) Nova reports them as spam herself; on Draft or
+ * Suggest she raises one card to hide them in one go.
+ */
+export function botWave(s: State): State {
+  const t = now(s)
+  const convs: Conversation[] = BOTS.map(([author, network, text], i) => ({
+    id: uid('c'), author, network, type: 'comment', sentiment: 'neutral', at: t - i * MIN, status: 'new', labels: [], unread: true,
+    post: 'Reel · “Storm Jacket vs. a garden hose”', messages: [{ id: uid('m'), from: 'them', text, at: t - i * MIN }],
+  }))
+  const next: State = { ...s, inbox: { ...s.inbox, convs: [...convs, ...s.inbox.convs] } }
+  const ids = convs.map(c => c.id)
+  if (actionOf(s, 'nova', 'nova-spam')?.autonomy === 'act') return moderate(next, ids, 'spam', 'nova')
+  return pushHandoff(next, {
+    agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Spam', action: 'nova-spam', confidence: 97, link: '/inbox?view=review',
+    title: '3 bot comments under your Storm Jacket reel', context: 'Follower selling, a crypto link and a fake giveaway, in the last 3 minutes.',
+    why: 'Spam and bots are set to Draft: I hide them when you say so.', inboxSpam: ids,
+    preview: { type: 'evidence', lines: convs.map(c => `${c.author}: “${c.messages[0].text}”`) },
   })
 }
