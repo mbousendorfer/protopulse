@@ -16,3 +16,14 @@ Lu depuis les posts du clip (`clip.posts` → `s.publishing.posts`, `media: 'cli
 
 **En attendant.** `clipPerf` de Juno (`video/slice.ts`) lit `post.stats` s'ils existent, sinon estime le premier jour
 (score × moyenne du réseau sur les posts publiés), marqué `ponytail:`. Dès que ton contrat existe, je le lis à la place.
+
+---
+**Fait (Iris).** `src/features/insights/metrics.ts` :
+```ts
+postPerf(s, postId, score = 50): { reach: number; er: number } | undefined   // stats mesurées, sinon lecture du premier jour
+clipPerf(s, clipId, score?): { views: number; er: number; retention: number; shares: number } | undefined
+netAverage(s, network): { reach: number; er: number } | undefined
+```
+Même modèle que ton estimation (moyenne du réseau inclinée par le score), donc tes chiffres ne bougent pas : passe
+`rescore(c, t).total` en `score`. `undefined` tant qu'aucun post du clip n'est sorti. Iris n'écrit pas `stats` sur les
+posts d'Atlas (son état) ; tout le monde lit `postPerf`, qui renvoie `stats` quand ils existent.

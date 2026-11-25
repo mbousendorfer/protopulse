@@ -32,7 +32,7 @@
 | 6 | Social Media ROI | Absent | UTM des liens d'Atlas → clics, sessions, conversions, revenu mockés GA4 par réseau et campagne | 2 | M | todo |
 | 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | todo |
 | 8 | Competitors (benchmark) | Texte dans `answer()` (`slice.ts:59`) | Section benchmark lue chez Echo (`s.listening`) dans les rapports | 2 | S | todo |
-| 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | todo |
+| 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | done (contrat clipPerf, demande de Juno) |
 | 10 | Boost : résultat mesuré | — (le budget est F2) | Historique des boosts avec résultat (reach payé, coût par clic) dans Explore | 1 | S | todo |
 | 11 | CSV Builder | Export CSV de la table des posts (`Page.tsx:189`) | — | 1 | — | skipped — l'export CSV d'Explore couvre le besoin du test |
 | 12 | Ads reports | Absent | — | 1 | — | skipped — hors périmètre (_common : Paid = boost recommandé par Iris, pas de gestionnaire de campagnes) |
