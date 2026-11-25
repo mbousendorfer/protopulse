@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
 import { actionOf, agentOf, now, pushHandoff } from '../../app/core'
-import { escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
+import { botWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -69,6 +69,10 @@ export const SCRIPT: ScriptEvent[] = ([
     // The conversations closest to (or past) their response target, raised now instead of 15 minutes before.
     id: 'ev-sla', order: 195, agent: 'nova', tag: 'sla', label: 'Nova · response targets about to be missed',
     run: s => warnLate(s, now(s), waitingList(s, now(s)).filter(x => !s.inbox.warned?.includes(x.c.id)).sort((a, b) => a.w.due - b.w.due).slice(0, 3)),
+  },
+  {
+    id: 'ev-bots', order: 205, agent: 'nova', tag: 'spam', label: 'Nova · bot comments under a reel (spam)',
+    run: s => botWave(s),
   },
   {
     id: 'ev-stove', order: 60, label: 'Nova · safety question (stove clip)', always: true,

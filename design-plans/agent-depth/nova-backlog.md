@@ -29,8 +29,8 @@
 | SLA / temps de réponse | absent | Délai qui court par conversation, seuils par type (DM 1 h, avis 24 h), tri « Waiting longest », Nova remonte avant dépassement ; chiffres exposés pour Iris | 3 | M | done (PR SLA) |
 | Équipe et assignation | `Assignee = 'sam' \| 'claire'` (`data/inbox.ts:39`) | Roster (Sam, Claire + 2 coéquipiers) ; Nova assigne par règle ; vue charge par personne | 2 | M | done (PR Team) |
 | CRM contacts | onglet Contact en lecture seule (`Page.tsx:494`) | Liste de contacts, fiche éditable (tags, notes datées), timeline ; Nova crée la fiche d'un nouveau contact | 2 | L | later — réponse au pitch |
-| Labels (gérer, renommer, supprimer) | création seule (`Page.tsx:317`) | Gestion dans la barre latérale ; Nova étiquette à l'arrivée ; labels lus par Iris | 2 | S | todo |
-| Modération : supprimer, bannir, spam, liker, répondre en privé | Hide seulement | Nova le fait en Act sur spam et bots ; chaque action dit avant si elle est réversible | 2 | M | todo |
+| Labels (gérer, renommer, supprimer) | création seule (`Page.tsx:317`) | Gestion dans la barre latérale ; Nova étiquette à l'arrivée ; labels lus par Iris | 2 | S | done (#93) |
+| Modération : supprimer, bannir, spam, liker, répondre en privé | Hide seulement | Nova le fait en Act sur spam et bots ; chaque action dit avant si elle est réversible | 2 | M | done (PR Moderation) |
 | Filtres (date, assigné, label, revue) et vues enregistrées par Sam | vues codées en dur (`Page.tsx:28-30`) | Filtres manquants + « Save view » | 2 | M | todo |
 | Fils sous le post (Filter items by post) | `post` = texte libre (`data/inbox.ts:24`) | Commentaires groupés sous leur post, aperçu du post | 2 | M | todo |
 | Volume crédible | 45 conversations, TikTok/YouTube maigres | ~80 conversations, fils plus longs, arrivées par le moteur | 2 | M | todo |

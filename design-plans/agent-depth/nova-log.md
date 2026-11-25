@@ -43,3 +43,7 @@
 - 25/11 · pitch Comments under their post · **Go** · — · tel que pitché.
 - 25/11 · Labels · liste stockée dans l'état de l'Inbox (`labels`) au lieu de la constante · garder `LABELS` · un label supprimé reviendrait sinon.
 - 25/11 · Labels · portée Inbox seulement (pas de portée Publishing) · scope Inbox/Publishing d'Agorapulse · les labels de Publishing sont chez Atlas.
+- 25/11 · Moderation · nouveau statut `new` (arrivé, pas encore traité) pour les suspects de spam en attente de décision · réutiliser `auto` · « Auto-replied » serait faux.
+- 25/11 · Moderation · Nova en Act signale le spam (action `nova-spam` existante) ; en Draft une carte « 3 bot comments » à approuver d'un coup · un like automatique par Nova sur les arrivées · les likes de Nova viennent avec ses réponses positives du seed ; un like par arrivée serait du bruit au journal.
+- 25/11 · Moderation · « Report as spam » ajoute au plus un mot (le plus long, ≥ 5 lettres) à la règle spam de Nova · apprendre tout le message · une règle trop large cacherait de vrais clients.
+- 25/11 · Moderation · avis : ni masquer, ni signaler, ni supprimer (le menu le dit) · comme Agorapulse (Google ne le permet pas).

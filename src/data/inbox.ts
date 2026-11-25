@@ -1,7 +1,8 @@
 import type { Flagged, Network } from '../app/types'
 import { T, MIN } from '../app/time'
 
-export type ConvStatus = 'auto' | 'draft' | 'escalated' | 'hidden' | 'you' | 'claire' | 'takeover'
+/** `new`: just in, not handled by anyone yet (Nova's spam suspects waiting on a decision). */
+export type ConvStatus = 'auto' | 'draft' | 'escalated' | 'hidden' | 'you' | 'claire' | 'takeover' | 'new'
 export type ConvType = 'comment' | 'dm' | 'mention' | 'review' | 'ad'
 export type Sentiment = 'positive' | 'neutral' | 'negative'
 
@@ -39,6 +40,10 @@ export type Conversation = {
   notes?: Note[]
   /** The saved reply Nova started her draft from (cited under the draft). */
   savedFrom?: string
+  /** Liked on the network (by Nova on Act, or by a person). */
+  liked?: boolean
+  /** Deleted from the network; Nova keeps the copy here. Can't be undone. */
+  removed?: boolean
   /** When the teammate it is assigned to answers (Léo and Yanis reply on their own; app time). */
   teamDue?: number
   /** Inbox rules that fit but that Nova only proposes (her rules action is on Suggest or Draft). */
@@ -128,7 +133,7 @@ const AUTO: Q[] = [
 ]
 
 const fromQ = ([id, author, network, type, sentiment, at, q, a, extra]: Q): Conversation => ({
-  id, author, network, type, sentiment, at, status: 'auto', reviewed: true, reviewedBy: 'nova',
+  id, author, network, type, sentiment, at, status: 'auto', reviewed: true, reviewedBy: 'nova', liked: sentiment === 'positive' || undefined,
   messages: [m('them', q, at - 2 * MIN), auto(a, at, id === 'c-tom' || id === 'c-ines' ? 10 : 0)],
   ...extra,
 })

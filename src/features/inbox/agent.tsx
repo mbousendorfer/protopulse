@@ -24,6 +24,8 @@ declare module '../../app/types' {
     inboxRule?: Pick<InboxRule, 'words' | 'network' | 'type' | 'then'>
     /** Nova's response-time warning: the conversations it is about (the card goes once they are answered). */
     sla?: string[]
+    /** Nova's spam suspects (conversation ids): approving the card reports them as spam. */
+    inboxSpam?: string[]
   }
 }
 
