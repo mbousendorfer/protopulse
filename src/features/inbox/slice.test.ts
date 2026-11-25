@@ -367,3 +367,13 @@ describe('filters and saved views', () => {
     expect(s.inbox.views[0].name).toBe('Negative IG')
   })
 })
+
+describe('comments under their post', () => {
+  it('a post groups its comments, whatever details each comment line carries', async () => {
+    const { matchFilters, postKey } = await import('./filters')
+    const s = initialState()
+    expect(postKey(conv(s, 'c-lea'))).toBe('Reel · “The Ridge on the GR20”')
+    const on = s.inbox.convs.filter(c => matchFilters(c, { post: 'Reel · “The Ridge on the GR20”' }, s.clock.base)).map(c => c.id)
+    expect(on.sort()).toEqual(['c-gr20-ben', 'c-gr20-julie', 'c-gr20-marco', 'c-lea'])
+  })
+})
