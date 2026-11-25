@@ -1,12 +1,16 @@
 import type { AgentId, Network } from '../app/types'
 import { T, DAY, DEMO_START } from '../app/time'
-import type { Pillar as PillarName } from './publishing'
+import type { Pillar as PillarName, Post } from './publishing'
+import { NETWORK_LABEL } from './agents'
 
 export type CampaignStatus = 'brief' | 'review' | 'live' | 'done'
 export type Phase = { name: 'Teasing' | 'Launch' | 'Follow-up'; start: number; end: number; summary: string }
-export type CPost = { id: string; phase: Phase['name']; network: Network; day: number; title: string; published?: boolean }
+/** `postId`: the post in Atlas's calendar, when it isn't the same id. */
+export type CPost = { id: string; phase: Phase['name']; network: Network; day: number; title: string; published?: boolean; pillar?: PillarName; postId?: string }
 export type CTask = { id: string; label: string; agent: AgentId; status: 'todo' | 'doing' | 'done' }
-export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined' }
+/** What an adjustment does to the campaign's posts (and their copies in Atlas's calendar). */
+export type PostMove = { post: string; network?: Network; title?: string }
+export type Adjustment = { id: string; text: string; status: 'proposed' | 'accepted' | 'declined'; moves?: PostMove[] }
 export type Change = { kind: 'added' | 'removed' | 'changed'; text: string }
 
 export type Campaign = {
@@ -35,6 +39,10 @@ export type Campaign = {
   /** Post `day` values are days from this date. */
   base: number
   source?: string
+  /** Iris's recap report, under /insights/reports/:id. */
+  reportId?: string
+  /** What Sage assumed because the brief didn't say. */
+  assumptions?: string[]
 }
 
 export const CAMPAIGNS: Campaign[] = [
@@ -57,8 +65,8 @@ export const CAMPAIGNS: Campaign[] = [
       { id: 'tw3', phase: 'Launch', network: 'instagram', day: -1, title: 'Day 1: any trail counts', published: true },
       { id: 'tw4', phase: 'Launch', network: 'x', day: 0, title: 'Trail Week is live: join the challenge', published: true },
       { id: 'tw5', phase: 'Launch', network: 'tiktok', day: 0, title: 'Packing for Trail Week', published: true },
-      { id: 'tw6', phase: 'Launch', network: 'instagram', day: 2, title: 'Trail kit list, carousel' },
-      { id: 'tw7', phase: 'Launch', network: 'instagram', day: 4, title: 'Sunrise at Lac Blanc, reel' },
+      { id: 'tw6', phase: 'Launch', network: 'instagram', day: 2, title: 'Trail kit list, carousel', postId: 'p-21' },
+      { id: 'tw7', phase: 'Launch', network: 'instagram', day: 4, title: 'Sunrise at Lac Blanc, reel', postId: 'p-25' },
       { id: 'tw8', phase: 'Launch', network: 'facebook', day: 3, title: 'Your trails so far' },
       { id: 'tw9', phase: 'Follow-up', network: 'youtube', day: 8, title: 'Trail Week, the film' },
       { id: 'tw10', phase: 'Follow-up', network: 'instagram', day: 7, title: 'The 12 best trails you shared' },
@@ -77,13 +85,13 @@ export const CAMPAIGNS: Campaign[] = [
     planned: [0, 45, 120, 165, 205, 240, 270, 290, 300],
     actual: [0, 61, 154],
     adjustments: [
-      { id: 'adj1', text: 'Instagram is at 41% of its target, TikTok at 118%. Move 2 Instagram posts to TikTok.', status: 'proposed' },
-      { id: 'adj2', text: 'Rain on Thursday: swap the Lac Blanc reel with “plan your trail from the sofa”.', status: 'proposed' },
+      { id: 'adj1', text: 'Instagram is at 41% of its target, TikTok at 118%. Move 2 Instagram posts to TikTok.', status: 'proposed', moves: [{ post: 'tw6', network: 'tiktok' }, { post: 'tw7', network: 'tiktok' }] },
+      { id: 'adj2', text: 'Rain on Thursday: swap the Lac Blanc reel with “plan your trail from the sofa”.', status: 'proposed', moves: [{ post: 'tw7', title: 'Plan your trail from the sofa' }] },
     ],
     version: 1,
   },
   {
-    id: 'repair-friday', name: 'Repair Friday', status: 'done', createdAt: T(10, 0, -45), base: DEMO_START,
+    id: 'repair-friday', name: 'Repair Friday', status: 'done', createdAt: T(10, 0, -45), base: DEMO_START, reportId: 'repair-friday',
     brief: 'Our answer to Black Friday, a month early: repair instead of buy. Goal: 800 repair requests.',
     goal: { label: 'repair requests', target: 800, current: 1180 },
     start: T(0, 0, -32), end: T(23, 59, -25),
@@ -134,7 +142,7 @@ export const CAMPAIGNS: Campaign[] = [
       { name: 'Follow-up', start: T(0, 0, 24), end: T(23, 59, 26), summary: 'Gift cards for late shoppers' },
     ],
     posts: [
-      { id: 'gg1', phase: 'Teasing', network: 'instagram', day: 13, title: 'What our team is giving this year' },
+      { id: 'gg1', phase: 'Teasing', network: 'instagram', day: 13, title: 'What our team is giving this year', pillar: 'Community' },
       { id: 'gg2', phase: 'Launch', network: 'instagram', day: 15, title: 'Gifts under €50, carousel' },
       { id: 'gg3', phase: 'Launch', network: 'tiktok', day: 16, title: 'Wrapping a Ridge without paper' },
       { id: 'gg4', phase: 'Launch', network: 'facebook', day: 17, title: 'Gifts under €150' },
@@ -157,141 +165,328 @@ export const CAMPAIGNS: Campaign[] = [
   },
 ]
 
-export type Pillar = { id: string; name: PillarName; desc: string; target: number; actual: number }
+export type Pillar = { id: string; name: PillarName; desc: string; target: number }
 export const PILLARS: Pillar[] = [
-  { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35, actual: 41 },
-  { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30, actual: 32 },
-  { id: 'p-repair', name: 'Repair & care', desc: 'Repairs, maintenance, how to make gear last.', target: 15, actual: 18 },
-  { id: 'p-community', name: 'Community', desc: 'Customer photos, UGC, creators, replies worth sharing.', target: 20, actual: 9 },
+  { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35 },
+  { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30 },
+  { id: 'p-repair', name: 'Repair & care', desc: 'Repairs, maintenance, how to make gear last.', target: 15 },
+  { id: 'p-community', name: 'Community', desc: 'Customer photos, UGC, creators, replies worth sharing.', target: 20 },
 ]
 
-export type Cadence = { network: Network; target: number; actual: number }
+export type Cadence = { network: Network; target: number }
 export const CADENCE: Cadence[] = [
-  { network: 'instagram', target: 5, actual: 5 }, { network: 'tiktok', target: 4, actual: 4 }, { network: 'linkedin', target: 2, actual: 2 },
-  { network: 'facebook', target: 2, actual: 3 }, { network: 'youtube', target: 1, actual: 1 }, { network: 'x', target: 3, actual: 2 },
+  { network: 'instagram', target: 5 }, { network: 'tiktok', target: 4 }, { network: 'linkedin', target: 2 },
+  { network: 'facebook', target: 2 }, { network: 'youtube', target: 1 }, { network: 'x', target: 3 },
 ]
+
+/**
+ * What actually went out, read from Atlas's posts: published, or scheduled and past. The calendar only keeps the last
+ * weeks, so the 30-day pillar mix adds the posts published before it (`PILLAR_HISTORY`).
+ */
+// ponytail: the history doesn't slide with the clock; it's the month before the demo's calendar starts.
+export const PILLAR_HISTORY: Partial<Record<PillarName, number>> = { 'Gear that lasts': 20, 'Trail stories': 13, 'Repair & care': 5, Community: 2 }
+const out = (p: Post, from: number, t: number) => p.at >= from && p.at <= t && (p.status === 'published' || p.status === 'scheduled')
+/** Share of posts per pillar over the last 30 days, in %. */
+export function pillarMix(posts: Post[], names: PillarName[], t: number): Record<string, number> {
+  const recent = posts.filter(p => out(p, t - 30 * DAY, t))
+  const count = (n: PillarName) => (PILLAR_HISTORY[n] ?? 0) + recent.filter(p => p.pillar === n).length
+  const total = names.reduce((sum, n) => sum + count(n), 0)
+  return Object.fromEntries(names.map(n => [n, total ? Math.round((count(n) / total) * 100) : 0]))
+}
+/** Posts that went out per network over the last 7 days. */
+export function postsLastWeek(posts: Post[], t: number): Partial<Record<Network, number>> {
+  const m: Partial<Record<Network, number>> = {}
+  for (const p of posts) if (out(p, t - 7 * DAY, t)) m[p.network] = (m[p.network] ?? 0) + 1
+  return m
+}
 
 /** Sage's targets as Atlas reads them: share of posts per pillar, posts a week per network. */
 export type Targets = { pillars: { name: PillarName; target: number }[]; cadence: Partial<Record<Network, number>> }
+/** Sage's targets after a change. Pillars stay as they are unless named; posts a week never go below 0. */
+export function applyChange<T extends { pillars: Pillar[]; cadence: Cadence[] }>(st: T, ch: TargetsChange): T {
+  return {
+    ...st,
+    pillars: st.pillars.map(p => (ch.pillars?.[p.name] !== undefined ? { ...p, target: ch.pillars[p.name]! } : p)),
+    cadence: st.cadence.map(c => ({ ...c, target: Math.max(0, (ch.cadence?.[c.network] ?? c.target) + (ch.add?.[c.network] ?? 0)) })),
+  }
+}
+
 export const targetsFrom = (st: { pillars: Pillar[]; cadence: Cadence[] }): Targets => ({
   pillars: st.pillars.map(({ name, target }) => ({ name, target })),
   cadence: Object.fromEntries(st.cadence.map(c => [c.network, c.target])),
 })
 
-export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined' }
+/** A change to Sage's targets: pillar shares and posts a week set to a value, or posts a week added (`add`, may be negative). */
+export type TargetsChange = { pillars?: Partial<Record<PillarName, number>>; cadence?: Partial<Record<Network, number>>; add?: Partial<Record<Network, number>> }
+export type Proposal = { id: string; text: string; why: string; status: 'proposed' | 'accepted' | 'declined'; change?: TargetsChange }
 export const PROPOSALS: Proposal[] = [
-  { id: 'pr1', text: 'Raise Community from 20% to 25% of posts', why: 'Community posts have the best saves rate (4.1%) and cost nothing to produce.', status: 'proposed' },
-  { id: 'pr2', text: 'Cut X to 1 post a day', why: 'X brings 2% of reach and 0.8% engagement. The time goes to TikTok instead.', status: 'proposed' },
+  { id: 'pr1', text: 'Raise Community from 20% to 25% of posts, Gear that lasts from 35% to 30%', why: 'Community posts have the best saves rate (4.1%) and cost nothing to produce.', status: 'proposed', change: { pillars: { Community: 25, 'Gear that lasts': 30 } } },
+  { id: 'pr2', text: 'Cut X from 3 posts a week to 1, add 1 on TikTok', why: 'X brings 2% of reach and 0.8% engagement. The time goes to TikTok instead.', status: 'proposed', change: { cadence: { x: 1 }, add: { tiktok: 1 } } },
   { id: 'pr3', text: 'Add a weekly repair post on LinkedIn', why: 'Repair posts do 1.9× better than product posts on LinkedIn.', status: 'accepted' },
 ]
 
 /* ---------- Sage's plan generator (scripted, deterministic) ---------- */
 
-const PRODUCTS: { re: RegExp; name: string; audience: string; msg: string[] }[] = [
-  { re: /storm|jacket|rain/i, name: 'Storm Jacket', audience: 'Hikers and city commuters who saved rain gear posts, ages 25–45', msg: ['Dry after 4 hours in the rain, tested on camera', 'PFC-free, repairable, guaranteed', 'Pre-order now, ships on launch day'] },
-  { re: /ridge|bag|pack/i, name: 'Ridge 28L', audience: 'Weekend hikers and travellers, followers who engaged with packing videos', msg: ['Everything for 3 days in 28 litres', 'Cabin-size, repairable forever', 'Built to last, not to discount'] },
-  { re: /bottle|summit/i, name: 'Summit Bottle', audience: 'Daily commuters and gym-goers, gift buyers', msg: ['One bottle for life, guaranteed', 'Dropped from 5 metres, still fine', 'No plastic, no BPA, lab-tested'] },
-  { re: /fleece|ember/i, name: 'Ember Fleece', audience: 'Cold-weather hikers, layering enthusiasts', msg: ['The warm layer under everything', 'Recycled fleece, repairable seams'] },
-  { re: /repair/i, name: 'Repair programme', audience: 'Existing customers and sustainability-minded followers on LinkedIn', msg: ['The greenest bag is the one you already own', 'Free repairs, forever'] },
+type Product = { re: RegExp; name: string; audience: string; msg: string[]; proof: [string, string]; behind: string; use: string; why: string }
+const PRODUCTS: Product[] = [
+  { re: /storm|jacket|rain/i, name: 'Storm Jacket', audience: 'Hikers and city commuters who saved rain gear posts, ages 25–45', msg: ['Dry after 4 hours in the rain, tested on camera', 'PFC-free, repairable, guaranteed'],
+    proof: ['4 hours in the rain in 30 seconds', 'Storm Jacket vs a garden hose'], behind: 'Inside the rain room: how we test it', use: 'From the commute to the col in one jacket', why: 'Why we spent 2 years on a PFC-free membrane' },
+  { re: /ridge|bag|pack/i, name: 'Ridge 28L', audience: 'Weekend hikers and travellers, followers who engaged with packing videos', msg: ['Everything for 3 days in 28 litres', 'Cabin-size, repairable forever'],
+    proof: ['3 days in 28 litres: everything we packed', 'A Ridge after 6 years and 40 trips'], behind: 'Stitch by stitch: how a Ridge is built', use: 'Cabin bag on Friday, trail pack on Saturday', why: 'Why the Ridge has no plastic buckles' },
+  { re: /bottle|summit/i, name: 'Summit Bottle', audience: 'Daily commuters and gym-goers, gift buyers', msg: ['One bottle for life, guaranteed', 'No plastic, no BPA, lab-tested'],
+    proof: ['Dropped from 5 metres, still fine', '12 hours hot: we timed it'], behind: 'Inside the lab: the drop test', use: 'Desk to trail in 20 seconds', why: 'One bottle for life: the maths' },
+  { re: /fleece|ember/i, name: 'Ember Fleece', audience: 'Cold-weather hikers, layering enthusiasts', msg: ['The warm layer under everything', 'Recycled fleece, repairable seams'],
+    proof: ['Ember Fleece at −8°C on the Semnoz', '100 washes later'], behind: 'From bottles to fleece: where the yarn comes from', use: 'The layer under everything, 3 ways', why: 'Why recycled fleece, and why it lasts' },
+  { re: /repair/i, name: 'Repair programme', audience: 'Existing customers and sustainability-minded followers on LinkedIn', msg: ['The greenest bag is the one you already own', 'Free repairs, forever'],
+    proof: ['Before/after: a 6-year-old Ridge', 'Fixing a zip in 40 seconds'], behind: 'Inside the Annecy workshop', use: 'How to send us your bag', why: 'Why we repair instead of replace' },
 ]
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+const BRAND: Product = { re: /fernway/i, name: 'Fernway', audience: 'Followers aged 25–40 who engaged in the last 90 days', msg: ['Gear that lasts', 'Go outside more'],
+  proof: ['Gear tested hard: rain, drops, years of use', 'Our oldest bag still in use'], behind: 'A day with the Fernway team', use: 'Our team’s kit for the season', why: 'Why we make fewer, better things' }
+export const PRODUCT_NAMES = PRODUCTS.map(p => p.name)
 
-export function generatePlan(id: string, brief: string, now: number, opts: { budget?: number; source?: string } = {}): Campaign {
-  const prod = PRODUCTS.find(p => p.re.test(brief)) ?? { name: 'Fernway', audience: 'Followers aged 25–40 who engaged in the last 90 days', msg: ['Gear that lasts', 'Go outside more'] }
-  const num = brief.match(/(\d[\d,.]*)\s*(k\b|pre-?orders?|sign-?ups?|sales|orders|requests|followers|€|euros?)?/i)
-  let target = num ? Math.round(parseFloat(num[1].replace(/,/g, '')) * (num[2]?.toLowerCase() === 'k' ? 1000 : 1)) : 300
-  if (!target || target < 10) target = 300
-  const unit = num?.[2] ? (/pre/i.test(num[2]) ? 'pre-orders' : /sign/i.test(num[2]) ? 'sign-ups' : /request/i.test(num[2]) ? 'requests' : /follow/i.test(num[2]) ? 'new followers' : /€|euro/i.test(num[2]) ? 'revenue from social (€)' : 'orders') : /pre-?order/i.test(brief) ? 'pre-orders' : 'sign-ups'
-  // Launch date: "March 15", "15 March", "in March"… default: 3 weeks from now.
-  const lower = brief.toLowerCase()
+export type GoalUnit = 'pre-orders' | 'orders' | 'sign-ups' | 'requests' | 'new followers' | 'revenue from social (€)'
+export const GOAL_UNITS: GoalUnit[] = ['pre-orders', 'orders', 'sign-ups', 'requests', 'new followers', 'revenue from social (€)']
+
+/** A brief as Sage reads it: the sentence, plus whatever the optional fields or Sage's questions settled. */
+export type BriefInput = { text: string; product?: string; launch?: number; goal?: { target: number; unit: GoalUnit }; budget?: number; audience?: string; networks?: Network[] }
+export type BriefGap = 'goal' | 'launch'
+
+/** The number that says it worked, if the text gives one: “300 pre-orders”, “2k orders”, “€40,000”. */
+export function readGoal(text: string): BriefInput['goal'] {
+  const found = [...text.matchAll(/(€\s*)?(\d[\d,.]*)\s*(k\b)?\s*(?:(?!pre|sign|sale|order|request|follow)[a-z-]+\s+)?(pre-?orders?|sign-?ups?|sales|orders?|requests?|followers|€|euros?)?/gi)].map(m => {
+    const target = Math.round(parseFloat(m[2].replace(/,/g, '')) * (m[3] ? 1000 : 1))
+    const u = (m[4] ?? '').toLowerCase()
+    const unit: GoalUnit = m[1] || /€|euro/.test(u) ? 'revenue from social (€)' : /pre/.test(u) ? 'pre-orders' : /sign/.test(u) ? 'sign-ups' : /request/.test(u) ? 'requests' : /follow/.test(u) ? 'new followers' : /order|sale/.test(u) ? 'orders' : /pre-?order/i.test(text) ? 'pre-orders' : 'sign-ups'
+    return { target, unit, named: !!(m[1] || m[3] || m[4]) }
+  })
+  // A number with a unit wins; a bare one counts only if it can't be a day or a year.
+  const g = found.find(x => x.named && x.target >= 10) ?? found.find(x => x.target >= 100 && !(x.target >= 1900 && x.target <= 2100))
+  return g && { target: g.target, unit: g.unit }
+}
+
+/** The launch date, if the text gives one: “March 15”, “15 March”, “in March”, “in 3 weeks”, “next month”. */
+export function readLaunch(text: string, now: number): number | undefined {
+  const lower = text.toLowerCase()
+  const weeks = lower.match(/in (\d+|two|three|four|six) weeks?/)
+  if (weeks) return now + ({ two: 2, three: 3, four: 4, six: 6 }[weeks[1]] ?? +weeks[1]) * 7 * DAY
+  const nd = new Date(now)
+  if (/next month/.test(lower)) return new Date(nd.getFullYear(), nd.getMonth() + 1, 1, 9).getTime()
+  if (/next week/.test(lower)) return now + 7 * DAY
   const mi = MONTHS.findIndex(m => new RegExp(`\\b${m}`).test(lower))
-  const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\s*(?:k|pre|sign|order|request|follow|€|%))/)
-  let launch = now + 21 * DAY
-  if (mi >= 0) {
-    const nd = new Date(now)
-    const year = mi < nd.getMonth() ? nd.getFullYear() + 1 : nd.getFullYear()
-    launch = new Date(year, mi, dm ? Math.min(28, +dm[1]) : 1, 9).getTime()
+  if (mi < 0) return
+  const dm = lower.match(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\s*(?:k\b|pre|sign|order|request|follow|€|%|,\d|\d))/)
+  const year = mi < nd.getMonth() ? nd.getFullYear() + 1 : nd.getFullYear()
+  return new Date(year, mi, dm ? Math.min(28, +dm[1]) : 1, 9).getTime()
+}
+
+/** What the brief says, and the two things Sage won't guess when a person is there to answer: the goal and the date. */
+export function readBrief(text: string, now: number, fields: Partial<BriefInput> = {}): { input: BriefInput; missing: BriefGap[] } {
+  const input: BriefInput = { text, ...fields, goal: fields.goal ?? readGoal(text), launch: fields.launch ?? readLaunch(text, now) }
+  return { input, missing: [...(input.goal ? [] : ['goal' as const]), ...(input.launch ? [] : ['launch' as const])] }
+}
+
+/* What kind of campaign each goal calls for: phases, the posts in them (days from launch), the trajectory's shape. */
+type Kind = 'teaser' | 'behind' | 'why' | 'preorder' | 'reveal' | 'proof' | 'proof2' | 'use' | 'faq' | 'guide' | 'guide2' | 'lastcall' | 'challenge' | 'ugc' | 'creator' | 'numbers' | 'recap'
+type Slot = [Kind, number]
+type Template = { name: string; phases: [number, number, number, number]; slots: Slot[]; curve: number }
+const TEMPLATES: Record<GoalUnit, Template> = {
+  // phases: teasing starts, launch, follow-up starts, end (days from launch)
+  'pre-orders': { name: 'launch', phases: [-7, 0, 5, 10], curve: 0.8, slots: [['teaser', -7], ['behind', -5], ['why', -3], ['preorder', -1], ['reveal', 0], ['proof', 0], ['faq', 1], ['proof2', 3], ['ugc', 6], ['numbers', 9]] },
+  orders: { name: 'push', phases: [-3, 0, 7, 10], curve: 1.2, slots: [['teaser', -3], ['behind', -2], ['reveal', 0], ['proof', 0], ['use', 1], ['guide', 3], ['proof2', 4], ['lastcall', 6], ['ugc', 8], ['numbers', 10]] },
+  'revenue from social (€)': { name: 'sales push', phases: [-2, 0, 7, 9], curve: 1.3, slots: [['teaser', -2], ['guide', 0], ['proof', 1], ['use', 2], ['guide2', 3], ['creator', 4], ['lastcall', 6], ['ugc', 8]] },
+  'sign-ups': { name: 'challenge', phases: [-4, 0, 7, 12], curve: 1, slots: [['teaser', -4], ['why', -2], ['challenge', 0], ['challenge', 1], ['ugc', 2], ['challenge', 3], ['creator', 4], ['ugc', 6], ['recap', 9], ['numbers', 11]] },
+  requests: { name: 'week', phases: [-3, 0, 6, 9], curve: 1, slots: [['teaser', -3], ['behind', -2], ['why', 0], ['proof', 0], ['use', 1], ['proof2', 3], ['ugc', 5], ['numbers', 8]] },
+  'new followers': { name: 'community push', phases: [-1, 0, 8, 11], curve: 1, slots: [['teaser', -1], ['creator', 0], ['ugc', 1], ['proof', 2], ['challenge', 3], ['ugc', 5], ['creator', 7], ['recap', 10]] },
+}
+/** Where each kind of post works best, in order. */
+const NETS: Record<Kind, Network[]> = {
+  teaser: ['instagram', 'tiktok', 'x'], behind: ['tiktok', 'youtube', 'instagram'], why: ['linkedin', 'facebook', 'instagram'], preorder: ['instagram', 'facebook', 'x'],
+  reveal: ['instagram', 'tiktok', 'facebook'], proof: ['tiktok', 'instagram', 'youtube'], proof2: ['youtube', 'tiktok', 'instagram'], use: ['tiktok', 'instagram', 'youtube'],
+  faq: ['facebook', 'instagram', 'x'], guide: ['instagram', 'facebook', 'linkedin'], guide2: ['facebook', 'instagram', 'linkedin'], lastcall: ['instagram', 'facebook', 'x'],
+  challenge: ['instagram', 'tiktok', 'facebook', 'x'], ugc: ['instagram', 'facebook', 'tiktok'], creator: ['instagram', 'tiktok', 'youtube'], numbers: ['linkedin', 'x', 'facebook'], recap: ['youtube', 'tiktok', 'instagram'],
+}
+const PILLAR_OF: Record<Kind, PillarName> = {
+  teaser: 'Gear that lasts', behind: 'Gear that lasts', why: 'Repair & care', preorder: 'Gear that lasts', reveal: 'Gear that lasts', proof: 'Gear that lasts', proof2: 'Gear that lasts',
+  use: 'Trail stories', faq: 'Gear that lasts', guide: 'Gear that lasts', guide2: 'Gear that lasts', lastcall: 'Gear that lasts', challenge: 'Trail stories', ugc: 'Community', creator: 'Community', numbers: 'Community', recap: 'Trail stories',
+}
+const SEASONS = [
+  { months: [11, 0, 1], hook: 'First snow', place: 'snowy trails', prompt: 'a winter walk, even 2 km from home', gift: true },
+  { months: [2, 3, 4], hook: 'First hikes of the year', place: 'spring trails', prompt: 'your first trail of the year', gift: false },
+  { months: [5, 6, 7], hook: 'Long days on the trail', place: 'summer trails', prompt: 'a sunrise or sunset hike', gift: false },
+  { months: [8, 9, 10], hook: 'Back to the commute', place: 'autumn trails', prompt: 'your commute on foot or by bike', gift: false },
+]
+const seasonOf = (t: number) => SEASONS.find(x => x.months.includes(new Date(t).getMonth()))!
+const short = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+
+function titleOf(k: Kind, p: Product, season: (typeof SEASONS)[number], launch: number, n: number): string {
+  switch (k) {
+    case 'teaser': return `${season.hook}: something new from Fernway`
+    case 'behind': return p.behind
+    case 'why': return p.why
+    case 'preorder': return `Pre-orders open: the ${p.name} ships on ${short(launch)}`
+    case 'reveal': return `${p.name} is here, carousel`
+    case 'proof': return p.proof[0]
+    case 'proof2': return p.proof[1]
+    case 'use': return p.use
+    case 'faq': return `${p.name}: everything you asked`
+    case 'guide': return season.gift ? `Gift guide: ${p.name} and what goes with it` : `${p.name}: which one is yours`
+    case 'guide2': return season.gift ? 'Gifts under €50, €100, €150' : 'Bundles for the season, by budget'
+    case 'lastcall': return season.gift ? 'Last order date for delivery before Christmas' : `Last week to get it before the ${season.place}`
+    case 'challenge': return n === 1 ? `Day 1: ${season.prompt}` : `Day ${n}: your ${season.place}, shared with #FernwayChallenge`
+    case 'ugc': return `Your first photos from the ${season.place}`
+    case 'creator': return `A creator who already uses ${p.name === 'Fernway' ? 'Fernway' : `the ${p.name}`}: 3 stories`
+    case 'numbers': return 'The numbers so far, and what we learned'
+    case 'recap': return 'The recap film'
   }
-  const start = launch - 5 * DAY, end = launch + 9 * DAY
-  const dayOf = (t: number) => Math.round((t - now) / DAY)
-  const L = dayOf(launch)
-  const name = `${prod.name} ${/launch/i.test(brief) ? 'launch' : 'campaign'}`
-  const posts: CPost[] = [
-    { id: `${id}-1`, phase: 'Teasing', network: 'instagram', day: L - 5, title: `Something is coming: ${prod.name} teaser` },
-    { id: `${id}-2`, phase: 'Teasing', network: 'tiktok', day: L - 3, title: 'Behind the scenes: the rain test' },
-    { id: `${id}-3`, phase: 'Teasing', network: 'linkedin', day: L - 2, title: `Why we spent 2 years on the ${prod.name}` },
-    { id: `${id}-4`, phase: 'Launch', network: 'instagram', day: L, title: `${prod.name} is here, carousel` },
-    { id: `${id}-5`, phase: 'Launch', network: 'tiktok', day: L, title: '4 hours in the rain in 30 seconds' },
-    { id: `${id}-6`, phase: 'Launch', network: 'facebook', day: L + 1, title: `${prod.name}: everything you asked` },
-    { id: `${id}-7`, phase: 'Launch', network: 'youtube', day: L + 2, title: 'Full review by the design team' },
-    { id: `${id}-8`, phase: 'Launch', network: 'instagram', day: L + 3, title: 'First customers, first trails' },
-    { id: `${id}-9`, phase: 'Follow-up', network: 'tiktok', day: L + 6, title: 'Your first week with it' },
-    { id: `${id}-10`, phase: 'Follow-up', network: 'linkedin', day: L + 8, title: 'Launch numbers and what we learned' },
+}
+
+/** Networks a plan may use: the ones Sam ticked, or those in Sage's cadence. */
+const usable = (input: BriefInput, cadence?: Partial<Record<Network, number>>): Network[] => {
+  if (input.networks?.length) return input.networks
+  const fromCadence = cadence ? (Object.keys(cadence) as Network[]).filter(n => (cadence[n] ?? 0) > 0) : []
+  return fromCadence.length ? fromCadence : ['instagram', 'tiktok', 'facebook', 'linkedin', 'youtube']
+}
+
+export function generatePlan(id: string, brief: string | BriefInput, now: number, opts: { budget?: number; source?: string; cadence?: Partial<Record<Network, number>> } = {}): Campaign {
+  const { input, missing } = readBrief(typeof brief === 'string' ? brief : brief.text, now, typeof brief === 'string' ? {} : brief)
+  const text = input.text
+  const prod = PRODUCTS.find(p => p.name === input.product) ?? (input.product ? undefined : PRODUCTS.find(p => p.re.test(text))) ?? BRAND
+  const unit: GoalUnit = input.goal?.unit ?? (/pre-?order/i.test(text) ? 'pre-orders' : /challenge|join/i.test(text) ? 'sign-ups' : prod === BRAND ? 'sign-ups' : 'orders')
+  const target = input.goal?.target ?? (unit === 'revenue from social (€)' ? 20000 : 300)
+  const launch = input.launch ?? now + 21 * DAY
+  const tpl = TEMPLATES[unit]
+  const season = seasonOf(launch)
+  // Sage says what it assumed when nobody was there to ask (a brief from another agent).
+  const assumptions = [
+    ...(missing.includes('goal') ? [`Goal: ${target.toLocaleString('en-GB')} ${unit}, the brief gives no number`] : []),
+    ...(missing.includes('launch') ? [`Launch on ${short(launch)}, 3 weeks out: the brief gives no date`] : []),
   ]
-  const budget = opts.budget ?? (target >= 1000 ? 1200 : 600)
+  const nets = usable(input, opts.cadence)
+  const L = Math.round((launch - now) / DAY)
+  const at = (d: number) => launch + d * DAY
+  const phaseOf = (d: number): Phase['name'] => (d < tpl.phases[1] ? 'Teasing' : d < tpl.phases[2] ? 'Launch' : 'Follow-up')
+  let challenge = 0
+  const posts: CPost[] = []
+  tpl.slots.forEach(([k, d], i) => {
+    if (k === 'challenge') challenge++
+    // The best network for this kind of post that Sam uses, not the one the post before used that day.
+    const prefs = NETS[k].filter(n => nets.includes(n))
+    const sameDay = posts.filter(p => p.day === L + d).map(p => p.network)
+    const network = prefs.find(n => !sameDay.includes(n)) ?? prefs[0] ?? nets[i % nets.length]
+    posts.push({ id: `${id}-${i + 1}`, phase: phaseOf(d), network, day: L + d, title: titleOf(k, prod, season, launch, challenge), pillar: PILLAR_OF[k] })
+  })
+  const kinds = new Set(tpl.slots.map(([k]) => k))
+  const cta: Record<GoalUnit, string> = {
+    'pre-orders': `Pre-order now, ships on ${short(launch)}`, orders: 'Free repairs for life on every order',
+    'revenue from social (€)': season.gift ? `Order by ${short(at(tpl.phases[3] - 4))} for delivery before Christmas` : 'Delivered in 48 hours, repaired for life',
+    'sign-ups': 'Join the challenge: any trail counts', requests: 'Send us your bag: we fix it for free', 'new followers': 'Follow for the trail stories',
+  }
+  const budget = input.budget ?? opts.budget ?? (target >= 1000 ? 1200 : 600)
+  const name = `${prod.name} ${/launch/i.test(text) ? 'launch' : season.gift && unit === 'revenue from social (€)' ? 'gift guide' : tpl.name}`
   return {
-    id, name, status: 'review', brief, createdAt: now, base: now, source: opts.source,
-    goal: { label: unit, target, current: 0 }, start, end,
-    kpis: [unit[0].toUpperCase() + unit.slice(1), 'Reach on Instagram and TikTok', 'Saves and shares on launch posts'],
-    messages: prod.msg, audience: prod.audience,
+    id, name, status: 'review', brief: text, createdAt: now, base: now, source: opts.source, assumptions: assumptions.length ? assumptions : undefined,
+    goal: { label: unit, target, current: 0 }, start: at(tpl.phases[0]), end: at(tpl.phases[3]) + DAY - 60_000,
+    kpis: [unit[0].toUpperCase() + unit.slice(1), `Reach on ${nets.slice(0, 2).map(n => NET_NAME[n]).join(' and ')}`, kinds.has('ugc') ? 'Customer photos shared with the campaign' : 'Saves and shares on launch posts'],
+    messages: [...prod.msg, cta[unit]], audience: input.audience || prod.audience,
     phases: [
-      { name: 'Teasing', start, end: launch - DAY, summary: 'Teaser, behind the scenes, the why' },
-      { name: 'Launch', start: launch, end: launch + 4 * DAY, summary: 'Reveal, proof, answers to every question' },
-      { name: 'Follow-up', start: launch + 5 * DAY, end, summary: 'Customer stories, numbers, last call' },
+      { name: 'Teasing', start: at(tpl.phases[0]), end: at(tpl.phases[1]) - 60_000, summary: kinds.has('preorder') ? 'Teaser, behind the scenes, pre-orders open' : 'Teaser and the why' },
+      { name: 'Launch', start: at(tpl.phases[1]), end: at(tpl.phases[2]) - 60_000, summary: kinds.has('challenge') ? 'Daily prompts, community reposts' : kinds.has('guide') ? 'Guide by budget, proof, last order date' : 'Reveal, proof, answers to every question' },
+      { name: 'Follow-up', start: at(tpl.phases[2]), end: at(tpl.phases[3]) + DAY - 60_000, summary: kinds.has('recap') ? 'Best entries, the recap film' : 'Customer photos, numbers' },
     ],
     posts,
     tasks: [
       { id: `${id}-t1`, label: `Write and schedule the ${posts.length} posts`, agent: 'atlas', status: 'todo' },
-      { id: `${id}-t2`, label: `Answer ${prod.name} questions and send ${unit} links`, agent: 'nova', status: 'todo' },
-      { id: `${id}-t3`, label: 'Watch competitor reactions and launch mentions', agent: 'echo', status: 'todo' },
-      { id: `${id}-t4`, label: `Daily ${unit} vs trajectory`, agent: 'iris', status: 'todo' },
-      { id: `${id}-t5`, label: 'Find 3 creators who already use Fernway', agent: 'echo', status: 'todo' },
+      { id: `${id}-t2`, label: `Answer ${prod.name} questions and send ${unit.replace(' (€)', '')} links`, agent: 'nova', status: 'todo' },
+      { id: `${id}-t3`, label: 'Watch competitor reactions and campaign mentions', agent: 'echo', status: 'todo' },
+      { id: `${id}-t4`, label: `Daily ${unit.replace(' (€)', '')} vs trajectory`, agent: 'iris', status: 'todo' },
+      ...(kinds.has('creator') ? [{ id: `${id}-t5`, label: 'Find 3 creators who already use Fernway', agent: 'echo' as const, status: 'todo' as const }] : []),
+      ...(kinds.has('ugc') ? [{ id: `${id}-t6`, label: 'Repost the best customer photos', agent: 'echo' as const, status: 'todo' as const }] : []),
     ],
     risks: [
       'Peakline usually discounts during competitor launches: keep the message on durability, not price',
-      'Stock: confirm launch-day quantities with ops before the teaser',
-      ...(target > 500 ? [`${target.toLocaleString('en-GB')} ${unit} is 2× your last launch: the boost budget matters`] : []),
+      ...(unit === 'pre-orders' || unit === 'orders' ? ['Stock: confirm launch-day quantities with ops before the teaser'] : []),
+      ...(season.gift ? ['Carrier delays after 17 December: say the last order date early'] : []),
+      ...(kinds.has('challenge') && season.months.includes(0) ? ['Snow or rain on challenge days: keep indoor prompts ready'] : []),
+      ...(target > 500 && unit !== 'revenue from social (€)' ? [`${target.toLocaleString('en-GB')} ${unit} is 2× your last launch: the boost budget matters`] : []),
     ],
     budget,
-    planned: Array.from({ length: 9 }, (_, i) => Math.round((target * Math.pow(i / 8, 1.3)))),
+    planned: Array.from({ length: 9 }, (_, i) => Math.round(target * Math.pow(i / 8, tpl.curve))),
     actual: [],
     adjustments: [],
     version: 1,
   }
 }
 
-/** Sage's v2: applies the feedback and returns what changed. */
+const NET_NAME = NETWORK_LABEL
+const NET_RE: [RegExp, Network][] = [[/instagram|insta\b|\big\b/, 'instagram'], [/tiktok|tik tok/, 'tiktok'], [/linkedin/, 'linkedin'], [/facebook|\bfb\b/, 'facebook'], [/youtube|\byt\b/, 'youtube'], [/\bx\b|twitter/, 'x']]
+const netIn = (t: string) => NET_RE.find(([re]) => re.test(t))?.[1]
+
+/** Sage's v2: each request in the note (“more TikTok, cut the budget, start a week later”) is applied, and listed in the diff. */
 export function revisePlan(c: Campaign, feedback: string): Campaign {
-  const f = feedback.toLowerCase()
   const diff: Change[] = []
-  let posts = [...c.posts]
-  let budget = c.budget
-  let messages = [...c.messages]
-  if (/tiktok|video/.test(f)) {
-    const moved = posts.filter(p => p.network === 'instagram').slice(0, 2)
-    posts = posts.map(p => moved.includes(p) ? { ...p, network: 'tiktok' as const } : p)
-    moved.forEach(p => diff.push({ kind: 'changed', text: `“${p.title}” moved from Instagram to TikTok` }))
+  let { posts, budget, messages, goal, planned, phases, start, end, risks } = structuredClone(c)
+  const clauses = feedback.toLowerCase().split(/,|;|\.\s|\band\b|\balso\b|\bthen\b/).map(x => x.trim()).filter(Boolean)
+  for (const f of clauses) {
+    const net = netIn(f)
+    const days = f.match(/(\d+|a|one|two|three) (week|day)s? (later|earlier|sooner)/)
+    if (days) {
+      const n = (/^\d/.test(days[1]) ? +days[1] : days[1] === 'two' ? 2 : days[1] === 'three' ? 3 : 1) * (days[2] === 'week' ? 7 : 1) * (days[3] === 'later' ? 1 : -1)
+      posts = posts.map(p => ({ ...p, day: p.day + n }))
+      phases = phases.map(p => ({ ...p, start: p.start + n * DAY, end: p.end + n * DAY }))
+      start += n * DAY; end += n * DAY
+      diff.push({ kind: 'changed', text: `Dates moved ${Math.abs(n) % 7 ? `${Math.abs(n)} day${Math.abs(n) > 1 ? 's' : ''}` : `${Math.abs(n) / 7} week${Math.abs(n) > 7 ? 's' : ''}`} ${n > 0 ? 'later' : 'earlier'}: ${short(start)} – ${short(end)}` })
+    } else if (/budget|cheaper|cost|spend|€/.test(f)) {
+      const set = f.match(/€\s*(\d[\d,]*)|(\d[\d,]*)\s*€/)
+      const nb = set ? +(set[1] ?? set[2]).replace(/,/g, '') : Math.round((budget * (/more|raise|increase|double/.test(f) ? 1.3 : 0.7)) / 50) * 50
+      if (nb !== budget) { diff.push({ kind: 'changed', text: `Boost budget €${budget} → €${nb}` }); budget = nb }
+    } else if (/goal|target/.test(f) && /\d/.test(f)) {
+      const g = readGoal(f)
+      if (g && g.target !== goal.target) {
+        const k = g.target / goal.target
+        diff.push({ kind: 'changed', text: `Goal ${goal.target.toLocaleString('en-GB')} → ${g.target.toLocaleString('en-GB')} ${goal.label}` })
+        goal = { ...goal, target: g.target }; planned = planned.map(v => Math.round(v * k))
+      }
+    } else if (net && /\b(no|drop|remove|without|skip|cut|less|fewer)\b/.test(f)) {
+      const gone = posts.filter(p => p.network === net)
+      if (/\b(less|fewer)\b/.test(f) && gone.length > 1) {
+        // Less, not none: half of them move to the network with the fewest posts.
+        const others = [...new Set(posts.map(p => p.network))].filter(n => n !== net)
+        const to = others.sort((a, b) => posts.filter(p => p.network === a).length - posts.filter(p => p.network === b).length)[0] ?? 'instagram'
+        const moved = gone.slice(0, Math.ceil(gone.length / 2))
+        posts = posts.map(p => (moved.includes(p) ? { ...p, network: to } : p))
+        moved.forEach(p => diff.push({ kind: 'changed', text: `“${p.title}” moved from ${NET_NAME[net]} to ${NET_NAME[to]}` }))
+      } else {
+        posts = posts.filter(p => p.network !== net)
+        gone.forEach(p => diff.push({ kind: 'removed', text: `“${p.title}” (${NET_NAME[net]})` }))
+      }
+    } else if (net && /\b(more|add|move|switch|focus)\b/.test(f)) {
+      // Two posts move from the network with the most of them.
+      const from = [...new Set(posts.map(p => p.network))].filter(n => n !== net).sort((a, b) => posts.filter(p => p.network === b).length - posts.filter(p => p.network === a).length)[0]
+      const moved = posts.filter(p => p.network === from).slice(0, 2)
+      posts = posts.map(p => (moved.includes(p) ? { ...p, network: net } : p))
+      moved.forEach(p => diff.push({ kind: 'changed', text: `“${p.title}” moved from ${NET_NAME[p.network]} to ${NET_NAME[net]}` }))
+    } else if (/price|discount|promo/.test(f)) {
+      const before = messages.length
+      messages = messages.filter(m => !/price|discount|€|offer/i.test(m))
+      risks = [...risks, 'No price or discount in any post: you asked']
+      diff.push({ kind: 'changed', text: before > messages.length ? 'Removed the mention of price from the key messages' : 'No price or discount in any post (added to the risks Sage checks)' })
+    } else if (/creator|influenc|ugc/.test(f)) {
+      const day = posts.find(x => x.phase === 'Launch')?.day ?? 0
+      const p: CPost = { id: `${c.id}-v${c.version + 1}-c`, phase: 'Launch', network: 'instagram', day: day + 1, title: 'Creator take-over: 3 stories from someone who owns it', pillar: 'Community' }
+      posts = [...posts, p]
+      diff.push({ kind: 'added', text: `“${p.title}” (Instagram, launch week)` })
+    } else if (/shorter|fewer posts|less posts/.test(f)) {
+      const cut = posts.filter(p => p.phase === 'Follow-up').slice(-1)
+      posts = posts.filter(p => !cut.includes(p))
+      cut.forEach(p => diff.push({ kind: 'removed', text: `“${p.title}”` }))
+    }
   }
-  if (/budget|cheaper|less money|cost/.test(f)) {
-    const nb = Math.round((budget * 0.7) / 50) * 50
-    diff.push({ kind: 'changed', text: `Boost budget €${budget} → €${nb}` })
-    budget = nb
+  // What Sage couldn't turn into a change still counts: it becomes a rule for this campaign.
+  if (!diff.length) {
+    risks = [...risks, `Your note: “${feedback.slice(0, 120)}”`]
+    diff.push({ kind: 'added', text: `Your note, as a rule Atlas follows when writing: “${feedback.slice(0, 80)}”` })
   }
-  if (/x\b|twitter/.test(f) || /drop|remove|less/.test(f) && /linkedin/.test(f)) {
-    const net = /linkedin/.test(f) ? 'linkedin' : 'x'
-    posts.filter(p => p.network === net).forEach(p => diff.push({ kind: 'removed', text: `“${p.title}”` }))
-    posts = posts.filter(p => p.network !== net)
-  }
-  if (/price|discount/.test(f)) {
-    messages = messages.filter(m => !/price|discount/i.test(m))
-    diff.push({ kind: 'changed', text: 'Removed any mention of price from the key messages' })
-  }
-  if (/creator|influenc|ugc/.test(f) || !diff.length) {
-    const p = { id: `${c.id}-v${c.version + 1}`, phase: 'Launch' as const, network: 'instagram' as const, day: posts.find(x => x.phase === 'Launch')?.day ?? 0, title: 'Creator take-over: 3 stories from someone who owns it' }
-    posts = [...posts, p]
-    diff.push({ kind: 'added', text: `“${p.title}” (Instagram, launch week)` })
-    if (!/creator|influenc|ugc/.test(f)) diff.push({ kind: 'changed', text: `Key messages tightened from your note: “${feedback.slice(0, 80)}”` })
-  }
-  return { ...c, posts, budget, messages, version: c.version + 1, diff }
+  return { ...c, posts, budget, messages, goal, planned, phases, start, end, risks, version: c.version + 1, diff }
 }

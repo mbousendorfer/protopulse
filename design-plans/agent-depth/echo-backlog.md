@@ -9,15 +9,15 @@
 
 | # | Capacité Agorapulse | État actuel (fichier:ligne) | Version agentique | Valeur | Taille | Statut |
 |---|---|---|---|---|---|---|
-| C1 | Alerte de pic → action | `listening/script.ts:7` carte « Negative spike », 3 options, aucun résolveur (`slice.ts:275`) | Option 1 : Atlas en pause (statut d'agent, Undo réel) + carte Claire ; option 2 : Nova reçoit une carte de réponse par mention du pic ; option 3 : Echo surveille 2 h et relance. Demande à Atlas pour la pause des posts du jour | 3 | M | todo |
-| C2 | Digest ventes | « Tell sales » envoie tout de suite (`slice.ts:95`) malgré `echo-sales` en Draft | Suggest : Echo dit quoi dire ; Draft : carte Desk avec l'email en aperçu, envoi à l'approbation ; Act : envoi direct, ligne au journal sans Undo (un email ne se rappelle pas, dit avant) | 3 | S | todo |
-| C3 | Événement réglé partout | `slice.ts:143` ne retire que `h-peakline` | Toute carte Desk dont l'événement est réglé dans Listening est retirée (lien carte ↔ événement par `ref`) | 2 | S | todo |
-| C4 | Compteurs calculés | ⌘K « 14 of 388 » (`agent.tsx:19`), Chat cite @hugo.rando en négatif (`agent.tsx:23`), 27 mentions du pic inexistantes, onglet Mentions compte les masquées (`Page.tsx:38`) | Toutes les mentions viennent de l'état (`allMentions(s)`) ; le pic injecte ses mentions ; ⌘K, Chat, onglet et barre lisent les mêmes calculs | 3 | M | todo |
-| C5 | Concurrent ajouté vivant | `Page.tsx:190` Benchmark, événements et profil lisent `COMPETITORS` | Un concurrent ajouté reçoit des chiffres générés crédibles (déterministes depuis son nom), une ligne au Benchmark, un profil et un premier événement après le délai annoncé | 2 | M | todo |
-| C6 | Recherche qui se remplit | `slice.ts:175` volume 0, « Collecting » pour toujours | Le battement de cœur remplit la recherche (volume qui monte, puis stable) avec des mentions rattachées | 2 | S | todo |
-| C7 | Lien du site concurrent | `Manage.tsx:40` `preventDefault` | Lien réel (nouvel onglet) | 1 | S | todo |
-| C8 | Règles d'alerte évaluées | `slice.ts:33` éditables, jamais évaluées | Évaluées au battement de cœur sur le flux de mentions ; dépassement → carte Desk (ou carte chez Claire), une fois par fenêtre | 3 | M | todo |
-| C9 | Garde-fous qui suivent l'état | `data/agents.ts:117` « 12 » et la liste des concurrents en dur | Valeurs lues dans l'état ; plafond de recherches actives appliqué à la création | 2 | S | todo |
+| C1 | Alerte de pic → action | `listening/script.ts:7` carte « Negative spike », 3 options, aucun résolveur (`slice.ts:275`) | Option 1 : Atlas en pause (statut d'agent, Undo réel) + carte Claire ; option 2 : Nova reçoit une carte de réponse par mention du pic ; option 3 : Echo surveille 2 h et relance. Demande à Atlas pour la pause des posts du jour | 3 | M | done (#33) |
+| C2 | Digest ventes | « Tell sales » envoie tout de suite (`slice.ts:95`) malgré `echo-sales` en Draft | Suggest : Echo dit quoi dire ; Draft : carte Desk avec l'email en aperçu, envoi à l'approbation ; Act : envoi direct, ligne au journal sans Undo (un email ne se rappelle pas, dit avant) | 3 | S | done (#38) |
+| C3 | Événement réglé partout | `slice.ts:143` ne retire que `h-peakline` | Toute carte Desk dont l'événement est réglé dans Listening est retirée (lien carte ↔ événement par `ref`) | 2 | S | done (#38) |
+| C4 | Compteurs calculés | ⌘K « 14 of 388 » (`agent.tsx:19`), Chat cite @hugo.rando en négatif (`agent.tsx:23`), 27 mentions du pic inexistantes, onglet Mentions compte les masquées (`Page.tsx:38`) | Toutes les mentions viennent de l'état (`allMentions(s)`) ; le pic injecte ses mentions ; ⌘K, Chat, onglet et barre lisent les mêmes calculs | 3 | M | done (#33) |
+| C5 | Concurrent ajouté vivant | `Page.tsx:190` Benchmark, événements et profil lisent `COMPETITORS` | Un concurrent ajouté reçoit des chiffres générés crédibles (déterministes depuis son nom), une ligne au Benchmark, un profil et un premier événement après le délai annoncé | 2 | M | done (PR suivante) |
+| C6 | Recherche qui se remplit | `slice.ts:175` volume 0, « Collecting » pour toujours | Le battement de cœur remplit la recherche (volume qui monte, puis stable) avec des mentions rattachées | 2 | S | done (#45) |
+| C7 | Lien du site concurrent | `Manage.tsx:40` `preventDefault` | Lien réel (nouvel onglet) | 1 | S | done (#38) |
+| C8 | Règles d'alerte évaluées | `slice.ts:33` éditables, jamais évaluées | Évaluées au battement de cœur sur le flux de mentions ; dépassement → carte Desk (ou carte chez Claire), une fois par fenêtre | 3 | M | done (#45) |
+| C9 | Garde-fous qui suivent l'état | `data/agents.ts:117` « 12 » et la liste des concurrents en dur | Valeurs lues dans l'état ; plafond de recherches actives appliqué à la création | 2 | S | done (#45) |
 
 ## Features (pitch obligatoire)
 

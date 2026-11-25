@@ -10,13 +10,14 @@ import { ago, hhmm, left, MIN, DEMO_START } from '../../app/time'
 import { agentName } from '../../data/agents'
 import { Btn, Kbd, Mark, TopicIcon } from '../../ui'
 import { BriefScene } from '../../ui/Illustrations'
+import { visibleMentions } from '../listening/model'
 
 /* ---------- Morning brief: one line, the team at a glance, three highlights ---------- */
 const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: number) => string> = {
   nova: (s, need) => `${(s.phase === 'day1' ? 0 : 142) + s.log.filter(l => l.agent === 'nova' && l.at > s.brief.since && l.status === 'done').length} conversations handled alone`,
   atlas: s => s.handoffs.some(h => h.id === 'h-plan') ? 'Next week’s plan is ready for you' : s.phase === 'day1' ? `${s.publishing.ideas.filter(i => i.status === 'new' || i.status === 'ready').length} post ideas in Publishing` : 'Next week is planned and scheduled',
   iris: s => { const n = s.handoffs.filter(h => h.agent === 'iris' && h.kind === 'alert' && !h.lane).length; return `${n || 'No'} ${n === 1 ? 'anomaly' : 'anomalies'}${s.phase === 'day1' ? '' : ' · weekly report written'}` },
-  echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'}${s.phase === 'day1' ? '' : ' · 23 new mentions'}` },
+  echo: s => { const n = s.handoffs.filter(h => h.topic === 'Competitor' && !h.lane).length; { const m = visibleMentions(s).filter(x => x.at > s.brief.since).length; return `${n || 'No'} competitor ${n === 1 ? 'move' : 'moves'}${s.phase === 'day1' ? '' : ` · ${m} new mention${m === 1 ? '' : 's'}`}` } },
   sage: s => (s.phase === 'day1' ? 'Pillars and cadence proposed' : 'Trail Week is at 128% of its trajectory'),
   juno: s => (s.phase === 'day1' ? 'Watching your YouTube channel for the next video' : s.handoffs.some(h => h.agent === 'juno' && !h.lane) ? 'New clips are ready for you' : 'No new video since yesterday'),
 }

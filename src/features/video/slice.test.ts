@@ -3,6 +3,7 @@ import { initialState, type State } from '../../app/state'
 import { reducer, type Action } from '../../app/reducer'
 import { now } from '../../app/core'
 import { PHASES, PHASE_MS, SEEDS, TRANSCRIPT } from '../../data/video'
+import { clipLengthOf, clipPosts as clipPosts2, rescore } from './model'
 
 const later = (s: State, ms: number): State => ({ ...s, clock: { base: now(s) + ms, realAt: Date.now() } })
 const run = (s: State, ...actions: Action[]) => actions.reduce(reducer, s)
@@ -20,9 +21,11 @@ test('a new upload is processed, its clips arrive with a Desk card; approving th
   expect(card.preview).toEqual({ type: 'clip', clip: ready[0].id })
 
   s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
-  expect(s.video.clips.filter(c => c.source === 'gr20').every(c => c.status === 'sent')).toBe(true)
-  expect(clipPosts(s, 'gr20').length).toBeGreaterThanOrEqual(3)
-  expect(s.tester.filter(e => e.kind === 'video/decision')).toHaveLength(3)
+  // Hugo is on screen in the opening shot without a signed release: that clip stays.
+  expect(s.video.clips.filter(c => c.source === 'gr20' && c.status === 'sent')).toHaveLength(2)
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('ready')
+  expect(clipPosts(s, 'gr20').length).toBeGreaterThanOrEqual(2)
+  expect(s.tester.filter(e => e.kind === 'video/decision')).toHaveLength(2)
 
   s = run(s, { type: 'core/undo', id: s.log[0].id })
   expect(clipPosts(s, 'gr20')).toHaveLength(0)
@@ -120,4 +123,128 @@ test('every seed clip finds its phrases in the real narration and lands between 
     return `${id}/${sd.key}: ${a ? '' : `missing “${sd.from}”`}${a && !b ? `missing “${sd.to}”` : ''}${a && b && (b.e - a.s < 8 || b.e - a.s > 65) ? `${Math.round(b.e - a.s)} s` : ''}`
   }))
   expect(found.filter(x => !x.endsWith(': '))).toEqual([])
+})
+
+const level = (s: State, action: string, lv: 'suggest' | 'draft' | 'act') => run(s, { type: 'core/autonomy', agent: 'juno', action, level: lv })
+const clipOf = (s: State, id: string) => s.video.clips.find(c => c.id === id)!
+const fireCaptions = (s: State) => run(s, { type: 'core/fire', eventId: 'ev-video-captions' })
+
+test('caption fixes on Act: Juno fixes the misheard product names, Undo takes them off', () => {
+  let s = fireCaptions(initialState())
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBe('28L')
+  expect(s.log[0].captionFixes?.['clip-repair-strap']).toEqual([38])
+  expect(s.log[0].text).toMatch(/“28” → “28L”/)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+})
+
+test('caption fixes on Draft: one card, approving it fixes; moving to Act does it too', () => {
+  let s = fireCaptions(level(initialState(), 'juno-captions', 'draft'))
+  const card = s.handoffs.find(h => h.topic === 'Captions')!
+  expect(card.fixes?.['clip-repair-strap']).toEqual([38])
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+  const approved = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(approved, 'clip-repair-strap').fixes[38]).toBe('28L')
+  s = level(s, 'juno-captions', 'act')
+  expect(s.handoffs.some(h => h.topic === 'Captions')).toBe(false)
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBe('28L')
+})
+
+test('caption fixes on Suggest: no card, nothing fixed, the words stay flagged', () => {
+  const s = fireCaptions(level(initialState(), 'juno-captions', 'suggest'))
+  expect(s.handoffs.some(h => h.topic === 'Captions')).toBe(false)
+  expect(clipOf(s, 'clip-repair-strap').fixes[38]).toBeUndefined()
+})
+
+test('reframing follows its level on new clips: applied (Act), to check (Draft), suggested and not applied (Suggest)', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-reframe', lv), { type: 'core/fire', eventId: 'ev-video-gr20' })).video.clips.filter(c => c.source === 'gr20')
+  expect(cut('act').every(c => c.frame === 'track' && !c.framing && c.brand.logo)).toBe(true)
+  expect(cut('draft').every(c => c.frame === 'track' && c.framing === 'check')).toBe(true)
+  expect(cut('suggest').every(c => c.frame === 'fit' && c.framing === 'suggested' && !c.brand.logo)).toBe(true)
+})
+
+test('dubbing follows its level: to review (Draft), made with Undo (Act), only suggested (Suggest)', () => {
+  const cut = (lv: 'suggest' | 'draft' | 'act') => done(run(level(initialState(), 'juno-dub', lv), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  const draft = cut('draft')
+  const c = draft.video.clips.find(x => x.source === 'gr20')!
+  expect(c.audio).toMatchObject({ dubs: ['fr', 'de'], review: ['fr', 'de'] })
+  const ok = run(draft, { type: 'video/approveDub', id: c.id, lang: 'fr' })
+  expect(clipOf(ok, c.id).audio.review).toEqual(['de'])
+
+  let act = cut('act')
+  const line = act.log.find(l => l.dubs)!
+  expect(act.video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 2 && !x.audio.review?.length)).toBe(true)
+  act = run(act, { type: 'core/undo', id: line.id })
+  expect(act.video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 0)).toBe(true)
+
+  expect(cut('suggest').video.clips.filter(x => x.source === 'gr20').every(x => x.audio.dubs.length === 0)).toBe(true)
+})
+
+test('a dub you ask for waits for review on Draft, and is ready on Act', () => {
+  const id = 'clip-live-second'
+  const draft = run(initialState(), { type: 'video/dub', id, lang: 'it' })
+  expect(clipOf(draft, id).audio).toMatchObject({ lang: 'it', dubs: ['it'], review: ['it'] })
+  const act = run(level(initialState(), 'juno-dub', 'act'), { type: 'video/dub', id, lang: 'it' })
+  expect(clipOf(act, id).audio.review ?? []).toEqual([])
+})
+
+test('a guest without a signed release holds the clip, with the reason; recording the release lets it go', () => {
+  let s = done(run(initialState(), { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  s = run(s, { type: 'video/send', ids: ['clip-gr20-refuge'] })
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('ready')
+  expect(s.notice?.text).toMatch(/Hugo is on screen without a signed release/)
+  s = run(s, { type: 'video/release', person: 'hugo', signed: true }, { type: 'video/send', ids: ['clip-gr20-refuge'] })
+  expect(s.video.clips.find(c => c.id === 'clip-gr20-refuge')?.status).toBe('sent')
+})
+
+test('five clips per video per week: Juno sends the best and says why the others wait', () => {
+  // repair already has 2 out this week; 4 more found clips + 3 ready = 7 candidates for 3 places.
+  let s = run(initialState(), { type: 'video/find', source: 'repair', query: 'stitches webbing bin carbon', len: 20, count: 4 })
+  const ready = s.video.clips.filter(c => c.source === 'repair' && c.status === 'ready')
+  expect(ready.length).toBeGreaterThan(3)
+  s = run(s, { type: 'video/send', ids: ready.map(c => c.id) })
+  expect(s.video.clips.filter(c => c.source === 'repair' && (c.status === 'sent' || c.status === 'published'))).toHaveLength(5)
+  expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
+})
+
+test('length per network: a 70 s clip goes to LinkedIn only, and loses Flow points only for the networks that cut it', () => {
+  const s0 = initialState()
+  const c = s0.video.clips.find(x => x.id === 'clip-repair-twenty')!
+  const t = TRANSCRIPT.repair
+  const long = { ...c, end: t.sentences[27].e }
+  const dur = clipLengthOf(long, t)
+  expect(dur).toBeGreaterThan(60)
+  expect(dur).toBeLessThan(90)
+  expect(clipPosts2(long, s0.publishing.posts, now(s0), () => 'x', dur).map(p => p.network)).toEqual(['linkedin'])
+  expect(rescore({ ...long, post: { ...long.post, networks: ['linkedin'] } }, t).reasons.flow).not.toMatch(/longer than/)
+  expect(rescore(long, t).reasons.flow).toMatch(/longer than 60 s, TikTok and Reels cut it off/)
+})
+
+test('a sent clip becomes Published at its posts’ time, with numbers, and good news when it beats its network', () => {
+  let s = run(initialState(), { type: 'video/send', ids: ['clip-live-zips'] })
+  const last = Math.min(...s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips').map(p => p.at))
+  s = run(s, { type: 'core/heartbeat' })
+  expect(s.video.clips.find(c => c.id === 'clip-live-zips')?.status).toBe('sent')
+  s = run(later(s, last - now(s) + 1000), { type: 'core/heartbeat' })
+  const c = s.video.clips.find(x => x.id === 'clip-live-zips')!
+  expect(c.status).toBe('published')
+  expect(c.stats!.views).toBeGreaterThan(0)
+  expect(s.log.some(l => l.text.startsWith('“Zips break, not fabric” is out:'))).toBe(true)
+  const news = s.handoffs.find(h => h.ref === 'clip-live-zips')
+  expect(news?.kind).toBe('news')
+  expect(news?.title).toContain(`${(c.stats!.views / 1000).toFixed(1)}k views`)
+})
+
+test('the score learns: published clips of the same pillar move the total, and the closest one is cited', () => {
+  let s = initialState()
+  const strap = () => s.video.clips.find(c => c.id === 'clip-repair-strap')!
+  // “Most brands…” (Repair & care, published, 48.2k) against TikTok's usual reach.
+  expect(strap().track?.like?.id).toBe('clip-repair-brands')
+  const before = rescore(strap(), TRANSCRIPT.repair).total
+  expect(before - rescore({ ...strap(), track: undefined }, TRANSCRIPT.repair).total).toBe(strap().track!.delta)
+  // A Gear that lasts clip going out big lifts the other Gear that lasts clips once it's published.
+  s = run(s, { type: 'video/send', ids: ['clip-live-zips'] })
+  const first = Math.min(...s.publishing.posts.filter(p => p.media === 'clip:clip-live-zips').map(p => p.at))
+  s = run(later(s, first - now(s) + 1000), { type: 'core/heartbeat' })
+  expect(s.video.clips.find(c => c.id === 'clip-live-bottle')?.track?.like?.id).toBe('clip-live-zips')
 })
