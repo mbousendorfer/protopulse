@@ -15,7 +15,7 @@ import { Notice } from '../../ui/Feedback'
 import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
-  LANG_LABEL, LANGS, NETWORK_FIT, SCORE_LABEL, applyAsk, captionLines, captionSlips, coverFrames, coverText, shortsTitle, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
+  LANG_LABEL, LANGS, NETWORK_FIT, NET_SPEC, SCORE_LABEL, buildVersions, versionFor, versionIssues, versionOf, applyAsk, captionLines, captionSlips, coverFrames, coverText, shortsTitle, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
   silences, toSRT, wordText, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
 } from './model'
 import { Frame, usePlayback, type Playback } from './Player'
@@ -47,6 +47,12 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
   const canUndo = s.video.editor.clip === clip.id && s.video.editor.past.length > 0
   const canRedo = s.video.editor.clip === clip.id && s.video.editor.future.length > 0
   const open = clip.status === 'ready' || clip.status === 'snoozed'
+  // Which version the frame shows: the clip as framed, or one network's version.
+  const [pick, setView] = useState<'all' | Network>('all')
+  const view = pick !== 'all' && clip.post.networks.includes(pick) ? pick : 'all'
+  const version = view === 'all' ? undefined : versionOf(clip, view)
+  const shown = version ? { ...clip, aspect: version.aspect, captions: { ...clip.captions, y: version.y } } : clip
+  const setAspect = (aspect: Clip['aspect']) => (view === 'all' ? edit({ aspect }) : edit({ versions: { ...clip.versions, [view]: { ...versionOf(clip, view), aspect } } }))
 
   useEffect(() => { d({ type: 'video/open', id: clip.id }) }, [clip.id, d])
 
@@ -97,20 +103,42 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
       <TranscriptPanel clip={clip} pb={pb} sel={sel} setSel={setSel} selected={selected} onCut={cutSelection} edit={edit} />
 
       <section className="ed-stage" aria-label="Preview">
-        <div className="ed-frame-wrap"><Frame clip={clip} source={source} pb={pb} safe={safe} outro={s.video.kit.outro} /></div>
+        {clip.post.networks.length > 1 && (
+          <Seg name="version" size="sm" label="Version" value={view} onChange={setView} options={[{ value: 'all', label: 'All' }, ...clip.post.networks.map(n => ({ value: n, label: NETWORK_FIT[n] ?? NETWORK_LABEL[n] }))]} />
+        )}
+        <div className="ed-frame-wrap"><Frame clip={shown} source={source} pb={pb} safe={safe && view !== 'all' ? NET_SPEC[view] ?? true : safe} outro={s.video.kit.outro} /></div>
         <div className="ed-transport">
           <Btn icon variant="ghost" onClick={pb.toggle} aria-label={pb.playing ? 'Pause' : 'Play'} kbd="Space">{pb.playing ? <Pause size={18} /> : <Play size={18} />}</Btn>
           <span className="mono t-sm">{fmt(pb.t)} / {fmt(pb.total)}</span>
           <span className="spacer" />
-          <Seg name="aspect" size="sm" label="Format" value={clip.aspect} onChange={aspect => edit({ aspect })} options={[{ value: '9:16', label: '9:16' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }]} />
+          <Seg name="aspect" size="sm" label="Format" value={shown.aspect} onChange={setAspect} options={[{ value: '9:16', label: '9:16' }, { value: '4:5', label: '4:5' }, { value: '1:1', label: '1:1' }, { value: '16:9', label: '16:9' }]} />
           <Switch checked={safe} onChange={setSafe} label="Safe zones" />
         </div>
+        {view !== 'all' && <VersionBar clip={clip} n={view} edit={edit} />}
         {pb.elements}
       </section>
 
       <Inspector clip={clip} pb={pb} edit={edit} score={score} />
 
       <div className="ed-timeline"><Timeline clip={clip} source={source} pb={pb} onEdit={edit} /></div>
+    </div>
+  )
+}
+
+/* ---------- One network's version ---------- */
+
+function VersionBar({ clip, n, edit }: { clip: Clip; n: Network; edit: (p: Partial<Clip>) => void }) {
+  const v = versionOf(clip, n)
+  const issues = versionIssues(clip, n)
+  const name = NETWORK_FIT[n] ?? NETWORK_LABEL[n]
+  const set = (p: Partial<typeof v>) => edit({ versions: { ...clip.versions, [n]: { ...v, ...p } } })
+  const juno = versionFor(clip, n)
+  return (
+    <div className="ed-version" role="group" aria-label={`${name} version`}>
+      <Net n={n} size={16} />
+      <span>{issues.length ? <>{name}: {issues.join(', ')}.</> : <>{name}: {v.aspect}, captions clear of the app’s buttons.</>}</span>
+      <CommitRange label="Caption height" min={8} max={86} value={v.y} onCommit={y => set({ y })} format={x => `${x}% from the top`} />
+      {(v.aspect !== juno.aspect || v.y !== juno.y) && <Btn size="xs" variant="ghost" onClick={() => set(juno)}><Mark agent="juno" />Juno’s version</Btn>}
     </div>
   )
 }
@@ -326,12 +354,12 @@ export function FramingNote({ clip, edit, kit }: { clip: Clip; edit: (p: Partial
     <div className="ed-flag" role="status">
       <Mark agent="juno" />
       {clip.framing === 'check' ? <>
-        <span className="grow">Juno framed it on the speaker and applied the brand kit. Reframing is set to Draft: check it.</span>
+        <span className="grow">Juno framed it on the speaker, made a version per network and applied the brand kit. Reframing is set to Draft: check it.</span>
         <Btn size="xs" onClick={() => edit({ framing: undefined })}>Keep it</Btn>
-        <Btn size="xs" variant="ghost" onClick={() => edit({ framing: undefined, frame: 'fit', focus: undefined, brand: { ...clip.brand, logo: false, progress: false, intro: false, outro: false, music: undefined } })}>Undo framing</Btn>
+        <Btn size="xs" variant="ghost" onClick={() => edit({ framing: undefined, frame: 'fit', focus: undefined, versions: undefined, brand: { ...clip.brand, logo: false, progress: false, intro: false, outro: false, music: undefined } })}>Undo framing</Btn>
       </> : <>
-        <span className="grow">Juno suggests auto-tracking the speaker and adding the brand kit: logo, progress bar, end card, music.</span>
-        <Btn size="xs" onClick={() => edit({ framing: undefined, frame: 'track', brand: { ...kit } })}>Apply</Btn>
+        <span className="grow">Juno suggests auto-tracking the speaker, a version per network, and the brand kit: logo, progress bar, end card, music.</span>
+        <Btn size="xs" onClick={() => edit({ framing: undefined, frame: 'track', brand: { ...kit }, versions: buildVersions(clip) })}>Apply</Btn>
       </>}
     </div>
   )
@@ -428,7 +456,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
   const setNets = (n: Network, on: boolean) => {
     const networks = on ? [...clip.post.networks, n] : clip.post.networks.filter(x => x !== n)
     if (!networks.length) return
-    edit({ post: { networks, text: on ? { ...clip.post.text, [n]: clip.post.text[clip.post.networks[0]] ?? clip.hook } : clip.post.text } })
+    edit({ post: { networks, text: on ? { ...clip.post.text, [n]: clip.post.text[clip.post.networks[0]] ?? clip.hook } : clip.post.text }, ...(on && clip.versions ? { versions: { ...clip.versions, [n]: versionFor(clip, n) } } : {}) })
   }
   return (
     <div className="stack">
@@ -477,6 +505,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
       <Field label="Where it goes">
         <div className="row">{CLIP_NETWORKS.map(n => <label key={n} className="check-row"><input type="checkbox" className="check" checked={clip.post.networks.includes(n)} onChange={e => setNets(n, e.target.checked)} /><Net n={n} size={16} />{NETWORK_FIT[n]}</label>)}</div>
         {clip.post.networks.filter(n => !fitsLength(n, dur)).map(n => <p key={n} className="muted t-sm">{NETWORK_FIT[n]}: {Math.round(dur)} s is outside {lengthSpec(n).min}–{lengthSpec(n).max} s, so Atlas won’t post it there.</p>)}
+        {clip.post.networks.flatMap(n => versionIssues(clip, n).map(x => <p key={n + x} className="muted t-sm">{NETWORK_FIT[n]}: {x}.</p>))}
       </Field>
       {clip.post.networks.map(n => {
         const text = clip.post.text[n] ?? ''
