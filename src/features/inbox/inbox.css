@@ -142,3 +142,31 @@
 .ib-sel-count { margin: 0 8px 0 2px; white-space: nowrap; }
 .ib-undo-strip { display: flex; align-items: center; gap: var(--s2); padding: 8px var(--s4); background: var(--ok-tint); color: var(--ok-strong); font-size: var(--t-sm); font-weight: 500; border-bottom: 1px solid var(--line); }
 .ib-undo-strip span { flex: 1; }
+
+/* ---------- Needs you: grouped by what Nova needs from you, with the quick decision on the row ---------- */
+.ib-need-group + .ib-need-group { border-top: 1px solid var(--line); }
+.ib-need-head { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; padding: var(--s4) var(--s4) var(--s2); }
+.ib-need-head h3 { display: flex; align-items: center; gap: 6px; font-size: var(--t-md); font-weight: 600; }
+.ib-need-head h3 .num { min-width: 22px; height: 20px; padding: 0 7px; border-radius: 999px; background: var(--lift-2); color: var(--ink-2); font-size: var(--t-xs); line-height: 20px; text-align: center; }
+.ib-need-group.ib-g-call h3 .num { background: var(--alert-tint); color: var(--alert-strong); }
+.ib-need-group.ib-g-check h3 .num { background: var(--caution-tint); color: var(--caution-strong); }
+.ib-need-head .faint { font-size: var(--t-sm); }
+.ib-need { display: grid; grid-template-columns: 28px 32px minmax(0, 1fr); gap: 4px 10px; align-items: start; padding: var(--s3) var(--s4) var(--s3) var(--s2); cursor: pointer; border-top: 1px solid var(--line); }
+.ib-need-head + ul > .ib-need:first-child { border-top: 0; }
+.ib-need:hover { background: var(--row-hover); }
+.ib-need.current { background: var(--brand-soft); }
+.ib-need.picked { background: var(--signal-wash); }
+.ib-need > .select-box { margin-top: 6px; }
+.ib-need-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ib-need-them { display: flex; align-items: center; gap: var(--s2); min-width: 0; }
+.ib-need-them .mono { margin-left: auto; font-size: var(--t-xs); flex: none; }
+.ib-need-quote { color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ib-need-nova, .ib-need-ask { display: flex; gap: 8px; align-items: flex-start; font-size: var(--t-sm); color: var(--ink-2); }
+.ib-need-nova > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ib-need-nova b, .ib-need-ask b { color: var(--ink); font-weight: 600; }
+.ib-need-ask { padding: 8px 10px; border-radius: 10px; background: var(--sunk); color: var(--ink); }
+.ib-need-group.ib-g-check .ib-need-ask svg { color: var(--caution-strong); flex: none; margin-top: 1px; }
+.ib-need-group.ib-g-call .ib-need-ask svg { color: var(--alert-strong); flex: none; margin-top: 1px; }
+.ib-need-acts { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; margin-top: 2px; }
+/* With a conversation open, the list is narrow: keep who and what, the panel carries the decision */
+.ib-layout.has-current .ib-need-nova, .ib-layout.has-current .ib-need-acts, .ib-layout.has-current .ib-need-head .faint, .ib-layout.has-current .ib-need-them .ib-tag { display: none; }

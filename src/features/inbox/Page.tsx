@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
+  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
   Paperclip, Plus, Search, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
@@ -184,6 +184,8 @@ export default function InboxPage() {
           {!list.length ? (
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
+          ) : view === 'needs' && !label ? (
+            <NeedsList list={list} sel={sel} currentId={id} onOpen={cid => nav(`/inbox/${cid}`)} />
           ) : (
             <ul className="ib-rows">
               {list.map(c => (
@@ -210,6 +212,79 @@ export default function InboxPage() {
         {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} /> : null}
       </div>
     </div>
+  )
+}
+
+/** What Nova needs from you, in three kinds: send what she is sure of, check the passage she doubts, decide what she never answers. */
+type Need = 'ready' | 'check' | 'call' | 'claire'
+const flagsOf = (c: Conversation) => (c.draft ?? []).filter((x): x is Exclude<typeof x, string> => typeof x !== 'string')
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
+const needOf = (c: Conversation): Need => c.status === 'claire' ? 'claire' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
+const NEEDS: { id: Need; title: string; hint: string }[] = [
+  { id: 'ready', title: 'Ready to send', hint: 'Nova is sure of the facts and the tone.' },
+  { id: 'check', title: 'One passage to check', hint: 'Nova marked what she is unsure about.' },
+  { id: 'call', title: 'Your call', hint: 'Locked topics Nova never answers herself.' },
+  { id: 'claire', title: 'Waiting on Claire', hint: 'She usually answers within the hour.' },
+]
+
+function NeedsList({ list, sel, currentId, onOpen }: { list: Conversation[]; sel: ReturnType<typeof useSelection>; currentId?: string; onOpen: (id: string) => void }) {
+  const { d } = useStore()
+  return (
+    <div className="ib-needs">
+      {NEEDS.map(g => {
+        const rows = list.filter(c => needOf(c) === g.id)
+        if (!rows.length) return null
+        return (
+          <section key={g.id} className={`ib-need-group ib-g-${g.id}`} aria-label={g.title}>
+            <header className="ib-need-head">
+              <h3>{g.title}<span className="num">{rows.length}</span></h3>
+              <span className="faint">{g.hint}</span>
+              <span className="spacer" />
+              {g.id === 'ready' && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
+            </header>
+            <ul>{rows.map(c => <NeedRow key={c.id} c={c} need={g.id} sel={sel} current={c.id === currentId} onOpen={() => onOpen(c.id)} />)}</ul>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Need; sel: ReturnType<typeof useSelection>; current: boolean; onOpen: () => void }) {
+  const { d } = useStore()
+  const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn() }
+  const flags = flagsOf(c)
+  const draft = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
+  const extras = (c.attachments ?? []).filter(a => !a.removed).map(a => a.label.split(':')[0]).join(' · ')
+  return (
+    <li className={`ib-need ${current ? 'current' : ''} ${sel.has(c.id) ? 'picked' : ''}`} onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : onOpen()}>
+      <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
+      <SocialAvatar name={c.author} network={c.network} size={32} />
+      <div className="ib-need-main">
+        <div className="ib-need-them">
+          <b className="ellipsis">{c.author}</b>
+          <TypeTag t={c.type} />
+          {c.sentiment === 'negative' && <SentimentTag s="negative" />}
+          <span className="mono faint">{hhmm(c.at)}</span>
+        </div>
+        <p className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”</p>
+        {need === 'ready' && <p className="ib-need-nova"><Mark agent="nova" /><span><b>Nova’s reply</b> {draft}{extras && <span className="faint"> · with {extras}</span>}</span></p>}
+        {need === 'check' && <p className="ib-need-ask"><CircleHelp size={15} aria-hidden /><span><b>Check “{flags[0].text}”.</b> {flags[0].note}</span></p>}
+        {need === 'call' && <p className="ib-need-ask"><Lock size={15} aria-hidden /><span><b>{c.note?.split(' · ')[0] ?? 'Locked topic'}.</b> {c.draft ? 'Nova suggests a holding reply only.' : cap(c.note?.split(' · ').slice(1).join(' · ') ?? '')}</span></p>}
+        {need === 'claire' && <p className="ib-need-ask"><Mark agent="claire" /><span>Claire is looking at it.</span></p>}
+        {need !== 'claire' && (
+          <div className="ib-need-acts">
+            {need === 'ready' && <><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send</Btn><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit</Btn></>}
+            {need === 'check' && <><Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send as is</Btn><Btn size="sm" variant="ghost" onClick={stop(onOpen)}>Edit the passage</Btn></>}
+            {need === 'call' && <>
+              {c.draft && <Btn size="sm" onClick={stop(() => d({ type: 'inbox/approve', id: c.id }))}><Send size={14} />Send the holding reply</Btn>}
+              <Btn size="sm" variant="ghost" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />I’ll reply</Btn>
+              <Btn size="sm" variant="ghost" onClick={stop(() => d({ type: 'inbox/claire', id: c.id }))}><UserRound size={14} />Ask Claire</Btn>
+            </>}
+          </div>
+        )}
+      </div>
+    </li>
   )
 }
 
