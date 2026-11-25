@@ -503,9 +503,11 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
       if (d.index === 1) return patchPost(s, linked.id, { waiting: 'visual', note: 'Waiting for your upload. Upload it in Media.' })
       return patchPost(s, linked.id, { at: linked.at + 7 * DAY, status: 'scheduled', waiting: undefined, note: 'Moved to next week, visual to find.' })
     }
-    if (h.id === 'h-code' && d.kind === 'answer') return patchPost(s, linked.id, { text: linked.text.replace('[code]', d.text.toUpperCase()), status: 'scheduled', note: `Code ${d.text.toUpperCase()} added.` })
-    if (ok && linked.approval) return patchPost(s, linked.id, approved(linked, h, now(s), preview ? plain(preview.text) : undefined))
-    if (ok) return patchPost(s, linked.id, { status: 'scheduled', text: preview ? plain(preview.text) : linked.text, note: undefined })
+    if (h.id === 'h-code' && d.kind === 'answer') return patchPost(s, linked.id, note({ ...linked, text: linked.text.replace('[code]', d.text.toUpperCase()), status: 'scheduled', note: `Code ${d.text.toUpperCase()} added.` }, now(s), `Code ${d.text.toUpperCase()} added by you`))
+    // The post keeps who approved it (Claire answers from her lane), so its detail view can say so once the card is gone.
+    const by = `Approved by ${d.act ? 'Atlas, on Act' : h.lane === 'claire' && h.thread?.at(-1)?.from === 'claire' ? 'Claire' : 'you'}`
+    if (ok && linked.approval) return patchPost(s, linked.id, note(approved(linked, h, now(s), preview ? plain(preview.text) : undefined), now(s), by))
+    if (ok) return patchPost(s, linked.id, note({ ...linked, status: 'scheduled', text: preview ? plain(preview.text) : linked.text, note: undefined }, now(s), by))
     if (d.kind === 'reject') return linked.handoff === 'h-trend' ? setPosts(s, s.publishing.posts.filter(p => p.id !== linked.id)) : patchPost(s, linked.id, { status: 'draft', note: `Rejected${d.reason ? `: ${d.reason.toLowerCase()}` : ''}.` })
     return s
   }
