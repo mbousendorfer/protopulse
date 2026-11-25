@@ -19,7 +19,7 @@ avec « Retry now » ; pas de statut « Approved »). Trié par valeur, les corr
 | B3 | Files et créneaux récurrents (Queues) | absent | Catégories (« Tips du mardi ») + créneaux ; Atlas remplit la file depuis Ideas et le recyclage | 3 | L | done (version simple : 2 files, créneaux modifiables ; création de file : later) |
 | B4 | Labels et filtres calendrier | `labels`, `campaign` posés sur `Post` sans UI ; filtre réseau seul (`Page.tsx:128`) | Labels éditables, filtres label / campagne / pilier / auteur / statut ; Atlas étiquette seul | 2 | M | done |
 | B5 | Garde-fous appliqués | `agents.ts` g1 (3/réseau/jour) appliqué dans Ideas seulement ; g4 (pause pendant alerte critique) = texte | Plafond partout (composer, plan, Act) ; posts du jour « Paused » pendant une alerte critique, reprise en un clic | 3 | M | done |
-| B6 | Liens et UTM | `link` posé sur `Post` sans UI | Champ lien, UTM générés selon une convention du Playbook, lien court simulé ; clics lus chez Iris | 2 | M | go |
+| B6 | Liens et UTM | `link` posé sur `Post` sans UI | Champ lien, UTM générés selon une convention du Playbook, lien court simulé ; clics lus chez Iris | 2 | M | done (clics : demande à Iris) |
 | B7 | Notes et commentaires | absent | Notes de calendrier par jour, commentaires sur un post avec @Claire ; Atlas lit les notes | 2 | M | go, plus simple (notes + quiet day) |
 | B8 | Glisser-déposer horaire | `Page.tsx:104-115` : le dépôt garde l'heure ; mois : pas de dépôt | Déposer sur une heure en semaine, déplacer en vue mois ; Atlas commente | 1 | S | à pitcher |
 | B9 | Perf d'un post | aperçu (`Bulk.tsx`) : `stats` seulement | Chiffres d'Iris et lien vers Insights depuis le panneau d'aperçu | 2 | S | done |

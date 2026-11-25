@@ -269,3 +269,12 @@ export const CREATOR_INFO: Record<string, CreatorInfo> = {
   '@julien_trail': { name: 'Julien Favre', network: 'tiktok', also: [{ competitor: 'trailkind', n: 2 }], history: ['Sunrise hikes around Chamonix every weekend'] },
   '@nadia.runs': { name: 'Nadia Benali', network: 'tiktok', also: [], history: ['Daily gym-bag routine, the Summit Bottle in every one'] },
 }
+
+/** Competitors per network, last 30 days: followers, posts a week, engagement rate. Totals match COMPETITORS. */
+export type NetStat = { followers: number; perWeek: number; er: number }
+export const COMP_NETWORKS: Record<CompetitorId, Partial<Record<Network, NetStat>>> = {
+  peakline: { instagram: { followers: 230000, perWeek: 8, er: 1.6 }, tiktok: { followers: 95000, perWeek: 9, er: 3.2 }, facebook: { followers: 70000, perWeek: 5, er: 0.7 }, youtube: { followers: 15000, perWeek: 2, er: 2.9 } },
+  norro: { instagram: { followers: 110000, perWeek: 4, er: 3.1 }, linkedin: { followers: 48000, perWeek: 3, er: 4.6 }, youtube: { followers: 27000, perWeek: 2, er: 2.4 } },
+  trailkind: { tiktok: { followers: 180000, perWeek: 21, er: 6.8 }, instagram: { followers: 70000, perWeek: 8, er: 4.1 }, x: { followers: 10000, perWeek: 2, er: 0.8 } },
+  basecamp: { facebook: { followers: 60000, perWeek: 7, er: 0.6 }, instagram: { followers: 30000, perWeek: 4, er: 1.2 }, x: { followers: 5000, perWeek: 1, er: 0.3 } },
+}

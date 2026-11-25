@@ -19,7 +19,7 @@ export type Post = {
   campaignId?: string
   /** Shared contract for every agent; no UI yet. */
   labels?: string[]
-  link?: { url: string; utm?: Record<string, string> }
+  link?: { url: string; utm?: Record<string, string>; short?: string }
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
   /** Published as the first comment, on networks that allow it. */
   firstComment?: string
