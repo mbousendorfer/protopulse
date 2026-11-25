@@ -59,6 +59,11 @@ regard, simple en surface et profond quand on creuse, parfaitement cohérent ave
 - Juste avant de merger : `git fetch` puis `git merge origin/main` dans la branche, et relance `npx tsc --noEmit`,
   `npm run build` et `npm test` sur le résultat (deux PR vertes chacune peuvent casser main ensemble : #37 + #50).
   Rouge → corrige, repousse, recommence.
+- Main bouge plus vite qu'un cycle complet (plusieurs sessions mergent chaque minute) : si `origin/main` a avancé
+  pendant les vérifs, refais `git merge origin/main` + `npx tsc --noEmit` seulement, pousse et merge tout de suite ;
+  puis lance `npm run build` et `npm test` sur main. Rouge → PR de correctif en priorité, avant toute autre chose.
+- Une refonte confiée à un sous-agent (ex. Composer, 25/11) réserve sa surface : la loop n'y touche pas tant que sa
+  PR est ouverte.
 - `gh pr merge --squash --delete-branch` (Matt l'a autorisé le 25/11 pour les PR de la loop). Puis
   `git switch --detach origin/main` après fetch. Vérifie que le CI de main repasse vert au tick suivant.
 - Écris dans STATE le SHA de `origin/main` **que tu as relu** (celui d'où la branche est partie), jamais le main du

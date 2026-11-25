@@ -5,6 +5,7 @@ import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pill
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
 import { arriveIdeas } from '../publishing/slice'
+import { reduceInbox } from '../inbox/slice'
 import type { IdeaSeed } from '../../data/ideas'
 import { T } from '../../app/time'
 import { DAY, dayLabel } from '../../app/time'
@@ -29,6 +30,7 @@ export type StrategyAction =
   | { type: 'strategy/propose'; proposal: Proposal }
   | { type: 'strategy/pillars'; pillars: Pillar[] }
   | { type: 'strategy/moment'; id: string; add: boolean }
+  | { type: 'strategy/label'; id: string }
 
 const patch = (s: State, p: Partial<StrategyState>): State => ({ ...s, strategy: { ...s.strategy, ...p } })
 const campaign = (s: State, id: string) => s.strategy.campaigns.find(c => c.id === id)
@@ -47,7 +49,7 @@ declare module '../../app/types' {
     sage?: SageUndo
   }
 }
-export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[]; moments?: Moment[]; ideas?: string[] }
+export type SageUndo = { card?: string; campaigns?: Campaign[]; posts?: { added: string[]; before: Post[] }; targets?: Pick<StrategyState, 'pillars' | 'cadence'>; proposals?: Proposal[]; moments?: Moment[]; ideas?: string[]; novaRule?: string }
 
 /** What a Sage Desk card changes when it's approved (or its first option picked). */
 export type SageCard = { campaign?: string; goal?: number; adjust?: string; change?: TargetsChange; moment?: string }
@@ -147,13 +149,16 @@ function approveCampaign(s: State, id: string, opts: { card?: Handoff; why?: str
   const cards = s.handoffs.filter(h => h.topic === 'Campaign plan' && h.ref === id)
   let next = updateCampaign(s, id, x => ({ ...x, status: 'live', diff: undefined, tasks: x.tasks.map((t, i) => (i < 2 && t.status === 'todo' ? { ...t, status: 'doing' } : t)) }))
   next = toAtlas({ ...next, handoffs: next.handoffs.filter(h => !cards.includes(h)) }, posts)
+  const hadRule = !!novaRuleFor(next, c)
+  next = askNovaToLabel(next, c)
+  const rule = hadRule ? undefined : novaRuleFor(next, c)?.id
   const byAgent = c.tasks.reduce<Record<string, number>>((m, t) => ({ ...m, [t.agent]: (m[t.agent] ?? 0) + 1 }), {})
   const tasks = Object.entries(byAgent).filter(([a]) => a !== 'atlas').map(([a, n]) => `${n} task${n > 1 ? 's' : ''} to ${cap(a)}`)
   return pushLog(next, {
     agent: 'sage', text: `Launched ${c.name}: ${posts.length} post${posts.length === 1 ? '' : 's'} in Atlas’s calendar${tasks.length ? `, ${list(tasks)}` : ''}`,
     status: opts.why ? 'done' : 'approved', reason: opts.why ?? 'You approved the campaign', link: `/strategy/campaigns/${id}`,
     undoMinutes: opts.card ? undefined : opts.why ? 30 : 10, restore: opts.card ? undefined : cards,
-    sage: { card: opts.card?.id, campaigns: [c], posts: { added: posts.map(p => p.id), before } },
+    sage: { card: opts.card?.id, campaigns: [c], posts: { added: posts.map(p => p.id), before }, novaRule: rule },
   })
 }
 
@@ -168,6 +173,7 @@ function reverse(s: State, u: SageUndo): State {
   if (u.targets) next = patch(next, u.targets)
   if (u.proposals) next = patch(next, { proposals: u.proposals })
   if (u.moments) next = patch(next, { moments: u.moments })
+  if (u.novaRule) next = reduceInbox(next, { type: 'inbox/ruleDelete', id: u.novaRule })
   // ponytail: Atlas's ideas from a moment leave his list by key; swap for an Atlas withdraw when he exposes one.
   if (u.ideas) next = { ...next, publishing: { ...next.publishing, ideas: next.publishing.ideas.filter(i => !u.ideas!.includes(i.key)) } }
   return next
@@ -361,6 +367,12 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       const next = patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id ? { ...x, status: a.accept ? 'accepted' : 'declined' } : x)) })
       if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
+    }
+    case 'strategy/label': {
+      const c = campaign(s, a.id)
+      if (!c || novaRuleFor(s, c)) return s
+      const next = askNovaToLabel(s, c)
+      return pushLog(next, { agent: 'sage', text: `Asked Nova to label ${c.name} conversations: ${labelStats(next, c).convs} so far`, status: 'done', reason: 'You asked for it', link: `/strategy/campaigns/${c.id}` })
     }
     case 'strategy/moment':
       return a.add ? addMoment(s, a.id, {}) : skipMoment(s, a.id)
@@ -589,4 +601,33 @@ function skipMoment(s: State, id: string): State {
   if (!m || m.status) return s
   const next = patch({ ...s, handoffs: s.handoffs.filter(h => cardOf(h)?.moment !== id) }, { moments: s.strategy.moments.map(x => (x.id === id ? { ...x, status: 'skipped' } : x)) })
   return pushLog(next, { agent: 'sage', text: `Left “${m.name}” out of the calendar this year`, status: 'rejected', reason: 'Your call', link: '/strategy' })
+}
+
+/* ---------- Campaign labels: Atlas's posts carry it, Nova labels the conversations ---------- */
+
+/** What Nova matches to label a campaign's conversations: its name, its hashtags, its product. */
+export function labelWords(c: Campaign): string[] {
+  const tags = c.messages.flatMap(m => m.match(/#\w+/g) ?? [])
+  return [...new Set([c.name.toLowerCase(), ...tags.map(t => t.toLowerCase()), ...(c.name.split(' ').length > 2 ? [c.name.split(' ').slice(0, 2).join(' ').toLowerCase()] : [])])]
+}
+export const novaRuleFor = (s: State, c: Campaign) => s.inbox.rules.find(r => r.then.op === 'label' && r.then.value === c.name)
+
+/** Sage asks Nova, through her own Inbox rules, to label the campaign's conversations, now and as they come. */
+export function askNovaToLabel(s: State, c: Campaign): State {
+  if (novaRuleFor(s, c)) return s
+  let next = s.inbox.labels.includes(c.name) ? s : reduceInbox(s, { type: 'inbox/labelAdd', name: c.name })
+  next = reduceInbox(next, { type: 'inbox/ruleAdd', rule: { words: labelWords(c), then: { op: 'label', value: c.name } }, applyNow: true, origin: `Sage · ${c.name} campaign` })
+  return { ...next, notice: s.notice }
+}
+
+/** The campaign's label across agents: Atlas's posts and Nova's conversations that carry it. */
+export function labelStats(s: State, c: Campaign) {
+  const posts = s.publishing.posts.filter(p => p.campaignId === c.id || p.labels?.includes(c.name) || p.campaign === c.name)
+  const convs = s.inbox.convs.filter(x => x.labels?.includes(c.name))
+  const latest = [...convs].sort((a, b) => b.at - a.at)[0]
+  return {
+    posts: posts.length, published: posts.filter(p => p.status === 'published').length, convs: convs.length,
+    latest: latest && { author: latest.author, text: latest.messages.find(m => m.from === 'them')?.text ?? '' },
+    rule: novaRuleFor(s, c),
+  }
 }
