@@ -19,4 +19,4 @@ Atlas lit seulement `s.handoffs` (cartes `kind: 'alert'`, `urgency: 'urgent'`, a
 La ligne d'Echo reste ; la carte et le calendrier d'Atlas disent la vérité.
 
 ## Fait
-  - Event subscriptions are in preview and may not be enabled for your account.
+https://github.com/mbousendorfer/protopulse/pull/77
