@@ -23,6 +23,8 @@ export const AGENTS: Agent[] = [
         says: says('Nova flags the question and suggests an answer. You write the reply.', 'Nova writes the reply and waits for your approval.', 'Nova replies on her own using the Playbook facts. You can undo for 10 minutes.') },
       { id: 'nova-spam', perWeek: 79, example: 'A bot drops a crypto link under your Storm Jacket reel', label: 'Hide spam and bots', risk: 'safe', autonomy: 'act', reviewed: 340, approvedUnchanged: 99,
         says: says('Nova marks likely spam. You hide it.', 'Nova queues spam for a batch review.', 'Nova hides spam on her own. Hidden items stay in the Hidden view.') },
+      { id: 'nova-rules', perWeek: 140, example: 'A DM asks for its money back: label it Refund', label: 'Apply Inbox rules (label, assign, hide, review)', risk: 'safe', autonomy: 'act', reviewed: 610, approvedUnchanged: 98,
+        says: says('Nova shows which of her rules fit a message. You apply them.', 'Nova lines up what her rules would do. You apply them in one go from Inbox › Rules.', 'Nova applies her rules as messages arrive. Each one is in the journal with Undo.') },
       { id: 'nova-complaint', perWeek: 12, example: 'Tom’s Ridge 28L strap broke after two hikes', label: 'Answer complaints', risk: 'risky', autonomy: 'draft', reviewed: 50, approvedUnchanged: 92,
         says: says('Nova flags the complaint. You handle it from scratch.', 'Nova drafts an apology and a fix, and waits for your approval.', 'Nova answers complaints on her own and applies the fix within her limits.') },
       { id: 'nova-exchange', perWeek: 5, example: 'Inès got her Ember Fleece in M and needs an L', label: 'Send an exchange or a replacement (up to €150)', risk: 'risky', autonomy: 'draft', reviewed: 22, approvedUnchanged: 86,

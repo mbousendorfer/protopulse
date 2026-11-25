@@ -1,6 +1,6 @@
 import type { ScriptEvent } from '../../data/script'
 import { actionOf, agentOf, pushHandoff } from '../../app/core'
-import { escalate, escalationOf, handledAlone } from './slice'
+import { escalate, escalationOf, handledAlone, land } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -19,7 +19,8 @@ const arrive = (ev: ScriptEvent): ScriptEvent => {
       // The Playbook's escalations come first, whatever the action's level.
       if (hit) return escalate(s, handoff, hit, ev.id)
       if (auto && actionOf(s, 'nova', handoff.action)?.autonomy === 'act') return handledAlone(s, handoff, auto)
-      return pushHandoff(s, { ...structuredClone(handoff), ref: handoff.ref ?? ev.id })
+      const next = pushHandoff(s, { ...structuredClone(handoff), ref: handoff.ref ?? ev.id })
+      return land(next, next.handoffs[0].id)
     },
   }
 }
@@ -47,6 +48,17 @@ export const SCRIPT: ScriptEvent[] = ([
       preview: { type: 'reply', network: 'instagram', author: '@lucie.alpine', text: 'Fell on the descent when the hip belt buckle gave way, my knee is still swollen. Is this a known problem?',
         draft: ['Lucie, sorry about the buckle. A new hip belt ships today, free of charge.'], attachments: ['Replacement: Ridge hip belt · €25 · within your €150 limit'] } },
     auto: { text: 'Answered @lucie.alpine and sent a new hip belt', reason: 'Complaint, set to Act', link: '/inbox' },
+  },
+  {
+    id: 'ev-refund-ask', order: 85, label: 'Nova · money-back question (Inbox rule)',
+    handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Product question', action: 'nova-faq',
+      title: 'Can I get my money back on a jacket that’s too big?', context: 'Facebook DM from Hélène Dubois.',
+      why: 'Return questions with an order number are checked first.', confidence: 86, link: '/inbox',
+      sources: [{ label: '30-day returns, free label', from: 'Playbook facts' }],
+      conv: { type: 'dm', sentiment: 'neutral', reply: 'Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.' },
+      preview: { type: 'reply', network: 'facebook', author: 'Hélène Dubois', text: 'The Storm Jacket is too big for me. Can I get my money back? Order #48402.',
+        draft: ['Of course, Hélène. You have 30 days: start the return from your order page, the label is free and the refund leaves the day we receive it.'] } },
+    auto: { text: 'Answered Hélène Dubois about returning her Storm Jacket', reason: 'Product question, set to Act', link: '/inbox' },
   },
   {
     id: 'ev-stove', order: 60, label: 'Nova · safety question (stove clip)', always: true,
