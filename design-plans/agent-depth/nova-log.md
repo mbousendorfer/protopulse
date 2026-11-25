@@ -48,3 +48,6 @@
 - 25/11 · Moderation · « Report as spam » ajoute au plus un mot (le plus long, ≥ 5 lettres) à la règle spam de Nova · apprendre tout le message · une règle trop large cacherait de vrais clients.
 - 25/11 · Moderation · avis : ni masquer, ni signaler, ni supprimer (le menu le dit) · comme Agorapulse (Google ne le permet pas).
 - 25/11 · Demande de Sage (label de campagne) · `?label=` + 4 conversations Trail Week + règle seed `ir-trailweek` · laisser Sage créer la règle au chargement · la campagne est déjà live dans le seed, sa règle doit déjà exister.
+- 25/11 · Filters · un seul prédicat (`filters.ts`) pour l'Inbox, les vues enregistrées et ⌘K · prédicats séparés · les comptes doivent être identiques partout.
+- 25/11 · Filters · ⌘K ne prend « mentions » que si l'Inbox est nommée · prendre toutes les mentions · les mentions de Listening sont à Echo.
+- 25/11 · Filters · nom de vue proposé = phrase des filtres (« Negative conversations from the last 7 days »), 40 caractères max · nom vide · Sam n'a qu'à valider.
