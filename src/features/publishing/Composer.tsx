@@ -12,6 +12,7 @@ import { NetworkPreview } from './Previews'
 import { slotComment } from './slice'
 import { checkPost } from './checks'
 import { libraryOf } from './visuals'
+import { variantsOf, type Variant } from './copilot'
 import { forLinkedIn, shorten } from './ideasModel'
 
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
@@ -32,17 +33,6 @@ function useBannedWords() {
 const pad = (n: number) => String(n).padStart(2, '0')
 const toDate = (t: number) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 
-const variantsOf = (text: string): { label: string; text: string }[] => {
-  const t = text.trim().replace(/\s+/g, ' ')
-  const first = t.split(/(?<=[.!?])\s/)[0]
-  const lower = t.charAt(0).toLowerCase() + t.slice(1)
-  return [
-    { label: 'Question hook', text: `Would you trust your gear on day 3 of the GR20? ${t}` },
-    { label: 'Number first', text: `3 days. 1 bag. ${first}` },
-    { label: 'Story', text: `Last week above Chamonix, ${lower}` },
-  ]
-}
-
 export default function Composer({ open, onClose, post, initial }: { open: boolean; onClose: () => void; post?: Post; initial?: { media?: string; text?: string; at?: number; network?: Network } }) {
   const { s, d } = useStore()
   const now = useNow()
@@ -58,7 +48,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const [pillar, setPillar] = useState<Pillar>(post?.pillar ?? 'Trail stories')
   const [preview, setPreview] = useState<Network>(post?.network ?? initial?.network ?? 'instagram')
   const [busy, setBusy] = useState<string | null>(null)
-  const [ideas, setIdeas] = useState<{ label: string; text: string }[] | null>(null)
+  const [ideas, setIdeas] = useState<Variant[] | null>(null)
   // After a failed submit the error follows the form live: it clears as soon as the problem is fixed.
   const [tried, setTried] = useState<boolean | null>(null)
 
@@ -193,7 +183,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           <section className="cmp-copilot" aria-label="Atlas copilot">
             <div className="row tight"><Mark agent="atlas" /><b>Atlas</b><span className="faint">copilot</span></div>
             <div className="row tight">
-              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Writing 3 variants', () => setIdeas(variantsOf(text)))}><Sparkles size={14} />3 variants</Btn>
+              <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Writing 3 variants', () => setIdeas(variantsOf(text, { pillar, network: previewNet ?? 'instagram', words, rules: s.playbook.rules ?? [] })))}><Sparkles size={14} />3 variants</Btn>
               <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Shortening', () => setText(shorten(text)))}><Scissors size={14} />Shorten</Btn>
               <Tip label="Adds a LinkedIn version: no emoji, one line of context, a question to close.">
                 <Btn size="sm" disabled={!text.trim() || !!busy} onClick={() => think('Adapting for LinkedIn', () => { setAccounts(a => (a.includes('linkedin') ? a : [...a, 'linkedin'])); setVariants(v => ({ ...v, linkedin: forLinkedIn(text) })); setPreview('linkedin') })}><Wand2 size={14} />Adapt for LinkedIn</Btn>
@@ -206,6 +196,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                   <li key={v.label}>
                     <span className="faint">{v.label}</span>
                     <p>{v.text}</p>
+                    {v.applied.length > 0 && <span className="faint t-xs">Playbook: {v.applied.join(' · ')}</span>}
                     <Btn size="xs" onClick={() => { setText(v.text); setIdeas(null) }}>Use this</Btn>
                   </li>
                 ))}

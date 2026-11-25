@@ -28,7 +28,8 @@ export default function StrategyPage() {
   return (
     <div className="page strategy">
       <PageHead agent="sage" title="Strategy" lede="Sage turns a two-line brief into a plan the whole team follows, and keeps the pillars and cadence on track.">
-        <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>
+        {/* Only on the lists: on the brief it would point to itself, in a campaign it would compete with Approve. */}
+        {(seg === '' || seg === 'pillars') && <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>}
       </PageHead>
       {seg !== 'new' && <Tabs value={tab} onChange={v => nav(v === 'campaigns' ? '/strategy' : '/strategy/pillars')} items={[{ value: 'campaigns', label: 'Campaigns' }, { value: 'pillars', label: 'Pillars and cadence' }]} />}
       <Routes>

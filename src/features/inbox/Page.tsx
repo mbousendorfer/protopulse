@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, CircleHelp, Lock, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
-  ListChecks, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  ListChecks, MessageSquareText, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
@@ -15,6 +15,8 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NEEDS_YOU, virtualConvs, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
+import { SavedSheet } from './SavedSheet'
+import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
 
@@ -126,6 +128,9 @@ export default function InboxPage() {
   const labels = [...new Set([...LABELS, ...s.inbox.rules.flatMap(r => (r.then.op === 'label' ? [r.then.value] : [])), ...all.flatMap(c => c.labels ?? [])])]
   const rulesOpen = params2.get('rules') === '1'
   const setRules = (o: boolean) => nav({ search: o ? '?rules=1' : '' })
+  const savedOpen = params2.get('saved') === '1'
+  const [savedSeed, setSavedSeed] = useState<string>()
+  const setSaved = (o: boolean) => { if (!o) setSavedSeed(undefined); nav({ search: o ? '?saved=1' : '' }) }
 
   const picked = list.filter(c => sel.has(c.id))
   const run = (op: BulkOp) => { d({ type: 'inbox/bulk', ids: picked.map(c => c.id), ...op }); sel.clear() }
@@ -136,9 +141,11 @@ export default function InboxPage() {
   return (
     <div className="page ib-page">
       <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you.">
+        <Btn variant="ghost" onClick={() => setSaved(true)}><MessageSquareText size={14} />Saved replies</Btn>
         <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
       </PageHead>
       <RulesSheet open={rulesOpen} onOpenChange={setRules} labels={labels} />
+      <SavedSheet open={savedOpen} onOpenChange={setSaved} seed={savedSeed} />
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <nav className="ib-side" aria-label="Views">
           <div className="ib-views">
@@ -224,7 +231,7 @@ export default function InboxPage() {
 
         </section>
 
-        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} /> : null}
+        {current ? <ConversationPanel c={current} labels={labels} onClose={() => nav('/inbox')} onSaveReply={t => { setSavedSeed(t); setSaved(true) }} /> : null}
       </div>
     </div>
   )
@@ -364,7 +371,7 @@ function LabelMenu({ trigger, labels, onPick }: { trigger: ReactNode; labels: st
 
 type PanelTab = 'conversation' | 'contact'
 
-function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: string[]; onClose: () => void }) {
+function ConversationPanel({ c, labels, onClose, onSaveReply }: { c: Conversation; labels: string[]; onClose: () => void; onSaveReply: (text: string) => void }) {
   const { s, d } = useStore()
   const now = useNow(10000)
   const [tab, setTab] = useState<PanelTab>('conversation')
@@ -372,6 +379,8 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
   const [text, setText] = useState('')
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [reply, setReply] = useState('')
+  const [picked, setPicked] = useState<string>()
+  const savedFrom = s.inbox.saved.find(r => r.id === c.savedFrom)
   const others = s.inbox.convs.filter(x => x.contact && x.contact === c.contact && x.id !== c.id)
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const draftPlain = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
@@ -379,15 +388,16 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
 
   const loc = useLocation()
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
-  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setTab('conversation'); if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id }) }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const canReply = ['you', 'takeover', 'auto', 'escalated'].includes(c.status) && !(c.status === 'escalated' && c.draft)
   // Messages and internal notes, in time order.
   const thread = [...c.messages.map(m => ({ kind: 'msg' as const, at: m.at, m })), ...(c.notes ?? []).map(n => ({ kind: 'note' as const, at: n.at, n }))].sort((a, b) => a.at - b.at)
   const submit = () => {
     if (!reply.trim()) return
-    d(mode === 'note' ? { type: 'inbox/note', id: c.id, text: reply } : { type: 'inbox/send', id: c.id, text: reply.trim() })
+    d(mode === 'note' ? { type: 'inbox/note', id: c.id, text: reply } : { type: 'inbox/send', id: c.id, text: reply.trim(), saved: picked })
     setReply('')
+    setPicked(undefined)
   }
 
   return (
@@ -450,6 +460,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   </div>
                   <p>{x.m.text}</p>
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
+                  {x.m.from !== 'them' && !x.m.undone && <button className="link-btn t-xs" onClick={() => onSaveReply(toTemplate(x.m.text, c))}>Save as reply</button>}
                   {x.m.auto && x.m.undoUntil && x.m.undoUntil > now && !x.m.undone && (
                     <Btn size="xs" variant="ghost" onClick={() => d({ type: 'inbox/undoAuto', id: c.id, msg: x.m.id })}><Undo2 size={12} />Undo · {left(x.m.undoUntil, now)}</Btn>
                   )}
@@ -481,6 +492,7 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
                   ))}
                 </ul>
               )}
+              {savedFrom && <div className="row tight"><span className="faint t-xs">Saved reply:</span><span className="chip">{savedFrom.name} · adapted by Nova</span></div>}
               {!!c.rules?.length && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
               <div className="row">
                 {editing ? (
@@ -517,6 +529,10 @@ function ConversationPanel({ c, labels, onClose }: { c: Conversation; labels: st
               value={reply} onChange={e => setReply(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); if (!canReply) setMode('note'); submit() } }} />
             <div className="row">
+              {canReply && mode === 'reply' && (
+                <Menu align="start" trigger={<Btn size="sm" variant="ghost"><MessageSquareText size={14} />Saved replies<ChevronDown size={12} /></Btn>}
+                  items={s.inbox.saved.map(r => ({ label: r.name, hint: <span className="num faint">{r.uses}</span>, onSelect: () => { setReply(fill(r, c)); setPicked(r.id) } }))} />
+              )}
               <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
               <Btn variant="primary" size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
