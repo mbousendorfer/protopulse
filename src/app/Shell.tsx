@@ -7,6 +7,7 @@ import {
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
 import { inboxNeedsCount } from '../features/inbox/slice'
+import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
 import { Btn, Kbd, Mark, Modal, Pop } from '../ui'
@@ -146,6 +147,8 @@ export default function Shell() {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
                 : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
+                : seg === 'strategy' && s.strategy.campaigns.some(c => c.id === x) ? s.strategy.campaigns.find(c => c.id === x)!.name
+                : seg === 'insights' && sub[0] === 'reports' && x !== 'reports' ? (reportList(s).find(r => r.id === x)?.title ?? x)
                 : decodeURIComponent(x).replace(/-/g, ' ')
               return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{CRUMB_WORD[t] ?? t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
