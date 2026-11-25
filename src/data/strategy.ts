@@ -1,6 +1,6 @@
 import type { AgentId, Network } from '../app/types'
 import { T, DAY, DEMO_START } from '../app/time'
-import type { Pillar as PillarName } from './publishing'
+import type { Pillar as PillarName, Post } from './publishing'
 
 export type CampaignStatus = 'brief' | 'review' | 'live' | 'done'
 export type Phase = { name: 'Teasing' | 'Launch' | 'Follow-up'; start: number; end: number; summary: string }
@@ -162,19 +162,40 @@ export const CAMPAIGNS: Campaign[] = [
   },
 ]
 
-export type Pillar = { id: string; name: PillarName; desc: string; target: number; actual: number }
+export type Pillar = { id: string; name: PillarName; desc: string; target: number }
 export const PILLARS: Pillar[] = [
-  { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35, actual: 41 },
-  { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30, actual: 32 },
-  { id: 'p-repair', name: 'Repair & care', desc: 'Repairs, maintenance, how to make gear last.', target: 15, actual: 18 },
-  { id: 'p-community', name: 'Community', desc: 'Customer photos, UGC, creators, replies worth sharing.', target: 20, actual: 9 },
+  { id: 'p-gear', name: 'Gear that lasts', desc: 'Products tested hard: rain, drops, years of use.', target: 35 },
+  { id: 'p-trail', name: 'Trail stories', desc: 'Places, trips and the team outside.', target: 30 },
+  { id: 'p-repair', name: 'Repair & care', desc: 'Repairs, maintenance, how to make gear last.', target: 15 },
+  { id: 'p-community', name: 'Community', desc: 'Customer photos, UGC, creators, replies worth sharing.', target: 20 },
 ]
 
-export type Cadence = { network: Network; target: number; actual: number }
+export type Cadence = { network: Network; target: number }
 export const CADENCE: Cadence[] = [
-  { network: 'instagram', target: 5, actual: 5 }, { network: 'tiktok', target: 4, actual: 4 }, { network: 'linkedin', target: 2, actual: 2 },
-  { network: 'facebook', target: 2, actual: 3 }, { network: 'youtube', target: 1, actual: 1 }, { network: 'x', target: 3, actual: 2 },
+  { network: 'instagram', target: 5 }, { network: 'tiktok', target: 4 }, { network: 'linkedin', target: 2 },
+  { network: 'facebook', target: 2 }, { network: 'youtube', target: 1 }, { network: 'x', target: 3 },
 ]
+
+/**
+ * What actually went out, read from Atlas's posts: published, or scheduled and past. The calendar only keeps the last
+ * weeks, so the 30-day pillar mix adds the posts published before it (`PILLAR_HISTORY`).
+ */
+// ponytail: the history doesn't slide with the clock; it's the month before the demo's calendar starts.
+export const PILLAR_HISTORY: Partial<Record<PillarName, number>> = { 'Gear that lasts': 20, 'Trail stories': 13, 'Repair & care': 5, Community: 2 }
+const out = (p: Post, from: number, t: number) => p.at >= from && p.at <= t && (p.status === 'published' || p.status === 'scheduled')
+/** Share of posts per pillar over the last 30 days, in %. */
+export function pillarMix(posts: Post[], names: PillarName[], t: number): Record<string, number> {
+  const recent = posts.filter(p => out(p, t - 30 * DAY, t))
+  const count = (n: PillarName) => (PILLAR_HISTORY[n] ?? 0) + recent.filter(p => p.pillar === n).length
+  const total = names.reduce((sum, n) => sum + count(n), 0)
+  return Object.fromEntries(names.map(n => [n, total ? Math.round((count(n) / total) * 100) : 0]))
+}
+/** Posts that went out per network over the last 7 days. */
+export function postsLastWeek(posts: Post[], t: number): Partial<Record<Network, number>> {
+  const m: Partial<Record<Network, number>> = {}
+  for (const p of posts) if (out(p, t - 7 * DAY, t)) m[p.network] = (m[p.network] ?? 0) + 1
+  return m
+}
 
 /** Sage's targets as Atlas reads them: share of posts per pillar, posts a week per network. */
 export type Targets = { pillars: { name: PillarName; target: number }[]; cadence: Partial<Record<Network, number>> }
