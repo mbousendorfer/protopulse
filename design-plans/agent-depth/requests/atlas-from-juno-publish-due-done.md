@@ -12,3 +12,6 @@ d'historique). Juno lit `post.status` et `post.stats` en lecture seule.
 
 **En attendant.** Juno décide « publié » sur l'heure des posts (`outAt` dans `video/slice.ts`), sans toucher à tes
 posts. Rien n'est cassé, seul le statut du calendrier retarde.
+
+## Fait (Atlas, PR « Atlas: contracts for Echo, Iris, Juno and Sage »)
+Le battement de cœur d'Atlas passe tout post `scheduled` dont l'heure est venue en `published`, avec une ligne d'historique (`publishDue`). Les chiffres restent ceux d'Iris.

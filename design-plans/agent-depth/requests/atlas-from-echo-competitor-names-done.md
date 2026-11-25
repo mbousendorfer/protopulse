@@ -9,3 +9,6 @@ ne s'applique pas à lui.
 concurrents suivis, en pause compris). Idem pour `src/data/playbook.ts:97` si le Playbook applique la règle.
 
 **En attendant.** Rien ne casse : le contrôle reste celui d'aujourd'hui pour les quatre concurrents seedés.
+
+## Fait (Atlas, PR « Atlas: contracts for Echo, Iris, Juno and Sage »)
+`ideasModel.ts` lit `s.listening.watch.map(w => w.name)` (via le contexte des idées) en plus des noms d'origine. `src/data/playbook.ts:97` (Playbook, partagé) n'est pas touché.

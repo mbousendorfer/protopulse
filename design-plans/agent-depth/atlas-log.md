@@ -26,3 +26,9 @@
 - 25/11/2026 · Circuit Git · merge quand la CI de PR est verte sur la branche déjà fusionnée avec main et sans conflit, puis tests et build de main juste après · exiger que main n'ait pas bougé pendant la CI · six sessions mergent toutes les ~40 s : la condition stricte ne passait jamais (5 essais perdus sur #47) ; la vérification après merge garde main vert
 - 25/11/2026 · Files · portées par l'action existante « Fill a slot left empty » (Draft) ; Draft = un post Needs you + une carte par créneau (le Desk les regroupe en lot), Act = programmés + Undo ; textes tirés d'une réserve par file, sans doublon · nouvelle action dédiée · remplir une file, c'est remplir des créneaux vides : même risque, même cran
 - 25/11/2026 · Files · pas de demande à Sage : les posts de file sont des posts du calendrier, ils comptent déjà dans `targetsOf` · une cadence propre aux files · une seule source de cadence
+- 25/11/2026 · Demandes entrantes · `BEST_SLOT` calculé depuis `bestTime` d'Iris (données → Iris) · garder la table d'Atlas alignée à la main · un chiffre, un propriétaire ; Sage lit le même objet
+- 25/11/2026 · Demande d'Echo (retenir le jour) · `holdToday`/`releaseToday` = la pause du garde-fou (24 h) · une pause « jour calendaire » distincte · un seul mécanisme de pause, déjà déclenché seul par l'alerte
+- 25/11/2026 · Pitch B4 labels et filtres · **Go**
+- 25/11/2026 · Pitch B6 liens et UTM · **Go** (UTM + raccourci, X garde le lien simple, demande à Iris pour les clics)
+- 25/11/2026 · Pitch B7 notes de calendrier · **Go, plus simple** (notes + « quiet day » appliqué ; la note de lancement reste informative)
+- 25/11/2026 · Pitch B9 performance d'un post · **Go** (vs médiane, lecture d'Atlas, Recycle it, lien Insights)

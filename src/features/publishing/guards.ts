@@ -59,7 +59,7 @@ export function tickGuards(s: State): State {
   return a ? pauseFor(s, a) : resumeAll(s, 'The alert is over')
 }
 
-function pauseFor(s: State, a: Alert): State {
+export function pauseFor(s: State, a: Alert): State {
   const hold = nextDay(s)
   if (!hold.length) return s
   const t = now(s)
