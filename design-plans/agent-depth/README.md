@@ -28,6 +28,26 @@ ce que fait Agorapulse, version agentique, ce que verra le testeur, taille) et a
 Go · Go, plus simple · Later · Drop, ou ta propre version en texte libre. Rien n'est construit sans
 ton Go. La Phase 0 ne pitche pas (plomberie sans changement visible).
 
+## Vague 2 — features ancrées dans le marché
+La vague 1 a porté la parité avec Agorapulse. La vague 2 vise ce que les outils agentiques du marché
+font de mieux, en faisant mieux qu'eux.
+
+| Fichier | Rôle |
+|---|---|
+| [`wave-2.md`](wave-2.md) | Prompt commun aux sept sessions : backlog de vague 2, pitch à cinq tests, confidentialité |
+| [`market-ideas.md`](market-ideas.md) | Catalogue d'idées par agent + Trust, ce que l'humain valide / coupe, déjà refusé, anti-patterns |
+| [`trust.md`](trust.md) | 7e session : shadow, test, trust metric, apprentissage, onboarding (port 5187) |
+
+Le contexte interne (avis de l'équipe, direction produit, sources) vit **hors du repo**, dans un
+fichier local lu par les sessions : le repo est public.
+
+Lancement : sept sessions neuves en parallèle (worktree chacune), avec :
+> Lis `design-plans/agent-depth/wave-2.md` et exécute-le pour <agent>
+> (Trust : `wave-2.md` puis `trust.md`).
+
+Chaque session pitche d'abord ses trois idées les plus fortes, chacune avec sa référence marché et
+« notre carte », puis te demande si elle continue.
+
 ## Ce que tu relis après coup
 - `design-plans/agent-depth/<agent>-backlog.md` : parité visée, ce qui est fait, ce qui est écarté.
 - `design-plans/agent-depth/<agent>-log.md` : chaque choix produit pris seul, avec l'alternative.
