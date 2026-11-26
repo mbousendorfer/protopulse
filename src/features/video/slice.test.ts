@@ -318,6 +318,19 @@ test('“4 more moments” sets up the weekly quota: sending them all keeps 3 an
   expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
 })
 
+test('the feed replays “more moments”: Juno never cuts the same moment twice', () => {
+  // The shared feed loops, so the event plays again on every cycle; asking again by hand takes the same path.
+  let s = initialState()
+  for (let i = 0; i < 4; i++) s = run(s, { type: 'core/fire', eventId: 'ev-video-more' })
+  const repair = s.video.clips.filter(c => c.source === 'repair')
+  const cuts = repair.map(c => `${c.start.toFixed(1)}-${c.end.toFixed(1)}`)
+  expect(new Set(cuts).size).toBe(cuts.length)
+  expect(repair.length).toBeGreaterThan(5)
+  const before = s.video.clips.length
+  s = run(s, { type: 'video/find', source: 'repair', query: 'stitches webbing bin carbon', len: 20, count: 4 })
+  expect(s.video.clips.length).toBe(before)
+})
+
 /* ---------- Hook trials ---------- */
 
 const DAY_MS = 24 * 3600_000

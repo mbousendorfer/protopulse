@@ -20,6 +20,7 @@ import { audienceOf, audienceTips } from './audience'
 
 const int = (v: number) => Math.round(v).toLocaleString('en-GB')
 import { SCRIPT } from './script'
+import { insightsNeeds } from './needs'
 
 declare module '../../data/command' {
   interface IntentTypes {
@@ -275,6 +276,8 @@ function Alerts() {
 const iris: AgentModule = {
   id: 'iris',
   script: SCRIPT,
+  // The rail badge and Agents › Team count the landing's decisions block.
+  needs: s => insightsNeeds(s).count,
   onResolve: onResolveInsights,
   onUndo: onUndoInsights,
   due: (s, t) => anomaliesDue(s) || reportsDue(s, t) || schedulesDue(s, t),

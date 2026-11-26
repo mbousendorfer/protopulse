@@ -3,7 +3,7 @@ import type { State } from '../../app/state'
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { Mark } from '../../ui'
 import { ClipPreview } from './parts'
-import { backToTrialHook, onResolveVideo, reduceVideo, removeRecuts, stopTrials, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent } from './slice'
+import { backToTrialHook, onResolveVideo, reduceVideo, removeRecuts, stopTrials, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent, videoNeeds } from './slice'
 import type { Lang } from './model'
 import { SCRIPT } from './script'
 import { clipBest, clipFind, clipRecut, clipTrial, clipVersion, clipWhy } from './intents'
@@ -66,6 +66,8 @@ const clip = defineIntent({
 const juno: AgentModule = {
   id: 'juno',
   script: SCRIPT,
+  // The rail badge and Agents › Team count the Clips decisions block.
+  needs: s => videoNeeds(s).count,
   onResolve: onResolveVideo,
   // Undoing a Desk decision on a clips card, or clips Juno sent alone, takes back what was sent.
   onUndo: (s, l) => {

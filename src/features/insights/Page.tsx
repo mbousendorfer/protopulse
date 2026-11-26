@@ -12,11 +12,14 @@ import {
   type Cited, type Kpi, type NetFilter, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
-import { InlineConfirm } from '../../ui/Feedback'
+import { CountBadge, InlineConfirm } from '../../ui/Feedback'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
+import { insightsNeeds } from './needs'
+import type { Anomaly } from '../../data/insights'
+import type { Handoff } from '../../app/types'
 import { reportList } from './reports'
 import Roi from './RoiTab'
 import { benchmarkRows } from './benchmark'
@@ -76,8 +79,8 @@ function Reports() {
   const now = useNow()
   return (
     <div className="reports">
-      <StudioAsk />
-      <Schedules />
+      <IrisNeeds />
+      <WeekKpis />
       {/* One list, one row per report: six reports fit the first screen instead of four cards. */}
       <section className="card">
         <div className="card-head"><h2>Written by Iris <span className="faint num">{reportList(s).length}</span></h2></div>
@@ -104,7 +107,115 @@ function Reports() {
           })}
         </ul>
       </section>
+      <StudioAsk />
+      <Schedules />
     </div>
+  )
+}
+
+/* ---------- What Iris waits on Sam for (PROMPT §3.9): first on the landing ---------- */
+
+type Show = 'all' | 'anomalies' | 'cards'
+
+function IrisNeeds() {
+  const { s, d } = useStore()
+  const now = useNow()
+  const [show, setShow] = useState<Show>('all')
+  const { anomalies, cards } = insightsNeeds(s)
+  const on = (k: Show) => show === 'all' || show === k
+  const count = (k: Show, n: number, label: string) => n > 0 && (
+    <button type="button" className="dq-count" aria-pressed={show === k} onClick={() => setShow(show === k ? 'all' : k)}>{label}</button>
+  )
+  return (
+    <div>
+      <p className="dq-sum" aria-live="polite">
+        <Mark agent="iris" />
+        {anomalies.length + cards.length ? <>
+          {count('anomalies', anomalies.length, `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} to decide`)}
+          {anomalies.length > 0 && cards.length > 0 && <span aria-hidden>·</span>}
+          {count('cards', cards.length, `${cards.length} to approve`)}
+          <span className="dq-sum-note">I check every network every hour.</span>
+        </> : <span>Nothing needs you here. I check every network every hour and write your brief at 07:00.</span>}
+      </p>
+      {on('anomalies') && anomalies.length > 0 && (
+        <section className="dq" aria-labelledby="iq-anomalies">
+          <header className="dq-head">
+            <h3 id="iq-anomalies">Anomalies to decide</h3><CountBadge n={anomalies.length} />
+            <span className="dq-hint">Outside the normal range. Pick what happens; the history is in Anomalies.</span>
+          </header>
+          <ul className="dq-rows">{anomalies.map(a => (
+            <li key={a.id} className="dq-row in-dq-anomaly">
+              <span className="dq-check"><Net n={a.network} /></span>
+              <div className="dq-main">
+                <p className="dq-title"><span className="dq-name">{a.title}</span><span className="dq-hook">{a.metric} <b className="num">{a.value}</b> <span className={`delta ${a.down ? 'down' : 'up'}`}>{a.delta}</span></span></p>
+                <p className="dq-line in-dq-cause"><span>Likely cause: {a.cause}</span></p>
+                <p className="dq-line"><span>{a.confidence}% confident</span><span>Detected {ago(a.detectedAt, now)}</span></p>
+                <div className="in-dq-decide"><AnomalyActions a={a} /></div>
+              </div>
+              <div className="dq-acts in-dq-spark"><Spark data={a.series} w={120} h={32} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} /></div>
+            </li>
+          ))}</ul>
+        </section>
+      )}
+      {on('cards') && cards.length > 0 && (
+        <section className="dq" aria-labelledby="iq-cards">
+          <header className="dq-head">
+            <h3 id="iq-cards">To approve</h3><CountBadge n={cards.length} />
+            <span className="dq-hint">Iris prepared these. Nothing goes out until you say so.</span>
+          </header>
+          <ul className="dq-rows">{cards.map(h => (
+            <li key={h.id} className="dq-row in-dq-card">
+              <span className="dq-check report-icon" aria-hidden><FileText size={16} /></span>
+              <div className="dq-main">
+                <p className="dq-title">{h.link ? <Link to={h.link} className="dq-name">{h.title}</Link> : <span className="dq-name">{h.title}</span>}</p>
+                <p className="dq-line"><span className="dq-src">{h.context}</span></p>
+                <p className="dq-line"><span className="dq-src">{h.why}</span></p>
+              </div>
+              <div className="dq-acts"><CardDecision h={h} onDecide={decision => d({ type: 'core/resolve', id: h.id, decision })} /></div>
+            </li>
+          ))}</ul>
+        </section>
+      )}
+    </div>
+  )
+}
+
+/** The quick decision on one of Iris's Desk cards, right here: its options, or approve. The Desk keeps the Undo. */
+function CardDecision({ h, onDecide }: { h: Handoff; onDecide: (d: { kind: 'approve' } | { kind: 'option'; option: string; index: number }) => void }) {
+  if (h.options?.length) return <>{h.options.map((o, i) => <Btn key={o.label} size="sm" variant={o.recommended ? undefined : 'ghost'} onClick={() => onDecide({ kind: 'option', option: o.label, index: i })}>{o.label}</Btn>)}</>
+  return <>
+    <Link to={`/?card=${h.id}`} className="btn sm ghost">Review on Desk</Link>
+    <Btn size="sm" onClick={() => onDecide({ kind: 'approve' })}>{h.topic === 'Weekly report' ? <><Send size={14} />Share with Claire</> : 'Approve'}</Btn>
+  </>
+}
+
+/** The week at a glance, after the decisions: the four audience numbers, each named, with the way into Explore. */
+function WeekKpis() {
+  return (
+    <section className="stack in-week" aria-labelledby="iq-week">
+      <div className="row"><h2 id="iq-week" className="section-title">Last 7 days</h2><span className="spacer" /><Link to="/insights/explore" className="link-btn t-sm">Explore the numbers</Link></div>
+      <KpiTiles kpis={rangeKpis({ days: 7, offset: 0 }, 'all').slice(0, 4)} label="7 days" />
+    </section>
+  )
+}
+
+/** KPI tiles: the number, its trend, and the previous period, always named. */
+function KpiTiles({ kpis, label }: { kpis: ReturnType<typeof rangeKpis>; label: string }) {
+  return (
+    <dl className="kpi-grid">
+      {kpis.map(k => {
+        const diff = k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100
+        const good = k.lowerBetter ? diff < 0 : diff > 0
+        const txt = k.fmt === 'pct' ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pt` : k.fmt === 'min' ? `${diff > 0 ? '+' : '−'}${Math.abs(diff)} min` : `${diff > 0 ? '+' : '−'}${Math.abs(Math.round(diff))}%`
+        return (
+          <div key={k.key} className="kpi">
+            <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
+            <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
+            <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {label}</span>
+          </div>
+        )
+      })}
+    </dl>
   )
 }
 
@@ -288,20 +399,7 @@ function Explore() {
         <Filters label="Network" value={net} onChange={setNet} items={[{ value: 'all', label: 'All networks' }, ...NETWORKS_SOCIAL.map(n => ({ value: n as NetFilter, label: NETWORK_LABEL[n] }))]} />
       </div>
 
-      <dl className="kpi-grid">
-        {kpis.map(k => {
-          const diff = k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100
-          const good = k.lowerBetter ? diff < 0 : diff > 0
-          const txt = k.fmt === 'pct' ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pt` : k.fmt === 'min' ? `${diff > 0 ? '+' : '−'}${Math.abs(diff)} min` : `${diff > 0 ? '+' : '−'}${Math.abs(Math.round(diff))}%`
-          return (
-            <div key={k.key} className="kpi">
-              <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
-              <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
-              <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {label}</span>
-            </div>
-          )
-        })}
-      </dl>
+      <KpiTiles kpis={kpis} label={label} />
 
       <section className="card pad">
         <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
@@ -398,9 +496,7 @@ function Anomalies() {
   const { s, d } = useStore()
   const now = useNow()
   const [view, setView] = useState<'open' | 'closed'>('open')
-  const [confirm, setConfirm] = useState<{ id: string; action: string } | null>(null)
   const list = anomalyList(s)
-  const budget = boostBudget(s)
   const shown = list.filter(a => (view === 'open') === a.open)
   const ids = useMemo(() => shown.map(a => a.id), [shown.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, view)
@@ -438,15 +534,7 @@ function Anomalies() {
           {a.rule && <p className="faint">Raised by your alert rule “{a.rule}”. <Link to="/agents/iris?tab=alerts">Edit</Link></p>}
           <div className="row"><Confidence v={a.confidence} /></div>
           {a.open ? (
-            <div className="row">
-              {confirm?.id === a.id ? (
-                // Paid spend never goes out on one click.
-                <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm.action }); setConfirm(null) }}>
-                  {confirm.action}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
-                </InlineConfirm>
-              ) : a.actions.map(x => <Btn key={x} size="sm" onClick={() => /€/.test(x) ? setConfirm({ id: a.id, action: x }) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
-              {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}
-            </div>
+            <AnomalyActions a={a} />
           ) : (
             <div className="resolution row nowrap"><Check size={14} className="ok" /><span>{a.resolution}</span><span className="spacer" /><Btn size="xs" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn></div>
           )}
@@ -454,6 +542,24 @@ function Anomalies() {
         </article>
       ))}
       <p className="faint in-rules-link">Iris raises anomalies from her alert rules. <Link to="/agents/iris?tab=alerts">Edit Iris’s alert rules</Link></p>
+    </div>
+  )
+}
+
+/** An open anomaly's decisions: Iris's proposed actions, a paid boost behind an inline confirmation, its Desk card. */
+function AnomalyActions({ a }: { a: Anomaly }) {
+  const { s, d } = useStore()
+  const [confirm, setConfirm] = useState<string | null>(null)
+  const budget = boostBudget(s)
+  return (
+    <div className="row">
+      {confirm ? (
+        // Paid spend never goes out on one click.
+        <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm }); setConfirm(null) }}>
+          {confirm}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
+        </InlineConfirm>
+      ) : a.actions.map((x, i) => <Btn key={x} size="sm" variant={i === 0 ? undefined : 'ghost'} onClick={() => /€/.test(x) ? setConfirm(x) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })}>{x}</Btn>)}
+      {a.handoff && s.handoffs.some(h => h.id === a.handoff) && <Link to={`/?card=${a.handoff}`} className="btn sm ghost">Review on Desk</Link>}
     </div>
   )
 }
