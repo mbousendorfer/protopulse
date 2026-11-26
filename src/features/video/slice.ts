@@ -105,6 +105,16 @@ export function holdReason(s: State, c: Clip): string | undefined {
   return undefined
 }
 
+/**
+ * What waits for Sam in Video: clips to send or unblock, videos to start or retry.
+ * The Clips summary, the Clips tab and the rail badge all count this.
+ */
+export function videoNeeds(s: State) {
+  const clips = s.video.clips.filter(c => c.status === 'ready')
+  const sources = s.video.sources.filter(x => x.status === 'waiting' || x.status === 'failed')
+  return { clips, sources, count: clips.length + sources.length }
+}
+
 /** Which of these clips can go out now, best first, and why the others wait. */
 export function vetClips(s: State, picked: Clip[]): { go: Clip[]; held: { clip: Clip; why: string }[] } {
   const held: { clip: Clip; why: string }[] = []
@@ -445,7 +455,8 @@ export function foundEvidence(s: State, src: Source, said: Sentence, query: stri
   const out: Evidence[] = [{ value: mmss(said.s), label: `${speakerName(said.speaker)} says “${short}”`, from: 'This video', to: `/video/sources/${src.id}` }]
   const keys = keywords(`${query} ${said.text}`)
   const trend = TRENDS.find(x => s.listening.trends[x.id] !== 'dismissed' && keys.some(k => x.name.toLowerCase().includes(k)))
-  if (trend) out.push({ value: trend.growth, label: `“${trend.name}” on ${trend.networks}`, from: 'Listening', to: '/listening/trends' })
+  // Some trend names already open on a quote (“Dawn patrol” before-work hikes): don't quote them twice.
+  if (trend) out.push({ value: trend.growth, label: `${trend.name.startsWith('“') ? trend.name : `“${trend.name}”`} on ${trend.networks}`, from: 'Listening', to: '/listening/trends' })
   const past = s.video.clips.filter(c => c.status === 'published' && c.stats && c.pillar === pillar).sort((a, b) => b.stats!.views - a.stats!.views)[0]
   if (past) out.push({ value: `${(past.stats!.views / 1000).toFixed(1)}k`, label: `views on “${past.title}”, same pillar`, from: 'Video', to: `/video/clips/${past.id}` })
   return out
@@ -529,9 +540,14 @@ export function reduceVideo(s: State, a: VideoAction): State {
       const src = sourceOf(s, a.source)
       if (!src || src.status !== 'ready') return s
       const tr = TRANSCRIPT[src.transcript]
-      const moments = findMoments(tr, a.query, a.len, a.count)
-      if (!moments.length) return notify(s, 'video', `Nothing in this video talks about “${a.query}”. Try other words.`)
-      let clips = moments.map(m => {
+      // Juno never cuts the same moment twice: asking again (or the feed replaying) only brings moments she hasn't cut yet.
+      // Her own picks from the video were cut around the same moments on purpose: only the same cut counts there.
+      const taken = s.video.clips.filter(c => c.source === src.id).map(c => ({ start: c.start, end: c.end, exact: !c.asked }))
+      const moments = findMoments(tr, a.query, a.len, a.count, taken)
+      if (!moments.length) {
+        return notify(s, 'video', findMoments(tr, a.query, a.len, 1).length ? `Juno already cut every moment about “${a.query}” in this video.` : `Nothing in this video talks about “${a.query}”. Try other words.`)
+      }
+      let clips: Clip[] = moments.map(m => {
         const said = tr.sentences[m.sentence]
         const short = said.text.length > 44 ? `${said.text.slice(0, 42).replace(/\s\S*$/, '')}…` : said.text
         const evidence = foundEvidence(s, src, said, a.query, PILLAR[src.media] ?? 'Repair & care')
@@ -541,7 +557,7 @@ export function reduceVideo(s: State, a: VideoAction): State {
           why: `You asked for moments about “${a.query}”. ${speakerName(said.speaker)} says it here: “${said.text}”`,
           evidence, networks: ['tiktok', 'instagram'], pillar: PILLAR[src.media] ?? 'Repair & care', text: said.text,
         }
-        return clipFromSeed(seed, src, t, s.video.kit)
+        return { ...clipFromSeed(seed, src, t, s.video.kit), asked: a.query }
       })
       // Found on your request: framed and checked like any new clip, but no dubs nobody asked for.
       clips = withTrack(prepare(s, clips).map(c => ({ ...c, audio: { ...c.audio, dubs: [], review: [] } })), s.video.clips, s.publishing.posts)

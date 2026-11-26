@@ -40,6 +40,8 @@ export type Clip = {
   /** On-screen hook card for the first seconds, and the caption's opening line. */
   hook: string
   hooks: string[]
+  /** What Sam (or the feed) asked Juno to find when she cut this clip, if she cut it on request. */
+  asked?: string
   /** Source time, seconds. */
   start: number
   end: number
@@ -254,8 +256,12 @@ export const clipText = (c: Clip, t: Transcript) => keptWords(c, t).map(w => wor
 const STOP = new Set(['the', 'and', 'about', 'with', 'that', 'this', 'from', 'for', 'clip', 'clips', 'moment', 'moments', 'where', 'when', 'what', 'our', 'you', 'your', 'make', 'find', 'some'])
 export const keywords = (q: string) => q.toLowerCase().split(/[^\p{L}\d]+/u).filter(w => w.length > 2 && !STOP.has(w))
 
-/** Sentences that mention the query, each widened with its neighbours until close to `len` seconds. Non-overlapping, best first. */
-export function findMoments(t: Transcript, query: string, len: number, count: number): { start: number; end: number; hits: number; sentence: number }[] {
+/**
+ * Sentences that mention the query, each widened with its neighbours until close to `len` seconds. Non-overlapping, best first.
+ * `taken`: moments already cut from this video. A moment that mostly repeats one (more than half of the shorter of the two)
+ * is never offered again; with `exact`, only the same cut (within a second at both ends) counts.
+ */
+export function findMoments(t: Transcript, query: string, len: number, count: number, taken: { start: number; end: number; exact?: boolean }[] = []): { start: number; end: number; hits: number; sentence: number }[] {
   const keys = keywords(query)
   if (!keys.length) return []
   const hits = t.sentences.map(s => ({ s, n: keys.filter(k => s.text.toLowerCase().includes(k)).length })).filter(x => x.n > 0).sort((a, b) => b.n - a.n || a.s.i - b.s.i)
@@ -275,6 +281,7 @@ export function findMoments(t: Transcript, query: string, len: number, count: nu
     }
     const start = t.sentences[lo].s, end = t.sentences[hi].e
     if (out.some(o => start < o.end && end > o.start)) continue
+    if (taken.some(o => o.exact ? Math.abs(o.start - start) < 1 && Math.abs(o.end - end) < 1 : Math.min(end, o.end) - Math.max(start, o.start) > Math.min(end - start, o.end - o.start) / 2)) continue
     out.push({ start, end, hits: n, sentence: s.i })
   }
   return out
