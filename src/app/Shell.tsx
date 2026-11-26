@@ -7,6 +7,7 @@ import {
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
 import { agentsNeedsCount, departmentNeeds } from '../features/agents/needs'
+import { virtualConvs } from '../features/inbox/slice'
 import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
@@ -83,6 +84,8 @@ export default function Shell() {
   }, [loc.pathname, nav, open.length])
 
   const seg = loc.pathname.split('/')[1] ?? ''
+  // A conversation shows as its author in the crumbs, never as its id (Desk cards open as `h:<card id>`).
+  const inboxConv = (id: string) => (seg === 'inbox' ? [...s.inbox.convs, ...virtualConvs(s)].find(c => c.id === decodeURIComponent(id)) : undefined)
   const sub = loc.pathname.split('/').slice(2).filter(Boolean)
 
   if (!s.onboarded && seg !== 'onboarding') { setTimeout(() => nav('/onboarding')); return null }
@@ -145,9 +148,10 @@ export default function Shell() {
           <Btn variant="ghost" icon size="sm" className="mobile-only" aria-label="Open menu" onClick={() => setMobileOpen(true)}><MenuIcon size={16} /></Btn>
           <div className="crumbs">
             <b>{CRUMB[seg] ?? seg}</b>
-            {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
+            {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}[-:]/.test(x) || seg === 'agents' || (seg === 'inbox' && inboxConv(x))).map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
+                : seg === 'inbox' && inboxConv(x) ? inboxConv(x)!.author
                 : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
                 : seg === 'strategy' && s.strategy.campaigns.some(c => c.id === x) ? s.strategy.campaigns.find(c => c.id === x)!.name
                 : seg === 'insights' && sub[0] === 'reports' && x !== 'reports' ? (reportList(s).find(r => r.id === x)?.title ?? x)
