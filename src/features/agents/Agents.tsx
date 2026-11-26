@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronDown, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 
 import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
-import { ago } from '../../app/time'
+import { ago, DAY } from '../../app/time'
 import { AUTONOMY_LABEL, PRESET_LABEL } from '../../data/agents'
 import { Btn, Empty, Mark, Menu, PageHead, Pill, Seg, Tabs } from '../../ui'
 import { AutonomyList, AutonomySummary, PRESET_SAYS, presetDelta, presetOf } from './autonomy'
@@ -61,7 +61,11 @@ export function Team() {
               <p className="muted">{a.role}</p>
               <div className="now-line"><span className="faint">Now</span> {a.status === 'on' ? a.now : `Paused${a.pausedUntil ? ` until ${a.pausedUntil}` : ''}`}</div>
               <div>
-                <div className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</div>
+                <div className="row between autonomy-line">
+                  <span className="faint caption">Autonomy · {presetOf(a) === 'custom' ? 'Custom' : presetOf(a)[0].toUpperCase() + presetOf(a).slice(1)}</span>
+                  {/* Asking for more autonomy needs you: caution, like every other "waits for you". */}
+                  {promo && <Pill tone="caution">Asks for more autonomy</Pill>}
+                </div>
                 <StackBar h={6} parts={[
                   { label: 'Suggest', value: lv('suggest'), color: 'var(--lift-2)' },
                   { label: 'Draft', value: lv('draft'), color: `color-mix(in srgb, var(--a-${a.id}) 40%, transparent)` },
@@ -77,7 +81,6 @@ export function Team() {
               <div className="row">
                 <Link to={`/agents/${a.id}`} className="btn sm">Open profile</Link>
                 {pending > 0 && <Link to="/" className="btn sm ghost">{pending} need you</Link>}
-                {promo && <Pill tone="signal">Asks for more autonomy</Pill>}
                 <span className="spacer" />
                 {a.status === 'on' ? <PauseMenu id={a.id} />
                   : <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
@@ -269,7 +272,10 @@ function Escalation({ agent }: { agent: Agent }) {
 
 function Record({ agent }: { agent: Agent }) {
   const { s } = useStore()
-  const days = agent.record.series.map((_, i) => `${i % 5 === 0 ? 30 - i : ''}`)
+  const now = useNow(60_000)
+  // Dated ticks every 5 days, ending today: a bare “25” didn't say whether it was a date or days ago.
+  const n = agent.record.series.length
+  const days = agent.record.series.map((_, i) => ((n - 1 - i) % 5 === 0 ? (i === n - 1 ? 'Today' : new Date(now - (n - 1 - i) * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) : ''))
   const undos = s.log.filter(l => l.agent === agent.id && l.status === 'undone').slice(0, 5)
   return (
     <div className="stack lg">
@@ -313,7 +319,7 @@ function AgentActivity({ agent }: { agent: AgentId }) {
       <div className="card-head"><h2>Last 20 actions</h2><Link to={`/activity?agent=${agent}`} className="btn sm ghost">Full journal for this agent</Link></div>
       <ul className="rows hist">
         {!items.length && <li className="faint">No activity yet.</li>}
-        {items.map(l => <li key={l.id}><span style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined }}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
+        {items.map(l => <li key={l.id}><span className={l.status === 'undone' ? 'struck' : undefined}>{l.text}{l.reason && <span className="faint"> · {l.reason}</span>}</span><span className="mono faint">{ago(l.at, now)}</span></li>)}
       </ul>
     </section>
   )

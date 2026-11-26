@@ -152,7 +152,7 @@ export function readingAt(ms: number) {
 /* ---------- Autonomy ---------- */
 
 export const PRESETS: { value: Preset; label: string; says: string }[] = [
-  { value: 'cautious', label: 'Cautious', says: 'Agents draft and suggest. Nothing goes out until you approve it. Best for the first week.' },
+  { value: 'cautious', label: 'Cautious', says: 'Recommended for the first week. Agents draft and suggest; nothing goes out until you approve it.' },
   { value: 'balanced', label: 'Balanced', says: 'Agents handle routine work alone, like product questions and spam. Anything risky waits for you.' },
   { value: 'autonomous', label: 'Autonomous', says: 'Agents act alone within their limits. You can undo anything for 10 minutes.' },
 ]

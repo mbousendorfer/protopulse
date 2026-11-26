@@ -48,7 +48,7 @@ export function AlertsTable({ agent, alerts, subjects, conditions, units, onSave
   return (
     <section className="card">
       <div className="card-head">
-        <h2 className="row tight"><BellRing size={15} aria-hidden />Alerts</h2>
+        <h2 className="row tight"><BellRing size={16} aria-hidden />Alerts</h2>
         <Btn size="sm" onClick={() => setEdit(blank)}><Plus size={14} />New alert</Btn>
       </div>
       <p className="muted in-alert-intro">{intro}</p>
