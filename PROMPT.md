@@ -57,6 +57,7 @@ Hypothèses de marché (issues du benchmark) que le proto incarne : un réglage 
 6. **Valider des ensembles.** Plans, campagnes, lots : approbation globale, partielle, ou avec modification.
 7. **Le Playbook est la source de vérité** de la marque. Une correction dans un fil peut devenir une règle.
 8. **Aucun faux-semblant.** Pas de bouton mort, pas de « coming soon ». Si une fonction n'est pas dans le proto, elle n'est pas dans l'UI.
+9. **Décisions d'abord** (demande de Matt, 25–26/11). La page d'arrivée de chaque département (Inbox, Publishing, Listening, Strategy, Video, Insights, Agents) et le premier onglet de chaque profil d'agent s'ouvrent sur ce qui attend Sam : en tête, un résumé nommé (« 4 need you · 2 plans to approve »), puis les décisions groupées par geste, chacune avec sa décision rapide sur place, sans ouvrir d'autre écran ; ensuite seulement le reste du module (suivi, historique, réglages). Rien n'attend → une ligne « Nothing needs you here » et ce que l'agent surveille. Le badge du rail compte exactement ce bloc.
 
 ---
 
