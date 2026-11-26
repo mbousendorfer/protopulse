@@ -12,6 +12,7 @@ import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
 import { PAUSE_TOPIC, fitCap, overCap, pauseAll, pauseFor, resumeAll } from './guards'
 import { WINDOW_TOPIC, resolveWindow } from './window'
+import { RESULT_TOPIC, TEST_TOPIC, proposeTest, resolveResult, startTest } from './tests'
 import { approved, sendToClaire } from './approvals'
 import { withFormat } from './formats'
 import { fillQueues } from './queues'
@@ -78,6 +79,7 @@ export type PublishingAction =
   | { type: 'publishing/retry'; id: string; mode: Retry }
   | { type: 'publishing/resume'; ids: string[] }
   | { type: 'publishing/pauseAll' }
+  | { type: 'publishing/tryTwo' }
   | { type: 'publishing/resumeAll' }
   | { type: 'publishing/firstComment'; id: string; text: string }
   | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
@@ -312,6 +314,8 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
+    case 'publishing/tryTwo':
+      return proposeTest(s)
     case 'publishing/pauseAll': case 'publishing/resumeAll': {
       // One brake for everything ahead; one Undo bar, like the bulk actions.
       const pausing = a.type === 'publishing/pauseAll'
@@ -500,6 +504,8 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     const ids = new Set(onQuietDays(s).filter(p => !note || startOfDay(p.at) === note.day).map(p => p.id))
     return setPosts(s, s.publishing.posts.map(p => (ids.has(p.id) ? avoidQuiet(s.publishing.notes, p) : p)))
   }
+  if (h.topic === TEST_TOPIC) return ok ? startTest(s, h) : s
+  if (h.topic === RESULT_TOPIC) return d.kind === 'option' ? resolveResult(s, d.index) : s
   if (h.topic === WINDOW_TOPIC) return d.kind === 'option' ? resolveWindow(s, h, d.index) : s
   if (h.topic === PAUSE_TOPIC) return d.kind === 'option' && d.index === 1 ? resumeAll(s, 'You resumed them from the Desk') : s
   if (h.topic === 'Better slot' && h.ref && h.preview?.type === 'post') {

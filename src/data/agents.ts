@@ -63,6 +63,8 @@ export const AGENTS: Agent[] = [
         says: says('Atlas tells you a slot is empty.', 'Atlas drafts a post for the empty slot.', 'Atlas fills empty slots on its own from the approved pillars.') },
       { id: 'atlas-retry', perWeek: 1, example: 'X refused a post: its short link looked like a redirect', label: 'Retry a failed post with a safe fix', risk: 'safe', autonomy: 'draft', reviewed: 3, approvedUnchanged: 100,
         says: says('Atlas tells you a post failed and why. You fix it.', 'Atlas prepares the fix and asks before retrying.', 'Atlas retries with the fix on its own and tells you. Fixes that need you, like a reconnection, still come to you.') },
+      { id: 'atlas-test', perWeek: 1, example: 'Do Instagram reels that open with a question get more saves?', label: 'Try two versions of a post', risk: 'risky', autonomy: 'draft',
+        says: says('Atlas tells you what it would like to try.', 'Atlas writes both versions and asks before scheduling them.', 'Atlas schedules both versions on its own and tells you. Making the winner a rule is always your call.') },
       { id: 'atlas-competitor', perWeek: 1, example: 'Peakline cuts its prices and a reply is tempting', label: 'Publish anything that mentions a competitor', risk: 'destructive', autonomy: 'suggest', locked: true,
         lockReason: 'Naming a competitor in public is always your call.',
         says: says('Atlas drafts it as a suggestion only. You publish it yourself.', '', '') },
