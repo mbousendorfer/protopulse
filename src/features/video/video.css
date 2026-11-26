@@ -29,28 +29,54 @@
 .score-badge b { font-size: var(--t-sm); }
 .score-badge.high b { color: var(--ok-strong); }
 
-/* Clips: cards, the frame at a size you can judge, two or three to a row. Clickable card = blue border on hover. */
-.clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: var(--s3); }
-.clip-card { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: var(--s4); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); cursor: pointer; transition: border-color var(--fast) var(--ease), background-color var(--fast) var(--ease); }
-.clip-card:hover { border-color: var(--signal); }
-.clip-card.picked { background: var(--signal-wash); border-color: var(--signal-edge); }
-.clip-card.arrive { animation: idea-arrive var(--slow) var(--ease); }
-.clip-card-thumb { position: relative; align-self: start; display: grid; justify-items: center; }
-.clip-card-thumb .src-thumb { width: 90px; height: 51px; }
-.clip-card-check { position: absolute; top: 4px; left: 4px; }
-.clip-card-check .select-box { width: 28px; height: 28px; background: var(--panel); }
-.clip-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.clip-card-body h3 { font-size: var(--t-lg); font-weight: 600; line-height: 1.3; }
-.clip-card-hook { color: var(--ink); }
-.clip-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px var(--s3); margin-top: 2px; font-size: var(--t-xs); color: var(--ink-2); }
-.clip-card-proof, .clip-card-src { font-size: var(--t-sm); color: var(--ink-2); }
-.clip-card-proof b { color: var(--ink); font-weight: 600; }
-.clip-card-src { font-size: var(--t-xs); }
-.clip-card-todo { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sm); color: var(--ink); }
-.clip-card-todo li { display: flex; align-items: center; gap: 6px; }
-.clip-card-todo svg { flex: none; color: var(--caution); }
-.clip-card-acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); margin-top: auto; padding-top: var(--s2); }
-.clip-card.making { cursor: pointer; }
+/* Clips: decisions first (PROMPT §3.9, matrix §12). One summary line naming each count, each count a filter; then one
+   bordered block per gesture (Ready to send, Held, New videos) with dense rows: one primary action per group, the quick
+   decisions on the row. To migrate to the agents lot's DecisionGroup primitive once it lands. */
+.dq-page { display: flex; flex-direction: column; }
+.dq-page > .filters, .dq-page > .video-notice { margin-bottom: var(--s4); }
+.dq-sum { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s2); margin: 0 0 var(--s4); color: var(--ink); }
+.dq-count { font: inherit; font-weight: 600; color: var(--action-ink); background: none; border: 0; padding: 2px 8px; margin: 0 -4px; border-radius: 999px; cursor: pointer; }
+.dq-count:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dq-count[aria-pressed="true"] { background: var(--signal-wash); text-decoration: none; }
+.dq-count:focus-visible { outline: none; box-shadow: var(--focus); }
+.dq-sum-note { color: var(--ink-2); }
+.dq { border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); overflow: hidden; margin-bottom: var(--s4); }
+.dq-head { display: flex; align-items: center; gap: var(--s2); padding: 8px var(--s4) 8px var(--s2); min-height: 48px; background: var(--sunk); border-bottom: 1px solid var(--line); }
+.dq-head h3 { font-size: var(--t-md); font-weight: 600; white-space: nowrap; }
+.dq-head h3:first-child { margin-left: var(--s2); }
+.dq-hint { font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.dq-head .btn { flex: none; }
+.dq > .bulk-bar { margin: var(--s2) var(--s4); }
+.dq-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); padding: 8px var(--s4); font-size: var(--t-sm); color: var(--ink); border-bottom: 1px solid var(--line); }
+.dq-note > svg { flex: none; color: var(--ink-2); }
+.dq-note b { font-weight: 600; }
+.dq-sub + .dq-sub { border-top: 1px solid var(--line); }
+.dq-rows { list-style: none; margin: 0; padding: 0; }
+.dq-rows > li + li { border-top: 1px solid var(--line); }
+.dq-row { display: grid; grid-template-columns: 32px auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 8px var(--s4) 8px var(--s2); cursor: pointer; transition: background-color var(--fast) var(--ease); }
+.dq-row:hover { background: var(--row-hover); }
+.dq-row:has(.select-box input:checked) { background: var(--signal-wash); }
+.dq-row.arrive { animation: settle var(--slow) var(--ease); }
+.dq-check { display: grid; place-items: center; width: 32px; }
+.dq-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dq-title, .dq-line, .dq-todo, .dq-why { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dq-name { font-weight: 600; color: var(--ink); text-decoration: none; margin-right: var(--s2); }
+.dq-name:hover, .dq-name:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.dq-hook { color: var(--ink); }
+.dq-line { display: flex; align-items: center; gap: var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
+.dq-line > * { flex: none; }
+.dq-line > .dq-proof, .dq-line > .dq-src { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dq-line > .dq-src { flex-shrink: 4; }
+.dq-proof b { color: var(--ink); font-weight: 600; }
+.dq-todo, .dq-why { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--ink); }
+.dq-todo svg { flex: none; color: var(--caution); }
+.dq-why { font-weight: 600; }
+.dq-why svg { flex: none; color: var(--alert-strong); }
+.dq-acts { display: flex; align-items: center; gap: 6px; flex: none; }
+.dq-row.is-source .src-thumb { width: 71px; height: 40px; }
+.dq-row .progress { margin-top: 4px; }
+.dq-rest { margin-bottom: var(--s4); }
+.dq-rest .card-head { min-height: 44px; }
 .idea-row.src-row { grid-template-columns: 80px minmax(0, 1fr) auto; }
 .progress { height: 6px; border-radius: 999px; background: var(--lift-2); margin-top: var(--s2); overflow: hidden; max-width: 320px; }
 .progress > span { display: block; height: 100%; background: var(--chart); border-radius: inherit; transition: width var(--base) linear; }
@@ -270,8 +296,13 @@
   .ed-head { flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
-  .clip-card { grid-template-columns: 72px minmax(0, 1fr); gap: var(--s3); }
-  .clip-card .clip-thumb.lg { width: 72px; height: 128px; }
+  .dq-head { flex-wrap: wrap; }
+  .dq-hint { display: none; }
+  .dq-row { grid-template-columns: 32px auto minmax(0, 1fr); align-items: start; gap: var(--s2) var(--s3); }
+  .dq-acts { grid-column: 3; flex-wrap: wrap; }
+  .dq-title, .dq-todo, .dq-why { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .dq-line { flex-wrap: wrap; row-gap: 2px; white-space: normal; }
+  .dq-line > .dq-proof { flex: 1 1 100%; order: 5; white-space: normal; }
   .idea-row.src-row { grid-template-columns: 64px minmax(0, 1fr); }
   .idea-row.src-row .idea-acts { grid-column: 2; padding: var(--s2) 0 0; }
   .src-thumb { width: 64px; height: 36px; }
