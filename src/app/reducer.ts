@@ -17,6 +17,7 @@ import { reducePlaybook, type PlaybookAction } from '../features/playbook/slice'
 import { deliverFollowUps, reduceChats, type ChatsAction } from '../features/chats/slice'
 import { reduceVideo, type VideoAction } from '../features/video/slice'
 import { reduceSetup, type SetupAction } from '../features/onboarding/slice'
+import { deliverDue } from '../features/onboarding/day1'
 
 export type CoreAction =
   | { type: 'core/resolve'; id: string; decision: Decision; ms?: number }
@@ -404,6 +405,8 @@ function reduceCore(s: State, a: CoreAction): State {
       }
       // Agents coming back in a conversation.
       next = deliverFollowUps(next, t)
+      // Day 1: what was announced with a delay (backfill, history import) lands when it's due.
+      next = deliverDue(next, t)
       // Each agent's own clock: ideas expiring, videos processing…
       for (const m of registry()) if (m.tick) next = m.tick(next, t)
       // Proactive feed.
@@ -457,7 +460,7 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/track': {
       // The getting-started list ticks pages off once you've been there.
       const path = String(a.detail?.path ?? '')
-      const seen = a.kind === 'nav' && s.phase === 'day1' && ['/playbook', '/agents'].includes(path) && !s.setup.seen.includes(path)
+      const seen = a.kind === 'nav' && s.phase === 'day1' && ['/playbook', '/agents', '/agents/rules', '/insights', '/insights/explore'].includes(path) && !s.setup.seen.includes(path)
       return track(seen ? { ...s, setup: { ...s.setup, seen: [...s.setup.seen, path] } } : s, a.kind, a.detail)
     }
 

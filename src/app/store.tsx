@@ -4,6 +4,7 @@ import { reducer, type Action } from './reducer'
 import { appNow, DEMO_START } from './time'
 import { hasDueFollowUps } from '../features/chats/slice'
 import { registry } from './agents-registry'
+import { hasDue } from '../features/onboarding/day1'
 
 const KEY = 'protopulse:state'
 
@@ -55,6 +56,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         st.handoffs.some(h => (h.lane === 'claire' && h.claire && !h.claire.reply && h.claire.dueAt <= t) || (h.lane === 'snoozed' && (h.snoozedUntil ?? Infinity) <= t)) ||
         st.agents.some(a => a.actions.some(x => x.trialUntil && x.trialUntil <= t)) ||
         hasDueFollowUps(st, t) ||
+        hasDue(st, t) ||
         registry().some(m => m.due?.(st, t))
       if (due) d({ type: 'core/heartbeat' })
     }, 1000)

@@ -1,240 +1,54 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { Check, Pencil, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { Check, Sparkles, UserPlus } from 'lucide-react'
 import { useStore } from '../../app/store'
 import type { AgentId } from '../../app/types'
 import { AGENTS } from '../../data/agents'
-import { Btn, Mark, Net, Pill, Seg, Thinking } from '../../ui'
-import Photo from '../../ui/Photo'
-import { SocialAvatar } from '../../ui/SocialAvatar'
-import { voiceSample, VOICE } from '../../data/playbook'
-import { Foot, Head, ShopifyMark, useElapsed } from './parts'
+import { Btn, Mark, Pill, Seg } from '../../ui'
+import { Foot, Head } from './parts'
 import { QUESTIONS } from './day1'
-import {
-  INTEGRATIONS, PHASES, PRESETS, PROPOSALS, READ_MS, SECTIONS, andList, keptCount, levelCounts, levelFor, netOf, pickOf, presetOf, readingAt, type Integration, type Proposal,
-} from './model'
-
-/* ---------- The live read ---------- */
-
-const PRODUCT_PHOTO: Record<string, string> = { pack: 'pack', bottle: 'bottle', jacket: 'jacket', fleece: 'fleece' }
-
-export function Reading({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
-  const { s, d } = useStore()
-  const [skipped, setSkipped] = useState(s.setup.read)
-  const ms = useElapsed(READ_MS, skipped)
-  const r = readingAt(ms)
-  useEffect(() => { if (r.done && !s.setup.read) d({ type: 'setup/patch', patch: { read: true } }) }, [r.done]) // eslint-disable-line react-hooks/exhaustive-deps
-  const has = (key: string) => r.shown.some(f => f.key === key)
-  const of = (phase: string) => r.shown.filter(f => f.phase === phase)
-  const latest = r.shown.at(-1)
-
-  return (
-    <section className="onb-step onb-wide">
-      <Head title={r.done ? 'Here’s Fernway, as we read it' : `Reading ${s.setup.site || 'fernway.co'}`}
-        lede={r.done ? 'Products, policies, accounts, voice and competitors. You’ll check each of them in a moment.' : 'Everything you’d otherwise type into a form. This takes a few seconds.'} />
-      <div className="onb-read">
-        <ol className="onb-phases" aria-label="What Protopulse is reading">
-          {PHASES.map((p, i) => {
-            const state = i < r.current ? 'done' : i === r.current ? 'current' : 'todo'
-            return (
-              <li key={p.id} className={state}>
-                <span className="onb-phase-icon" aria-hidden>{state === 'done' ? <Check size={12} /> : state === 'current' ? <span className="spin" /> : null}</span>
-                <span><span className="onb-phase-label">{p.label}</span>{state === 'done' && <span className="onb-phase-done">{p.done}</span>}</span>
-              </li>
-            )
-          })}
-        </ol>
-
-        <article className="card onb-brand" aria-label="What Protopulse found">
-          <header className="onb-brand-head">
-            {has('brand') ? <>
-              <span className="onb-brand-logo" aria-hidden>F</span>
-              <div><h2>Fernway</h2><p className="muted">Outdoor gear · Annecy, France · fernway.co</p></div>
-            </> : <div className="onb-skeleton" aria-hidden><i /><i /></div>}
-          </header>
-          {of('site').length > 1 && (
-            <section>
-              <h3>Products</h3>
-              <ul className="onb-products">
-                {of('site').filter(f => PRODUCT_PHOTO[f.key]).map(f => (
-                  <li key={f.key} className="onb-in"><span className="onb-product-photo"><Photo name={PRODUCT_PHOTO[f.key]} /></span><b>{f.label}</b><span className="muted">{f.detail}</span></li>
-                ))}
-              </ul>
-            </section>
-          )}
-          {of('policies').length > 0 && (
-            <section>
-              <h3>Policies</h3>
-              <ul className="onb-facts">{of('policies').map(f => <li key={f.key} className="onb-in"><Check size={14} aria-hidden className="ok" />{f.label}</li>)}</ul>
-            </section>
-          )}
-          {of('accounts').length > 0 && (
-            <section>
-              <h3>Accounts <span className="muted num">{of('accounts').length}</span></h3>
-              <ul className="onb-nets">
-                {of('accounts').map(f => { const i = INTEGRATIONS.find(x => x.id === f.key)!; return <li key={f.key} className="onb-in" title={`${i.name} · ${i.handle}`}>{i.net ? <Net n={i.net} size={22} /> : <ShopifyMark />}</li> })}
-              </ul>
-            </section>
-          )}
-          {of('voice').length > 0 && (
-            <section>
-              <h3>Voice</h3>
-              {of('voice').map(f => <p key={f.key} className="onb-in onb-voice-find"><b>{f.label}</b>{f.detail && <span className="muted"> · {f.detail}</span>}</p>)}
-            </section>
-          )}
-          {of('rivals').length > 0 && (
-            <section>
-              <h3>Likely competitors</h3>
-              <ul className="onb-rivals">{of('rivals').map(f => <li key={f.key} className="onb-in"><SocialAvatar name={f.label} org size={24} />{f.label}</li>)}</ul>
-            </section>
-          )}
-          <p className="sr-only" aria-live="polite">{latest ? `Found: ${latest.label}${latest.detail ? `, ${latest.detail}` : ''}` : ''}</p>
-        </article>
-      </div>
-      <Foot onBack={onBack}>
-        {r.done ? <Btn variant="primary" onClick={onDone}>Review what we found</Btn> : <Btn variant="ghost" onClick={() => setSkipped(true)}>Skip the wait</Btn>}
-      </Foot>
-    </section>
-  )
-}
-
-
-/* ---------- Accounts: found, ticked, connected in one click ---------- */
-
-export function Accounts({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
-  const { s, d } = useStore()
-  const connected = s.setup.connected
-  const [ticked, setTicked] = useState<string[]>(() => INTEGRATIONS.map(i => i.id))
-  const [busy, setBusy] = useState<string[]>([])
-  const timers = useRef<number[]>([])
-  useEffect(() => () => timers.current.forEach(clearTimeout), [])
-  const todo = ticked.filter(id => !connected.includes(id))
-  const connect = () => {
-    setBusy(todo)
-    todo.forEach((id, n) => timers.current.push(window.setTimeout(() => { d({ type: 'setup/connect', ids: [id] }); setBusy(b => b.filter(x => x !== id)) }, 500 + n * 280)))
-  }
-  const working = busy.length > 0
-  return (
-    <section className="onb-step">
-      <Head title={`We found your ${INTEGRATIONS.length} accounts`} lede="Your agents read and reply through them. Nothing is published until you choose how much they can do alone." />
-      {(['Social', 'Reviews', 'Store'] as const).map(g => (
-        <div key={g} className="onb-group">
-          <h2>{g === 'Store' ? 'Store, for orders and exchanges' : g === 'Reviews' ? 'Review sites' : 'Social networks'}</h2>
-          <ul className="card rows">
-            {INTEGRATIONS.filter(i => i.group === g).map(i => (
-              <AccountRow key={i.id} i={i} on={connected.includes(i.id)} busy={busy.includes(i.id)} ticked={ticked.includes(i.id)}
-                onTick={v => setTicked(t => (v ? [...t, i.id] : t.filter(x => x !== i.id)))} />
-            ))}
-          </ul>
-        </div>
-      ))}
-      <Foot onBack={onBack} note={working ? <Thinking label={`Connecting ${busy.length} more…`} /> : !todo.length && connected.length ? `${connected.length} of ${INTEGRATIONS.length} connected` : undefined}>
-        {todo.length && !working ? <>
-          {!!connected.length && <Btn variant="ghost" onClick={onDone}>Continue with {connected.length}</Btn>}
-          <Btn variant="primary" onClick={connect}>Connect {todo.length} account{todo.length > 1 ? 's' : ''}</Btn>
-        </> : <Btn variant="primary" disabled={working} onClick={onDone}>{connected.length ? 'Continue' : 'Continue without accounts'}</Btn>}
-      </Foot>
-    </section>
-  )
-}
-
-function AccountRow({ i, on, busy, ticked, onTick }: { i: Integration; on: boolean; busy: boolean; ticked: boolean; onTick: (v: boolean) => void }) {
-  return (
-    <li className={`onb-int ${on ? 'on' : ''}`}>
-      <input type="checkbox" className="check" checked={on || ticked} disabled={on || busy} onChange={e => onTick(e.target.checked)} aria-label={`Connect ${i.name}`} />
-      {i.net ? <Net n={i.net} size={22} /> : <ShopifyMark />}
-      <div className="grow">
-        <b>{i.name}</b> <span className="muted">{i.handle}{i.size ? ` · ${i.size}` : ''}</span>
-        <div className="onb-found">{i.foundIn}</div>
-      </div>
-      {busy ? <Thinking label="Connecting…" /> : on ? <Pill tone="ok" dot>Connected</Pill> : null}
-    </li>
-  )
-}
-
-/* ---------- Playbook: one set to validate, each line with its proof ---------- */
-
-export function Brand({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
-  const { s } = useStore()
-  const n = keptCount(s.setup)
-  return (
-    <section className="onb-step">
-      <Head title="Here’s how Fernway sounds" lede="From your site, your help centre and your last 200 posts and replies. Untick what’s wrong, click a line to fix it. Every agent follows what you keep." />
-      {SECTIONS.map(sec => (
-        <div key={sec.title} className="onb-group">
-          <h2>{sec.title} <span className="muted">· {sec.note}</span></h2>
-          <ul className="card rows">
-            {PROPOSALS.filter(p => sec.kind.includes(p.kind)).map(p => <ProposalRow key={p.id} p={p} />)}
-          </ul>
-        </div>
-      ))}
-      <Foot onBack={onBack} note={`${n} of ${PROPOSALS.length} kept`}>
-        <Btn variant="primary" onClick={onDone}>{n ? `Add ${n} to my Playbook` : 'Continue without them'}</Btn>
-      </Foot>
-    </section>
-  )
-}
-
-function ProposalRow({ p }: { p: Proposal }) {
-  const { s, d } = useStore()
-  const pick = pickOf(s.setup, p)
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(pick.text)
-  const save = () => { if (text.trim() && text.trim() !== pick.text) d({ type: 'setup/pick', id: p.id, text, keep: true }); setEditing(false) }
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Enter') { e.preventDefault(); save() } if (e.key === 'Escape') { e.preventDefault(); setText(pick.text); setEditing(false) } }
-  const edited = pick.text !== p.text
-  return (
-    <li className={`onb-prop ${pick.keep ? '' : 'off'}`}>
-      <input type="checkbox" className="check" checked={pick.keep} onChange={e => d({ type: 'setup/pick', id: p.id, keep: e.target.checked })} aria-label={`Keep: ${pick.text}`} />
-      {p.kind === 'competitor' && <SocialAvatar name={pick.text} org size={24} />}
-      <div className="grow">
-        {editing
-          ? <input className="input" autoFocus onFocus={e => e.target.select()} value={text} aria-label="Edit this line" onChange={e => setText(e.target.value)} onKeyDown={onKey} onBlur={save} />
-          : <button className="onb-prop-text" onClick={() => { setText(pick.text); setEditing(true) }} disabled={p.kind === 'competitor'} title={p.kind === 'competitor' ? undefined : 'Click to edit'}>
-              {pick.text}{p.kind !== 'competitor' && <Pencil size={12} aria-hidden className="onb-pencil" />}
-            </button>}
-        <div className="onb-proof">{edited && <>Edited by you · <button className="link-btn" onClick={() => { d({ type: 'setup/pick', id: p.id, text: p.text }); setText(p.text) }}>Restore</button> · </>}{p.evidence}</div>
-        {p.kind === 'voice' && pick.keep && (
-          <div className="onb-sample"><span className="onb-sample-by"><Mark agent="nova" />How Nova would answer a complaint</span><p>{voiceSample(VOICE)}</p></div>
-        )}
-      </div>
-    </li>
-  )
-}
+import { PRESETS, andList, connectedNets, levelCounts, levelFor, presetOf, validEmail } from './model'
 
 /* ---------- Team and autonomy ---------- */
 
-type Ctx = { questions: number; faqAlone: boolean; watched: string[] }
-const FOR_FERNWAY: Record<AgentId, (c: Ctx) => string> = {
-  nova: c => c.questions
-    ? `${c.questions} question${c.questions > 1 ? 's' : ''} from last night ${c.questions > 1 ? 'are' : 'is'} waiting. Nova ${c.faqAlone ? 'answers them on her own' : 'drafts the answers for you to send'}, from your facts.`
-    : 'Answers comments, DMs and reviews from your facts, and hides spam.',
-  atlas: () => 'Finds what to post next from your best posts this month, and fills the gaps in your calendar.',
-  iris: () => 'Reads 90 days of results tonight. Your first morning brief lands tomorrow at 07:00.',
-  echo: c => c.watched.length ? `Watches ${andList(c.watched)}, and every mention of Fernway.` : 'Watches every mention of Fernway. Add competitors any time.',
-  sage: () => 'Proposes your editorial pillars and a posting cadence from what already works.',
-  juno: () => 'Watches your YouTube channel and lives, and cuts each new video into captioned clips for you to review.',
+type Ctx = { questions: number; faqAlone: boolean; watched: string[]; nets: number; youtube: boolean }
+/** What each agent will do, said honestly: what needs an account says so, what takes hours says when. */
+const FOR_YOU: Record<AgentId, (c: Ctx) => { text: string; needs?: boolean }> = {
+  nova: c => !c.nets ? { text: 'Answers comments, DMs and reviews once a profile is connected.', needs: true }
+    : { text: c.questions ? `${c.questions} message${c.questions > 1 ? 's' : ''} ${c.questions > 1 ? 'are' : 'is'} waiting in your imported Inbox. Nova ${c.faqAlone ? `answers ${c.questions > 1 ? 'them' : 'it'} on her own` : `drafts the ${c.questions > 1 ? 'replies' : 'reply'} for you to send`}.` : 'Watches your Inbox and drafts replies from your Playbook.' },
+  atlas: () => ({ text: 'Writes your 3 first drafts from your Playbook, right after this screen.' }),
+  iris: c => ({ text: c.nets ? 'Writes your first report once your history is imported, later today. First morning brief tomorrow at 07:00.' : 'Writes your first morning brief tomorrow at 07:00. Reports start once a profile is connected.' }),
+  echo: c => !c.nets ? { text: 'Watches your competitors once a profile is connected.', needs: true }
+    : { text: c.watched.length ? `Backfills ${andList(c.watched).replace(/\.$/, '')}. First topics in about 2 hours.` : 'Watches mentions of your brand. Add competitors any time.' },
+  sage: () => ({ text: 'Proposes your editorial pillars and a posting cadence from your Playbook.' }),
+  juno: c => ({ text: c.youtube ? 'Watches your YouTube channel and cuts each new video into captioned clips for you to review.' : 'Cuts your YouTube videos into clips once YouTube is connected.' }),
 }
 
 export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { s, d } = useStore()
   const [perAgent, setPerAgent] = useState(Object.keys(s.setup.custom).length > 0)
-  const watched = PROPOSALS.filter(p => p.kind === 'competitor' && pickOf(s.setup, p).keep).map(p => pickOf(s.setup, p).text)
+  const nets = connectedNets(s.setup.connected)
   const counts = levelCounts(AGENTS, s.setup)
   const ctx: Ctx = {
-    watched, faqAlone: levelFor('safe', presetOf(s.setup, 'nova')) === 'act',
-    questions: QUESTIONS.filter(q => s.setup.connected.some(id => netOf(id) === s.inbox.convs.find(c => c.id === q.conv)?.network)).length,
+    nets: s.setup.connected.length, youtube: nets.includes('youtube'),
+    watched: s.setup.pb.brief?.competitors.filter(c => c.on).map(c => c.label) ?? [],
+    faqAlone: levelFor('safe', presetOf(s.setup, 'nova')) === 'act',
+    questions: QUESTIONS.filter(q => nets.includes(s.inbox.convs.find(c => c.id === q.conv)?.network as never)).length,
   }
   const preset = PRESETS.find(p => p.value === s.setup.preset)!
+  const team = Number(s.setup.teamSize ?? 1) >= 3
   return (
     <section className="onb-step">
-      <Head title="Meet your team" lede="Six agents, one per department. Here’s what each will do for Fernway, starting now." />
+      <Head title="Meet your team" lede="Six agents, one per department. Here’s what each will do, and when." />
       <ul className="card rows onb-team">
-        {AGENTS.map(a => (
-          <li key={a.id}>
-            <Mark agent={a.id} size="lg" />
-            <div className="grow"><b>{a.name}</b> <span className="muted">· {a.dept}</span><p>{FOR_FERNWAY[a.id](ctx)}</p></div>
-          </li>
-        ))}
+        {AGENTS.map(a => {
+          const line = FOR_YOU[a.id](ctx)
+          return (
+            <li key={a.id}>
+              <Mark agent={a.id} size="lg" />
+              <div className="grow"><b>{a.name}</b> <span className="muted">· {a.dept}</span>{line.needs && <> <Pill tone="caution">Needs an account</Pill></>}<p>{line.text}</p></div>
+            </li>
+          )
+        })}
       </ul>
 
       <div className="card pad onb-autonomy">
@@ -245,8 +59,8 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
         {/* Same scale, same order as every agent profile: Suggest, Draft, Act. */}
         <dl className="onb-counts" aria-label="Actions at each level, across the team">
           <div><dt>Actions on Suggest</dt><dd className="num">{counts.suggest}</dd></div>
-          <div><dt>On Draft</dt><dd className="num">{counts.draft}</dd></div>
-          <div><dt>On Act</dt><dd className="num">{counts.act}</dd></div>
+          <div><dt>Actions on Draft</dt><dd className="num">{counts.draft}</dd></div>
+          <div><dt>Actions on Act</dt><dd className="num">{counts.act}</dd></div>
         </dl>
         <p className="muted t-sm">Press, legal and safety always come to you, whatever you pick. Agents ask for more autonomy when your approvals show they’ve earned it.</p>
         <button className="link-btn self-start" aria-expanded={perAgent} onClick={() => setPerAgent(o => !o)}>{perAgent ? 'Same setting for everyone' : 'Adjust per agent'}</button>
@@ -263,9 +77,36 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
           </ul>
         )}
       </div>
+
+      {team && <Approver />}
+
       <Foot onBack={onBack} note={s.phase === 'day1' ? 'Your team is already running. Starting again replaces today’s first results.' : undefined}>
         <Btn variant="primary" onClick={onDone}><Sparkles size={14} />{s.phase === 'day1' ? 'Start again' : 'Start my team'}</Btn>
       </Foot>
     </section>
+  )
+}
+
+/** 3 people or more on social: someone approves what's sensitive. Claire is the one the test knows. */
+function Approver() {
+  const { s, d } = useStore()
+  const [email, setEmail] = useState(s.setup.validator ?? 'claire.dubois@fernway.co')
+  const [error, setError] = useState(false)
+  const invited = s.setup.validator
+  return (
+    <div className="card pad onb-autonomy">
+      <h2>Who approves what’s sensitive?</h2>
+      <p>You said 3 people or more handle social. Invite the person who signs off on press, legal and budget: agents send those to them.</p>
+      {invited ? (
+        <p className="onb-sent"><Check size={14} aria-hidden className="ok" />Invitation sent to {invited} · Pending · <button className="link-btn" onClick={() => d({ type: 'setup/patch', patch: { validator: undefined } })}>Cancel invitation</button></p>
+      ) : (
+        <form className="row tight onb-approver" onSubmit={e => { e.preventDefault(); if (!validEmail(email)) { setError(true); return } d({ type: 'setup/patch', patch: { validator: email.trim() } }) }} noValidate>
+          <input className="input grow" type="email" aria-label="Approver’s email" value={email} aria-invalid={error} onChange={e => { setEmail(e.target.value); setError(false) }} />
+          <Btn type="submit"><UserPlus size={14} />Invite as approver</Btn>
+        </form>
+      )}
+      {error && <p className="onb-error" role="alert">Enter a valid email address.</p>}
+      <p className="muted t-sm">Optional. You can invite them later from Settings.</p>
+    </div>
   )
 }

@@ -17,7 +17,7 @@ const PRESETS: { id: Preset; label: string; note: string }[] = [
 /** An event's label without its agent prefix, capitalised. */
 const short = (label: string) => { const t = label.replace(/^\w+ · /, ''); return t.charAt(0).toUpperCase() + t.slice(1) }
 
-const JUMPS: { label: string; minutes: number }[] = [{ label: '+10 min', minutes: 10 }, { label: '+1 hour', minutes: 60 }, { label: '+1 week', minutes: 7 * 24 * 60 }]
+const JUMPS: { label: string; minutes: number }[] = [{ label: '+10 min', minutes: 10 }, { label: '+1 hour', minutes: 60 }, { label: 'Skip 2 hours', minutes: 120 }, { label: '+1 week', minutes: 7 * 24 * 60 }]
 
 export default function Moderator({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { s, d } = useStore()
@@ -67,7 +67,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
             {JUMPS.map(j => <Btn key={j.minutes} size="sm" onClick={() => d({ type: 'core/advance', minutes: j.minutes })}><Clock size={14} />{j.label}</Btn>)}
             <Btn size="sm" onClick={() => run(() => { d({ type: 'core/skipDay' }); nav('/') })}><FastForward size={14} />Tomorrow 08:00</Btn>
           </div>
-          <p className="faint t-xs">Claire’s answers, snoozes, response targets, idea windows, videos in progress, reports and trials all run on this clock.</p>
+          <p className="faint t-xs">Skip 2 hours delivers what Day 1 announces with a delay: Echo’s first topics and Iris’s first report. Claire’s answers, snoozes, response targets, idea windows, videos in progress, reports and trials all run on this clock.</p>
         </section>
 
         {triggers.length > 0 && (
@@ -91,7 +91,7 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
           <div className="row">
             <Btn size="sm" onClick={() => run(() => { d({ type: 'core/reset' }); nav('/') })}><RotateCcw size={14} />Day 30 workspace</Btn>
             <Btn size="sm" onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); d({ type: 'setup/start', defaults: true }); nav('/') })}><Sunrise size={14} />Day 1 Desk</Btn>
-            <Btn size="sm" onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); nav('/onboarding/signup') })}><Play size={14} />Onboarding</Btn>
+            <Btn size="sm" onClick={() => run(() => { d({ type: 'core/reset', onboarding: true }); nav('/onboarding/signup') })}><Play size={14} />Start onboarding</Btn>
           </div>
           <div className="mod-presets">
             {PRESETS.map(p => (

@@ -43,7 +43,8 @@ export type State = {
   video: VideoState
 }
 
-export const STATE_VERSION = 3
+// 4: the first run is rebuilt on Agorapulse's and Archie's real screens; old setups can't resume.
+export const STATE_VERSION = 4
 
 export type Preset = 'calm' | 'busy' | 'competitor' | 'trust'
 

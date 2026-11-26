@@ -148,11 +148,11 @@ test('the goal card raises the goal of the campaign it names', () => {
   expect(cmp(s, 'trail-week').goal.target).toBe(360)
 })
 
-test('Day 1: approving Sage’s first card sets the pillars and cadence it shows', async () => {
+test('Day 1: approving Sage’s first card, once the history is imported, sets the pillars and cadence it shows', async () => {
   const { DAY1_IDS } = await import('../onboarding/day1')
   const { cardOf, targetsOf } = await import('./slice')
   expect(cardOf({ id: DAY1_IDS.sage } as never)?.change).toBeDefined()
-  let s = reducer(initialState(), { type: 'setup/start', defaults: true })
+  let s = reducer(reducer(initialState(), { type: 'setup/start', defaults: true }), { type: 'core/advance', minutes: 120 })
   const h = s.handoffs.find(x => x.id === DAY1_IDS.sage)!
   expect(h).toBeDefined()
   s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })

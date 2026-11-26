@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Check, ChevronDown, ChevronRight, Clock, Sunrise } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
 import { hhmm } from '../../app/time'
-import { Btn, Thinking } from '../../ui'
+import { Btn } from '../../ui'
+import type { AgentId } from '../../app/types'
+import { ConnectModal } from '../onboarding/Connect'
 import { BriefScene } from '../../ui/Illustrations'
 import { AgentTiles } from './widgets'
 import { checklist, firstBriefAt, type CheckItem } from '../onboarding/day1'
@@ -18,19 +20,28 @@ export function Welcome({ onPick }: { onPick: (key: string) => void }) {
   const need = open.filter(h => groupOf(h) === 'need').length
   // The latest thing each agent did since it started.
   const first = (agent: string) => s.log.find(l => l.agent === agent && l.status === 'done' && !l.text.startsWith('You ') && l.at >= started - 60_000)
+  const connected = s.setup.connected.length > 0
+  const line = (id: AgentId) => {
+    const p = s.setup.pending.find(x => x.agent === id)
+    if (p && !first(id)?.text.startsWith('Found') && !first(id)?.text.startsWith('Wrote your first')) return `${p.label} at ${hhmm(p.at)}`
+    const iris = s.setup.pending.find(x => x.id === 'iris')
+    if (id === 'sage' && iris) return `Pillars and cadence at ${hhmm(iris.at)}, from your history`
+    if (!connected && ['nova', 'echo'].includes(id)) return 'Needs an account'
+    return first(id)?.text ?? (id === 'juno' ? 'Starts with your next YouTube video' : 'Starts working tonight')
+  }
   return (
     <section className="brief card day1" aria-labelledby="welcome-title">
       <div className="brief-top">
         <div>
           <h1 id="welcome-title" className="hello">Welcome aboard{s.setup.first ? `, ${s.setup.first}` : ''}.</h1>
-          <p className="story">{s.setup.connected.length
-            ? <>Your team started at {hhmm(started)}. In their first minutes they read Fernway and got to work. <b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you.</>
-            : <>Connect your accounts and your agents start reading tonight. Echo is already watching your competitors.</>}</p>
+          <p className="story">{connected
+            ? <>Your team started at {hhmm(started)}. Atlas wrote your first drafts{s.setup.pending.some(p => p.id === 'iris') ? ' and your history is importing' : ' and your history is in'}. <b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you.</>
+            : <>Atlas wrote 3 first drafts from your Playbook. Connect a profile to schedule them: Nova and Echo start once one is connected.</>}</p>
           <p className="day1-promise"><Sunrise size={16} aria-hidden />Your first morning brief arrives tomorrow at {hhmm(firstBriefAt(started))}.</p>
         </div>
         <div className="brief-scene"><BriefScene hour={new Date(now).getHours()} /></div>
       </div>
-      <AgentTiles onPick={onPick} line={id => first(id)?.text ?? 'Starts working tonight'} />
+      <AgentTiles onPick={onPick} line={id => line(id as AgentId)} />
     </section>
   )
 }
@@ -57,15 +68,11 @@ export function Checklist({ side }: { side?: boolean }) {
 }
 
 function Item({ i }: { i: CheckItem }) {
-  const { d } = useStore()
   const nav = useNavigate()
-  const [busy, setBusy] = useState(false)
-  const t = useRef<number>()
-  useEffect(() => () => clearTimeout(t.current), [])
+  const [connecting, setConnecting] = useState(false)
   const run = () => {
-    if (!i.action) return
-    if (i.action.connect) { setBusy(true); t.current = window.setTimeout(() => { d({ type: 'setup/connect', ids: i.action!.connect! }); setBusy(false) }, 1100); return }
-    if (i.action.to) nav(i.action.to)
+    if (i.action?.connect) setConnecting(true)
+    else if (i.action?.to) nav(i.action.to)
   }
   return (
     <li className={`check-item ${i.done ? 'done' : ''}`}>
@@ -75,7 +82,8 @@ function Item({ i }: { i: CheckItem }) {
         <p className="muted">{i.detail}</p>
         {i.unlocks && !i.done && <p className="check-unlocks">{i.unlocks}</p>}
       </div>
-      {busy ? <Thinking label="Connecting…" /> : i.action && !i.done && <Btn size="sm" onClick={run}>{i.action.label}</Btn>}
+      {i.action && !i.done && <Btn size="sm" onClick={run}>{i.action.label}</Btn>}
+      {i.action?.connect && <ConnectModal open={connecting} onOpenChange={setConnecting} why="Your agents read and reply through it. Its history imports as soon as it’s connected." />}
     </li>
   )
 }
