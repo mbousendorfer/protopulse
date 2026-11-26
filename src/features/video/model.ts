@@ -93,6 +93,8 @@ export type Clip = {
   ytTitle?: string
   /** The hook trial running or done on this clip. */
   trial?: Trial
+  /** A new cut of a published clip that did worse than usual. */
+  recutOf?: string
   arrivedAt: number
 }
 
@@ -353,6 +355,16 @@ export function trackRecord(c: Clip, clips: Clip[], posts: Post[], rule = false)
   const delta = Math.max(-6, Math.min(6, Math.round((lift - 1) * 4)))
   const word = past.length === 1 ? `Your ${c.pillar} clip did` : `Your ${past.length} ${c.pillar} clips did`
   return { delta, lift, why: `${word} ${lift.toFixed(1)}× your usual ${NETWORK_FIT[net] ?? net} reach`, like: { id: past[0].id, title: past[0].title, views: past[0].stats!.views }, ...(rule ? { rule } : {}) }
+}
+
+/* ---------- Recut ---------- */
+
+/** A shot that shows the product, by its label. */
+const PRODUCT_SHOT = /ridge|\bbag|bottle|jacket|shell|backpack/i
+/** Seconds into the clip when a shot showing the product starts; undefined when none does. */
+export function productAt(c: Clip, t: Transcript): number | undefined {
+  const shot = t.shots.find(x => x.e > c.start && x.s < c.end && PRODUCT_SHOT.test(x.label))
+  return shot ? Math.max(0, shot.s - c.start) : undefined
 }
 
 /* ---------- Hook trials ---------- */

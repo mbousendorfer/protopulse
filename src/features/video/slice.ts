@@ -1,16 +1,16 @@
 // Juno's slice: sources being watched or added, the clips she cut, the brand kit, and the editor's history.
 import type { State } from '../../app/state'
-import type { Decision, Handoff } from '../../app/types'
+import type { Decision, Handoff, Network } from '../../app/types'
 import { DAY, T } from '../../app/time'
 import { actionOf, addRule, agentOf, notify, now, pushHandoff, pushLog, removeHandoff, track, uid, updateHandoff } from '../../app/core'
 import { POSTS, type Pillar, type Post } from '../../data/publishing'
 import {
-  BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, TRIALS, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
+  BROLL, BRAND_KIT, ON_SCREEN, PEOPLE, PHASES, PHASE_MS, RELEASES, SEEDS, SOURCE_DEFS, TRANSCRIPT, TRIALS, clipFromSeed, clipsCard, speakerName, type BrandKit, type ClipSeed, type Source,
 } from '../../data/video'
-import { TRENDS } from '../../data/listening'
+import { LESSONS, TRENDS } from '../../data/listening'
 import { clipPerf, netAverage } from '../insights/metrics'
 import { LANG_LABEL, NETWORK_FIT, buildVersions, translatedCaption, type PostTags, captionSlips, coverFrames, coverText, shortsTitle, type Transcript, trackRecord, clipLengthOf, clipPosts, fitsLength, lengthSpec, findMoments, keywords, rescore, slipLabel, type Clip, type Evidence, type Lang, type Sentence,
-  HOOK_RULE, RULE_AFTER, numberWins, trialHold, trialPair, winnerOf, type TrialRecord } from './model'
+  HOOK_RULE, RULE_AFTER, productAt, numberWins, trialHold, trialPair, winnerOf, type TrialRecord } from './model'
 
 export type VideoState = {
   sources: Source[]
@@ -57,6 +57,7 @@ export type VideoAction =
   | { type: 'video/release'; person: string; signed: boolean }
   | { type: 'video/trial'; id: string }
   | { type: 'video/trialStop'; id: string }
+  | { type: 'video/recut'; id: string }
 
 /* ---------- Small setters ---------- */
 
@@ -200,6 +201,7 @@ export function unsendClips(s: State, ids: string[]): State {
 /** Undoing a Desk decision on a clips card also takes back what it sent. */
 export const undoDeskClips = (s: State, h: Handoff): State =>
   h.topic === 'Clips' ? unsendClips(s, s.video.clips.filter(c => c.sentFrom === h.id).map(c => c.id))
+    : h.topic === 'Recut' ? unsendClips(s, s.video.clips.filter(c => c.sentFrom === h.id).map(c => c.id))
     : h.topic === 'Hook trial' && h.ref ? backToTrialHook(unsendClips(s, s.video.clips.filter(c => c.sentFrom === h.id).map(c => c.id)), [h.ref])
       : h.topic === 'Hook rule' ? refreshTrack({ ...s, playbook: { ...s.playbook, rules: s.playbook.rules.filter(r => r.text !== HOOK_RULE) } })
         : h.topic === 'Captions' && h.fixes ? undoVideoWork(s, h.fixes) : s
@@ -449,6 +451,7 @@ export function onResolveVideo(s: State, h: Handoff, d: Decision): State {
     return refreshTrack(addRule(s, { kind: 'do', text: HOOK_RULE, agents: ['juno'], origin: `Learned from ${n} hook trials · Juno` }))
   }
   if (h.topic === 'Hook trial' && h.ref) return yes ? useWinner(s, h.ref, 'desk', h.id) : s
+  if (h.topic === 'Recut' && h.ref) return yes ? sendClips(s, [h.ref], 'desk', h.id) : removeRecuts(s, [h.ref])
   if (!h.ref) return s
   const src = sourceOf(s, h.ref)
   if (!src) return s
@@ -457,6 +460,83 @@ export function onResolveVideo(s: State, h: Handoff, d: Decision): State {
   if (h.topic === 'New video' && yes) next = startSource(next, src.id)
   return next
 }
+
+/* ---------- Recut: a published clip that did worse than usual ---------- */
+
+/** Under this share of its network's average views (Iris's `netAverage`), a published clip did worse than usual. */
+export const FLOP = 0.5
+const k1 = (n: number) => `${(n / 1000).toFixed(1)}k`
+const LESSON = LESSONS.find(l => l.id === 'ls1')!
+
+/** How a published clip did against its network's average, when it did worse than usual. */
+export function flopOf(s: State, c: Clip): { net: Network; avg: number; share: number } | undefined {
+  if (c.status !== 'published' || !c.stats || c.recutOf) return
+  const net = c.post.networks[0]
+  const avg = netAverage(s, net)?.reach
+  if (!avg || c.stats.views >= avg * FLOP) return
+  return { net, avg, share: c.stats.views / avg }
+}
+export const recutOf = (s: State, c: Clip) => s.video.clips.find(x => x.recutOf === c.id && x.status !== 'dismissed')
+
+/** The new cut: same moment, the product on screen from the first second (B-roll), the hook that names it. Waits for review. */
+export function makeRecut(s: State, c: Clip): Clip | undefined {
+  const src = sourceOf(s, c.source)
+  const f = flopOf(s, c)
+  if (!src || !f || recutOf(s, c)) return
+  const tr = TRANSCRIPT[src.transcript]
+  const said = tr.sentences.filter(x => x.s < c.end && x.e > c.start).map(x => x.text).join(' ')
+  const shot = BROLL.find(b => b.match.test(said)) ?? BROLL[1]
+  const at = productAt(c, tr)
+  const hook = c.hooks.find(h => /bag|ridge|bottle|jacket/i.test(h)) ?? c.hook
+  const when = at === undefined ? 'The product is never on screen' : `The product shows up at ${mmss(at)}`
+  const t = now(s)
+  return {
+    ...c, id: `${c.id}-recut`, title: `${c.title} (recut)`, hook, status: 'ready', stats: undefined, posts: undefined, sentAt: undefined, sentFrom: undefined, edited: false,
+    trial: undefined, recutOf: c.id, arrivedAt: t, base: { ...c.base, hook: Math.min(95, c.base.hook + 10) },
+    broll: [{ id: uid('br'), asset: shot.id, at: c.start, dur: 2 }],
+    cover: c.cover ? { ...c.cover, text: coverText(hook) } : c.cover,
+    why: `“${c.title}” got ${k1(c.stats!.views)} views, ${Math.round(f.share * 100)}% of your ${NETWORK_FIT[f.net] ?? f.net} average. ${when}: this cut opens on “${shot.label.toLowerCase()}” for 2 seconds, then Léo’s answer.`,
+    evidence: [
+      { value: k1(c.stats!.views), label: `views on the first cut, against ${k1(f.avg)} on average`, from: 'Insights', to: '/insights/explore' },
+      { value: '2 s', label: `“${LESSON.text}”: Echo’s lesson from competitors`, from: 'Listening', to: '/listening/competitors' },
+    ],
+  }
+}
+
+/** Recuts out: their posts leave the calendar, the clips go. */
+export function removeRecuts(s: State, ids: string[]): State {
+  const next = unsendClips(s, ids)
+  return setVideo(next, { clips: next.video.clips.filter(c => !ids.includes(c.id)) })
+}
+
+/**
+ * Juno reads how her published clips did. One that did worse than usual, by her level: Suggest, she says so on the clip
+ * and in the journal, you recut it; Draft, she makes the recut and asks on the Desk to post it; Act, she makes it and sends it.
+ */
+export function checkFlops(s: State): State {
+  let next = s
+  for (const c of s.video.clips.filter(x => flopOf(s, x) && !recutOf(s, x))) {
+    const f = flopOf(next, c)!
+    const level = levelOf(next, 'juno-recut')
+    const head = `“${c.title}” got ${k1(c.stats!.views)} views on ${NETWORK_FIT[f.net] ?? f.net}, ${Math.round(f.share * 100)}% of your average`
+    if (level === 'suggest') { next = pushLog(next, { agent: 'juno', text: `${head}. Recut it from Published to show the product first`, status: 'done', reason: 'Recuts are set to Suggest: you decide', link: `/video/clips/${c.id}` }); continue }
+    const r = makeRecut(next, c)!
+    next = setVideo(next, { clips: [r, ...next.video.clips] })
+    if (level === 'act') {
+      next = pushLog(next, { agent: 'juno', text: `${head}. Juno recut it with the product first`, status: 'done', reason: 'Recuts are set to Act', undoMinutes: 10, recuts: [r.id], link: `/video/clips/${r.id}` })
+      next = sendClips(next, [r.id], 'juno')
+    } else {
+      next = pushHandoff(next, {
+        agent: 'juno', kind: 'approval', urgency: 'today', topic: 'Recut', action: 'juno-recut', chain: ['juno', 'atlas'], ref: r.id,
+        title: `Post a new cut of “${c.title}”?`, context: `${head}. The new cut shows the product from the first second.`,
+        why: 'Recuts are set to Draft: Juno made the new cut, and it goes to Atlas once you approve.', confidence: 74, link: `/video/clips/${r.id}`,
+        preview: { type: 'clip', clip: r.id }, sources: r.evidence.map(e => ({ label: `${e.value} ${e.label}`, from: e.from })),
+      })
+    }
+  }
+  return next
+}
+export const recutScript = { tag: 'video', run: (s: State) => checkFlops(s) }
 
 /* ---------- Hook trials ---------- */
 
@@ -709,6 +789,13 @@ export function reduceVideo(s: State, a: VideoAction): State {
     case 'video/trialStop': {
       const c = s.video.clips.find(x => x.id === a.id && x.status === 'trial')
       return c ? notify(stopTrials(s, [a.id]), 'video', `Stopped the hook trial on “${c.title}”. It’s back to review with its first hook.`) : s
+    }
+
+    case 'video/recut': {
+      const c = s.video.clips.find(x => x.id === a.id)
+      const r = c && makeRecut(s, c)
+      if (!r) return s
+      return notify(track(setVideo(s, { clips: [r, ...s.video.clips] }), 'video/recut', { clip: a.id }), 'video', `Juno recut “${c!.title}”: the product is on screen from the first second. It’s in Ready to review.`)
     }
 
     case 'video/approveDub': {

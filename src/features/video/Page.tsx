@@ -7,9 +7,9 @@ import { PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/video'
 import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
-import { LANG_LABEL, captionSlips, type Clip } from './model'
+import { LANG_LABEL, NETWORK_FIT, captionSlips, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipScore } from './parts'
-import { holdReason } from './slice'
+import { flopOf, holdReason, recutOf } from './slice'
 import Sources, { SourceDetail } from './Sources'
 import BrandKit from './BrandKit'
 import Editor from './Editor'
@@ -78,7 +78,9 @@ function ClipCard({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<
   const slips = Object.keys(captionSlips(c, TRANSCRIPT[src.transcript])).length
   const review = c.audio.review?.length ?? 0
   const held = c.status === 'ready' || c.status === 'snoozed' ? holdReason(s, c) : undefined
-  const todo = c.status !== 'ready' && c.status !== 'snoozed' ? [] : [
+  const flop = flopOf(s, c)
+  const recut = flop && recutOf(s, c)
+  const todo = flop ? [`Did worse than usual: ${Math.round(flop.share * 100)}% of your ${NETWORK_FIT[flop.net] ?? flop.net} average views`] : c.status !== 'ready' && c.status !== 'snoozed' ? [] : [
     held ? `Held: ${held}` : '',
     slips ? `${slips} caption${slips > 1 ? 's' : ''} to fix` : '',
     c.framing === 'check' ? 'Framing to check' : c.framing === 'suggested' ? 'Framing suggested' : '',
@@ -113,6 +115,9 @@ function ClipCard({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<
           {c.status === 'trial' && c.trial && <span className="t-sm">On trial on Reels · results {new Date(c.trial.until).toLocaleDateString('en-GB', { weekday: 'short' })} {hhmm(c.trial.until)}</span>}
           {c.status === 'sent' && <Link className="link-btn t-sm" to="/publishing/calendar" onClick={e => e.stopPropagation()}>{posts.length ? `Scheduled ${posts.map(p => `${new Date(p!.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(p!.at)}`)[0]}${posts.length > 1 ? ` +${posts.length - 1}` : ''}` : 'In the calendar'}</Link>}
           {c.status === 'published' && c.stats && <span className="t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span>}
+          {flop && (recut
+            ? <Link className="link-btn t-sm" to={`/video/clips/${recut.id}`} onClick={e => e.stopPropagation()}>{recut.status === 'ready' ? 'New cut ready to review' : 'New cut sent to Atlas'}</Link>
+            : <Btn size="sm" onClick={stop(() => d({ type: 'video/recut', id: c.id }))}>Recut, product first</Btn>)}
         </div>
       </div>
     </article>
