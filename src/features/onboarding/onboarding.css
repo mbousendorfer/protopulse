@@ -15,7 +15,7 @@
 .onb-stages span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
 .onb-main { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: var(--s10) var(--s5) var(--s8); }
-.at-signup .onb-main, .at-reading .onb-main { max-width: 1040px; }
+.at-signup .onb-main { max-width: 1040px; }
 .at-results .onb-main { max-width: 860px; }
 .onb-step { display: flex; flex-direction: column; gap: var(--s5); animation: settle var(--slow) var(--ease); }
 .onb-head { display: flex; flex-direction: column; gap: var(--s2); }
@@ -49,18 +49,80 @@
 .onb-signup-side b { font-weight: 600; }
 .onb-signup-grid .onb-step h1 { font-size: var(--t-3xl); }
 
+/* ---------- Forms ---------- */
+.onb-form { display: flex; flex-direction: column; gap: var(--s4); }
+.onb-form .input { height: 40px; font-size: var(--t-md); }
+.onb-form .field > label, .onb-form .field > .label { color: var(--ink); }
+.onb-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); }
+.onb-phone { display: flex; gap: var(--s2); }
+.onb-phone .input:last-child { flex: 1; }
+.onb-pick { display: inline-flex; align-items: center; justify-content: space-between; gap: var(--s2); width: 100%; text-align: left; color: var(--ink); cursor: pointer; }
+.onb-pick.invalid { border-color: var(--alert); }
+.onb-code { width: auto; min-width: 72px; justify-content: center; }
+.onb-ph { color: var(--ink-2); }
+.onb-tick { display: inline-flex; width: 14px; color: var(--action-ink); }
+.onb-sso { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.onb-question { font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
+
 /* ---------- Website ---------- */
-.onb-site { display: flex; flex-direction: column; gap: var(--s2); }
-.onb-url { display: flex; align-items: center; height: 52px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--panel); padding-left: var(--s4); transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
+.onb-url { display: flex; align-items: center; height: 48px; border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--panel); padding-left: var(--s3); transition: border-color var(--fast) var(--ease), box-shadow var(--fast) var(--ease); }
 .onb-url:focus-within { border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }
 .onb-url.invalid { border-color: var(--alert); }
-.onb-url span { color: var(--ink-2); font-size: var(--t-lg); }
-.onb-url .input { border: 0; background: transparent; height: 100%; font-size: var(--t-xl); font-weight: 500; padding-left: 2px; box-shadow: none; }
-.onb-url .input:focus { box-shadow: none; }
+.onb-url span { color: var(--ink-2); }
+.onb-form .onb-url .input { border: 0; background: transparent; height: 100%; font-size: var(--t-lg); font-weight: 500; padding-left: 2px; box-shadow: none; }
 
-/* ---------- The live read ---------- */
-.onb-read { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: var(--s6); align-items: start; }
-.onb-phases { display: flex; flex-direction: column; gap: var(--s1); position: sticky; top: calc(56px + var(--s6)); }
+/* ---------- Connect ---------- */
+.onb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--s2); }
+.onb-net { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); width: 100%; height: 100%; min-height: 96px; padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--panel); color: var(--ink); text-align: left; transition: border-color var(--fast) var(--ease); }
+.onb-net:hover { border-color: var(--signal); }
+.onb-net-name { font-weight: 600; }
+.onb-net-note { font-size: var(--t-sm); color: var(--ink-2); }
+.onb-trust { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font-size: var(--t-sm); }
+.onb-trust li { display: flex; align-items: flex-start; gap: var(--s2); }
+.onb-trust svg { flex: none; margin-top: 1px; color: var(--ink-2); }
+.onb-trust b { font-weight: 600; }
+.onb-invite-row { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3) var(--s4); border: 1px solid var(--line); border-radius: var(--r-ctl); }
+.onb-invite-row p { flex: 1; min-width: 220px; }
+.onb-invite-row b { font-weight: 600; }
+.onb-sent { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); }
+.onb-mobile { display: flex; align-items: flex-start; gap: var(--s3); flex-wrap: wrap; }
+.onb-mobile b { font-weight: 600; }
+.onb-oauth { display: flex; flex-direction: column; gap: var(--s3); }
+.onb-oauth-who { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); }
+.onb-oauth h3 { font-size: var(--t-lg); font-weight: 600; }
+.onb-perms { display: flex; flex-direction: column; gap: 6px; }
+.onb-perms li { display: flex; align-items: center; gap: var(--s2); }
+.onb-note { font-size: var(--t-sm); padding: var(--s2) var(--s3); border-radius: var(--r-ctl); background: var(--sunk); }
+.onb-reasons { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--s2); }
+.onb-reasons legend { margin-bottom: var(--s2); }
+.onb-reason > label { display: flex; align-items: flex-start; gap: var(--s2); cursor: pointer; line-height: 1.4; }
+.onb-reason input[type='radio'], .onb-source input[type='radio'], .onb-radios input, .onb-pages input { accent-color: var(--signal); margin-top: 3px; flex: none; }
+.onb-reason-more { display: flex; flex-direction: column; gap: var(--s2); margin: var(--s2) 0 var(--s1) 24px; }
+
+/* ---------- Playbook ---------- */
+.onb-sources { display: flex; flex-direction: column; gap: var(--s2); }
+.onb-source { border: 1px solid var(--line); border-radius: var(--r-ctl); background: var(--panel); transition: border-color var(--fast) var(--ease); }
+.onb-source:not(.off):hover, .onb-source.on { border-color: var(--signal); }
+.onb-source.off { opacity: 0.75; }
+.onb-source > label { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); cursor: pointer; }
+.onb-source > label svg { flex: none; margin-top: 2px; color: var(--ink-2); }
+.onb-source b { font-weight: 600; }
+.onb-source-more { padding: 0 var(--s4) var(--s3) calc(var(--s4) + 24px); display: flex; flex-direction: column; gap: var(--s2); }
+.onb-pages { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+.onb-pages label { display: inline-flex; align-items: center; gap: var(--s2); cursor: pointer; }
+.onb-file { font-size: var(--t-sm); color: var(--ink); }
+.onb-recap { display: flex; flex-direction: column; }
+.onb-q-card { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s4); }
+.onb-q-card + .onb-q-card { border-top: 1px solid var(--line); }
+.onb-q-card h3 { font-size: var(--t-md); font-weight: 600; }
+.onb-from { font-size: var(--t-sm); color: var(--ink-2); }
+.onb-radios { display: flex; flex-direction: column; gap: 2px; }
+.onb-radio-row { display: flex; align-items: center; gap: var(--s2); }
+.onb-radio-row label { display: flex; align-items: flex-start; gap: var(--s2); flex: 1; cursor: pointer; padding: 4px 0; }
+.onb-toggles { flex-wrap: wrap; }
+.onb-toggles .filter { display: inline-flex; align-items: center; gap: 4px; }
+.onb-missing { color: var(--ink); }
+.onb-phases { display: flex; flex-direction: column; gap: var(--s1); }
 .onb-phases li { display: flex; gap: var(--s3); padding: var(--s2) 0; color: var(--ink-2); }
 .onb-phases li.current, .onb-phases li.done { color: var(--ink); }
 .onb-phases li > span:last-child { display: flex; flex-direction: column; }
@@ -70,30 +132,6 @@
 .onb-phases li.done .onb-phase-icon { background: var(--ok-wash); color: var(--ok); box-shadow: none; animation: float-in var(--base) var(--ease); }
 .onb-phases li.current .onb-phase-icon { box-shadow: none; }
 .onb-phase-icon .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--signal); animation: spin 0.8s linear infinite; }
-.onb-brand { padding: var(--s5) var(--s6); display: flex; flex-direction: column; gap: var(--s4); min-height: 400px; }
-.onb-brand-head { display: flex; align-items: center; gap: var(--s3); min-height: 48px; }
-.onb-brand-head h2 { font-size: var(--t-xl); font-weight: 600; }
-.onb-brand-logo { width: 44px; height: 44px; border-radius: var(--r-ctl); background: color-mix(in srgb, var(--a-sage) 22%, var(--panel)); color: var(--a-sage-ink); display: grid; place-items: center; font-weight: 700; font-size: var(--t-xl); animation: float-in var(--base) var(--ease); }
-.onb-skeleton { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.onb-skeleton i { display: block; height: 12px; border-radius: 6px; background: var(--lift-2); width: 40%; animation: pulse 1.2s ease-in-out infinite; }
-.onb-skeleton i + i { width: 60%; }
-@keyframes pulse { 50% { opacity: 0.5; } }
-.onb-brand section { display: flex; flex-direction: column; gap: var(--s2); padding-top: var(--s3); border-top: 1px solid var(--line); }
-.onb-brand h3 { font-size: var(--t-sm); font-weight: 600; color: var(--ink-2); display: flex; gap: 6px; }
-.onb-in { animation: rise var(--base) var(--ease) both; }
-.onb-products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3); }
-.onb-products li { display: grid; grid-template-columns: 44px minmax(0, 1fr); column-gap: var(--s2); align-items: center; font-size: var(--t-sm); line-height: 1.3; }
-.onb-products b { font-weight: 600; font-size: var(--t-md); grid-column: 2; }
-.onb-products li > .muted { grid-column: 2; }
-.onb-product-photo { grid-column: 1; grid-row: 1 / span 2; display: block; width: 44px; height: 44px; border-radius: var(--r-ctl); overflow: hidden; }
-.onb-facts { display: flex; flex-direction: column; gap: 4px; }
-.onb-facts li { display: flex; align-items: center; gap: 8px; }
-.onb-nets { display: flex; gap: var(--s2); flex-wrap: wrap; }
-.onb-nets li { display: inline-flex; }
-.onb-voice-find b { font-weight: 600; }
-.onb-rivals { display: flex; gap: var(--s4); flex-wrap: wrap; }
-.onb-rivals li { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
-.onb-shop { width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center; background: #5E8E3E; color: #fff; flex: none; }
 
 /* ---------- Lists to validate ---------- */
 .onb-group { display: flex; flex-direction: column; gap: var(--s2); }
@@ -132,6 +170,11 @@
 .onb-per-agent b { font-weight: 600; }
 
 /* ---------- First results ---------- */
+.onb-block { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s2); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); }
+.onb-later li { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); }
+.onb-later b { font-weight: 600; }
+.onb-later p { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); }
+.onb-shop { width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center; background: #5E8E3E; color: #fff; flex: none; }
 .onb-crew { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s2); }
 .onb-crew button { display: flex; align-items: flex-start; gap: var(--s2); width: 100%; height: 100%; padding: var(--s3); border-radius: var(--r-ctl); border: 1px solid var(--line); background: var(--panel); text-align: left; color: var(--ink); transition: border-color var(--fast) var(--ease); }
 .onb-crew button:not(:disabled):hover { border-color: var(--signal); }
@@ -175,15 +218,15 @@
   .onb-stages span { display: none; }
   .onb-main { padding: var(--s6) var(--s4) var(--s6); }
   .onb-head h1, .onb-signup-grid .onb-step h1 { font-size: var(--t-2xl); }
-  .onb-read { grid-template-columns: minmax(0, 1fr); }
-  .onb-phases { position: static; }
-  .onb-products { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .onb-brand { padding: var(--s4); min-height: 0; }
+  .onb-two { grid-template-columns: minmax(0, 1fr); }
+  .onb-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .onb-source-more { padding-left: var(--s4); }
+  .onb-int { flex-wrap: wrap; }
   .onb-signup-side { display: none; }
   .onb-per-agent li { flex-wrap: wrap; }
   .onb-a { margin-left: 0; }
   .onb-crew { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .onb-step, .onb-in, .onb-result, .onb-result-body, .onb-signup-side li, .onb-phase-done { animation: none; }
+  .onb-step, .onb-result, .onb-result-body, .onb-signup-side li, .onb-phase-done { animation: none; }
 }

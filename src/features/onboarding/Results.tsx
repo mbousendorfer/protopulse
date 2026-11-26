@@ -1,72 +1,86 @@
-import type { ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, Send } from 'lucide-react'
+import { ArrowRight, Check, Clock, Send } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { AgentId } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { hhmm } from '../../app/time'
 import { agentName } from '../../data/agents'
-import { PILLAR_PERF } from '../../data/insights'
-import { Btn, Mark, Net } from '../../ui'
-import { HBars } from '../../ui/charts'
+import { Btn, Mark, Net, Thinking } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
+import { ConnectModal } from './Connect'
 import { Foot, Head, useElapsed } from './parts'
-import { DAY1_IDS, QUESTIONS } from './day1'
+import { DAY1_IDS, QUESTIONS, firstBriefAt } from './day1'
+import { publishNet } from './model'
 
 const SENT = (n: number) => `Sent ${n} ${n > 1 ? 'replies' : 'reply'} Nova drafted`
 const slot = (t: number) => `${new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(t)}`
 
-/** The first results, one agent after the other. Each card thinks for a moment, then shows real work on Fernway's data. */
+/** First results, honest: what's ready now, and what takes hours with the time it lands. Also reachable from the Desk. */
 export default function Results({ onDone }: { onDone: () => void }) {
   const { s } = useStore()
-  const has = (id: string) => s.handoffs.some(h => h.id === id) || s.desk.done.some(x => x.id === id)
-  const nova = QUESTIONS.filter(q => has(q.id) || s.inbox.convs.find(c => c.id === q.conv)?.status === 'auto').length
-  const cards: { agent: AgentId; working: string; got: string; body: ReactNode }[] = []
-  if (nova) cards.push({ agent: 'nova', working: 'Reading messages', got: `${nova} ${nova > 1 ? 'replies' : 'reply'} ${QUESTIONS.some(q => s.handoffs.some(h => h.id === q.id)) ? 'ready' : 'sent'}`, body: <NovaResult /> })
-  if (has(DAY1_IDS.atlas)) cards.push({ agent: 'atlas', working: 'Reading your posts', got: '1 post idea', body: <AtlasResult /> })
-  if (has('h-peakline')) cards.push({ agent: 'echo', working: 'Checking competitors', got: '1 price move', body: <Plain id="h-peakline" where="Worth a look" /> })
-  if (has(DAY1_IDS.iris)) cards.push({ agent: 'iris', working: 'Comparing themes', got: '1 finding', body: <IrisResult /> })
-  if (has(DAY1_IDS.sage)) cards.push({ agent: 'sage', working: 'Planning', got: '4 pillars', body: <Plain id={DAY1_IDS.sage} where="Needs you" /> })
-
-  const STEP = 1500
-  const ms = useElapsed(cards.length * STEP + 300)
-  const revealed = Math.min(cards.length, Math.floor((ms + 300) / STEP))
-  const done = revealed >= cards.length
+  const nova = QUESTIONS.filter(q => s.handoffs.some(h => h.id === q.id) || s.desk.done.some(x => x.id === q.id) || s.inbox.convs.find(c => c.id === q.conv)?.status === 'auto').length
   const waiting = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need').length
-
   return (
     <section className="onb-step">
-      <Head title={done ? 'Your team’s first results' : 'Your team is on it'}
-        lede={cards.length ? 'Real work on Fernway’s data, from the first minutes. Nothing goes out without you.' : 'Connect an account and your agents start reading. Your Desk lists what’s left to set up.'} />
-      {cards.length > 0 && (
-        <ol className="onb-crew" aria-label="Your agents">
-          {cards.map((c, i) => (
-            <li key={c.agent} className={i < revealed ? 'ready' : ''}>
-              <button disabled={i >= revealed} onClick={() => document.getElementById(`onb-r-${c.agent}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
-                <Mark agent={c.agent} size="md" />
-                <span><b>{agentName(c.agent)}</b>{i < revealed ? <span className="onb-got"><Check size={12} aria-hidden />{c.got}</span> : <span className="onb-working"><span className="spin" aria-hidden />{c.working}</span>}</span>
-              </button>
-            </li>
-          ))}
+      <Head title="Your team’s first results" lede="Some work is ready now. What takes hours says when it lands. Nothing goes out without you." />
+      <div className="onb-group">
+        <h2>Ready now</h2>
+        <ol className="onb-cards">
+          <Result agent="atlas" got="3 first drafts"><AtlasResult /></Result>
+          {nova > 0 && <Result agent="nova" got={`${nova} ${nova > 1 ? 'replies' : 'reply'}`}><NovaResult /></Result>}
         </ol>
-      )}
-      <p className="sr-only" aria-live="polite">{revealed ? `${revealed} of ${cards.length} agents done` : ''}</p>
-      <ol className="onb-cards">
-        {cards.slice(0, revealed).map(c => (
-          <li key={c.agent} id={`onb-r-${c.agent}`} className="card onb-result">
-            <header>
-              <Mark agent={c.agent} size="md" />
-              <b style={{ color: `var(--a-${c.agent}-ink)` }}>{agentName(c.agent)}</b>
-              <span className="muted t-sm">· {c.got}</span>
-            </header>
-            <div className="onb-result-body">{c.body}</div>
-          </li>
-        ))}
-      </ol>
-      <Foot note={done ? (waiting ? `${waiting} thing${waiting > 1 ? 's' : ''} need${waiting > 1 ? '' : 's'} you on your Desk` : 'Nothing needs you right now') : undefined}>
-        <Btn variant={done ? 'primary' : 'secondary'} onClick={onDone}>Open my Desk<ArrowRight size={14} /></Btn>
+      </div>
+      <Later />
+      <Foot note={waiting ? `${waiting} thing${waiting > 1 ? 's' : ''} need${waiting > 1 ? '' : 's'} you on your Desk` : undefined}>
+        <Btn variant="primary" onClick={onDone}>Open my Desk<ArrowRight size={14} /></Btn>
       </Foot>
     </section>
+  )
+}
+
+function Result({ agent, got, children }: { agent: AgentId; got: string; children: ReactNode }) {
+  return (
+    <li className="card onb-result">
+      <header><Mark agent={agent} size="md" /><b>{agentName(agent)}</b><span className="muted t-sm">· {got}</span></header>
+      <div className="onb-result-body">{children}</div>
+    </li>
+  )
+}
+
+function AtlasResult() {
+  const { s, d } = useStore()
+  const now = useNow(1000)
+  const [connecting, setConnecting] = useState(false)
+  // Writing takes a moment, for real: the drafts appear once, the first time this screen opens.
+  const seen = s.setup.seen.includes('results-atlas')
+  const written = useElapsed(1800, seen) >= 1800
+  useEffect(() => { if (written && !seen) d({ type: 'setup/seen', path: 'results-atlas' }) }, [written]) // eslint-disable-line react-hooks/exhaustive-deps
+  if (!written) return <Thinking label="Atlas is writing from your Playbook…" />
+  const net = publishNet(s.setup.connected)
+  return (
+    <>
+      <p className="onb-result-title">Atlas wrote 3 drafts from your website and your Playbook.</p>
+      {!net && (
+        <div className="onb-block">
+          <p>Pick the account these posts publish on. You don’t have one connected yet, so these drafts are a preview you can’t schedule.</p>
+          <Btn variant="primary" onClick={() => setConnecting(true)}>Connect to schedule</Btn>
+        </div>
+      )}
+      <ul className="onb-replies">
+        {s.setup.drafts.map(x => (
+          <li key={x.id} className="onb-post">
+            <span className="onb-a-by">{net && <Net n={net} size={14} />}{x.status === 'scheduled' ? `Scheduled for ${slot(x.at)}` : `Draft for ${slot(x.at)}`}</span>
+            <p>{x.text}</p>
+            {net && x.status === 'draft' && <div className="row"><Btn size="sm" onClick={() => d({ type: 'setup/schedule', id: x.id })}>Schedule for {slot(x.at)}</Btn></div>}
+            {x.status === 'scheduled' && (x.undoUntil && x.undoUntil > now
+              ? <UndoBar until={x.undoUntil} onUndo={() => d({ type: 'setup/schedule', id: x.id, undo: true })}>Scheduled. It’s in your calendar.</UndoBar>
+              : <p className="muted"><Check size={14} className="ok" aria-hidden /> Scheduled. It’s in your calendar.</p>)}
+          </li>
+        ))}
+      </ul>
+      <ConnectModal open={connecting} onOpenChange={setConnecting} why="Atlas needs an account to publish on before it can schedule a draft." />
+    </>
   )
 }
 
@@ -80,7 +94,7 @@ function NovaResult() {
   const sent = s.log.find(l => l.text.startsWith('Sent ') && l.restore?.some(h => h.id.startsWith('d1-nova')) && l.status !== 'undone')
   return (
     <>
-      <p className="onb-result-title">{alone ? `${qs.length} questions came in overnight. Nova answered them on her own.` : `${qs.length} question${qs.length > 1 ? 's' : ''} came in overnight. Nova wrote the answers.`}</p>
+      <p className="onb-result-title">{alone ? `${qs.length} messages were waiting in your imported Inbox. Nova answered them on her own.` : `${qs.length} message${qs.length > 1 ? 's were' : ' was'} waiting in your imported Inbox. Nova wrote the replies.`}</p>
       <ul className="onb-replies">
         {qs.map(q => {
           const c = s.inbox.convs.find(x => x.id === q.conv)!
@@ -110,65 +124,41 @@ function NovaResult() {
   )
 }
 
-function AtlasResult() {
-  const { s, d } = useStore()
-  const now = useNow(1000)
-  const idea = s.publishing.ideas.find(i => i.handoff === DAY1_IDS.atlas || (s.handoffs.find(h => h.id === DAY1_IDS.atlas)?.ref === i.id))
-    ?? s.publishing.ideas.find(i => i.id === s.desk.done.find(x => x.id === DAY1_IDS.atlas)?.h.ref)
-  if (!idea) return null
-  const src = idea.sources[0]
-  const draft = idea.drafts?.[0]
-  const open = s.handoffs.some(h => h.id === DAY1_IDS.atlas)
-  const log = s.log.find(l => l.restore?.some(h => h.id === DAY1_IDS.atlas) && l.status !== 'undone')
-  const scheduled = idea.status === 'scheduled'
-  return (
-    <>
-      <p className="onb-result-title">Atlas suggests: {idea.title}</p>
-      {src.value && <p className="onb-metric"><b className="num">{src.value}</b> <span>{src.measure}</span></p>}
-      <p className="muted">{idea.why}</p>
-      {draft && (
-        <div className="onb-post">
-          <span className="onb-a-by"><Net n={draft.network} size={14} /> Draft for {slot(draft.at)}</span>
-          <p>{draft.text}</p>
-        </div>
-      )}
-      {open && !draft && <div className="row"><Btn onClick={() => d({ type: 'publishing/ideaDraft', id: idea.id })}>Draft it</Btn><span className="muted t-sm">Atlas is on Suggest: it writes when you ask.</span></div>}
-      {open && draft && <div className="row"><Btn onClick={() => d({ type: 'core/resolve', id: DAY1_IDS.atlas, decision: { kind: 'approve' } })}>Schedule for {slot(draft.at)}</Btn></div>}
-      {scheduled && log?.undoUntil && log.undoUntil > now
-        ? <UndoBar until={log.undoUntil} onUndo={() => d({ type: 'core/undo', id: log.id })}>Scheduled. It’s in your calendar.</UndoBar>
-        : scheduled ? <p className="muted"><Check size={14} className="ok" aria-hidden /> Scheduled. It’s in your calendar.</p> : null}
-    </>
-  )
-}
-
-function IrisResult() {
+/** What takes real time: the backfill, the import, tomorrow's brief. Each says when it lands, then that it landed. */
+function Later() {
   const { s } = useStore()
-  const h = s.handoffs.find(x => x.id === DAY1_IDS.iris) ?? s.desk.done.find(x => x.id === DAY1_IDS.iris)?.h
-  if (!h) return null
-  const best = [...PILLAR_PERF].sort((a, b) => b.er - a.er)[0]
+  const nav = useNavigate()
+  const now = useNow(5000)
+  const st = s.setup
+  const connected = st.connected.length > 0
+  const pending = (id: string) => st.pending.find(p => p.id === id)
+  const landed = (id: string) => s.handoffs.some(h => h.id === id) || s.desk.done.some(x => x.id === id)
+  const briefAt = firstBriefAt(st.startedAt ?? now)
+  const rows: { agent: AgentId; what: string; when: ReactNode; ready?: boolean; to?: string }[] = []
+  const nova = pending('nova')
+  if (nova) rows.push({ agent: 'nova', what: 'Replies to the messages your Inbox imports', when: `In about 10 minutes · around ${hhmm(nova.at)}` })
+  const echo = pending('echo')
+  rows.push({ agent: 'echo', what: 'First competitor topics',
+    ...(echo ? { when: `In about 2 hours, after the backfill · around ${hhmm(echo.at)}` }
+      : landed('h-peakline') ? { when: 'Ready', ready: true, to: '/?card=h-peakline' }
+      : connected ? { when: 'Started. Topics show up in Listening as Echo finds them.', to: '/listening' } : { when: 'Needs a connected profile' }) })
+  const iris = pending('iris')
+  rows.push({ agent: 'iris', what: 'Your first report',
+    ...(iris ? { when: `Later today, once your history is imported · around ${hhmm(iris.at)}` }
+      : landed(DAY1_IDS.iris) ? { when: 'Ready', ready: true, to: `/?card=${DAY1_IDS.iris}` } : { when: 'Needs a connected profile: nothing to report on yet' }) })
+  rows.push({ agent: 'iris', what: 'Your first morning brief', ...(now >= briefAt ? { when: 'Ready', ready: true, to: '/' } : { when: `Tomorrow at ${hhmm(briefAt)}` }) })
   return (
-    <>
-      <p className="onb-result-title">{h.title}</p>
-      <p className="muted">{h.context}</p>
-      <figure className="onb-chart">
-        <figcaption className="muted t-sm">Engagement rate by theme, last 90 days</figcaption>
-        <HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v}%`} highlight={best.pillar} color="var(--a-iris)" />
-      </figure>
-    </>
-  )
-}
-
-function Plain({ id, where }: { id: string; where: string }) {
-  const { s } = useStore()
-  const h = s.handoffs.find(x => x.id === id) ?? s.desk.done.find(x => x.id === id)?.h
-  if (!h) return null
-  const lines = h.preview?.type === 'plan' ? h.preview.lines : undefined
-  return (
-    <>
-      <p className="onb-result-title">{h.title}</p>
-      <p className="muted">{h.context}</p>
-      {lines && <ul className="onb-lines">{lines.map(l => <li key={l}>{l}</li>)}</ul>}
-      <p className="onb-where">{s.handoffs.some(x => x.id === id) ? `On your Desk, in ${where}.` : 'Settled on your Desk.'}</p>
-    </>
+    <div className="onb-group">
+      <h2>On its way</h2>
+      <ul className="card rows onb-later">
+        {rows.map(r => (
+          <li key={r.what}>
+            <Mark agent={r.agent} />
+            <div className="grow"><b>{r.what}</b><p className={r.ready ? '' : 'muted'}>{r.ready ? <><Check size={14} aria-hidden className="ok" /> {r.when}</> : <><Clock size={14} aria-hidden /> {r.when}</>}</p></div>
+            {r.to && <Btn size="sm" onClick={() => nav(r.to!)}>{r.ready ? 'Open' : 'Look'}</Btn>}
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

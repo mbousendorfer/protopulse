@@ -115,6 +115,7 @@
   /* Networks: ADS brand colours */
   --n-instagram: #DD2A7B; --n-tiktok: #000000; --n-linkedin: #2668B2; --n-facebook: #0866FF;
   --n-youtube: #FE0101; --n-x: #000000; --n-google: #2668B2; --n-trustpilot: #00a36c;
+  --n-threads: #000000; --n-pinterest: #E60023; --n-bluesky: #1185FE;
 
   /* Utility washes */
   --scrim: rgba(33, 46, 68, 0.4);
@@ -194,6 +195,7 @@
 
   --n-instagram: #f0609f; --n-tiktok: #EAECEF; --n-linkedin: #5b95d6; --n-facebook: #4d8fff;
   --n-youtube: #ff5a4f; --n-x: #EAECEF; --n-google: #5b95d6; --n-trustpilot: #3cc98f;
+  --n-threads: #EAECEF; --n-pinterest: #ff4d6a; --n-bluesky: #4da3ff;
 
   --scrim: rgba(5, 9, 16, 0.6);
   --row-hover: rgba(214, 218, 224, 0.04);

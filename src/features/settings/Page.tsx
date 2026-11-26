@@ -8,6 +8,7 @@ import { ago, MIN } from '../../app/time'
 import { agentName } from '../../data/agents'
 import { Btn, Net, PageHead, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { ShopifyMark } from '../onboarding/parts'
+import { pageOf } from '../onboarding/model'
 import './settings.css'
 
 type Account = { id: string; name: string; handle: string; net?: Network; followers?: string; state: 'ok' | 'expiring' | 'error'; syncedMin: number; note?: string }
@@ -59,7 +60,7 @@ function Accounts() {
   const { s, d } = useStore()
   // Day 1: accounts were connected minutes ago, so none is expiring yet; those skipped at sign-up can be connected here.
   const day1 = s.phase === 'day1'
-  const [list, setList] = useState<Account[]>(() => (day1 ? ACCOUNTS.map(a => ({ ...a, state: 'ok', syncedMin: 1, note: a.id === 'shop' ? a.note : undefined })) : ACCOUNTS))
+  const [list, setList] = useState<Account[]>(() => (day1 ? ACCOUNTS.filter(a => pageOf(a.id)).map(a => ({ ...a, state: 'ok', syncedMin: 1, note: undefined })) : ACCOUNTS))
   const [busy, setBusy] = useState<string | null>(null)
   const off = (a: Account) => day1 && !s.setup.connected.includes(a.id)
   const reconnect = (a: Account) => {
