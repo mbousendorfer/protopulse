@@ -77,23 +77,32 @@ function Reports() {
     <div className="reports">
       <StudioAsk />
       <Schedules />
-      {reportList(s).map(r => {
-        const shared = s.insights.shared[r.id]
-        return (
-          <Link key={r.id} to={`/insights/reports/${r.id}`} className="card report-row">
-            <span className="report-icon" aria-hidden><FileText size={16} /></span>
-            <div className="report-main">
-              <span className="faint">{reportMeta(r)}</span>
-              <h2>{r.title}</h2>
-              <p className="muted">{r.summary}</p>
-            </div>
-            <div className="report-meta">
-              <span className="mono faint">Written {ago(r.writtenAt, now)}</span>
-              {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={11} />Shared with Claire</Pill> : r.kind !== 'brief' ? <Pill>Not shared</Pill> : null}
-            </div>
-          </Link>
-        )
-      })}
+      {/* One list, one row per report: six reports fit the first screen instead of four cards. */}
+      <section className="card">
+        <div className="card-head"><h2>Written by Iris <span className="faint num">{reportList(s).length}</span></h2></div>
+        <ul className="rows report-list">
+          {reportList(s).map(r => {
+            const shared = s.insights.shared[r.id]
+            return (
+              <li key={r.id}>
+                <Link to={`/insights/reports/${r.id}`} className="report-row">
+                  <span className="report-icon" aria-hidden><FileText size={16} /></span>
+                  <div className="report-main">
+                    <h3>{r.title}</h3>
+                    <span className="faint report-kind">{reportMeta(r)}</span>
+                    <p className="muted">{r.summary}</p>
+                  </div>
+                  <div className="report-meta">
+                    <span className="mono faint">{ago(r.writtenAt, now)}</span>
+                    {/* Only what differs gets a status: a draft waiting for you, or what Claire already has. */}
+                    {r.draft ? <Pill tone="caution">Waits for you</Pill> : shared ? <Pill tone="ok"><Check size={12} />Shared with Claire</Pill> : null}
+                  </div>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      </section>
     </div>
   )
 }
@@ -245,7 +254,7 @@ function Explore() {
 
   const th = (key: SortKey, label: string) => (
     <th className={['date', 'network', 'pillar', 'author'].includes(key) ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
-      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={11} /></button>
+      <button onClick={() => setSort(s => ({ key, desc: s.key === key ? !s.desc : !['network', 'pillar', 'author'].includes(key) }))}>{label}<ArrowUpDown size={12} /></button>
     </th>
   )
 

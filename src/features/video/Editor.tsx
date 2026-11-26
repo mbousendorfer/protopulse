@@ -24,7 +24,7 @@ import { TemplatePicker, SwatchPicker } from './BrandKit'
 import { CoverFrame, ScoreBadge, fmt, focusAt, useClip } from './parts'
 import { ClipNotNow } from './Page'
 
-const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow', dismissed: 'Dismissed' }
+const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow 08:00', dismissed: 'Dismissed' }
 const CLIP_NETWORKS: Network[] = ['tiktok', 'instagram', 'youtube', 'linkedin', 'facebook']
 const typing = (e: KeyboardEvent) => !!(e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"]'))
 
@@ -89,11 +89,17 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
         <Pill tone={clip.status === 'sent' || clip.status === 'published' ? 'ok' : undefined}>{STATUS[clip.status]}</Pill>
         <ScoreBadge value={score.total} />
         <span className="spacer" />
-        <Btn variant="ghost" icon size="sm" disabled={!canUndo} onClick={() => d({ type: 'video/undo' })} aria-label="Undo" kbd="⌘Z"><Undo2 size={16} /></Btn>
-        <Btn variant="ghost" icon size="sm" disabled={!canRedo} onClick={() => d({ type: 'video/redo' })} aria-label="Redo" kbd="⇧⌘Z"><Redo2 size={16} /></Btn>
-        {open && <ClipNotNow c={clip} />}
-        {open ? <Btn variant="primary" onClick={() => d({ type: 'video/send', ids: [clip.id] })}>Send to Atlas</Btn>
-          : clip.status === 'sent' ? <Btn onClick={() => nav('/publishing/calendar')}>Open the calendar<ArrowUpRight size={14} /></Btn> : null}
+        <span className="row tight nowrap">
+          <Btn variant="ghost" icon size="sm" disabled={!canUndo} onClick={() => d({ type: 'video/undo' })} aria-label="Undo" kbd="⌘Z"><Undo2 size={16} /></Btn>
+          <Btn variant="ghost" icon size="sm" disabled={!canRedo} onClick={() => d({ type: 'video/redo' })} aria-label="Redo" kbd="⇧⌘Z"><Redo2 size={16} /></Btn>
+        </span>
+        {(open || clip.status === 'sent') && (
+          <span className="ed-acts">
+            {open && <ClipNotNow c={clip} />}
+            {open ? <Btn variant="primary" onClick={() => d({ type: 'video/send', ids: [clip.id] })}>Send to Atlas</Btn>
+              : <Btn onClick={() => nav('/publishing/calendar')}>Open the calendar<ArrowUpRight size={14} /></Btn>}
+          </span>
+        )}
       </header>
       <Notice scope="video" className="ed-notice" />
       <div className="ed-panes" role="tablist" aria-label="Editor panels">

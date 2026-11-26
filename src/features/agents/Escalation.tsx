@@ -4,7 +4,7 @@ import { ChevronDown, Trash2 } from 'lucide-react'
 import type { AgentId } from '../../app/types'
 import { useStore } from '../../app/store'
 import { AGENTS, agentName } from '../../data/agents'
-import { Btn, Empty, Filters, Menu, Seg, Switch } from '../../ui'
+import { Btn, Empty, Filters, Mark, Menu, Seg, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
 import './rules.css'
 
@@ -41,9 +41,9 @@ export default function Escalation() {
   return (
     <section className="card">
       <div className="card-head"><div><h2>Always raised to a person</h2><span className="faint">Whatever the autonomy, these topics never go out without a human.</span></div></div>
-      <div className="card-body pb-0">
+      <div className="card-body">
         <Filters label="Watched by" value={agent} onChange={v => { setParams(v === 'all' ? {} : { agent: v }, { replace: true }); pick(CONDITIONS.find(c => v === 'all' || c.agents.includes(v))) }}
-          items={[{ value: 'all' as const, label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id, label: a.name }))]} />
+          items={[{ value: 'all' as const, label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id, label: <><Mark agent={a.id} />{a.name}</> }))]} />
       </div>
       <ul className="rows">
         {!shown.length && <li><Empty title={`Nothing is raised by ${agent === 'all' ? 'any agent' : agentName(agent)} yet`} /></li>}

@@ -225,7 +225,6 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
     questions: QUESTIONS.filter(q => s.setup.connected.some(id => netOf(id) === s.inbox.convs.find(c => c.id === q.conv)?.network)).length,
   }
   const preset = PRESETS.find(p => p.value === s.setup.preset)!
-  const label = (v: string) => (v === 'cautious' ? <>Cautious <em className="rec-tag">· Recommended</em></> : PRESETS.find(p => p.value === v)!.label)
   return (
     <section className="onb-step">
       <Head title="Meet your team" lede="Six agents, one per department. Here’s what each will do for Fernway, starting now." />
@@ -241,12 +240,13 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
       <div className="card pad onb-autonomy">
         <h2>How much can they do alone?</h2>
         <Seg name="onb-preset" label="Autonomy for the whole team" value={s.setup.preset} onChange={v => d({ type: 'setup/preset', preset: v })}
-          options={PRESETS.map(p => ({ value: p.value, label: label(p.value) }))} />
+          options={PRESETS.map(p => ({ value: p.value, label: p.label }))} />
         <p>{preset.says}</p>
-        <dl className="onb-counts">
-          <div><dt>Act alone</dt><dd className="num">{counts.act}</dd></div>
-          <div><dt>Draft for you</dt><dd className="num">{counts.draft}</dd></div>
-          <div><dt>Suggest only</dt><dd className="num">{counts.suggest}</dd></div>
+        {/* Same scale, same order as every agent profile: Suggest, Draft, Act. */}
+        <dl className="onb-counts" aria-label="Actions at each level, across the team">
+          <div><dt>Actions on Suggest</dt><dd className="num">{counts.suggest}</dd></div>
+          <div><dt>On Draft</dt><dd className="num">{counts.draft}</dd></div>
+          <div><dt>On Act</dt><dd className="num">{counts.act}</dd></div>
         </dl>
         <p className="muted t-sm">Press, legal and safety always come to you, whatever you pick. Agents ask for more autonomy when your approvals show they’ve earned it.</p>
         <button className="link-btn self-start" aria-expanded={perAgent} onClick={() => setPerAgent(o => !o)}>{perAgent ? 'Same setting for everyone' : 'Adjust per agent'}</button>

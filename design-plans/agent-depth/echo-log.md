@@ -36,3 +36,4 @@
 - 25/11/2026 · ⌘K concurrent · réponse lue dans les événements ouverts (même état que Listening › Competitors) · texte Peakline figé · « les chiffres cités en ⌘K sont ceux de l'écran »
 - 25/11/2026 · Clôture · PROMPT.md §1 (scénarios Listening), §4 Echo, §6.5, §9 réécrits ; rapport `docs/agent-depth/echo.html` avec captures avant (73a7ba2) / après · – · fin de session
 - 25/11/2026 · Déclencheurs ⇧D (« Hard to see ») · ajout Norrø (ripostes, email ventes selon le cran), Trailkind → benchmark TikTok, tendance repair · – · règle de la Phase 0 : chaque capacité difficile à croiser a un déclencheur ; recherche qui se remplit, concurrent ajouté et alertes passent par les boutons de temps
+- 26/11/2026 · Pitch F6 Mention → Inbox (contrat `inbox/ingest` de Nova, #128) · **Later** · – · réponse de l'humain ; « Ask Nova to reply » garde ses cartes Desk (conversations virtuelles côté Inbox)

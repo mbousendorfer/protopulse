@@ -36,6 +36,8 @@
   --pv-font-x: TwitterChirp, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --pv-font-yt: Roboto, Arial, sans-serif;
   --pv-font-g: 'Google Sans', Roboto, Arial, sans-serif;
+  /* Over a video frame or a photo (Video's player, thumbnails): the same in both themes. */
+  --media-bg: #000000; --on-media: #ffffff; --media-badge: rgba(0, 0, 0, 0.72); --media-shadow: rgba(0, 0, 0, 0.6);
   --pv-brand: #2b3a33; --pv-brand-ink: #e8eaed; --pv-on-color: #ffffff;
   --pv-shadow: rgba(0, 0, 0, 0.45); --pv-scrim: rgba(0, 0, 0, 0.6); --pv-scrim-top: rgba(0, 0, 0, 0.3);
   --pv-ig-bg: #ffffff; --pv-ig-ink: #000000; --pv-ig-muted: #737373; --pv-ig-link: #00376b; --pv-ig-blue: #0095f6;

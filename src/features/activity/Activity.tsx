@@ -8,12 +8,16 @@ import { AGENTS } from '../../data/agents'
 import { Btn, Empty, Filters, Mark, PageHead, Pill, Switch } from '../../ui'
 import './activity.css'
 
-const STATUS: Record<LogStatus, { label: string; tone?: 'ok' | 'caution' | 'alert' | 'signal' }> = {
-  done: { label: 'Done' }, approved: { label: 'Approved by you', tone: 'ok' }, edited: { label: 'Edited by you', tone: 'signal' },
+const STATUS: Record<LogStatus, { label: string; tone?: 'ok' | 'caution' | 'alert' }> = {
+  done: { label: 'Done' }, approved: { label: 'Approved by you', tone: 'ok' }, edited: { label: 'Edited by you' },
   rejected: { label: 'Rejected', tone: 'alert' }, undone: { label: 'Undone', tone: 'caution' }, redone: { label: 'Redone' }, dismissed: { label: 'Dismissed' },
 }
 
 type StatusFilter = 'all' | 'alone' | 'you' | 'undone'
+
+/** A day shows its latest entries; the rest wait behind “Show N more”, like the Inbox groups. */
+export const DAY_CAP = 12
+export const visibleRows = <T,>(rows: T[], open: boolean) => (open || rows.length <= DAY_CAP + 2 ? rows : rows.slice(0, DAY_CAP))
 
 export default function Activity() {
   const { s, d } = useStore()
@@ -23,6 +27,7 @@ export default function Activity() {
   const [status, setStatus] = useState<StatusFilter>('all')
   const [reversible, setReversible] = useState(false)
   const [open, setOpen] = useState<string | null>(null)
+  const [full, setFull] = useState<string[]>([])
 
   const canUndo = (l: LogEntry) => !!l.undoUntil && l.undoUntil > now && l.status !== 'undone'
   const items = s.log.filter(l =>
@@ -57,7 +62,7 @@ export default function Activity() {
         <section key={day} className="act-day">
           <h2>{day} <span className="faint num">{rows.length}</span></h2>
           <ul className="card ledger">
-            {rows.map(l => {
+            {visibleRows(rows, full.includes(day)).map(l => {
               const isOpen = open === l.id
               const st = STATUS[l.status]
               return (
@@ -69,7 +74,8 @@ export default function Activity() {
                       {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                       <span>{l.text}</span>
                     </button>
-                    {st.tone ? <Pill tone={st.tone}>{st.label}</Pill> : <span className="faint lstatus">{st.label}</span>}
+                    {/* Done is what agents do all day: only what differs (your decisions, undos) gets a status. */}
+                    {l.status === 'done' ? <span aria-hidden /> : <Pill tone={st.tone}>{st.label}</Pill>}
                     <span className="lact">
                       {canUndo(l) && <Btn size="xs" onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={12} />Undo · {left(l.undoUntil!, now)}</Btn>}
                       {l.status === 'undone' && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/redo', id: l.id })}><Redo2 size={12} />Redo</Btn>}
@@ -87,6 +93,9 @@ export default function Activity() {
                 </li>
               )
             })}
+            {visibleRows(rows, full.includes(day)).length < rows.length && (
+              <li className="act-more"><Btn size="sm" variant="ghost" onClick={() => setFull(f => [...f, day])}>Show {rows.length - DAY_CAP} more</Btn></li>
+            )}
           </ul>
         </section>
       ))}

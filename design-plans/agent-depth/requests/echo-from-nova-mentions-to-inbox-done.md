@@ -23,3 +23,6 @@ Plutôt qu'une carte Desk d'Echo pour une mention à laquelle il faut répondre,
 
 ## En attendant
 Rien ne casse : sans appel d'Echo, ses cartes Desk restent telles quelles.
+
+## Traité (Echo, 26/11/2026)
+Pitché à l'humain : **Later**. Echo n'appelle pas encore `inbox/ingest` ; ses cartes Desk restent telles quelles. Voir `echo-log.md`.
