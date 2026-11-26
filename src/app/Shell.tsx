@@ -7,6 +7,8 @@ import {
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
 import { inboxNeedsCount } from '../features/inbox/slice'
+import { videoNeeds } from '../features/video/slice'
+import { insightsNeeds } from '../features/insights/needs'
 import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
@@ -58,6 +60,8 @@ export default function Shell() {
   // The Inbox badge predicts the Inbox's own Needs you view (conversations), not Nova's Desk cards.
   const inboxNeeds = inboxNeedsCount(s)
   const countFor = (agent: AgentId) => open.filter(h => h.agent === agent).length
+  // Video and Insights open on what waits for Sam (PROMPT §3.9): their badge counts that block, like the Inbox.
+  const deptCount = (agent: AgentId) => (agent === 'nova' ? inboxNeeds : agent === 'juno' ? videoNeeds(s).count : agent === 'iris' ? insightsNeeds(s).count : countFor(agent))
   const urgentFor = (agent: AgentId) => open.some(h => h.agent === agent && h.urgency === 'urgent')
 
   // Track navigation for the tester log, close mobile rail.
@@ -113,7 +117,7 @@ export default function Shell() {
           {DEPTS.map(dp => {
             const ag = s.agents.find(a => a.id === dp.agent)!
             return (
-              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : countFor(dp.agent)} hot={urgentFor(dp.agent)}
+              <RailLink key={dp.to} to={dp.to} label={dp.label} count={deptCount(dp.agent)} hot={urgentFor(dp.agent)}
                 icon={<Mark agent={dp.agent} state={ag.status === 'on' ? 'on' : 'paused'} />} />
             )
           })}
