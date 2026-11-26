@@ -42,3 +42,5 @@
 - 26/11 · Pitch n°9 « Historique des boosts et leur résultat » (#10) · **Drop** · — · décision de l'humain, sans commentaire.
 - 26/11 · Demande d'Atlas « chiffres par profil » · **Later** · Go · décision de l'humain ; demande close sans construction.
 - 26/11 · Demande de Nova « temps de réponse » (re-pitch réduit du rapport community) · **Toujours Later** · Go réduit · décision de l'humain ; demande close sans construction.
+- 26/11 · Benchmark · abonnés de l'onglet Audience alignés sur la valeur déjà affichée par Echo (120 000 au lieu de 48 200) ; la ligne Fernway vient d'Iris (`fernwayRow`), les concurrents et la part de voix d'Echo · garder deux chiffres d'abonnés · un même chiffre sur tous les écrans (PROMPT §9). Demande à Echo pour qu'il lise la croissance d'Iris (1,8 % vs 2,1 %).
+- 26/11 · Déclencheurs ⇧D · `ev-audience` → /insights/audience ajouté à côté de `ev-linkedin`. Les rapports quotidiens, hebdo et programmés passent par les boutons d'avance du temps ; Report Studio et ROI sont à la surface d'Insights.
