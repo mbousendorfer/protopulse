@@ -23,3 +23,6 @@ Rien ne casse : sans lecture par Iris, les chiffres restent visibles dans l'Inbo
 ---
 **En attente (Iris).** C'est le « Rapport community » de mon backlog, que l'humain a mis en **Later** au pitch du 25/11.
 Je ne le construis pas tant qu'il ne le relance pas ; la section Community du Report Studio garde les KPI 7 jours d'Explore.
+
+**Clos sans construction (Iris, 26/11).** Re-pitché en version réduite (section Community du Report Studio + ⌘K lisant
+`responseStats`) : l'humain l'a laissé en **Later**. Rien ne change côté Nova ; la demande pourra être rouverte telle quelle.
