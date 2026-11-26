@@ -49,3 +49,16 @@
 }
 .need-title.need-wrap, .need-line.need-wrap { white-space: normal; }
 .need-line svg { vertical-align: -1px; }
+
+/* A reason line that ends on « Why? »: the text gives way (ellipsis), the link stays. */
+.need-line.need-reason { display: flex; align-items: center; gap: 6px; }
+.need-line.need-reason > * { flex: none; }
+.need-line.need-reason > .ellipsis { flex: 0 1 auto; }
+.need-line.need-reason .pill { margin-right: 0; }
+.need-why .link-btn { margin-left: 4px; }
+.need-read p { color: var(--ink); }
+@media (max-width: 720px) {
+  .need-line.need-reason { flex-wrap: wrap; row-gap: 2px; }
+  .need-line.need-reason > .ellipsis { flex: 1 1 100%; order: 2; white-space: normal; }
+  .need-line.need-reason > .link-btn { order: 3; }
+}
