@@ -8,6 +8,7 @@
     { "name": "protopulse-iris", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5183"], "port": 5183 },
     { "name": "protopulse-echo", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5184"], "port": 5184 },
     { "name": "protopulse-sage", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5185"], "port": 5185 },
-    { "name": "protopulse-juno", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5186"], "port": 5186 }
+    { "name": "protopulse-juno", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5186"], "port": 5186 },
+    { "name": "protopulse-trust", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5187"], "port": 5187 }
   ]
 }
