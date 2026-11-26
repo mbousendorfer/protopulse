@@ -53,7 +53,7 @@ export function fillQueues(s: State, opts: { queue?: string; days?: number; from
       if (at <= now(s) || inSlot(next.publishing.posts, q, at) || isQuiet(next.publishing.notes ?? [], at)) continue
       const text = nextCopy(q, next.publishing.posts, taken)
       taken.push(text)
-      const post = withFormat({ id: uid('p'), network: q.network, at, text, media: q.media, pillar: q.pillar, author: 'atlas', queue: q.id, labels: [q.name], status: level === 'act' ? 'scheduled' : 'needs', note: `${q.name} queue` })
+      const post = withFormat({ id: uid('p'), network: q.network, at, text, media: q.media, pillar: q.pillar, author: 'atlas', queue: q.id, labels: [q.name], status: level === 'act' ? 'scheduled' : 'needs', note: `${q.name} queue`, ...(level === 'act' ? { alone: { why: 'Fill a slot left empty, on Act' } } : {}) })
       made.push(post)
       next = { ...next, publishing: { ...next.publishing, posts: [...next.publishing.posts, post] } }
       if (level !== 'act') {
