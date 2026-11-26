@@ -61,3 +61,29 @@
 - 25/11 · Demande d'Atlas (Fernway Repair) · `account` sur la conversation, seed et filtre Profile · une vue par profil · le filtre suffit et se sauvegarde en vue.
 - 25/11 · Clôture · PROMPT.md §4 (Nova), §6.2 et §9 réécrits ; rapport `docs/agent-depth/nova.html` avec captures avant (73a7ba2) / après.
 - 25/11 · Triggers ⇧D (« Hard to see ») · 6 déclencheurs : SLA et règle apprise → Desk, escalade → Inbox, règle Refund → `?label=Refund`, bots → Hidden, allemand → Handled by Nova · garder /activity pour la règle · la page où l'effet se voit vaut mieux que le journal.
+
+## Vague 2
+- 26/11 · pitch N2 Product discovery · **Go** · — · tel que pitché (produit + candidats, réponse publique + DM, lien suivi, offre de la campagne live de Sage, clics chez Iris).
+- 26/11 · pitch N1 Escalade complète · **Go** · — · tel que pitché (attente publique « We've sent you a DM » + DM, phrase surlignée, profil du fan, mêmes règles partout).
+- 26/11 · pitch N5 Rythme humain · **Go** · — · tel que pitché, cran Act par défaut (like public seulement, visible dans Handled et au journal, Undo).
+- 26/11 · suite des pitchs · construire N2, N1, N5 d'abord · pitcher les six autres maintenant · réponse de l'humain.
+- 26/11 · N1 · nouvelle action `nova-holding` (« Send holding replies on escalations », Draft par défaut) qui porte la carte d'escalade ; `nova-sensitive` reste verrouillée pour les décisions · garder la carte sous `nova-sensitive` · le pitch dit qu'en Act Nova envoie l'attente seule : il fallait une action réglable.
+- 26/11 · N1 · le DM vit dans la conversation `<id>-dm` (même mécanisme que « Reply in private ») · un message `dm` dans la même conversation · l'Inbox montre déjà les DM comme des conversations ; le testeur répond là où le client répondra.
+- 26/11 · N1 · avis : pas de DM possible (Google, Trustpilot), l'attente reste publique et sobre ; mention et annonce comptent comme publiques.
+- 26/11 · N1 · Act : l'attente part à l'arrivée, la conversation publique passe dans Handled, le DM reste Your call (ou Claire) avec une carte décision « I'll answer in the DM / Forward to Claire » ; Undo barre les deux messages et remet la paire en brouillon · approuver la carte en Act · l'attente doit partir vite, la réponse reste humaine.
+- 26/11 · N1 · Suggest traité comme Draft pour l'attente (la carte d'escalade existe toujours) · une suggestion sans brouillon · une escalade sans réponse d'attente proposée serait un recul.
+- 26/11 · N1 · le DM n'apparaît pas encore sur la carte Desk : demande `requests/trust-from-nova-reply-extra.md` ; en attendant le « why » le dit et l'Inbox montre les deux moitiés.
+- 26/11 · catalogue simplifié (PR #147) après mes pitchs · garder les versions validées (Go explicites) mais au plus simple : pas d'offre inventée, pas de ligne de clics avant Iris · re-pitcher · l'humain a choisi Go et non « Go, plus simple » ; la simplification est dans l'exécution, pas dans le périmètre.
+- 26/11 · N2 · nouvelle action `nova-links` (« Send product links in DM », Draft) · étendre `nova-faq` · le pitch le dit ; un lien envoyé en privé n'est pas une réponse FAQ.
+- 26/11 · N2 · produit trouvé par le post (92 %) puis par les mots de la question (64 %) ; le second candidat est celui que les mots désignent aussi, avec ce qu'il est (« a fleece, not a rain shell ») · un score par mots · le post est la meilleure preuve dans une session de test.
+- 26/11 · N2 · catalogue dans `inbox/products.ts`, mêmes noms et prix que les faits du Playbook · lire les faits par regex · les faits sont des phrases ; un petit catalogue lisible suffit.
+- 26/11 · N2 · lien suivi par la convention d'Atlas (`track`, pilier « Nova DMs », `utm_campaign=nova-dms`) · une UTM propre à Nova · un seul format de lien dans tout le produit.
+- 26/11 · N2 · offre : lue sur la campagne live de Sage (`offer`), absente aujourd'hui → demande `requests/sage-from-nova-campaign-offer.md` ; clics : demande `requests/iris-from-nova-dm-clicks.md`. En attendant, aucune ligne vide.
+- 26/11 · N2 · Suggest traité comme Draft (carte avec le produit et les deux moitiés) · une simple étiquette · même règle que pour l'attente.
+- 26/11 · N5 · nouvelle action `nova-compliments` (« Like or answer compliments », Act par défaut comme pitché) · garder sous `nova-faq` · le pitch le dit ; un like est public mais réversible, visible dans Handled et au journal.
+- 26/11 · N5 · règle : une question ou une histoire (6 mots et plus) → réponse ; un emoji ou un compliment court → like · un pourcentage caché · le pitch refuse le réglage caché ; la raison s'affiche sur chaque conversation.
+- 26/11 · N5 · réponses étalées de 7 min (battement de cœur, `queued`) et affichées « Replies at 08:19 » · réponses immédiates · le rythme humain doit se voir.
+- 26/11 · N5 · formules : « Answer this one » prend un remerciement que Nova n'a pas encore utilisé dans la journée (comparaison au modèle, prénom ignoré) · tirage au hasard · déterministe et testable.
+- 26/11 · N5 · Undo de la vague : likes retirés, réponses retirées (envoyées ou non), commentaires en New · repasser en brouillons · 8 brouillons d'un coup seraient l'inverse du but.
+- 26/11 · N5 · Suggest traité comme Draft (une carte qui aligne tout) · une proposition par commentaire · même règle que N1 et N2 ; 8 propositions séparées seraient du bruit.
+- 26/11 · N2 · post renommé « Storm Jacket vs. a garden hose » comme celui des bots, pour que « By post » les regroupe.

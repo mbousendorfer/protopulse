@@ -7,8 +7,8 @@ import { defineIntent } from '../../app/agent-module'
 import { NETWORK_LABEL } from '../../data/agents'
 import { PEOPLE, TRANSCRIPT } from '../../data/video'
 import { Mark } from '../../ui'
-import { clipLengthOf, fitsLength, keywords, lengthSpec, versionFor as netVersion, type Clip } from './model'
-import { holdReason, reduceVideo, unreleased } from './slice'
+import { clipLengthOf, fitsLength, keywords, lengthSpec, versionFor as netVersion, trialPair, winnerOf, type Clip } from './model'
+import { canTrial, flopOf, holdReason, reduceVideo, recutOf, unreleased } from './slice'
 
 declare module '../../data/command' {
   interface IntentTypes {
@@ -16,6 +16,8 @@ declare module '../../data/command' {
     clipWhy: { q: string }
     clipBest: object
     clipVersion: { network: Network; q: string }
+    clipTrial: { q: string; start: boolean }
+    clipRecut: { q: string }
   }
 }
 
@@ -23,7 +25,7 @@ const open = (c: Clip) => c.status === 'ready' || c.status === 'snoozed'
 const k = (n: number) => `${(n / 1000).toFixed(1)}k`
 
 /** The clip a sentence talks about: most title and hook words in common. */
-const ASKING = new Set(['why', 'not', 'going', 'out', 'held', 'stuck', 'sent', 'isn', 'won', 'still', 'here', 'did', 'best', 'version', 'make', 'add', 'create', 'post', 'put', 'video', 'short', 'reel', 'one', 'please', 'juno'])
+const ASKING = new Set(['why', 'not', 'going', 'out', 'held', 'stuck', 'sent', 'isn', 'won', 'still', 'here', 'did', 'best', 'version', 'make', 'add', 'create', 'post', 'put', 'video', 'short', 'reel', 'one', 'please', 'juno', 'trial', 'test', 'hook', 'hooks', 'which', 'the', 'its', 'first', 'before', 'sending', 'clip'])
 export function matchClip(s: State, q: string, pool = s.video.clips.filter(c => c.status !== 'dismissed')): Clip | undefined {
   const keys = keywords(q).filter(w => !ASKING.has(w))
   const scored = pool.map(c => ({ c, n: keys.filter(w => `${c.title} ${c.hook}`.toLowerCase().includes(w)).length })).filter(x => x.n > 0)
@@ -141,5 +143,65 @@ export const clipFind = defineIntent({
       replies: [{ from: 'juno', text: `Reading “${src.title}” for moments about “${i.query}”. They’ll be in Ready to review.`, card: { type: 'done', text: `Juno is finding ${i.count} moment${i.count > 1 ? 's' : ''} about “${i.query}”` } }],
       effects: [(st: State) => reduceVideo(st, { type: 'video/find', source: src.id, query: i.query, len: 45, count: i.count })],
     }
+  },
+})
+
+/** A hook trial, asked for or asked about: the result if there is one, the trial running, or Juno starts one (or says why not). */
+function trialAnswer(s: State, i: { q: string; start: boolean }): { text: string; clip?: Clip; start?: boolean } {
+  const c = matchClip(s, i.q) ?? (i.start ? s.video.clips.find(x => canTrial(s, x) === true) : s.video.clips.filter(x => x.trial).sort((a, b) => b.trial!.from - a.trial!.from)[0])
+  if (!c) {
+    const last = s.video.trials[s.video.trials.length - 1]
+    if (!last) return { text: 'No hook trial yet. Open a clip and trial its hooks from the Post tab.' }
+    const w = winnerOf(last)
+    return { text: `Last trial, on “${last.title}”: “${last.hooks[w]}” held ${last.held[w]}% of viewers at 3 s, against ${last.held[1 - w]}%.` }
+  }
+  if (c.status === 'trial') return { clip: c, text: `“${c.title}” is on trial on Reels: “${c.trial!.hooks[0]}” against “${c.trial!.hooks[1]}”. Results at ${new Date(c.trial!.until).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}.` }
+  if (c.trial?.held) {
+    const w = winnerOf({ hooks: c.trial.hooks, held: c.trial.held })
+    return { clip: c, text: `On “${c.title}”, “${c.trial.hooks[w]}” won: ${c.trial.held[w]}% still watching at 3 s, against ${c.trial.held[1 - w]}%.${c.hook === c.trial.hooks[w] ? ' The clip uses it.' : ' The clip still has the other hook.'}` }
+  }
+  const ok = canTrial(s, c)
+  if (!i.start) return { clip: c, text: `“${c.title}” hasn’t been trialled.${ok === true ? ` Juno would put “${trialPair(c)![0]}” against “${trialPair(c)![1]}”.` : ''}` }
+  if (ok !== true) return { clip: c, text: `Juno can’t trial “${c.title}”: ${ok.charAt(0).toLowerCase()}${ok.slice(1)}.` }
+  const [a, b] = trialPair(c)!
+  return { clip: c, start: true, text: `Juno trials “${a}” against “${b}” on Reels, with non-followers first. Results in 24 hours; nothing reaches your followers before.` }
+}
+
+export const clipTrial = defineIntent({
+  kind: 'clipTrial', owner: 'juno', order: 35,
+  parse: t => /\bhooks?\b/.test(t) && /\b(trial|test|a\/b|won|win|better|best)\b/.test(t) ? { kind: 'clipTrial', q: t, start: /\b(trial|test|a\/b)\b/.test(t) && !/\b(won|win|result)/.test(t) } : undefined,
+  bar: (i, { s, d, go }) => {
+    const r = trialAnswer(s, i)
+    return { text: r.text, after: r.start ? () => d({ type: 'video/trial', id: r.clip!.id }) : undefined, ctas: [{ label: r.clip ? 'Open the clip' : 'Open Video', primary: true, run: () => go(r.clip ? `/video/clips/${r.clip.id}` : '/video') }] }
+  },
+  chat: (i, { s }) => {
+    const r = trialAnswer(s, i)
+    return { replies: [{ from: 'juno', text: r.text, card: r.start ? { type: 'done', text: `Hook trial started on “${r.clip!.title}”` } : undefined }], effects: r.start ? [(st: State) => reduceVideo(st, { type: 'video/trial', id: r.clip!.id })] : [] }
+  },
+})
+
+/** A recut asked for: Juno makes it when the clip did worse than usual, or says how it did. */
+function recutAnswer(s: State, q: string): { text: string; clip?: Clip; make?: boolean } {
+  const out = s.video.clips.filter(c => c.status === 'published' && c.stats && !c.recutOf)
+  const c = matchClip(s, q, out) ?? out.find(x => flopOf(s, x))
+  if (!c) return { text: 'None of your published clips did worse than usual. Juno recuts the ones that get under half your average views.' }
+  const done = recutOf(s, c)
+  if (done) return { clip: done, text: `“${c.title}” already has a new cut, ${done.status === 'ready' ? 'waiting for your review' : 'sent to Atlas'}.` }
+  const f = flopOf(s, c)
+  if (!f) return { clip: c, text: `“${c.title}” did fine: ${k(c.stats!.views)} views. Juno recuts clips under half your average.` }
+  return { clip: c, make: true, text: `“${c.title}” got ${k(c.stats!.views)} views, ${Math.round(f.share * 100)}% of your average. Juno made a new cut with the product on screen from the first second. It’s in Ready to review.` }
+}
+
+export const clipRecut = defineIntent({
+  kind: 'clipRecut', owner: 'juno', order: 36,
+  parse: t => /\bre-?cut\b/.test(t) ? { kind: 'clipRecut', q: t.replace(/re-?cut/g, '') } : undefined,
+  bar: (i, { s, d, go }) => {
+    const r = recutAnswer(s, i.q)
+    const to = r.make ? `/video/clips/${r.clip!.id}-recut` : r.clip ? `/video/clips/${r.clip.id}` : '/video'
+    return { text: r.text, after: r.make ? () => d({ type: 'video/recut', id: r.clip!.id }) : undefined, ctas: [{ label: r.clip ? 'Open the clip' : 'Open Video', primary: true, run: () => go(to) }] }
+  },
+  chat: (i, { s }) => {
+    const r = recutAnswer(s, i.q)
+    return { replies: [{ from: 'juno', text: r.text, card: r.make ? { type: 'done', text: `New cut of “${r.clip!.title}”` } : undefined }], effects: r.make ? [(st: State) => reduceVideo(st, { type: 'video/recut', id: r.clip!.id })] : [] }
   },
 })

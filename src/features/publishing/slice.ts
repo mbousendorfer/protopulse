@@ -10,7 +10,8 @@ import { IDEA_SEEDS, type Idea, type IdeaOrigin } from '../../data/ideas'
 import { briefSage, targetsOf } from '../strategy/slice'
 import { libraryOf, pickVisual, visualCardOf, waitingForVisual } from './visuals'
 import { RETRY_OPTIONS, failureCardOf, retried, type Retry } from './failures'
-import { PAUSE_TOPIC, fitCap, overCap, pauseFor, resumeAll } from './guards'
+import { PAUSE_TOPIC, fitCap, overCap, pauseAll, pauseFor, resumeAll } from './guards'
+import { WINDOW_TOPIC, resolveWindow } from './window'
 import { approved, sendToClaire } from './approvals'
 import { withFormat } from './formats'
 import { fillQueues } from './queues'
@@ -32,10 +33,10 @@ export type PlanState = {
   request?: string
 }
 /** Last bulk change, kept 10 s so it can be undone in one click. */
-export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[] }
+export type PubUndo = { label: string; posts: Post[]; handoffs: string[]; until: number; ideas?: Idea[]; hold?: { at: number } | 'none' }
 /** What one Desk card changed in Publishing, so its Undo restores exactly that (posts and ideas as they were, posts it added, the plan). */
-export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: PlanState }
-export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[]; notes: DayNote[]; mediaTags: Record<string, string[]> }
+export type CardUndo = { posts: Post[]; added: string[]; ideas: Idea[]; plan?: PlanState; hold?: { at: number } | 'none' }
+export type PublishingState = { posts: Post[]; plan: PlanState; undo?: PubUndo; ideas: Idea[]; learned: Record<string, number>; byCard: Record<string, CardUndo>; uploads: Media[]; queues: Queue[]; notes: DayNote[]; mediaTags: Record<string, string[]>; hold?: { at: number } }
 const ATLAS_LEVELS = Object.fromEntries(AGENTS.find(a => a.id === 'atlas')!.actions.map(x => [x.id, x.autonomy]))
 export const initialPublishing = (): PublishingState => ({
   posts: structuredClone(POSTS).map(p => withLabels(p)), plan: { status: 'proposed', version: 1, items: structuredClone(PLAN) },
@@ -76,6 +77,8 @@ export type PublishingAction =
   | { type: 'publishing/upload'; media: Media; post?: string }
   | { type: 'publishing/retry'; id: string; mode: Retry }
   | { type: 'publishing/resume'; ids: string[] }
+  | { type: 'publishing/pauseAll' }
+  | { type: 'publishing/resumeAll' }
   | { type: 'publishing/firstComment'; id: string; text: string }
   | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
   | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
@@ -309,10 +312,18 @@ export function reducePublishing(s: State, a: PublishingAction): State {
     }
     case 'publishing/resume':
       return resumeAll(s, 'You resumed it', a.ids)
+    case 'publishing/pauseAll': case 'publishing/resumeAll': {
+      // One brake for everything ahead; one Undo bar, like the bulk actions.
+      const pausing = a.type === 'publishing/pauseAll'
+      const next = pausing ? pauseAll(s) : resumeAll(s, 'You resumed publishing')
+      const card = next.handoffs.find(h => h.topic === PAUSE_TOPIC && !s.handoffs.some(x => x.id === h.id))
+      return { ...next, publishing: { ...next.publishing, undo: { label: pausing ? 'Paused all publishing' : 'Resumed publishing', posts: s.publishing.posts, handoffs: card ? [card.id] : [], until: now(s) + 10_000, hold: s.publishing.hold ?? 'none' } } }
+    }
     case 'publishing/restore': {
       const u = s.publishing.undo
       if (!u) return s
-      const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, ideas: u.ideas ?? s.publishing.ideas, undo: undefined } }
+      const hold = u.hold === 'none' ? undefined : u.hold ?? s.publishing.hold
+      const next: State = { ...s, handoffs: s.handoffs.filter(h => !u.handoffs.includes(h.id)), publishing: { ...s.publishing, posts: u.posts, ideas: u.ideas ?? s.publishing.ideas, undo: undefined, hold } }
       return pushLog(next, { agent: 'atlas', text: `Undone: ${u.label}`, status: 'undone', link: '/publishing/calendar' })
     }
   }
@@ -384,7 +395,7 @@ const NET: Partial<Record<Network, string>> = { instagram: 'Instagram', tiktok: 
 export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
   const next = resolveCard(s, h, d)
   const a = s.publishing, b = next.publishing
-  if (a === b || (a.posts === b.posts && a.ideas === b.ideas && a.plan === b.plan)) return next
+  if (a === b || (a.posts === b.posts && a.ideas === b.ideas && a.plan === b.plan && a.hold === b.hold)) return next
   const after = new Map(b.posts.map(p => [p.id, p]))
   const before = new Set(a.posts.map(p => p.id))
   const ideasAfter = new Map(b.ideas.map(i => [i.id, i]))
@@ -393,9 +404,17 @@ export function onResolvePublishing(s: State, h: Handoff, d: Decision): State {
     added: b.posts.filter(p => !before.has(p.id)).map(p => p.id),
     ideas: a.ideas.filter(i => ideasAfter.get(i.id) !== i),
     plan: a.plan !== b.plan ? a.plan : undefined,
+    ...(a.hold !== b.hold ? { hold: a.hold ?? 'none' } : {}),
   }
-  return { ...next, publishing: { ...b, byCard: { ...b.byCard, [h.id]: u } } }
+  // On Act, what Atlas scheduled alone waits in the send window (window.ts).
+  const touched = new Set([...u.added, ...u.posts.map(p => p.id)])
+  const posts = d.act ? markAlone(b.posts, touched, actionOf(s, 'atlas', h.action)?.label ?? 'set to Act') : b.posts
+  return { ...next, publishing: { ...b, posts, byCard: { ...b.byCard, [h.id]: u } } }
 }
+
+/** Posts Atlas just scheduled alone open the send window. */
+export const markAlone = (posts: Post[], ids: Set<string>, why: string) =>
+  posts.map(p => (ids.has(p.id) && p.status === 'scheduled' && !p.alone ? { ...p, alone: { why: why.includes('Act') ? why : `${why}, on Act` } } : p))
 
 /** On Act, Atlas picks a library photo for every post held for a visual, and says which. Without a photo that fits, the card stays. */
 export function actVisuals(s: State): State {
@@ -449,7 +468,8 @@ export function undoCards(s: State, cards: Handoff[]): State {
     const posts = [...kept, ...u.posts.filter(p => !kept.some(k => k.id === p.id))]
     const ideasBack = new Map(u.ideas.map(i => [i.id, i]))
     const { [h.id]: _gone, ...byCard } = P.byCard
-    next = { ...next, publishing: { ...P, posts, ideas: P.ideas.map(i => ideasBack.get(i.id) ?? i), plan: u.plan ?? P.plan, byCard } }
+    const hold = u.hold === 'none' ? undefined : u.hold ?? P.hold
+    next = { ...next, publishing: { ...P, posts, ideas: P.ideas.map(i => ideasBack.get(i.id) ?? i), plan: u.plan ?? P.plan, byCard, hold } }
   }
   return next
 }
@@ -480,6 +500,7 @@ function resolveCard(s: State, h: Handoff, d: Decision): State {
     const ids = new Set(onQuietDays(s).filter(p => !note || startOfDay(p.at) === note.day).map(p => p.id))
     return setPosts(s, s.publishing.posts.map(p => (ids.has(p.id) ? avoidQuiet(s.publishing.notes, p) : p)))
   }
+  if (h.topic === WINDOW_TOPIC) return d.kind === 'option' ? resolveWindow(s, h, d.index) : s
   if (h.topic === PAUSE_TOPIC) return d.kind === 'option' && d.index === 1 ? resumeAll(s, 'You resumed them from the Desk') : s
   if (h.topic === 'Better slot' && h.ref && h.preview?.type === 'post') {
     const p = s.publishing.posts.find(x => x.id === h.ref)
@@ -705,7 +726,8 @@ export function arriveIdeas(s: State, seeds: import('../../data/ideas').IdeaSeed
     const alone = draftsAlone(i0, act?.autonomy)
     let i = alone || origin === 'urgent' ? draftIdea(i0, ctxOf(next)) : i0
     if (alone && act?.autonomy === 'act' && origin !== 'weekly') {
-      const posts = ideaPosts(i, () => uid('p'))
+      const made = ideaPosts(i, () => uid('p'))
+      const posts = markAlone(made, new Set(made.map(p => p.id)), `${act.label}, on Act`)
       i = { ...i, status: 'scheduled', posts: posts.map(p => p.id) }
       next = setPosts(next, [...next.publishing.posts, ...posts])
       next = pushLog(next, { agent: 'atlas', text: `Scheduled on its own: “${i.title}” for ${slotLabel(posts[0].at)}`, reason: `${act.label}, set to Act`, status: 'done', undoMinutes: 10, link: '/publishing/calendar', idea: i.id })

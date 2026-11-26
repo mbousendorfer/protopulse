@@ -1,6 +1,6 @@
 import type { State } from '../../app/state'
 import type { AgentId, Decision, Handoff, LogEntry, Network } from '../../app/types'
-import { actionOf, agentOf, now, pushHandoff, pushLog, uid } from '../../app/core'
+import { actionOf, agentOf, notify, now, pushHandoff, pushLog, uid } from '../../app/core'
 import { CADENCE, CAMPAIGNS, PILLARS, PROPOSALS, applyChange, generatePlan, pillarMix, postsLastWeek, revisePlan, targetsFrom, type Cadence, type CPost, type Campaign, type Pillar, type Proposal, type TargetsChange, type BriefInput, type Adjustment, MOMENTS, MOMENT_LEAD, type Moment } from '../../data/strategy'
 import { BEST_SLOT, type Post } from '../../data/publishing'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -323,7 +323,16 @@ export function endCampaign(s: State, id: string): State {
   return pushLog(next, { agent: 'sage', text: `${c.name} ended: ${fmtN(c, c.goal.current)} of ${fmtN(c, c.goal.target)} ${unit(c)}. Recap written${lesson ? `, proposed: ${lesson.text}` : ''}`, status: 'done', reason: `The campaign ran until ${dateLabel(c.end)}`, link: `/strategy/campaigns/${id}` })
 }
 
+/** Sam's decisions from Strategy are confirmed where he made them, with the journal's Undo. */
+const DECIDED: Partial<Record<StrategyAction['type'], true>> = { 'strategy/approve': true, 'strategy/moment': true, 'strategy/adjust': true, 'strategy/proposal': true }
 export function reduceStrategy(s: State, a: StrategyAction): State {
+  const next = reduceStrategyRaw(s, a)
+  if (!DECIDED[a.type] || next === s || next.log[0] === s.log[0]) return next
+  const l = next.log[0]
+  return notify(next, 'strategy', `${l.text}.`, l.undoUntil ? { undo: l.id } : {})
+}
+
+function reduceStrategyRaw(s: State, a: StrategyAction): State {
   switch (a.type) {
     case 'strategy/create':
       return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { budget: a.budget, cadence: targetsOf(s).cadence }), { brief: a.brief })
@@ -361,7 +370,7 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
       const p = s.strategy.proposals.find(x => x.id === a.id)
       if (!p || p.status !== 'proposed') return s
       const next = patch(s, { proposals: s.strategy.proposals.map(x => (x.id === a.id ? { ...x, status: a.accept ? 'accepted' : 'declined' } : x)) })
-      if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars' })
+      if (!a.accept) return pushLog(next, { agent: 'sage', text: `${p.text}: declined`, status: 'rejected', reason: 'Your call on the pillars', link: '/strategy/pillars', undoMinutes: 10, sage: { proposals: s.strategy.proposals } })
       return changeTargets(next, p.change ?? {}, { text: `${p.text}: applied`, reason: 'You applied Sage’s proposal', before: s.strategy })
     }
     case 'strategy/label': {
@@ -443,7 +452,7 @@ function applyAdjust(s: State, id: string, adj: string, accept: boolean, card?: 
   const cards = s.handoffs.filter(h => h.id !== card?.id && cardOf(h)?.adjust === adj && cardOf(h)?.campaign === id)
   let next = toAtlas({ ...updateCampaign(s, id, () => after), handoffs: s.handoffs.filter(h => !cards.includes(h)) }, moved)
   const what = a.text.split('. ').slice(-1)[0].replace(/\.$/, '')
-  if (!accept) return pushLog(next, { agent: 'sage', text: `${c.name}: ${what} (declined)`, status: 'rejected', reason: 'Your call on the campaign', link: `/strategy/campaigns/${id}` })
+  if (!accept) return pushLog(next, { agent: 'sage', text: `${c.name}: ${what} (declined)`, status: 'rejected', reason: 'Your call on the campaign', link: `/strategy/campaigns/${id}`, ...(card ? {} : { undoMinutes: 10, restore: cards, sage: { campaigns: [c] } }) })
   next = pushLog(next, {
     agent: 'sage', text: `${c.name}: ${what}${moved.length ? ` (${moved.length} post${moved.length > 1 ? 's' : ''} changed in Atlas’s calendar)` : ''}`, status: 'approved', reason: 'Your call on the campaign',
     link: `/strategy/campaigns/${id}`, undoMinutes: card ? undefined : 10, restore: card ? undefined : cards,
@@ -609,8 +618,9 @@ function addMoment(s: State, id: string, o: { card?: Handoff; why?: string }): S
 function skipMoment(s: State, id: string): State {
   const m = s.strategy.moments.find(x => x.id === id)
   if (!m || m.status) return s
-  const next = patch({ ...s, handoffs: s.handoffs.filter(h => cardOf(h)?.moment !== id) }, { moments: s.strategy.moments.map(x => (x.id === id ? { ...x, status: 'skipped' } : x)) })
-  return pushLog(next, { agent: 'sage', text: `Left “${m.name}” out of the calendar this year`, status: 'rejected', reason: 'Your call', link: '/strategy' })
+  const cards = s.handoffs.filter(h => cardOf(h)?.moment === id)
+  const next = patch({ ...s, handoffs: s.handoffs.filter(h => !cards.includes(h)) }, { moments: s.strategy.moments.map(x => (x.id === id ? { ...x, status: 'skipped' } : x)) })
+  return pushLog(next, { agent: 'sage', text: `Left “${m.name}” out of the calendar this year`, status: 'rejected', reason: 'Your call', link: '/strategy', undoMinutes: 10, restore: cards, sage: { moments: s.strategy.moments } })
 }
 
 /* ---------- Campaign labels: Atlas's posts carry it, Nova labels the conversations ---------- */
@@ -641,3 +651,19 @@ export function labelStats(s: State, c: Campaign) {
     rule: novaRuleFor(s, c),
   }
 }
+
+/* ---------- What waits for Sam (Strategy › Campaigns, the rail badge) ---------- */
+
+/**
+ * Decisions on Strategy, grouped by gesture: plans to approve, moments Sage raised (3 weeks before),
+ * and the changes Sage proposes (live-campaign adjustments and pillar or cadence proposals). The rail badge counts exactly this.
+ */
+export function strategyNeeds(s: State, t = now(s)) {
+  return {
+    plans: s.strategy.campaigns.filter(c => c.status === 'review'),
+    moments: s.strategy.moments.filter(m => !m.status && m.end > t && m.start - MOMENT_LEAD <= t),
+    adjustments: s.strategy.campaigns.filter(c => c.status === 'live').flatMap(c => c.adjustments.filter(a => a.status === 'proposed').map(a => ({ c, a }))),
+    proposals: s.strategy.proposals.filter(p => p.status === 'proposed'),
+  }
+}
+export const strategyNeedsCount = (s: State) => Object.values(strategyNeeds(s)).reduce((n, xs) => n + xs.length, 0)

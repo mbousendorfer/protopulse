@@ -76,6 +76,9 @@ export type ListeningAction =
   | { type: 'listening/watchDelete'; id: string }
   | { type: 'listening/lesson'; id: string; test: boolean }
   | { type: 'listening/trend'; id: string; hand: boolean }
+  | { type: 'listening/trends'; ids: string[] }
+  | { type: 'listening/dismiss'; event: string }
+  | { type: 'listening/unseen'; ids: string[] }
   | { type: 'listening/reopen'; kind: 'trends' | 'lessons' | 'events'; id: string }
   | { type: 'listening/mention'; id: string; action: 'replied' | 'hidden' }
   | { type: 'listening/searchSave'; search: Search }
@@ -176,8 +179,15 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       const move = ev?.moves[a.index]
       if (!ev || !move) return s
       // The event is settled here: every Desk card about it goes too.
-      const next = { ...s, handoffs: s.handoffs.filter(h => !(h.topic === 'Competitor' && EVENT_OF(s, h)?.id === ev.id)) }
-      return applyMove(next, ev, move)
+      const next = applyMove(withoutEventCards(s, ev), ev, move)
+      const st = next.listening.events[ev.id]
+      return st && next.notice === s.notice
+        ? notify(next, 'listening', `${competitorName(s, ev.competitor)}: ${st.result}`, st.status === 'handed' ? { link: { to: '/', label: 'Review on Desk' } } : {})
+        : next
+    }
+    case 'listening/dismiss': {
+      const ev = eventsOf(s).find(e => e.id === a.event)
+      return ev ? setEvent(withoutEventCards(s, ev), ev.id, { status: 'dismissed', move: 'Dismissed', result: 'Dismissed. Echo keeps watching.' }) : s
     }
     case 'listening/lesson': {
       const l = LESSONS.find(x => x.id === a.id)
@@ -196,7 +206,11 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return patch(s, { [a.kind]: rest })
     }
     case 'listening/trend':
-      return a.hand ? handTrend(s, a.id) : patch(s, { trends: { ...s.listening.trends, [a.id]: 'dismissed' } })
+      return a.hand ? told(s, handTrend(s, a.id), 1) : patch(s, { trends: { ...s.listening.trends, [a.id]: 'dismissed' } })
+    case 'listening/trends': {
+      const next = a.ids.reduce(handTrend, s)
+      return told(s, next, a.ids.length)
+    }
     case 'listening/mention': {
       const m = mentionOf(s, a.id)
       if (!m) return s
@@ -234,6 +248,7 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       return patch(s, { alerts: s.listening.alerts.filter(x => x.id !== a.id) })
     case 'listening/testFormat': return testFormat(s, a.network, a.competitor)
     case 'listening/seen': return patch(s, { seen: { ...s.listening.seen, ...Object.fromEntries(a.ids.map(id => [id, true as const])) } })
+    case 'listening/unseen': return patch(s, { seen: Object.fromEntries(Object.entries(s.listening.seen).filter(([id]) => !a.ids.includes(id))) })
     case 'listening/tagSave': return saveTag(s, a.def)
     case 'listening/tagDelete': return deleteTag(s, a.id)
     case 'listening/tagAccept': return acceptPending(s, a.id && a.tag ? { id: a.id, tag: a.tag } : undefined)
@@ -312,6 +327,9 @@ function mentionsBulk(s: State, a: Extract<ListeningAction, { type: 'listening/m
     }
   }
 }
+
+const withoutEventCards = (s: State, ev: CompEvent): State => ({ ...s, handoffs: s.handoffs.filter(h => !(h.topic === 'Competitor' && EVENT_OF(s, h)?.id === ev.id)) })
+const told = (s: State, next: State, n: number) => (next === s ? s : notify(next, 'listening', n > 1 ? `Atlas is drafting ${n} trend posts. They’re on your Desk.` : 'Atlas is drafting the trend post. It’s on your Desk.', { link: { to: '/', label: 'Review on Desk' } }))
 
 const EVENT_OF = (s: State, h: Handoff): CompEvent | undefined => {
   const own = h.ref ? s.listening.customEvents.find(e => e.id === h.ref) : undefined

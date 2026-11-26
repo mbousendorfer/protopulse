@@ -24,6 +24,7 @@ import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
 import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
+import { WINDOW_TOPIC } from './window'
 import './publishing.css'
 
 type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'queues' | 'media'
@@ -34,7 +35,7 @@ const MONDAY_THIS_WEEK = T(0, 0, -1)
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`)
 
 export default function PublishingPage() {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const nav = useNavigate()
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
@@ -54,6 +55,9 @@ export default function PublishingPage() {
   return (
     <div className="page pub-page">
       <PageHead agent="atlas" title="Publishing" lede="Atlas plans the week, writes the posts and picks the slots. You approve the plan, not each post.">
+        {s.publishing.hold
+          ? <Btn onClick={() => d({ type: 'publishing/resumeAll' })}><Play size={14} />Resume publishing</Btn>
+          : <Btn onClick={() => d({ type: 'publishing/pauseAll' })}><Pause size={14} />Pause all publishing</Btn>}
         <Btn variant="primary" onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
@@ -365,6 +369,8 @@ function postLine(p: Post, shared?: string): { text: string; kind: 'reason' | 's
 
 /** A post in the week: when and where, the words, then one line only if there's something to know. */
 function PostChip({ p, shared, onOpen, checked, anySelected, onToggle }: { p: Post; shared?: string; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
+  const { s } = useStore()
+  const going = s.handoffs.find(h => h.topic === WINDOW_TOPIC && h.ref === p.id)
   const draggable = p.status !== 'published'
   const line = postLine(p, shared)
   const named = NAMED.includes(p.status)
@@ -379,7 +385,7 @@ function PostChip({ p, shared, onOpen, checked, anySelected, onToggle }: { p: Po
         </span>
         <span className="cal-post-text">{p.text}</span>
         {/* The status is named only when it asks something of Sam; its reason follows on the same line. */}
-        {named && <span className="cal-post-state"><Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill></span>}
+        {(named || going) && <span className="cal-post-state">{named && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}{going && <Pill tone="caution">{going.title.split(':')[0]}</Pill>}</span>}
         {line && <span className={`cal-post-line ${line.kind}`}>{line.kind === 'atlas' && <Mark agent="atlas" />}{line.text}</span>}
       </button>
     </article>

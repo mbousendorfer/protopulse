@@ -2,7 +2,7 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, TRENDS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
 import type { Network } from '../../app/types'
 import { NET_SHARE, POSTS } from '../../data/insights'
 import { lastWeekOf } from '../strategy/slice'
@@ -304,3 +304,31 @@ export const needsYou = (s: State, m: Mention) =>
 export const seenOf = (s: State, m: Mention) => !!s.listening.seen[m.id] || m.at <= s.brief.since || !needsYou(s, m)
 /** The Mentions badge: unseen mentions that need you. */
 export const unseenNeeds = (s: State, ms = visibleMentions(s)) => ms.filter(m => !seenOf(s, m))
+
+/* ---------- What waits for Sam (Listening › Needs you, the rail badge) ---------- */
+
+/** An event's status: Sam's move, else seeded as already handled, else open (null). */
+export function eventState(s: State, e: CompEvent): { status: 'handed' | 'done' | 'dismissed'; move: string; result: string } | null {
+  return s.listening.events[e.id] ?? (e.done ? { status: 'done', ...e.done } : null)
+}
+
+/** Events on watched competitors that nobody answered yet, newest first. */
+export const openEvents = (s: State) => {
+  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
+  return eventsOf(s).filter(e => watched.has(e.competitor) && !eventState(s, e)).sort((a, b) => b.at - a.at)
+}
+
+/**
+ * Everything in Listening that waits for a decision, grouped by gesture. The rail badge counts exactly this.
+ * Urgent: Echo's open urgent cards (the negative spike). Trends: only the high-fit ones Echo recommends.
+ */
+export function listeningNeeds(s: State) {
+  return {
+    urgent: s.handoffs.filter(h => h.agent === 'echo' && !h.lane && h.urgency === 'urgent'),
+    events: openEvents(s),
+    mentions: unseenNeeds(s).sort((a, b) => b.at - a.at),
+    creators: creatorsOf(s).filter(c => c.fit && !s.listening.creators[c.handle]),
+    trends: TRENDS.filter(t => t.fit === 'High' && !s.listening.trends[t.id]),
+  }
+}
+export const listeningNeedsCount = (s: State) => Object.values(listeningNeeds(s)).reduce((n, xs) => n + xs.length, 0)

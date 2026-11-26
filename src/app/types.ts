@@ -147,7 +147,7 @@ export interface LogEntry {
 export type DoneItem = { id: string; title: string; text: string; at: number; ms?: number; h: Handoff }
 
 /** Where your own action's confirmation shows: the top of the list it acted on. */
-export type NoticeScope = 'desk' | 'publishing' | 'listening' | 'agents' | 'video'
+export type NoticeScope = 'desk' | 'publishing' | 'listening' | 'agents' | 'video' | 'strategy'
 /** The one confirmation of your last action. `undo` is a journal entry id; it lasts while that entry can be undone. */
 export type Notice = { scope: NoticeScope; text: string; undo?: string; link?: { to: string; label: string }; until: number }
 

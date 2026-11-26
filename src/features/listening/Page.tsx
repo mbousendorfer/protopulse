@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
+import NeedsYou, { EventNeedRow, IMPACT_TONE } from './Needs'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
@@ -10,33 +11,33 @@ import {
   FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
   type CompEvent, type Mention, type Search, type Sentiment,
 } from '../../data/listening'
-import { MENTION_NET, type EventState, type MentionOp } from './slice'
+import { MENTION_NET, type MentionOp } from './slice'
 import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
-import { seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
+import { eventState, listeningNeedsCount, openEvents, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
-import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
+import { CountBadge, Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 
 
-type Tab = 'competitors' | 'mentions' | 'creators' | 'trends' | 'searches'
+type Tab = 'needs' | 'competitors' | 'mentions' | 'creators' | 'trends' | 'searches'
 
 export default function ListeningPage() {
   const loc = useLocation()
   const nav = useNavigate()
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
-  const tab: Tab = (['mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'competitors'
-  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
-  const openEvents = eventsOf(s).filter(e => watched.has(e.competitor) && eventState(s.listening.events[e.id], e) === null).length
+  // The landing is Needs you (PROMPT §3.9): what waits for Sam across Listening, before the feeds.
+  const tab: Tab = (['competitors', 'mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'needs'
   return (
     <div className="page listening">
       <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
-      <Tabs value={tab} onChange={v => nav(`/listening/${v}`)} items={[
-        { value: 'competitors', label: 'Competitors', count: openEvents },
+      <Tabs value={tab} onChange={v => nav(v === 'needs' ? '/listening' : `/listening/${v}`)} items={[
+        { value: 'needs', label: 'Needs you', count: listeningNeedsCount(s) },
+        { value: 'competitors', label: 'Competitors', count: eventsOf(s).filter(e => s.listening.watch.some(w => w.tracking && w.id === e.competitor)).length },
         { value: 'mentions', label: 'Mentions', count: allMentions(s).filter(m => s.listening.mentions[m.id] !== 'hidden').length },
         { value: 'creators', label: 'Creators', count: creatorsOf(s).length },
         { value: 'trends', label: 'Trends', count: TRENDS.length },
@@ -44,7 +45,7 @@ export default function ListeningPage() {
       ]} />
       <Notice scope="listening" className="mb-3" />
       <Routes>
-        <Route index element={<Competitors view="events" />} />
+        <Route index element={<NeedsYou />} />
         <Route path="competitors" element={<Competitors view="events" />} />
         <Route path="competitors/benchmark" element={<Competitors view="benchmark" />} />
         <Route path="competitors/manage" element={<ManageCompetitors />} />
@@ -55,20 +56,11 @@ export default function ListeningPage() {
         <Route path="trends" element={<Trends />} />
         <Route path="searches" element={<Searches />} />
         <Route path="searches/:sid" element={<SearchView />} />
-        <Route path="*" element={<Competitors view="events" />} />
+        <Route path="*" element={<NeedsYou />} />
       </Routes>
     </div>
   )
 }
-
-/** Current status of an event: from the slice, else seeded as already handled, else open (null). */
-function eventState(st: EventState | undefined, e: CompEvent): Omit<EventState, 'at'> | null {
-  if (st) return st
-  if (e.done) return { status: 'done', move: e.done.move, result: e.done.result }
-  return null
-}
-
-const IMPACT_TONE = { High: 'alert', Medium: 'caution', Low: undefined } as const
 
 /* ---------- Competitors ---------- */
 function Competitors({ view }: { view: 'events' | 'benchmark' }) {
@@ -86,44 +78,48 @@ function Competitors({ view }: { view: 'events' | 'benchmark' }) {
   )
 }
 
+/** Events: the ones that need a move first, decided in place as on Needs you; then what was done about the others. */
 function Events() {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const now = useNow()
   const [comp, setComp] = useState<string>('all')
-  const [status, setStatus] = useState<'open' | 'handled' | 'all'>('open')
-  const watched = new Set(s.listening.watch.filter(w => w.tracking).map(w => w.id))
-  const list = eventsOf(s).filter(e => watched.has(e.competitor) && (comp === 'all' || e.competitor === comp))
-    .filter(e => { const st = eventState(s.listening.events[e.id], e); return status === 'all' || (status === 'open' ? !st : !!st) })
-    .sort((a, b) => b.at - a.at)
+  const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null)
+  const watched = s.listening.watch.filter(w => w.tracking)
+  const mine = (e: CompEvent) => comp === 'all' || e.competitor === comp
+  const open = openEvents(s).filter(mine)
+  const handled = eventsOf(s).filter(e => watched.some(w => w.id === e.competitor) && mine(e) && eventState(s, e)).sort((a, b) => b.at - a.at)
+  const who = watched.find(w => w.id === comp)?.name
   return (
     <div className="stack">
-      <div className="row">
-        <Filters label="Status" value={status} onChange={setStatus} items={[{ value: 'open', label: 'Needs a move' }, { value: 'handled', label: 'Handled' }, { value: 'all', label: 'All' }]} />
-        <span className="spacer" />
-        <Filters label="Competitor" value={comp} onChange={setComp} items={[{ value: 'all', label: 'All competitors' }, ...s.listening.watch.filter(w => watched.has(w.id)).map(w => ({ value: w.id, label: w.name }))]} />
-      </div>
-      {!list.length && <Empty icon={<Check size={18} />} title={status === 'open' ? 'Every competitor move has an answer' : 'Nothing here'} body="Echo raises launches, price changes, campaigns and viral posts as they happen." />}
-      <ul className="events">
-        {list.map(e => {
-          const st = eventState(s.listening.events[e.id], e)
-          return (
-            <li key={e.id}>
-              <Link to={`/listening/competitors/${e.id}`} className="card event-row">
-                <div className="event-top">
-                  <span className="row tight"><SocialAvatar name={competitorName(s, e.competitor)} network={e.proof.network} org size={24} /><b>{competitorName(s, e.competitor)}</b><span className="chip">{e.type}</span></span>
+      <Menu align="start" trigger={<Btn size="sm" className="self-start">{who ?? 'All competitors'}<ChevronDown size={14} /></Btn>}
+        items={[{ label: 'All competitors', onSelect: () => setComp('all') }, ...watched.map(w => ({ label: w.name, hint: comp === w.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setComp(w.id) }))]} />
+      {undo && <UndoBar onUndo={() => { undo.run(); setUndo(null) }} onDismiss={() => setUndo(null)}>{undo.text}</UndoBar>}
+      <section className="card needs" aria-label="Needs a move">
+        <header className="need-head"><h2>Needs a move</h2><CountBadge n={open.length} /><span className="faint need-why">Echo picked a move for each. Anything public stays yours to publish.</span></header>
+        {open.length ? <ul>{open.map(e => <EventNeedRow key={e.id} e={e} onUndo={setUndo} />)}</ul>
+          : <p className="need-empty">Every move{who ? ` from ${who}` : ''} has an answer. Echo raises launches, price changes, campaigns and viral posts as they happen.</p>}
+      </section>
+      {handled.length > 0 && (
+        <section className="card">
+          <div className="card-head"><h2>Handled <span className="faint num">{handled.length}</span></h2></div>
+          <ul className="rows">
+            {handled.map(e => {
+              const st = eventState(s, e)!
+              return (
+                <li key={e.id} className="ev-done">
+                  <SocialAvatar name={competitorName(s, e.competitor)} network={e.proof.network} org size={24} />
+                  <div className="need-main">
+                    <p className="need-title"><Link to={`/listening/competitors/${e.id}`}>{e.title}</Link></p>
+                    <p className="need-line"><span className={`ev-status ${st.status}`}><Check size={14} aria-hidden />{st.result}</span></p>
+                  </div>
                   <span className="mono faint">{ago(e.at, now)}</span>
-                </div>
-                <h3>{e.title}</h3>
-                <p className="muted ellipsis">{e.read}</p>
-                <div className="row">
-                  <Pill tone={IMPACT_TONE[e.impact]}>{e.impact} impact</Pill>
-                  {st ? <span className={`ev-status ${st.status}`}><Check size={14} />{st.result}</span> : <span className="ev-status open">{e.moves.length} counter-moves ready</span>}
-                </div>
-              </Link>
-            </li>
-          )
-        })}
-      </ul>
+                  {s.listening.events[e.id]?.status === 'dismissed' && <button type="button" className="link-btn t-sm" onClick={() => d({ type: 'listening/reopen', kind: 'events', id: e.id })}>Undo</button>}
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
     </div>
   )
 }
@@ -135,7 +131,7 @@ function EventView() {
   const nav = useNavigate()
   const e = eventsOf(s).find(x => x.id === id)
   if (!e) return <Empty title="This event doesn’t exist" action={<Btn onClick={() => nav('/listening/competitors')}>All events</Btn>} />
-  const st = eventState(s.listening.events[e.id], e)
+  const st = eventState(s, e)
   const c = competitorOf(s, e.competitor) ?? { id: e.competitor, name: competitorName(s, e.competitor), handle: competitorName(s, e.competitor) }
   return (
     <div className="event-layout">
@@ -304,7 +300,7 @@ function Profile() {
           <div className="card-head"><h2>Recent events</h2></div>
           <ul className="rows">
             {events.map(e => {
-              const st = eventState(s.listening.events[e.id], e)
+              const st = eventState(s, e)
               return (
                 <li key={e.id} className="prof-ev">
                   <Link to={`/listening/competitors/${e.id}`}>{e.title}</Link>

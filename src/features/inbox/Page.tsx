@@ -13,7 +13,7 @@ import { Btn, Empty, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tab
 import { CountBadge, InlineConfirm, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { canModerate, deleteWarning, dur, NEEDS_YOU, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
+import { canModerate, deleteWarning, dmId, dur, fanOf, NEEDS_YOU, PUBLIC, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { translate } from './translate'
 import { ACCOUNTS, accountById, accountLabel } from '../publishing/accounts'
@@ -77,6 +77,8 @@ function statusOf(c: Conversation) {
   const by = [...c.messages].reverse().find(m => m.from === 'you')?.by
   if (c.status === 'you' && by && by !== 'sam') return { ...STATUS.you, label: `${ROSTER[by].short} replied` }
   if (c.status === 'takeover' && c.assignee && c.assignee !== 'sam') return { ...STATUS.takeover, label: `${ROSTER[c.assignee].short} is replying` }
+  if (c.status === 'auto' && c.choice?.did === 'like') return { ...STATUS.auto, label: 'Liked, no reply' }
+  if (c.status === 'auto' && c.queued) return { ...STATUS.auto, label: `Replies at ${hhmm(c.queued.at)}` }
   return STATUS[c.status]
 }
 const lastText = (c: Conversation) => c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
@@ -545,6 +547,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
   const [tab, setTab] = useState<PanelTab>('conversation')
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState('')
+  const [dmText, setDmText] = useState('')
   const [mode, setMode] = useState<'reply' | 'note'>('reply')
   const [reply, setReply] = useState('')
   const [picked, setPicked] = useState<string>()
@@ -562,7 +565,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
   const wantsEdit = !!(loc.state as { edit?: boolean } | null)?.edit
   const body = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setReply(''); setPicked(undefined); setTab('conversation'); setNoting(false)
+    setEditing(wantsEdit && !!c.draft?.length); setText(draftPlain); setDmText(c.dm ?? ''); setReply(''); setPicked(undefined); setTab('conversation'); setNoting(false)
     if (c.unread && s.inbox.convs.some(x => x.id === c.id)) d({ type: 'inbox/read', id: c.id })
   }, [c.id]) // eslint-disable-line react-hooks/exhaustive-deps
   // While Nova's draft waits on a decision, the note field folds to one button so it never covers Send.
@@ -662,7 +665,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                     <b>{x.m.from === 'them' ? c.author : x.m.from === 'you' ? (x.m.by && x.m.by !== 'sam' ? ROSTER[x.m.by].name : 'You') : x.m.auto ? 'Nova · auto' : 'Nova · approved by you'}</b>
                     <span className="mono faint">{hhmm(x.m.at)}</span>
                   </div>
-                  <p>{x.m.text}</p>
+                  <p>{x.m.from === 'them' && c.trigger ? <Trigger text={x.m.text} words={c.trigger} /> : x.m.text}</p>
                   <English text={x.m.text} from={x.m.from === 'them'} />
                   {x.m.undone && <span className="faint ib-meta">Deleted by you</span>}
                   {x.m.from !== 'them' && !x.m.undone && <button className="link-btn t-xs" onClick={() => onSaveReply(toTemplate(x.m.text, c))}>Save as reply</button>}
@@ -672,7 +675,8 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 </div>
               </div>
             ))}
-            {c.note && <p className="ib-note faint">{c.note}</p>}
+            {c.choice?.did === 'like' && c.status === 'auto' && <div className="row tight ib-note"><Heart size={14} fill="currentColor" aria-hidden /><span className="grow">Nova liked it instead of answering: {c.choice.why}.</span><Btn size="xs" onClick={() => d({ type: 'inbox/answerThis', id: c.id })}>Answer this one</Btn></div>}
+            {c.note && <p className="ib-note faint">{c.note}{PUBLIC.includes(c.type) && s.inbox.convs.some(x => x.id === dmId(c.id)) && <> · <Link className="link-btn" to={`/inbox/${dmId(c.id)}`}>Open the DM</Link></>}</p>}
             {card?.claire?.reply && (
               <div className="ib-claire"><Mark agent="claire" /><div><b>Claire {card.claire.verdict === 'changes' ? 'asked for changes' : 'declined'}</b><p>“{card.claire.reply}”</p></div></div>
             )}
@@ -684,9 +688,17 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
                 {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
-              {editing ? <textarea className="textarea" rows={4} value={text} onChange={e => setText(e.target.value)} aria-label="Edit Nova’s draft" autoFocus />
+              {c.status === 'escalated' && <WhyEscalated c={c} fan={fanOf(s, c)} />}
+              {c.product && <ProductFound d={c.product} />}
+              {c.dm && <div className="ib-half">In public</div>}
+              {editing ? <textarea className="textarea" rows={c.dm ? 2 : 4} value={text} onChange={e => setText(e.target.value)} aria-label={c.dm ? 'Edit the public reply' : 'Edit Nova’s draft'} autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
               {!editing && <English text={draftPlain} />}
+              {c.dm && <>
+                <div className="ib-half">Then by DM</div>
+                {editing ? <textarea className="textarea" rows={3} value={dmText} onChange={e => setDmText(e.target.value)} aria-label="Edit the DM" />
+                  : <p className="ib-draft-text">{c.dm}</p>}
+              </>}
               {!!c.attachments?.length && (
                 <ul className="ib-attach">
                   {c.attachments.map(a => (
@@ -703,13 +715,13 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
               <div className="row">
                 {editing ? (
                   <>
-                    <Btn variant="primary" onClick={() => { d({ type: 'inbox/approve', id: c.id, text }); setEditing(false) }}><Send size={14} />Send edited reply</Btn>
+                    <Btn variant="primary" onClick={() => { d({ type: 'inbox/approve', id: c.id, text, dm: c.dm ? dmText : undefined }); setEditing(false) }}><Send size={14} />Send edited reply</Btn>
                     <Btn variant="ghost" onClick={() => setEditing(false)}>Cancel</Btn>
                   </>
                 ) : (
                   <>
                     <Btn variant="primary" onClick={() => one({ op: 'approve' })}><Send size={14} />{c.status === 'escalated' ? 'Send holding reply' : 'Send'}</Btn>
-                    <Btn onClick={() => { setText(draftPlain); setEditing(true) }}>Edit</Btn>
+                    <Btn onClick={() => { setText(draftPlain); setDmText(c.dm ?? ''); setEditing(true) }}>Edit</Btn>
                   </>
                 )}
                 <Btn variant="ghost" onClick={() => d({ type: 'inbox/takeover', id: c.id })}><Hand size={14} />Take over</Btn>
@@ -722,7 +734,18 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
           {c.status === 'hidden' && (
             <div className="ib-draft row"><span className="muted grow">Hidden from your public page. Nobody else sees it.</span><Btn onClick={() => d({ type: 'inbox/hide', id: c.id, hidden: false })}>Unhide</Btn></div>
           )}
-          {c.status === 'claire' && !card?.claire?.reply && <div className="ib-draft"><span className="muted">Waiting on Claire. She usually replies in about a minute.</span></div>}
+          {c.status === 'claire' && (c.trigger || !card?.claire?.reply) && (
+            <div className="ib-draft">
+              {c.trigger && <>
+                <WhyEscalated c={c} fan={fanOf(s, c)} />
+                {c.dm && <div className="ib-half">In public</div>}
+                {!!c.draft?.length && <p className="ib-draft-text"><FlagText parts={c.draft} /></p>}
+                {c.dm && <><div className="ib-half">Then by DM</div><p className="ib-draft-text">{c.dm}</p></>}
+              </>}
+              <span className="muted">{card?.claire?.reply ? 'Claire answered: send it from the Desk.' : 'Waiting on Claire. She usually replies in about a minute.'}</span>
+              {card?.claire?.reply && <Link to={`/?card=${card.id}`} className="link-btn t-xs">Review on Desk</Link>}
+            </div>
+          )}
 
           {pending && !noting && !reply ? (
             <div className="ib-reply ib-reply-folded">
@@ -799,5 +822,38 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
         </div>
       )}
     </div>
+  )
+}
+
+/** The words that made Nova escalate, marked in the customer's message. */
+function Trigger({ text, words }: { text: string; words: string }) {
+  const i = text.toLowerCase().indexOf(words.toLowerCase())
+  if (i < 0) return <>{text}</>
+  return <>{text.slice(0, i)}<mark className="ib-trigger">{text.slice(i, i + words.length)}</mark>{text.slice(i + words.length)}</>
+}
+
+/** Why Nova escalated: the rule, what matched and where, who the fan is, what she won't do. */
+function WhyEscalated({ c, fan }: { c: Conversation; fan?: string }) {
+  const rule = c.rules?.[0]
+  const open = PUBLIC.includes(c.type)
+  return (
+    <ul className="ib-why" aria-label="Why Nova escalated">
+      {rule && <li><b>Rule</b><span>{rule}</span></li>}
+      {c.trigger && <li><b>Why</b><span>“{c.trigger}” in {open ? `a public ${c.type}` : c.type === 'dm' ? 'a DM' : `a ${c.type}`}</span></li>}
+      {fan && <li><b>Who</b><span>{fan}</span></li>}
+      {open && <li><b>Never</b><span>Refunds or liability in public. The answer goes by DM.</span></li>}
+    </ul>
+  )
+}
+
+/** What Nova found for "which one is it?": the product, the runner-up she ruled out, the tracked link, the campaign offer. */
+function ProductFound({ d }: { d: NonNullable<Conversation['product']> }) {
+  return (
+    <ul className="ib-why" aria-label="The product Nova found">
+      <li><b>Product</b><span>{d.name} · €{d.price} · {d.match}% match</span></li>
+      {d.other && <li><b>Not</b><span>{d.other.name}: {d.other.why}</span></li>}
+      <li><b>Link</b><span>{d.link} · tracked as utm_campaign={d.utm}</span></li>
+      {d.offer && <li><b>Offer</b><span>{d.offer}</span></li>}
+    </ul>
   )
 }

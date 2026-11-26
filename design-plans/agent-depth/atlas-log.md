@@ -45,3 +45,13 @@
 - 25/11/2026 · Multi-profils · l'id d'un compte principal = son réseau (posts existants inchangés), un second compte Instagram « Fernway Repair » ; Atlas y route le pilier Repair & care d'Instagram (posts qu'il écrit, file Sunday repair, suggestion dans le composer) ; plafond de 3 par profil ; groupes « Fernway, every network » et « Repair » · un modèle de comptes chez chaque agent · source unique dans `publishing/accounts.ts`, les autres lisent ; demandes à Nova, Iris et Sage pour l'Inbox, les chiffres et la cadence par profil
 - 25/11/2026 · Demandes (Juno, Sage ×2) · `pillarFamily` déduit la famille d'un pilier nouveau depuis son nom, en attendant `pillarBase` de Sage · bloquer jusqu'à son contrat · un pilier ajouté doit marcher tout de suite chez Atlas
 - 25/11/2026 · Pitch B11 fuseaux horaires · **Later** (recommandé : faible valeur pour le test, public surtout à Paris)
+- 26/11/2026 · Vague 2 · Pitch A1 expériences à hypothèse · **Go** (paire appariée, conclusion chiffrée, règle proposée seulement si l'écart est net)
+- 26/11/2026 · Vague 2 · Pitch A4 délai de publication et Stop · **Go** (fenêtre de 10 min sur les posts programmés en Act, Stop + raison, Pause all manuel)
+- 26/11/2026 · Vague 2 · Pitch A6 questions de l'inbox → post · **Later**
+- 26/11/2026 · Vague 2 · Suite des pitchs · construire A1 et A4 d'abord, pitcher A3, A5, A2 ensuite si l'humain le veut
+- 26/11/2026 · Vague 2 · A1 après la simplification du catalogue (#147) · **Go, version simple** (confirmé : deux ouvertures, verdict en clair, règle proposée ; pas de mot « hypothèse »)
+- 26/11/2026 · A4 délai · fenêtre ouverte par tout ce qu'Atlas programme en Act (carte réglée par Act, files, idées) via `alone` sur le post ; carte Worth a look sans `action` pour que l'Act ne la règle jamais seul · fenêtre sur tous les posts · Sam a déjà vu ses posts et les brouillons validés
+- 26/11/2026 · A4 délai · la raison du Stop est une option de la carte (un clic au Desk, menu « Stop it » dans l'aperçu du post), gardée dans `learned` · deuxième question après le Stop · un clic de moins, même information
+- 26/11/2026 · A4 délai · une alerte critique d'Echo met en pause un post en fenêtre (le garde-fou passe avant) · ouvrir la fenêtre quand même · rien ne part pendant une crise
+- 26/11/2026 · A4 Pause all · réutilise le statut et la carte de pause du garde-fou, plus `hold` : rien ne reprend seul et ce qu'Atlas programme entre-temps est mis en pause aussi ; Undo par la barre de Publishing · une pause de 24 h comme l'alerte · « jusqu'à ce que tu reprennes » est ce que Sam attend d'un frein
+- 26/11/2026 · A4 délai · le pied de carte du Desk dit « Nothing goes out until you confirm », faux ici : demande `requests/trust-from-atlas-card-footnote.md`
