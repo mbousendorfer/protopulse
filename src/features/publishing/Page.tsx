@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Plus, Sparkles, StickyNote, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Pause, Play, Plus, Sparkles, StickyNote, Upload, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
@@ -24,6 +24,7 @@ import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
 import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
+import { WINDOW_TOPIC } from './window'
 import './publishing.css'
 
 type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'queues' | 'media'
@@ -34,7 +35,7 @@ const MONDAY_THIS_WEEK = T(0, 0, -1)
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`)
 
 export default function PublishingPage() {
-  const { s } = useStore()
+  const { s, d } = useStore()
   const nav = useNavigate()
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
@@ -54,6 +55,9 @@ export default function PublishingPage() {
   return (
     <div className="page pub-page">
       <PageHead agent="atlas" title="Publishing" lede="Atlas plans the week, writes the posts and picks the slots. You approve the plan, not each post.">
+        {s.publishing.hold
+          ? <Btn onClick={() => d({ type: 'publishing/resumeAll' })}><Play size={14} />Resume publishing</Btn>
+          : <Btn onClick={() => d({ type: 'publishing/pauseAll' })}><Pause size={14} />Pause all publishing</Btn>}
         <Btn variant="primary" onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
@@ -294,6 +298,8 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
 }
 
 function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
+  const { s } = useStore()
+  const going = s.handoffs.find(h => h.topic === WINDOW_TOPIC && h.ref === p.id)
   const draggable = p.status !== 'published'
   return (
     <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
@@ -302,6 +308,7 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
         <span className="cal-post-top"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span>{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}{p.account && <span className="cal-acc">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}<span className="spacer" />{p.media && <span className="cal-photo"><Photo name={p.media} /></span>}</span>
         <p className="cal-post-text">{p.text}</p>
         {(p.status === 'needs' || p.status === 'draft' || p.status === 'failed' || p.status === 'paused' || p.status === 'unapproved') && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}
+        {going && <Pill tone="caution">{going.title.split(':')[0]}</Pill>}
         {p.stats && <span className="cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
         {p.note && <span className="cal-note">{p.note}</span>}
         {p.campaign && <span className="chip">{p.campaign}</span>}
