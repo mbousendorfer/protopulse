@@ -317,3 +317,69 @@ test('“4 more moments” sets up the weekly quota: sending them all keeps 3 an
   s = run(s, { type: 'video/send', ids: ready })
   expect(s.log[0].text).toMatch(/5 clips from this video already go out this week/)
 })
+
+/* ---------- Hook trials ---------- */
+
+const DAY_MS = 24 * 3600_000
+
+test('a hook trial: the clip leaves review for a day, the results raise a Draft card, approving uses the winner and sends it', () => {
+  let s = run(initialState(), { type: 'video/trial', id: 'clip-repair-twenty' })
+  expect(clipOf(s, 'clip-repair-twenty').status).toBe('trial')
+  expect(clipOf(s, 'clip-repair-twenty').trial?.hooks).toEqual(['42 stitches. 20 minutes. €0.', 'This repair cost the owner nothing.'])
+  s = run(later(s, DAY_MS + 1000), { type: 'core/heartbeat' })
+  const c = clipOf(s, 'clip-repair-twenty')
+  expect(c.status).toBe('ready')
+  expect(c.trial?.held?.[0]).toBeGreaterThan(c.trial!.held![1])
+  expect(s.video.trials).toHaveLength(3)
+  const card = s.handoffs.find(h => h.topic === 'Hook trial')!
+  expect(card.title).toMatch(/won the hook trial/)
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(s, 'clip-repair-twenty').status).toBe('sent')
+  expect(clipOf(s, 'clip-repair-twenty').hook).toBe('42 stitches. 20 minutes. €0.')
+})
+
+test('the third win of a hook with a number proposes a Playbook rule once; adding it feeds the score, Undo takes it out', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-trial' })
+  const card = s.handoffs.find(h => h.topic === 'Hook rule')!
+  expect(card.context).toMatch(/won 3 of 3/)
+  const before = rescore(clipOf(s, 'clip-live-zips'), TRANSCRIPT.live).total
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(s.playbook.rules.some(r => r.text === 'Open clip hooks on a number')).toBe(true)
+  // “Zips break, not fabric” opens on a question: the rule says so, and a numbered hook scores higher.
+  const zips = clipOf(s, 'clip-live-zips')
+  expect(rescore(zips, TRANSCRIPT.live).track?.why).toMatch(/Playbook says to open on a number/)
+  expect(rescore({ ...zips, hook: '1,200 repairs taught us this.' }, TRANSCRIPT.live).total).toBe(rescore(zips, TRANSCRIPT.live).total + 3)
+  expect(rescore(zips, TRANSCRIPT.live).total).toBe(before)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.playbook.rules.some(r => r.text === 'Open clip hooks on a number')).toBe(false)
+  // Juno doesn't ask twice.
+  s = run(s, { type: 'core/fire', eventId: 'ev-video-trial' })
+  expect(s.handoffs.filter(h => h.topic === 'Hook rule')).toHaveLength(1)
+})
+
+test('on Act, Juno trials her best new clips alone (Undo stops them) and puts the winner on; on Suggest the result is only logged', () => {
+  let s = level(initialState(), 'juno-trial', 'act')
+  s = done(run(s, { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  const trialled = s.video.clips.filter(c => c.status === 'trial')
+  expect(trialled.length).toBeGreaterThan(0)
+  const line = s.log.find(l => l.trials)!
+  const undone = run(s, { type: 'core/undo', id: line.id })
+  expect(undone.video.clips.filter(c => c.status === 'trial')).toHaveLength(0)
+  s = run(later(s, DAY_MS + 1000), { type: 'core/heartbeat' })
+  const won = clipOf(s, trialled[0].id)
+  expect(won.hook).toBe(won.trial!.hooks[won.trial!.held![1] > won.trial!.held![0] ? 1 : 0])
+  expect(s.handoffs.some(h => h.topic === 'Hook trial')).toBe(false)
+
+  let q = level(initialState(), 'juno-trial', 'suggest')
+  q = run(q, { type: 'core/fire', eventId: 'ev-video-trial' })
+  expect(q.handoffs.some(h => h.topic === 'Hook trial')).toBe(false)
+  expect(q.log[0].text).toMatch(/Pick the hook in the editor|Hook trial on/)
+})
+
+test('only a clip waiting for review, going to Instagram, can be trialled', () => {
+  const s = run(initialState(), { type: 'video/trial', id: 'clip-live-bottle' })
+  expect(clipOf(s, 'clip-live-bottle').status).toBe('trial')
+  // Already sent, TikTok only: no trial.
+  const t = run(initialState(), { type: 'video/trial', id: 'clip-repair-unpick' })
+  expect(clipOf(t, 'clip-repair-unpick').status).toBe('sent')
+})
