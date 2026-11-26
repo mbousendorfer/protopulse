@@ -23,7 +23,7 @@ declare module '../../app/types' {
     inboxBannedBefore?: string[]
   }
 }
-import { CONVERSATIONS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
+import { CONTACTS, CONVERSATIONS, LABELS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Msg, type Sentiment } from '../../data/inbox'
 
 /** The last group action, kept so it can be undone in one click for a few seconds. */
 export type InboxUndo = { label: string; at: number; logId?: string; before: Conversation[]; created: string[]; cards: Handoff[]; rules?: InboxRule[]; banned?: string[] }
@@ -37,7 +37,7 @@ export type BulkOp =
   | { op: 'assign'; value?: Assignee } | { op: 'label'; value: string } | { op: 'unlabel'; value: string } | { op: 'sentiment'; value: Sentiment }
 
 export type InboxAction =
-  | { type: 'inbox/approve'; id: string; text?: string }
+  | { type: 'inbox/approve'; id: string; text?: string; dm?: string }
   | { type: 'inbox/send'; id: string; text: string; saved?: string }
   | { type: 'inbox/takeover'; id: string }
   | { type: 'inbox/hide'; id: string; hidden: boolean }
@@ -68,6 +68,7 @@ export type InboxAction =
   | { type: 'inbox/labelDelete'; name: string }
   | { type: 'inbox/moderate'; ids: string[]; op: ModOp }
   | { type: 'inbox/private'; id: string }
+  | { type: 'inbox/answerThis'; id: string }
   | { type: 'inbox/ingest'; mention: Ingest }
   | { type: 'inbox/viewAdd'; view: Omit<SavedView, 'id'> }
   | { type: 'inbox/viewDelete'; id: string }
@@ -94,6 +95,12 @@ export type CardConv = {
   /** Author's audience, for the "creators above 50k" escalation. */
   followers?: number
   note?: string
+  /** The private half of the reply on a public message (see `Conversation.dm`). */
+  dm?: string
+  /** The words that made Nova escalate. */
+  trigger?: string
+  /** The product a "which one is it?" question is about (see products.ts). */
+  product?: Conversation['product']
 }
 export function kindOf(h: Pick<Handoff, 'conv' | 'context' | 'topic' | 'title'>, p: Reply): CardConv {
   if (h.conv) return h.conv
@@ -108,8 +115,8 @@ function cardConv(h: Omit<Handoff, 'id' | 'at'>, p: Reply, id: string, at: numbe
   const k = kindOf(h, p)
   return {
     id, contact: k.contact, author: p.author, network: p.network, type: k.type, sentiment: k.sentiment, stars: k.stars, intent: k.intent, post: k.post,
-    at, handoff: card, unread: true, labels: [], note: k.note, savedFrom: k.saved,
-    status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' ? 'escalated' : 'draft',
+    at, handoff: card, unread: true, labels: [], note: k.note, savedFrom: k.saved, dm: k.dm, trigger: k.trigger, product: k.product,
+    status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' || h.action === 'nova-holding' ? 'escalated' : 'draft',
     messages: [{ id: `${id}-q`, from: 'them', text: p.text, at: at - MIN }],
     draft: p.draft, rules: h.rules,
     attachments: p.attachments?.map((a, i) => ({ id: `${id}-a${i}`, kind: /refund/i.test(a) ? 'refund' : /code/i.test(a) ? 'code' : 'exchange', label: a.split(' · within')[0], limit: a.includes('within') ? a.slice(a.indexOf('within')) : 'within your limits' })),
@@ -163,6 +170,35 @@ function settleCard(s: State, c: Conversation, text: string, status: 'approved' 
 
 const attachmentNote = (c: Conversation) => (c.attachments ?? []).filter(a => !a.removed).map(a => a.label).join(' · ')
 
+/* ---------- Public line, then a DM ---------- */
+
+/** Public messages Nova can follow up in private. */
+export const PUBLIC: ConvType[] = ['comment', 'mention', 'ad']
+/** The DM conversation that continues a public one. */
+export const dmId = (id: string) => `${id}-dm`
+const dmBase = (c: Conversation, t: number): Conversation => ({
+  id: dmId(c.id), contact: c.contact, author: c.author, network: c.network, type: 'dm', sentiment: c.sentiment, at: t, status: 'you', labels: c.labels ?? [], assignee: c.assignee,
+  messages: [{ id: uid('m'), from: 'them', text: lastThem(c), at: c.at }],
+  note: `From a public ${c.type} on ${NET_NAME[c.network]}${c.post ? ` · ${c.post}` : ''}`,
+})
+/** Nova's DM, sent right after her public line: added to the DM conversation, created if needed. */
+function deliverDm(s: State, c: Conversation, text: string, m: Partial<Msg>, p: Partial<Conversation> = {}): State {
+  const t = now(s)
+  const msg: Msg = { id: uid('m'), from: 'nova', text, at: t, dm: true, ...m }
+  const there = s.inbox.convs.find(x => x.id === dmId(c.id))
+  if (there) return patch(s, there.id, x => ({ ...p, messages: [...x.messages, msg] }))
+  const conv = dmBase(c, t)
+  return { ...s, inbox: { ...s.inbox, convs: [{ ...conv, ...p, messages: [...conv.messages, msg] }, ...s.inbox.convs] } }
+}
+/** Takes Nova's DM back: the message goes, and a DM conversation that only held it goes too. */
+function undoDm(s: State, id: string, which: (m: Msg) => boolean): State {
+  const c = s.inbox.convs.find(x => x.id === dmId(id))
+  if (!c?.messages.some(which)) return s
+  const messages = c.messages.filter(m => !which(m))
+  const convs = messages.some(m => m.from !== 'them') ? s.inbox.convs.map(x => (x.id === c.id ? { ...x, messages } : x)) : s.inbox.convs.filter(x => x.id !== c.id)
+  return { ...s, inbox: { ...s.inbox, convs } }
+}
+
 const hasDraft = (c: Conversation) => (c.status === 'draft' || c.status === 'escalated') && !!c.draft?.length
 /** What a person sent or looked at is reviewed. */
 const BY_SAM = { reviewed: true, reviewedBy: 'sam' } as const
@@ -187,7 +223,7 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   const cards = s.handoffs.filter(h => picked.some(c => c.handoff === h.id))
   const change = (c: Conversation): Partial<Conversation> => {
     switch (a.op) {
-      case 'approve': return { status: 'you', draft: undefined, unread: false, ...BY_SAM, messages: [...c.messages, { id: uid('m'), from: 'nova', text: plain(c.draft), at: t, approved: true }] }
+      case 'approve': return { status: 'you', draft: undefined, dm: undefined, note: c.dm ? 'Continued in private messages' : c.note, unread: false, ...BY_SAM, messages: [...c.messages, { id: uid('m'), from: 'nova', text: plain(c.draft), at: t, approved: true }] }
       case 'hide': return { status: 'hidden', note: 'Hidden by you' }
       case 'unhide': return { status: c.draft?.length ? 'draft' : 'auto', note: undefined }
       case 'reviewed': return { reviewed: a.value, reviewedBy: a.value ? 'sam' : undefined, unread: false }
@@ -210,8 +246,12 @@ function bulk(s0: State, a: Extract<InboxAction, { type: 'inbox/bulk' }>): State
   const settles = a.op === 'approve' || a.op === 'hide'
   let next: State = { ...s, handoffs: settles ? s.handoffs.filter(h => !cards.includes(h)) : s.handoffs, inbox: { ...s.inbox, convs: s.inbox.convs.map(c => (ids.has(c.id) ? { ...withTeam(c), ...change(withTeam(c)) } : c)) } }
   if (a.op === 'approve') next = bumpSaved(next, ...picked.map(c => c.savedFrom))
+  // The DM half of a reply on a public message goes out with it, and comes back with the group Undo.
+  const dms = a.op === 'approve' ? picked.filter(c => c.dm) : []
+  for (const c of dms) next = deliverDm(next, c, c.dm!, { approved: true })
   next = pushLog(next, { agent: 'nova', text: label, status: a.op === 'approve' ? 'approved' : 'done', reason: n > 1 ? 'Your call from the Inbox, in one go' : 'Your call from the Inbox', link: '/inbox' })
-  const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id)), created: picked.map(c => c.id).filter(id => !existing.has(id)), cards: settles ? cards : [] }
+  const dmIds = new Set(dms.map(c => dmId(c.id)))
+  const undo: InboxUndo = { label, at: t, logId: next.log[0].id, before: s0.inbox.convs.filter(c => ids.has(c.id) || dmIds.has(c.id)), created: [...picked.map(c => c.id), ...dmIds].filter(id => !existing.has(id)), cards: settles ? cards : [] }
   next = { ...next, inbox: { ...next.inbox, undo } }
   if (a.op === 'label' && !next.inbox.labels.includes(a.value)) next = { ...next, inbox: { ...next.inbox, labels: [...next.inbox.labels, a.value] } }
   return a.op === 'label' ? teach(next, a.value, picked.map(c => c.id)) : next
@@ -240,6 +280,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
   if (a.type === 'inbox/ingest') return ingest(s0, a.mention)
   if (a.type === 'inbox/moderate') return moderate(s0, a.ids, a.op, 'sam')
   if (a.type === 'inbox/private') return replyInPrivate(s0, a.id)
+  if (a.type === 'inbox/answerThis') return answerThis(s0, a.id)
   if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)
   if (a.type === 'inbox/target') return { ...s0, inbox: { ...s0.inbox, targets: { ...s0.inbox.targets, [a.kind]: a.minutes } } }
   if (a.type === 'inbox/bulk') return bulk(s0, a)
@@ -252,7 +293,9 @@ export function reduceInbox(s0: State, a: InboxAction): State {
     case 'inbox/approve': {
       const text = a.text ?? plain(c.draft)
       const edited = a.text !== undefined && a.text !== plain(c.draft)
-      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, unread: false, ...BY_SAM, note: attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
+      const dm = a.dm ?? c.dm
+      let next = patch(s, c.id, x => ({ status: 'you', draft: undefined, dm: undefined, unread: false, ...BY_SAM, note: dm ? 'Continued in private messages' : attachmentNote(x) ? `Sent with: ${attachmentNote(x)}` : x.note, messages: [...x.messages, { id: uid('m'), from: 'nova', text, at: t, approved: true }] }))
+      if (dm) next = deliverDm(next, c, dm, { approved: true })
       next = bumpSaved(settleCard(next, c, `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, edited ? 'edited' : 'approved'), c.savedFrom)
       if (!c.handoff) next = pushLog(next, { agent: 'nova', text: `Reply to ${c.author}: ${edited ? 'approved with your edits' : 'approved'}`, status: edited ? 'edited' : 'approved', reason: 'Your call from the Inbox', link: `/inbox/${c.id}` })
       return next
@@ -305,6 +348,8 @@ export function reduceInbox(s0: State, a: InboxAction): State {
 
 /** Nova's reply sent alone, taken back: the message stays crossed out, the text comes back as a draft, the journal says so. */
 function undoAlone(s: State, c: Conversation, msg: Msg): State {
+  const pair = msg.log ? s.inbox.convs.find(x => x.id === dmId(c.id))?.messages.find(m => m.log === msg.log) : undefined
+  if (pair) return undoHolding(s, c, msg, pair)
   let next = patch(s, c.id, x => ({ status: 'draft', draft: [msg.text], reviewed: false, reviewedBy: undefined, messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)) }))
   if (msg.log) next = { ...next, log: next.log.map(l => (l.id === msg.log ? { ...l, status: 'undone' as const } : l)) }
   if (msg.log && s.log.find(l => l.id === msg.log)?.status === 'undone') return next
@@ -325,10 +370,13 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
   const base = cardConv(h, p, id, t)
   const sent = (base.attachments ?? []).map(a => a.label).join(' · ')
   const conv: Conversation = {
-    ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, attachments: undefined, note: sent ? `Sent with: ${sent}` : undefined,
+    ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, dm: undefined, attachments: undefined, note: base.dm ? 'Continued in private messages' : sent ? `Sent with: ${sent}` : undefined,
     messages: [{ ...base.messages[0], at: t - 2 * MIN }, { id: uid('m'), from: 'nova', text: kindOf(h, p).reply ?? plain(p.draft), at: t, auto: true, undoUntil: t + 10 * MIN, log: next.log[0].id }],
   }
-  return runRules({ ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }, id)
+  let out = runRules({ ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }, id)
+  // A public answer with a private half: the DM goes out with it, and comes back with its Undo.
+  if (base.dm) out = deliverDm(out, conv, base.dm, { auto: true, log: next.log[0].id }, { status: 'auto', reviewed: true, reviewedBy: 'nova', unread: false })
+  return out
 }
 
 /**
@@ -337,6 +385,7 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
  */
 export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
   if (h.inboxSpam) return d.kind === 'approve' ? moderate(s0, h.inboxSpam, 'spam', d.act ? 'nova' : 'sam') : s0
+  if (h.compliments) return d.kind === 'approve' ? applyChoices(s0, h.compliments, h.id) : s0
   if (h.inboxRule) return d.kind === 'approve' ? reduceRules(s0, { type: 'inbox/ruleAdd', rule: h.inboxRule, applyNow: true, origin: LEARNED }) : s0
   const p = replyOf(h)
   let s = s0
@@ -354,7 +403,7 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
   const draft = p ? plain(p.draft) : plain(conv.draft)
   const extras = attachmentNote(conv)
   const send = (status: ConvStatus, text = draft): Partial<Conversation> => ({
-    status: d.act ? 'auto' : status, unread: false, reviewed: true, reviewedBy: d.act ? 'nova' : 'sam', draft: undefined, note: extras ? `Sent with: ${extras}` : conv.note,
+    status: d.act ? 'auto' : status, unread: false, reviewed: true, reviewedBy: d.act ? 'nova' : 'sam', draft: undefined, dm: undefined, note: conv.dm ? 'Continued in private messages' : extras ? `Sent with: ${extras}` : conv.note,
     messages: text ? [...conv.messages, { id: uid('m'), from: 'nova', text, at: t, approved: !d.act, auto: d.act, card: h.id }] : conv.messages,
   })
   let change: Partial<Conversation> | undefined
@@ -371,13 +420,16 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
   }
   if (!change) return s0
   if (change.messages !== conv.messages) s = bumpSaved(s, conv.savedFrom)
-  const settled = { card: h.id, created, status: conv.status, draft: conv.draft, note: conv.note, unread: conv.unread, reviewed: conv.reviewed, reviewedBy: conv.reviewedBy }
-  return patch(s, conv.id, { ...change, settled })
+  const settled = { card: h.id, created, status: conv.status, draft: conv.draft, dm: conv.dm, note: conv.note, unread: conv.unread, reviewed: conv.reviewed, reviewedBy: conv.reviewedBy }
+  const out = patch(s, conv.id, { ...change, settled })
+  return conv.dm && change.messages && change.messages !== conv.messages ? deliverDm(out, conv, conv.dm, { approved: !d.act, auto: d.act, card: h.id },
+    // Sent by Nova on Act: the answer itself still waits on Sam, in the DM.
+    d.act && conv.status === 'escalated' ? { status: 'escalated', unread: true, trigger: conv.trigger, note: `${conv.note ?? 'Escalated'}. Nova sent the holding reply; the answer is yours.` } : {}) : out
 }
 
 /** The journal's Undo: a card's decision comes off its conversation, and a reply Nova sent alone comes back as a draft. */
 export function onUndoInbox(s: State, entry: LogEntry): State {
-  let next = undoRules(s, entry)
+  let next = undoChoices(undoRules(s, entry), [entry.id, ...(entry.restore ?? []).map(h => h.id)])
   // A learned rule approved from the Desk goes away with its card's Undo.
   for (const h of entry.restore ?? []) {
     const r = h.inboxRule
@@ -387,11 +439,12 @@ export function onUndoInbox(s: State, entry: LogEntry): State {
     const c = next.inbox.convs.find(x => x.settled?.card === h.id)
     if (!c?.settled) continue
     const b = c.settled
+    next = undoDm(next, c.id, m => m.card === h.id)
     next = b.created
       ? { ...next, inbox: { ...next.inbox, convs: next.inbox.convs.filter(x => x.id !== c.id) } }
-      : patch(next, c.id, { status: b.status, draft: b.draft, note: b.note, unread: b.unread, reviewed: b.reviewed, reviewedBy: b.reviewedBy, settled: undefined, messages: c.messages.filter(m => m.card !== h.id) })
+      : patch(next, c.id, { status: b.status, draft: b.draft, dm: b.dm, note: b.note, unread: b.unread, reviewed: b.reviewed, reviewedBy: b.reviewedBy, settled: undefined, messages: c.messages.filter(m => m.card !== h.id) })
   }
-  const alone = next.inbox.convs.find(x => x.messages.some(m => m.log === entry.id && !m.undone))
+  const alone = next.inbox.convs.find(x => x.messages.some(m => m.log === entry.id && !m.undone && !m.dm))
   const msg = alone?.messages.find(m => m.log === entry.id)
   return alone && msg ? undoAlone(next, alone, msg) : next
 }
@@ -411,14 +464,14 @@ const labelWords = (label: string) => {
   const w = label.toLowerCase().match(/[a-zà-ÿ]{5,}/g) ?? []
   return w.length ? new RegExp(w.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i') : /$^/
 }
-export type EscalationHit = Pick<Escalation, 'id' | 'label' | 'to'> & { topic: string }
+export type EscalationHit = Pick<Escalation, 'id' | 'label' | 'to'> & { topic: string; /** The words that matched, quoted on the card. */ match?: string }
 
 /** The first escalation rule that is on for Nova and matches what came in, in the Playbook's order. */
 export function escalationFor(s: State, text: string, meta: { followers?: number; refund?: number } = {}): EscalationHit | undefined {
   for (const e of s.playbook.escalate) {
     if (!e.on || !e.agents.includes('nova')) continue
-    const hit = e.id === 'e-creator' ? (meta.followers ?? 0) > 50_000 : e.id === 'e-refund' ? (meta.refund ?? 0) > 150 : (ESC_WORDS[e.id] ?? labelWords(e.label)).test(text)
-    if (hit) return { id: e.id, label: e.label, to: e.to, topic: TOPIC[e.id] ?? 'Escalation' }
+    const hit = e.id === 'e-creator' ? (meta.followers ?? 0) > 50_000 : e.id === 'e-refund' ? (meta.refund ?? 0) > 150 : (ESC_WORDS[e.id] ?? labelWords(e.label)).exec(text)
+    if (hit) return { id: e.id, label: e.label, to: e.to, topic: TOPIC[e.id] ?? 'Escalation', match: typeof hit === 'object' ? hit[0] : undefined }
   }
 }
 
@@ -431,26 +484,87 @@ export const escalationOf = (s: State, h: Omit<Handoff, 'id' | 'at'>) => {
   return p ? escalationFor(s, p.text, { followers: h.conv?.followers, refund: refundOf(p) }) : undefined
 }
 
+/** Who the fan is, in one line: audience, orders, earlier conversations, tags. */
+export function fanOf(s: State, c: Pick<Conversation, 'id' | 'contact' | 'author'>): string | undefined {
+  const k = c.contact ? CONTACTS.find(x => x.id === c.contact) : undefined
+  const past = s.inbox.convs.filter(x => x.id !== c.id && x.id !== dmId(c.id) && (c.contact ? x.contact === c.contact : x.author === c.author)).length
+  const late = k?.orders.filter(o => o.status === 'Late').length ?? 0
+  const parts = [
+    k?.followers && `${k.followers} followers`,
+    k && `${k.orders.length} order${k.orders.length === 1 ? '' : 's'}${late ? ` (${late} late)` : ''}`,
+    past && `${past} earlier conversation${past > 1 ? 's' : ''}`,
+    k?.tags.length && k.tags.join(', '),
+  ].filter(Boolean)
+  return parts.length ? parts.join(' · ') : undefined
+}
+
 /**
  * A message that matches an escalation rule never gets Nova's own answer, whatever her autonomy: it goes to Your call
- * (or to Claire when the rule says so) with a holding reply, and the journal quotes the rule.
+ * (or to Claire when the rule says so) with a holding reply, and the journal quotes the rule. Same rules in DMs and in
+ * public; in public the holding reply is one line ("we've sent you a DM") and the rest goes in private, so nothing about
+ * refunds or liability is ever said in public. With "Send holding replies" on Act, Nova sends the pair herself and the
+ * answer stays Sam's, in the DM.
  */
 export function escalate(s: State, h: Omit<Handoff, 'id' | 'at'>, hit: EscalationHit, ref: string): State {
   const p = replyOf(h)!
   const t = now(s)
+  const k = kindOf(h, p)
   const first = p.author.replace(/^@/, '').split(/[\s._·]/)[0]
   const name = first.charAt(0).toUpperCase() + first.slice(1)
-  const holding = `${name}, thank you for telling us. ${hit.id === 'e-injury' ? 'We’re sorry, and we hope you’re OK. ' : ''}A member of our team will get back to you today.`
-  const why = `Escalated · rule “${hit.label}”`
+  const open = PUBLIC.includes(k.type)
+  const holding = `${name}, thank you for telling us. ${hit.id === 'e-injury' ? 'We’re sorry, and we hope you’re OK. ' : 'We’re sorry about this. '}A member of our team will get back to you today.`
+  const line = `${name}, we’ve sent you a DM.`
+  const rule = `Escalated · rule “${hit.label}”`
+  const said = `${hit.match ? `“${hit.match}” ` : ''}${open ? `in a public ${k.type}` : k.type === 'review' ? 'in a review' : 'in a DM'}`
+  const fan = fanOf(s, { id: '', contact: k.contact, author: p.author })
+  const sources = fan ? [{ label: fan, from: 'Contact' }] : undefined
+  const to = hit.to === 'claire' ? 'Claire' : 'you'
+
+  if (open && actionOf(s, 'nova', 'nova-holding')?.autonomy === 'act') {
+    // Nova sends "we've sent you a DM" and the DM herself; the answer waits on Sam in the DM.
+    let next = pushHandoff(s, {
+      agent: 'nova', kind: 'decision', action: 'nova-sensitive', topic: hit.topic, urgency: 'urgent', ref, title: h.title, context: `${p.author}: “${p.text}”`,
+      why: `${rule}: ${said}. Nova sent the holding reply (in public “we’ve sent you a DM”, the rest in private). The answer is yours.`,
+      confidence: h.confidence, rules: [hit.label], sources, link: h.link,
+      options: hit.to === 'claire'
+        ? [{ label: 'Forward to Claire', recommended: true }, { label: 'I’ll answer in the DM' }]
+        : [{ label: 'I’ll answer in the DM', recommended: true }, { label: 'Forward to Claire' }],
+    })
+    const card = next.handoffs[0].id
+    next = pushLog(next, { agent: 'nova', text: `Sent ${p.author} a holding reply (public line, then a DM) · rule: ${hit.label}`, status: 'done', undoMinutes: 10, reason: 'Holding replies on escalations, set to Act', link: `/inbox/${dmId(`c-${card}`)}` })
+    const log = next.log[0].id
+    const base = cardConv({ ...h, conv: k }, p, `c-${card}`, t)
+    const pub: Conversation = { ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, dm: undefined, attachments: undefined, note: 'Continued in private messages',
+      messages: [{ ...base.messages[0], at: t - 2 * MIN }, { id: uid('m'), from: 'nova', text: line, at: t, auto: true, undoUntil: t + 10 * MIN, log }] }
+    next = { ...next, inbox: { ...next.inbox, convs: [pub, ...next.inbox.convs] } }
+    next = deliverDm(next, pub, holding, { auto: true, log }, { status: 'escalated', handoff: card, unread: true, trigger: hit.match, note: `${rule}. Nova sent the holding reply; the answer is yours.` })
+    return runRules(next, dmId(pub.id))
+  }
+
   let next = pushHandoff(s, {
-    ...structuredClone(h), kind: 'approval', action: 'nova-sensitive', topic: hit.topic, urgency: 'urgent', ref,
-    why: `${why}. Nova never answers this herself, whatever her autonomy.`, rules: [hit.label], sources: undefined,
-    conv: { ...kindOf(h, p), note: why }, preview: { ...p, draft: [holding], attachments: undefined },
+    ...structuredClone(h), kind: 'approval', action: 'nova-holding', topic: hit.topic, urgency: 'urgent', ref,
+    why: `${rule}: ${said}. ${open ? 'In public Nova only says “we’ve sent you a DM”; the DM holds the rest. Nothing about refunds or liability in public.' : 'Nova never answers this herself, whatever her autonomy.'}`,
+    rules: [hit.label], sources,
+    conv: { ...k, note: rule, trigger: hit.match, dm: open ? holding : undefined }, preview: { ...p, draft: [open ? line : holding], attachments: undefined },
   })
   const id = next.handoffs[0].id
   if (hit.to === 'claire') next = updateHandoff(next, id, { lane: 'claire', claire: { askedAt: t, dueAt: t + 45_000 } })
   next = land(next, id)
-  return pushLog(next, { agent: 'nova', text: `Escalated ${p.author} to ${hit.to === 'claire' ? 'Claire' : 'you'} · rule: ${hit.label}`, status: 'done', reason: 'Playbook escalation, whatever the autonomy', link: `/inbox/h:${id}` })
+  return pushLog(next, { agent: 'nova', text: `Escalated ${p.author} to ${to} · rule: ${hit.label}`, status: 'done', reason: 'Playbook escalation, whatever the autonomy', link: `/inbox/h:${id}` })
+}
+
+/** A public reply and its DM taken back: both crossed out, the pair back as a draft on the public message, the DM gone. */
+function undoHolding(s: State, c: Conversation, msg: Msg, pair: Msg): State {
+  const dmc = s.inbox.convs.find(x => x.id === dmId(c.id))!
+  const held = dmc.status === 'escalated' || dmc.status === 'claire'
+  let next = undoDm(s, c.id, m => m.id === pair.id)
+  next = patch(next, c.id, x => ({
+    status: held ? 'escalated' : 'draft', draft: [msg.text], dm: pair.text, handoff: dmc.handoff, trigger: dmc.trigger, note: held ? dmc.note?.split('. ')[0] : undefined, reviewed: false, reviewedBy: undefined, unread: true,
+    messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)),
+  }))
+  next = { ...next, log: next.log.map(l => (l.id === msg.log ? { ...l, status: 'undone' as const } : l)) }
+  if (s.log.find(l => l.id === msg.log)?.status === 'undone') return next
+  return pushLog(next, { agent: 'nova', text: `Undone: Nova’s ${held ? 'holding reply' : 'reply and DM'} to ${c.author}. ${held ? 'It’s' : 'They’re'} back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
 }
 
 /* ---------- Inbox rules ---------- */
@@ -689,9 +803,9 @@ export function warnLate(s: State, t: number, items: { c: Conversation; w: Wait 
   })
 }
 
-export const dueInbox = (s: State, t: number) => soon(s, t).length > 0 || staleWarnings(s, t).length > 0 || teamDue(s, t).length > 0
+export const dueInbox = (s: State, t: number) => s.inbox.convs.some(c => c.queued && c.queued.at <= t) || soon(s, t).length > 0 || staleWarnings(s, t).length > 0 || teamDue(s, t).length > 0
 export function tickInbox(s: State, t: number): State {
-  let next = teamReplies(s, t)
+  let next = sendQueued(teamReplies(s, t), t)
   next = staleWarnings(next, t).reduce((x, h) => removeHandoff(x, h.id), next)
   next = warnLate(next, t, soon(next, t))
   return next
@@ -821,13 +935,7 @@ export function replyInPrivate(s0: State, id: string): State {
   const dm = `${c.id}-dm`
   if (s.inbox.convs.some(x => x.id === dm)) return s0
   const t = now(s)
-  const quote = c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
-  const conv: Conversation = {
-    id: dm, contact: c.contact, author: c.author, network: c.network, type: 'dm', sentiment: c.sentiment, at: t, status: 'draft', labels: c.labels ?? [], assignee: c.assignee,
-    messages: [{ id: uid('m'), from: 'them', text: quote, at: c.at }],
-    draft: [`Hi ${firstName(c)}, following up here in private so we can sort this out properly. Could you send me your order number?`],
-    note: `From a public ${c.type} on ${NET_NAME[c.network]}${c.post ? ` · ${c.post}` : ''}`,
-  }
+  const conv: Conversation = { ...dmBase(c, t), status: 'draft', draft: [`Hi ${firstName(c)}, following up here in private so we can sort this out properly. Could you send me your order number?`] }
   const next = patch({ ...s, inbox: { ...s.inbox, convs: [conv, ...s.inbox.convs] } }, c.id, { note: 'Continued in private messages', status: c.status === 'draft' ? 'you' : c.status, draft: c.status === 'draft' ? undefined : c.draft })
   const line = `Moved ${c.author}’s ${c.type} to private messages. Nova drafted the DM.`
   const settled = settleCard(next, c, line, 'done')
@@ -858,6 +966,114 @@ export function botWave(s: State): State {
     why: 'Spam and bots are set to Draft: I hide them when you say so.', inboxSpam: ids,
     preview: { type: 'evidence', lines: convs.map(c => `${c.author}: “${c.messages[0].text}”`) },
   })
+}
+
+/* ---------- Rhythm: Nova doesn't answer everything ---------- */
+
+const FANS: [string, string][] = [
+  ['@sofi.out', '🔥🔥'],
+  ['@jb.alps', 'love this'],
+  ['@ana.walks', 'does it pack small?'],
+  ['@tim.rando', 'best jacket I own, six winters and still dry'],
+  ['@noa.peaks', '😍'],
+  ['@leo_hikes', 'need this'],
+  ['@camille.v', 'the hose at the end 😂'],
+  ['@marius.gr', '🙌🙌'],
+]
+/** Nova's own answers to the two comments that say something. */
+const ANSWERS: Record<string, string> = {
+  'does it pack small?': 'It does: it folds into its own hood, about the size of a water bottle.',
+  'best jacket I own, six winters and still dry': 'Six winters and still dry? That’s exactly the plan. Thank you!',
+}
+/** Short thanks for a compliment Sam wants answered. Nova never uses the same one twice in a day. */
+const THANKS = ['Thank you, {name}!', 'Glad you like it, {name}.', 'That means a lot, {name}.', 'Thanks {name}, see you on the trail.', 'Made our day, {name}.']
+const SPREAD = 7 * MIN
+
+/** Like or answer: a question or a story gets an answer; an emoji or a short compliment gets a like. */
+export function choose(text: string): { did: 'like' | 'answer'; why: string } {
+  const words = text.replace(/\p{Extended_Pictographic}|\uFE0F/gu, ' ').trim().split(/\s+/).filter(Boolean)
+  if (text.includes('?')) return { did: 'answer', why: 'asks a question' }
+  if (words.length >= 6) return { did: 'answer', why: 'tells a story' }
+  return { did: 'like', why: words.length ? 'short compliment, no question' : 'emoji only' }
+}
+
+/** The thanks Nova hasn't said today. */
+export function freshThanks(s: State, c: Conversation): string {
+  const said = s.inbox.convs.flatMap(x => x.messages.filter(m => m.from !== 'them' && m.at >= now(s) - 24 * 60 * MIN).map(m => m.text))
+  const used = (tpl: string) => {
+    const re = new RegExp(`^${tpl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{name\\}', '.+')}$`)
+    return said.some(t => re.test(t))
+  }
+  const name = firstName(c)
+  return (THANKS.find(x => !used(x)) ?? 'Thanks, {name}.').replaceAll('{name}', name)
+}
+
+/**
+ * Eight comments land under the reel. On Act Nova likes the simple compliments and answers the two that say something,
+ * spread a few minutes apart; one journal line sums it up. On Draft (or Suggest) she lines it all up on one Desk card.
+ */
+export function complimentWave(s: State): State {
+  const t = now(s)
+  const post = 'Reel · “Storm Jacket vs. a garden hose”'
+  const convs: Conversation[] = FANS.map(([author, text], i) => ({
+    id: uid('c'), author, network: 'instagram', type: 'comment', sentiment: 'positive', at: t - i * MIN, status: 'new', labels: [], unread: true, post,
+    messages: [{ id: uid('m'), from: 'them', text, at: t - i * MIN }],
+  }))
+  const ids = convs.map(c => c.id)
+  const plan = convs.map(c => choose(c.messages[0].text))
+  const liked = plan.filter(p => p.did === 'like').length
+  const next: State = { ...s, inbox: { ...s.inbox, convs: [...convs, ...s.inbox.convs] } }
+  if (actionOf(s, 'nova', 'nova-compliments')?.autonomy === 'act') {
+    const logged = pushLog(next, { agent: 'nova', text: `Liked ${liked} compliments, replied to ${ids.length - liked} · under “Storm Jacket vs. a garden hose”`, status: 'done', undoMinutes: 10, reason: 'Compliments, set to Act', link: '/inbox?view=handled' })
+    return applyChoices(logged, ids, logged.log[0].id)
+  }
+  return pushHandoff(next, {
+    agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Compliments', action: 'nova-compliments', confidence: 93, link: '/inbox?view=review',
+    title: `${ids.length} compliments under your Storm Jacket reel: like ${liked}, answer ${ids.length - liked}`, context: 'In the last 8 minutes on Instagram.',
+    why: 'Compliments are set to Draft: I like or answer them when you say so. I answer what has a question or a story.', compliments: ids,
+    preview: { type: 'evidence', lines: convs.map((c, i) => `${c.author}: “${c.messages[0].text}” → ${plan[i].did === 'like' ? 'like' : 'answer'} (${plan[i].why})`) },
+  })
+}
+
+/** Nova's choices, done: likes now, answers queued a few minutes apart. `wave` is what undoes them. */
+export function applyChoices(s: State, ids: string[], wave: string): State {
+  const t = now(s)
+  let k = 0
+  const convs = s.inbox.convs.map(c => {
+    if (!ids.includes(c.id)) return c
+    const ch = choose(c.messages[0]?.text ?? '')
+    const base = { ...c, status: 'auto' as const, unread: false, reviewed: true, reviewedBy: 'nova' as const, choice: { ...ch, wave } }
+    if (ch.did === 'like') return { ...base, liked: true, note: `Liked, no reply · ${ch.why}` }
+    const at = t + SPREAD * k++
+    const text = ANSWERS[c.messages[0].text] ?? ''
+    return { ...base, queued: { text, at }, note: `Nova replies at ${hhmm(at)} · ${ch.why}` }
+  })
+  return sendQueued({ ...s, inbox: { ...s.inbox, convs } }, t)
+}
+
+/** The heartbeat sends what Nova spread out once its time comes. */
+function sendQueued(s: State, t: number): State {
+  if (!s.inbox.convs.some(c => c.queued && c.queued.at <= t)) return s
+  const convs = s.inbox.convs.map(c => (c.queued && c.queued.at <= t
+    ? { ...c, queued: undefined, note: `Answered · ${c.choice?.why ?? 'compliment'}`, messages: [...c.messages, { id: uid('m'), from: 'nova' as const, text: c.queued.text, at: c.queued.at, auto: true, card: c.choice?.wave }] }
+    : c))
+  return { ...s, inbox: { ...s.inbox, convs } }
+}
+
+/** Undo of a wave: likes removed, replies taken back (sent or not), the comments back to New. */
+function undoChoices(s: State, waves: string[]): State {
+  if (!s.inbox.convs.some(c => c.choice && waves.includes(c.choice.wave))) return s
+  const convs = s.inbox.convs.map(c => (c.choice && waves.includes(c.choice.wave)
+    ? { ...c, status: 'new' as const, liked: false, queued: undefined, choice: undefined, reviewed: false, reviewedBy: undefined, note: 'Nova’s like or reply undone', messages: c.messages.filter(m => m.from === 'them') }
+    : c))
+  return { ...s, inbox: { ...s.inbox, convs } }
+}
+
+/** "Answer this one": Sam overrides a like; Nova drafts a short thanks she hasn't used today. */
+export function answerThis(s0: State, id: string): State {
+  const [s, c] = materialize(s0, id)
+  if (!c) return s0
+  return patch(s, c.id, { status: 'draft', draft: [freshThanks(s, c)], note: c.choice ? `You asked Nova to answer · she had ${c.choice.did === 'like' ? 'liked it' : 'answered'}` : c.note, reviewed: false })
 }
 
 /* ---------- Contract for Echo: mentions that need an answer become Inbox conversations ---------- */

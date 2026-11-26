@@ -28,6 +28,8 @@ declare module '../../app/types' {
     sla?: string[]
     /** Nova's spam suspects (conversation ids): approving the card reports them as spam. */
     inboxSpam?: string[]
+    /** A wave of compliments (conversation ids): approving the card likes or answers each one, as Nova chose. */
+    compliments?: string[]
   }
 }
 
@@ -178,8 +180,11 @@ const nova: AgentModule = {
   triggers: [
     { event: 'ev-sla', to: '/', label: 'Nova · warning before a response target is missed (Desk)' },
     { event: 'ev-injury', to: '/inbox', label: 'Nova · Playbook escalation, rule quoted (Your call)' },
+    { event: 'ev-legal', to: '/inbox', label: 'Nova · legal threat in public: “we’ve sent you a DM”, the rest in private' },
+    { event: 'ev-which', to: '/inbox', label: 'Nova · “which jacket is that?”: answers in public, product link in DM' },
     { event: 'ev-refund-ask', to: '/inbox?label=Refund', label: 'Nova · Inbox rule labels a new message Refund' },
     { event: 'ev-teach-rule', to: '/', label: 'Nova · proposes a rule learned from your labels (Desk)' },
+    { event: 'ev-compliments', to: '/inbox?view=handled', label: 'Nova · 8 compliments under a reel: likes 6, answers 2 (Handled by Nova)' },
     { event: 'ev-bots', to: '/inbox?view=hidden', label: 'Nova · reports bot comments as spam (Hidden)' },
     { event: 'ev-german', to: '/inbox?view=handled', label: 'Nova · answers in German, English shown (Handled by Nova)' },
   ],
