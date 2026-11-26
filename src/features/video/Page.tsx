@@ -102,12 +102,15 @@ function ClipCard({ c, src, sel, now }: { c: Clip; src: Source; sel: ReturnType<
           {c.audio.dubs.length > 0 && <span title={c.audio.dubs.map(l => LANG_LABEL[l]).join(', ')}>{c.audio.dubs.map(l => l.toUpperCase()).join(' ')}</span>}
           {c.edited && <span>Edited by you</span>}
         </p>
-        {proof && !c.stats && <p className="clip-card-proof"><b className="num">{proof.value}</b> {proof.label}</p>}
+        {c.trial?.held
+          ? <p className="clip-card-proof"><b className="num">{Math.max(...c.trial.held)}%</b> still watching at 3 s: “{c.trial.hooks[c.trial.held[1] > c.trial.held[0] ? 1 : 0]}” won its hook trial</p>
+          : proof && !c.stats && <p className="clip-card-proof"><b className="num">{proof.value}</b> {proof.label}</p>}
         <p className="clip-card-src">From {src.title}</p>
         {todo.length > 0 && <ul className="clip-card-todo">{todo.map(t => <li key={t}><TriangleAlert size={12} aria-hidden />{t}</li>)}</ul>}
         <div className="clip-card-acts">
           {c.status === 'ready' && <><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn><NotNow c={c} size="sm" /></>}
           {c.status === 'snoozed' && <><Pill>Back tomorrow 08:00</Pill><Btn size="sm" onClick={stop(() => d({ type: 'video/send', ids: [c.id] }))}>Send to Atlas</Btn></>}
+          {c.status === 'trial' && c.trial && <span className="t-sm">On trial on Reels · results {new Date(c.trial.until).toLocaleDateString('en-GB', { weekday: 'short' })} {hhmm(c.trial.until)}</span>}
           {c.status === 'sent' && <Link className="link-btn t-sm" to="/publishing/calendar" onClick={e => e.stopPropagation()}>{posts.length ? `Scheduled ${posts.map(p => `${new Date(p!.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${hhmm(p!.at)}`)[0]}${posts.length > 1 ? ` +${posts.length - 1}` : ''}` : 'In the calendar'}</Link>}
           {c.status === 'published' && c.stats && <span className="t-sm">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span>}
         </div>
@@ -180,6 +183,7 @@ function Clips() {
         <>
           {group('ready', 'Ready to review', ready, readyIds.length > 0 && <SelectAll sel={sel} label="Select every ready clip" />)}
           {group('making', 'Being made', [], undefined, making.length > 0 && making.map(x => <MakingCard key={x.id} src={x} now={now} />))}
+          {group('trial', 'On trial', by('trial'))}
           {group('later', 'Later', by('snoozed'))}
           {group('sent', 'Sent to Atlas', by('sent'))}
           {group('published', 'Published', by('published'))}

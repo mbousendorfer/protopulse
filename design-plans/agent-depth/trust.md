@@ -7,7 +7,7 @@
 ## Mission
 Protopulse veut valider qu'un social media manager **accepte de laisser des agents agir seuls**
 (PROMPT.md §1, points 1 et 3). En vague 1, chaque session a approfondi son module ; personne n'a
-porté ce qui fait naître la confiance. C'est toi. Ta section du catalogue est **Trust (T1–T8)**.
+porté ce qui fait naître la confiance. C'est toi. Ta section du catalogue est **Trust (T1–T5)**.
 
 Le marché met la barre ici : raisonnement et confiance sur chaque item, shadow par agent, pages de
 test et sandbox, onboarding qui montre l'agent au travail sur tes propres données. Et il rate tous
@@ -29,10 +29,10 @@ la même chose : défauts dangereux, inbox vide au jour 1, aucun chiffre de conf
 - Pas de shadow, pas de page de test, pas de versions du Playbook, pas de pouce sur les décisions.
 
 ## À faire dans l'ordre
-1. Backlog `trust-wave2-backlog.md` depuis T1–T8 (+ au moins une idée à toi).
-2. Pitche T1 (shadow), T2 (test), T3 (trust metric calculé) en premier : ils se renforcent (le shadow
-   produit les concordances, le trust metric les compte, la promotion s'appuie dessus, le test
-   permet de vérifier avant).
+1. Backlog `trust-wave2-backlog.md` depuis T1–T5 (+ au moins une idée à toi).
+2. Pitche T1 (essai à blanc), T2 (tester un agent), T3 (le vrai chiffre de confiance) en premier,
+   chacun en une phrase simple (règle n°1 de `market-ideas.md`). Dans l'UI aussi, des mots simples :
+   « Essai à blanc » / « Try it », pas « Shadow mode ».
 3. Pour chaque mécanisme, un point d'extension du registre (`src/app/agent-module.ts`) que chaque
    agent remplit pour ce qui lui est propre (ex. `testCases`, `leavesAlone`, `shadowPreview`) ; tu
    remplis toi-même une première version pour les six agents à partir de leurs actions, puis tu

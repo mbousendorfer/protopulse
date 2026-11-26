@@ -31,7 +31,9 @@ export type Brand = { logo: boolean; progress: boolean; intro: boolean; outro: b
 export type Score = { hook: number; flow: number; value: number; trend: number }
 export type ScoreKey = keyof Score
 export type Evidence = { value: string; label: string; from: string; to?: string }
-export type ClipStatus = 'ready' | 'sent' | 'published' | 'snoozed' | 'dismissed'
+export type ClipStatus = 'ready' | 'sent' | 'published' | 'snoozed' | 'dismissed' | 'trial'
+/** A hook trial on Instagram Reels: each hook shown to non-followers first. `hooks[0]` is the hook the clip had before. `held`: share still watching at 3 s, per hook. */
+export type Trial = { hooks: [string, string]; from: number; until: number; by: 'you' | 'juno'; held?: [number, number] }
 
 export type Clip = {
   id: string
@@ -89,6 +91,8 @@ export type Clip = {
   cover?: { at: number; text: string; by: 'juno' | 'you' }
   /** YouTube Shorts title, when YouTube is one of the networks. */
   ytTitle?: string
+  /** The hook trial running or done on this clip. */
+  trial?: Trial
   arrivedAt: number
 }
 
@@ -334,22 +338,54 @@ export const shortsTitle = (c: Pick<Clip, 'title' | 'hook'>) => `${c.title}: ${c
 
 /* ---------- Track record ---------- */
 
-export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number } }
+export type Track = { delta: number; lift: number; why: string; like?: { id: string; title: string; views: number }; /** The Playbook rule learned from hook trials is on. */ rule?: boolean }
 export const median = (xs: number[]) => { if (!xs.length) return 0; const o = [...xs].sort((a, b) => a - b); const m = o.length >> 1; return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2 }
 /** The usual reach of a published post on this network: the median, so one viral post doesn't set the bar. */
 export const typicalReach = (posts: Post[], n: Network) => median(posts.filter(p => p.network === n && p.status === 'published' && p.stats).map(p => p.stats!.reach))
 
 /** How the published clips of this clip's pillar did against the usual reach of its first network. Up to ±6 on the total. */
-export function trackRecord(c: Clip, clips: Clip[], posts: Post[]): Track | undefined {
+export function trackRecord(c: Clip, clips: Clip[], posts: Post[], rule = false): Track | undefined {
   const net = c.post.networks[0]
   const base = typicalReach(posts, net)
   const past = clips.filter(x => x.id !== c.id && x.status === 'published' && x.stats && x.pillar === c.pillar).sort((a, b) => b.stats!.views - a.stats!.views)
-  if (!base || !past.length) return undefined
+  if (!base || !past.length) return rule ? { delta: 0, lift: 1, why: '', rule } : undefined
   const lift = past.reduce((a, x) => a + x.stats!.views / base, 0) / past.length
   const delta = Math.max(-6, Math.min(6, Math.round((lift - 1) * 4)))
   const word = past.length === 1 ? `Your ${c.pillar} clip did` : `Your ${past.length} ${c.pillar} clips did`
-  return { delta, lift, why: `${word} ${lift.toFixed(1)}× your usual ${NETWORK_FIT[net] ?? net} reach`, like: { id: past[0].id, title: past[0].title, views: past[0].stats!.views } }
+  return { delta, lift, why: `${word} ${lift.toFixed(1)}× your usual ${NETWORK_FIT[net] ?? net} reach`, like: { id: past[0].id, title: past[0].title, views: past[0].stats!.views }, ...(rule ? { rule } : {}) }
 }
+
+/* ---------- Hook trials ---------- */
+
+/** The Playbook rule Juno proposes once hooks with a number keep winning her trials. */
+export const HOOK_RULE = 'Open clip hooks on a number'
+/** Trials it takes before Juno proposes the rule. */
+export const RULE_AFTER = 3
+const RULE_BONUS = 3
+export const hasNumber = (hook: string) => /\d/.test(hook)
+
+/** The two hooks Juno puts against each other: the clip's hook first, then the one that differs most (a number against none), else the next one. */
+export function trialPair(c: Clip): [string, string] | undefined {
+  const others = [...new Set(c.hooks)].filter(h => h !== c.hook)
+  const other = others.find(h => hasNumber(h) !== hasNumber(c.hook)) ?? others[0]
+  return other ? [c.hook, other] : undefined
+}
+
+/**
+ * Share of non-followers still watching at 3 s, for one hook.
+ * ponytail: Juno's own estimate until Iris exposes trial figures (requests/iris-from-juno-hook-trial.md):
+ * a number up front holds best, then short hooks, then questions. Deterministic per hook.
+ */
+export function trialHold(hook: string): number {
+  const jitter = [...hook].reduce((a, ch) => (a + ch.charCodeAt(0)) % 5, 0)
+  return 40 + (hasNumber(hook) ? 16 : 0) + (hook.length <= 32 ? 3 : 0) + (/\?/.test(hook) ? 2 : 0) + jitter
+}
+
+/** A finished trial in Juno's memory: the seed's older ones and every one run since. `held` follows `hooks`. */
+export type TrialRecord = { clip?: string; title: string; hooks: [string, string]; held: [number, number]; at: number }
+export const winnerOf = (r: { hooks: [string, string]; held: [number, number] }) => (r.held[1] > r.held[0] ? 1 : 0)
+/** Trials where a hook with a number beat one without. */
+export const numberWins = (trials: TrialRecord[]) => trials.filter(r => { const w = winnerOf(r); return hasNumber(r.hooks[w]) && !hasNumber(r.hooks[1 - w]) })
 
 /* ---------- Score ---------- */
 
@@ -381,7 +417,12 @@ export function rescore(c: Clip, t: Transcript): { score: Score; total: number; 
     value: c.evidence[0] ? `${c.evidence[0].value} ${c.evidence[0].label}` : 'Shows the product doing its job',
     trend: c.base.trend >= 70 ? 'The topic is rising on TikTok this week' : 'Steady topic, not trending',
   }
-  return { score, total: clamp(total(score) + (c.track?.delta ?? 0)), reasons, track: c.track }
+  // The rule learned from hook trials, once in the Playbook, counts in the track record, with the hook as it is now.
+  const tr = c.track?.rule ? {
+    ...c.track, delta: c.track.delta + (hasNumber(c.hook) ? RULE_BONUS : 0),
+    why: [c.track.why, hasNumber(c.hook) ? 'The hook opens on a number, as your Playbook says' : 'Your Playbook says to open on a number: this hook doesn’t'].filter(Boolean).join('. '),
+  } : c.track
+  return { score, total: clamp(total(score) + (tr?.delta ?? 0)), reasons, track: tr }
 }
 
 /* ---------- Ask Juno ---------- */
