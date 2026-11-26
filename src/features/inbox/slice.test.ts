@@ -460,3 +460,39 @@ describe('contracts', () => {
     expect(matchFilters(conv(s, 'c-lea'), { account: 'instagram' }, s.clock.base)).toBe(true)
   })
 })
+
+describe('Product links in DM', () => {
+  it('“which jacket is that?”: the product from the post, the runner-up ruled out, a tracked link in the DM', async () => {
+    const { dmId } = await import('./slice')
+    let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-which' })
+    const h = s.handoffs.find(x => x.ref === 'ev-which')!
+    expect(h).toMatchObject({ action: 'nova-links' })
+    expect(h.sources?.map(x => x.label)).toEqual(['Storm Jacket · €220 · 92% match', 'Not the Ember Fleece: a fleece, not a rain shell'])
+    const c = s.inbox.convs.find(x => x.handoff === h.id)!
+    expect(c).toMatchObject({ status: 'draft', draft: ['It’s the Storm Jacket, Julie! I’ve sent you the link in DM.'], product: { name: 'Storm Jacket', utm: 'nova-dms' } })
+    expect(c.dm).toContain('fwy.link/nd-ig')
+    s = reducer(s, { type: 'inbox/approve', id: c.id })
+    expect(s.inbox.convs.find(x => x.id === dmId(c.id))!.messages.slice(-1)[0]).toMatchObject({ dm: true, text: c.dm })
+  })
+
+  it('on Act Nova answers and sends the DM alone; Undo takes both back as a draft', async () => {
+    const { dmId } = await import('./slice')
+    let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-links', level: 'act' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-which' })
+    const pub = s.inbox.convs.find(x => x.author === '@julie.trails' && x.type === 'comment')!
+    expect(pub.status).toBe('auto')
+    expect(s.inbox.convs.find(x => x.id === dmId(pub.id))!.messages.slice(-1)[0]).toMatchObject({ dm: true, auto: true })
+    s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.text.startsWith('Answered @julie.trails'))!.id })
+    expect(s.inbox.convs.find(x => x.id === dmId(pub.id))).toBeUndefined()
+    expect(s.inbox.convs.find(x => x.id === pub.id)).toMatchObject({ status: 'draft', dm: expect.stringContaining('fwy.link') })
+  })
+
+  it('the offer comes from Sage’s live campaign, never from Nova', async () => {
+    const { discover } = await import('./products')
+    const ev = (await import('./script')).SCRIPT.find(e => e.id === 'ev-which')!
+    const s0 = initialState()
+    expect(discover(s0, ev.handoff!).conv?.dm).not.toMatch(/Trail Week/)
+    const s = { ...s0, strategy: { ...s0.strategy, campaigns: s0.strategy.campaigns.map(c => (c.status === 'live' ? { ...c, offer: 'free shipping until Sunday' } : c)) } }
+    expect(discover(s, ev.handoff!).conv?.dm).toContain('Trail Week: free shipping until Sunday.')
+  })
+})

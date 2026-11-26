@@ -686,6 +686,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
               {c.status === 'escalated' && <WhyEscalated c={c} fan={fanOf(s, c)} />}
+              {c.product && <ProductFound d={c.product} />}
               {c.dm && <div className="ib-half">In public</div>}
               {editing ? <textarea className="textarea" rows={c.dm ? 2 : 4} value={text} onChange={e => setText(e.target.value)} aria-label={c.dm ? 'Edit the public reply' : 'Edit Nova’s draft'} autoFocus />
                 : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
@@ -838,6 +839,18 @@ function WhyEscalated({ c, fan }: { c: Conversation; fan?: string }) {
       {c.trigger && <li><b>Why</b><span>“{c.trigger}” in {open ? `a public ${c.type}` : c.type === 'dm' ? 'a DM' : `a ${c.type}`}</span></li>}
       {fan && <li><b>Who</b><span>{fan}</span></li>}
       {open && <li><b>Never</b><span>Refunds or liability in public. The answer goes by DM.</span></li>}
+    </ul>
+  )
+}
+
+/** What Nova found for "which one is it?": the product, the runner-up she ruled out, the tracked link, the campaign offer. */
+function ProductFound({ d }: { d: NonNullable<Conversation['product']> }) {
+  return (
+    <ul className="ib-why" aria-label="The product Nova found">
+      <li><b>Product</b><span>{d.name} · €{d.price} · {d.match}% match</span></li>
+      {d.other && <li><b>Not</b><span>{d.other.name}: {d.other.why}</span></li>}
+      <li><b>Link</b><span>{d.link} · tracked as utm_campaign={d.utm}</span></li>
+      {d.offer && <li><b>Offer</b><span>{d.offer}</span></li>}
     </ul>
   )
 }
