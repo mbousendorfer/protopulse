@@ -35,6 +35,8 @@ export const AGENTS: Agent[] = [
         says: says('Nova suggests a code. You decide.', 'Nova adds a single-use code to her draft for your approval.', 'Nova sends single-use codes up to 15% on her own.') },
       { id: 'nova-reviews', perWeek: 6, example: 'A 3-star Trustpilot review says the Storm Jacket runs small', label: 'Reply to reviews (Google, Trustpilot)', risk: 'risky', autonomy: 'draft', reviewed: 27, approvedUnchanged: 81,
         says: says('Nova flags new reviews.', 'Nova drafts a public reply for your approval.', 'Nova replies to reviews on her own.') },
+      { id: 'nova-links', perWeek: 14, example: '“Which jacket is that?” under your Storm Jacket reel', label: 'Send product links in DM', risk: 'safe', autonomy: 'draft',
+        says: says('Nova shows which product they mean. You answer.', 'Nova drafts the public reply and the DM with the product link, and waits for your approval.', 'Nova answers in public and sends the link in DM on her own. You can undo for 10 minutes.') },
       { id: 'nova-holding', perWeek: 6, example: 'A customer threatens legal action in a comment under your reel', label: 'Send holding replies on escalations', risk: 'safe', autonomy: 'draft',
         says: says('Nova suggests a holding reply on each escalation. You send it.', 'Nova drafts the holding reply (in public, “we’ve sent you a DM”, then the DM) and waits for your approval.', 'Nova sends the holding reply herself as soon as she escalates. The answer itself stays yours.') },
       { id: 'nova-sensitive', perWeek: 1, example: 'A journalist asks about a hiker hurt on a trail', label: 'Reply to press, legal, safety or injuries', risk: 'destructive', autonomy: 'suggest', locked: true,

@@ -98,6 +98,8 @@ export type CardConv = {
   dm?: string
   /** The words that made Nova escalate. */
   trigger?: string
+  /** The product a "which one is it?" question is about (see products.ts). */
+  product?: Conversation['product']
 }
 export function kindOf(h: Pick<Handoff, 'conv' | 'context' | 'topic' | 'title'>, p: Reply): CardConv {
   if (h.conv) return h.conv
@@ -112,7 +114,7 @@ function cardConv(h: Omit<Handoff, 'id' | 'at'>, p: Reply, id: string, at: numbe
   const k = kindOf(h, p)
   return {
     id, contact: k.contact, author: p.author, network: p.network, type: k.type, sentiment: k.sentiment, stars: k.stars, intent: k.intent, post: k.post,
-    at, handoff: card, unread: true, labels: [], note: k.note, savedFrom: k.saved, dm: k.dm, trigger: k.trigger,
+    at, handoff: card, unread: true, labels: [], note: k.note, savedFrom: k.saved, dm: k.dm, trigger: k.trigger, product: k.product,
     status: h.lane === 'claire' ? 'claire' : h.action === 'nova-sensitive' || h.action === 'nova-holding' ? 'escalated' : 'draft',
     messages: [{ id: `${id}-q`, from: 'them', text: p.text, at: at - MIN }],
     draft: p.draft, rules: h.rules,
@@ -366,10 +368,13 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
   const base = cardConv(h, p, id, t)
   const sent = (base.attachments ?? []).map(a => a.label).join(' · ')
   const conv: Conversation = {
-    ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, attachments: undefined, note: sent ? `Sent with: ${sent}` : undefined,
+    ...base, status: 'auto', unread: false, reviewed: true, reviewedBy: 'nova', draft: undefined, dm: undefined, attachments: undefined, note: base.dm ? 'Continued in private messages' : sent ? `Sent with: ${sent}` : undefined,
     messages: [{ ...base.messages[0], at: t - 2 * MIN }, { id: uid('m'), from: 'nova', text: kindOf(h, p).reply ?? plain(p.draft), at: t, auto: true, undoUntil: t + 10 * MIN, log: next.log[0].id }],
   }
-  return runRules({ ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }, id)
+  let out = runRules({ ...next, inbox: { ...next.inbox, convs: [conv, ...next.inbox.convs] } }, id)
+  // A public answer with a private half: the DM goes out with it, and comes back with its Undo.
+  if (base.dm) out = deliverDm(out, conv, base.dm, { auto: true, log: next.log[0].id }, { status: 'auto', reviewed: true, reviewedBy: 'nova', unread: false })
+  return out
 }
 
 /**
@@ -545,17 +550,18 @@ export function escalate(s: State, h: Omit<Handoff, 'id' | 'at'>, hit: Escalatio
   return pushLog(next, { agent: 'nova', text: `Escalated ${p.author} to ${to} · rule: ${hit.label}`, status: 'done', reason: 'Playbook escalation, whatever the autonomy', link: `/inbox/h:${id}` })
 }
 
-/** Nova's holding pair taken back: both messages crossed out, the pair back as a draft on the public message, the DM gone. */
+/** A public reply and its DM taken back: both crossed out, the pair back as a draft on the public message, the DM gone. */
 function undoHolding(s: State, c: Conversation, msg: Msg, pair: Msg): State {
   const dmc = s.inbox.convs.find(x => x.id === dmId(c.id))!
+  const held = dmc.status === 'escalated' || dmc.status === 'claire'
   let next = undoDm(s, c.id, m => m.id === pair.id)
   next = patch(next, c.id, x => ({
-    status: 'escalated', draft: [msg.text], dm: pair.text, handoff: dmc.handoff, trigger: dmc.trigger, note: dmc.note?.split('. ')[0], reviewed: false, reviewedBy: undefined, unread: true,
+    status: held ? 'escalated' : 'draft', draft: [msg.text], dm: pair.text, handoff: dmc.handoff, trigger: dmc.trigger, note: held ? dmc.note?.split('. ')[0] : undefined, reviewed: false, reviewedBy: undefined, unread: true,
     messages: x.messages.map(m => (m.id === msg.id ? { ...m, undone: true, undoUntil: undefined } : m)),
   }))
   next = { ...next, log: next.log.map(l => (l.id === msg.log ? { ...l, status: 'undone' as const } : l)) }
   if (s.log.find(l => l.id === msg.log)?.status === 'undone') return next
-  return pushLog(next, { agent: 'nova', text: `Undone: Nova’s holding reply to ${c.author}. It’s back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
+  return pushLog(next, { agent: 'nova', text: `Undone: Nova’s ${held ? 'holding reply' : 'reply and DM'} to ${c.author}. ${held ? 'It’s' : 'They’re'} back as a draft.`, status: 'undone', link: `/inbox/${c.id}` })
 }
 
 /* ---------- Inbox rules ---------- */

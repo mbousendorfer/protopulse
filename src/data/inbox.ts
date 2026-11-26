@@ -56,6 +56,8 @@ export type Conversation = {
   dm?: string
   /** The words that made Nova escalate, highlighted in the customer's message. */
   trigger?: string
+  /** "Which jacket is that?": the product Nova found, the link she sends in DM, the runner-up and the campaign offer. */
+  product?: import('../features/inbox/products').Discovery
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
   settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; dm?: string; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }
