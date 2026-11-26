@@ -383,3 +383,40 @@ test('only a clip waiting for review, going to Instagram, can be trialled', () =
   const t = run(initialState(), { type: 'video/trial', id: 'clip-repair-unpick' })
   expect(clipOf(t, 'clip-repair-unpick').status).toBe('sent')
 })
+
+/* ---------- Recut ---------- */
+
+test('a published clip under half its network’s average: on Draft Juno recuts it, product first, and asks before Atlas posts it', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-recut' })
+  const r = clipOf(s, 'clip-live-fabric-recut')
+  expect(r.status).toBe('ready')
+  expect(r.recutOf).toBe('clip-live-fabric')
+  expect(r.broll[0]).toMatchObject({ at: clipOf(s, 'clip-live-fabric').start, dur: 2 })
+  expect(r.hook).toBe('The bag outlives the small parts.')
+  const card = s.handoffs.find(h => h.topic === 'Recut')!
+  expect(card.context).toMatch(/8\.4k views on TikTok/)
+  // Only once.
+  expect(run(s, { type: 'core/fire', eventId: 'ev-video-recut' }).handoffs.filter(h => h.topic === 'Recut')).toHaveLength(1)
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('sent')
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('ready')
+  // Rejecting the card drops the new cut.
+  const t = run(initialState(), { type: 'core/fire', eventId: 'ev-video-recut' })
+  const no = run(t, { type: 'core/resolve', id: t.handoffs.find(h => h.topic === 'Recut')!.id, decision: { kind: 'reject' } })
+  expect(no.video.clips.some(c => c.id === 'clip-live-fabric-recut')).toBe(false)
+})
+
+test('recut on Act: made and sent alone, Undo takes it out; on Suggest only a journal line, you recut it', () => {
+  let s = run(level(initialState(), 'juno-recut', 'act'), { type: 'core/fire', eventId: 'ev-video-recut' })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('sent')
+  const line = s.log.find(l => l.recuts)!
+  s = run(s, { type: 'core/undo', id: line.id })
+  expect(s.video.clips.some(c => c.id === 'clip-live-fabric-recut')).toBe(false)
+  expect(s.publishing.posts.some(p => p.media === 'clip:clip-live-fabric-recut')).toBe(false)
+
+  let q = run(level(initialState(), 'juno-recut', 'suggest'), { type: 'core/fire', eventId: 'ev-video-recut' })
+  expect(q.video.clips.some(c => c.recutOf)).toBe(false)
+  q = run(q, { type: 'video/recut', id: 'clip-live-fabric' })
+  expect(clipOf(q, 'clip-live-fabric-recut').status).toBe('ready')
+})

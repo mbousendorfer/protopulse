@@ -1,5 +1,5 @@
 import type { ScriptEvent } from '../../data/script'
-import { captionsScript, moreMomentsScript, trialScript, videoScript } from './slice'
+import { captionsScript, moreMomentsScript, recutScript, trialScript, videoScript } from './slice'
 
 /** Juno's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
@@ -9,5 +9,7 @@ export const SCRIPT: ScriptEvent[] = [
   { id: 'ev-video-more', order: 85, label: 'Juno · 4 more moments in the strap video', agent: 'juno', ...moreMomentsScript },
   // Moderator only (a no-op in the feed): a hook trial ends now; the third win of a hook with a number brings the rule card.
   { id: 'ev-video-trial', order: 87, label: 'Juno · hook trial results are in', agent: 'juno', ...trialScript },
+  // Juno reads how her published clips did: “Fabric goes last” did worse than usual, so she recuts it (by her level).
+  { id: 'ev-video-recut', order: 88, label: 'Juno · a clip did worse than usual', agent: 'juno', ...recutScript },
   { id: 'ev-video-captions', order: 80, label: 'Juno · product names misheard in captions', agent: 'juno', ...captionsScript },
 ]

@@ -56,3 +56,10 @@ test('hook trials in Chat: start one on a named clip, then ask which hook won', 
   const s = run(later(r.after, 24 * 3600_000 + 1000), { type: 'core/heartbeat' })
   expect(chat(s, 'Which hook won on twenty minutes?').text).toMatch(/“42 stitches\. 20 minutes\. €0\.” won: \d+% still watching at 3 s/)
 })
+
+test('recut in Chat: the clip that did worse than usual gets a new cut', () => {
+  const r = chat(initialState(), 'Recut the fabric clip')
+  expect(r.kind).toBe('clipRecut')
+  expect(r.text).toMatch(/“Fabric goes last” got 8\.4k views/)
+  expect(r.after.video.clips.some(c => c.id === 'clip-live-fabric-recut')).toBe(true)
+})

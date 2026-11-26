@@ -8,7 +8,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { PEOPLE, TRANSCRIPT } from '../../data/video'
 import { Mark } from '../../ui'
 import { clipLengthOf, fitsLength, keywords, lengthSpec, versionFor as netVersion, trialPair, winnerOf, type Clip } from './model'
-import { canTrial, holdReason, reduceVideo, unreleased } from './slice'
+import { canTrial, flopOf, holdReason, reduceVideo, recutOf, unreleased } from './slice'
 
 declare module '../../data/command' {
   interface IntentTypes {
@@ -17,6 +17,7 @@ declare module '../../data/command' {
     clipBest: object
     clipVersion: { network: Network; q: string }
     clipTrial: { q: string; start: boolean }
+    clipRecut: { q: string }
   }
 }
 
@@ -176,5 +177,31 @@ export const clipTrial = defineIntent({
   chat: (i, { s }) => {
     const r = trialAnswer(s, i)
     return { replies: [{ from: 'juno', text: r.text, card: r.start ? { type: 'done', text: `Hook trial started on “${r.clip!.title}”` } : undefined }], effects: r.start ? [(st: State) => reduceVideo(st, { type: 'video/trial', id: r.clip!.id })] : [] }
+  },
+})
+
+/** A recut asked for: Juno makes it when the clip did worse than usual, or says how it did. */
+function recutAnswer(s: State, q: string): { text: string; clip?: Clip; make?: boolean } {
+  const out = s.video.clips.filter(c => c.status === 'published' && c.stats && !c.recutOf)
+  const c = matchClip(s, q, out) ?? out.find(x => flopOf(s, x))
+  if (!c) return { text: 'None of your published clips did worse than usual. Juno recuts the ones that get under half your average views.' }
+  const done = recutOf(s, c)
+  if (done) return { clip: done, text: `“${c.title}” already has a new cut, ${done.status === 'ready' ? 'waiting for your review' : 'sent to Atlas'}.` }
+  const f = flopOf(s, c)
+  if (!f) return { clip: c, text: `“${c.title}” did fine: ${k(c.stats!.views)} views. Juno recuts clips under half your average.` }
+  return { clip: c, make: true, text: `“${c.title}” got ${k(c.stats!.views)} views, ${Math.round(f.share * 100)}% of your average. Juno made a new cut with the product on screen from the first second. It’s in Ready to review.` }
+}
+
+export const clipRecut = defineIntent({
+  kind: 'clipRecut', owner: 'juno', order: 36,
+  parse: t => /\bre-?cut\b/.test(t) ? { kind: 'clipRecut', q: t.replace(/re-?cut/g, '') } : undefined,
+  bar: (i, { s, d, go }) => {
+    const r = recutAnswer(s, i.q)
+    const to = r.make ? `/video/clips/${r.clip!.id}-recut` : r.clip ? `/video/clips/${r.clip.id}` : '/video'
+    return { text: r.text, after: r.make ? () => d({ type: 'video/recut', id: r.clip!.id }) : undefined, ctas: [{ label: r.clip ? 'Open the clip' : 'Open Video', primary: true, run: () => go(to) }] }
+  },
+  chat: (i, { s }) => {
+    const r = recutAnswer(s, i.q)
+    return { replies: [{ from: 'juno', text: r.text, card: r.make ? { type: 'done', text: `New cut of “${r.clip!.title}”` } : undefined }], effects: r.make ? [(st: State) => reduceVideo(st, { type: 'video/recut', id: r.clip!.id })] : [] }
   },
 })
