@@ -126,9 +126,10 @@ export function WontGuess({ h }: { h: Handoff }) {
  * One line of reason and the confidence (matrix §13). The full reasoning, the Playbook rules applied and the sources
  * sit behind « Why? ».
  */
-export function WhyLine({ h }: { h: Handoff }) {
+export function WhyLine({ h, sourcesShown }: { h: Handoff; sourcesShown?: boolean }) {
   const short = gist(h.why, 18)
-  const more = short !== h.why || !!h.rules?.length || !!h.sources?.length
+  // No « Why? » when the panel would only repeat what the card already shows.
+  const more = short !== h.why || !!h.rules?.length || (!!h.sources?.length && !sourcesShown)
   return (
     <div className="why">
       <span>{short}{more && <>{' '}<MoreInfo label="Why?" title={`Why ${agentName(h.agent)} raised this`}><WhyPanel h={h} /></MoreInfo></>}</span>
