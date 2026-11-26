@@ -3,7 +3,7 @@ import { reducer } from '../../app/reducer'
 import { initialState, type State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY } from '../../app/time'
-import { campaignPosts, launchBlock } from './slice'
+import { campaignPosts, launchBlock, strategyNeeds, strategyNeedsCount } from './slice'
 import { scriptEvents } from '../../app/agents-registry'
 
 const BRIEF = 'Launch the Summit Bottle in March, goal 500 orders.'
@@ -326,4 +326,17 @@ test('a renamed pillar keeps counting its posts; a new one gets a share; Atlasâ€
   s = reducer(s, { type: 'core/undo', id: s.log[0].id })
   expect(s.publishing.posts.some(p => p.pillar === 'Places we go')).toBe(false)
   expect(targetsOf(s).pillars).toHaveLength(4)
+})
+
+test('Strategy needs: plans, raised moments and Sageâ€™s changes; a decline is confirmed with an Undo that brings it back', () => {
+  let s = initialState()
+  const n = strategyNeedsCount(s)
+  const { adjustments, moments } = strategyNeeds(s)
+  expect(moments.every(m => m.start - 21 * DAY <= now(s))).toBe(true)
+  const { c, a } = adjustments[0]
+  s = reducer(s, { type: 'strategy/adjust', id: c.id, adj: a.id, accept: false })
+  expect(strategyNeedsCount(s)).toBe(n - 1)
+  expect(s.notice?.scope).toBe('strategy')
+  s = reducer(s, { type: 'core/undo', id: s.notice!.undo! })
+  expect(strategyNeedsCount(s)).toBe(n)
 })
