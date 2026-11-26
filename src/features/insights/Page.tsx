@@ -39,7 +39,7 @@ export default function InsightsPage() {
 
   return (
     <div className="page insights">
-      <PageHead agent="iris" title="Insights" lede="Iris writes the story first. Dig into the numbers underneath whenever you want." />
+      <PageHead agent="iris" title="Insights" lede="Iris writes the story first, with the numbers underneath." />
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
         { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },

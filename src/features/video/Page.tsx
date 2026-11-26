@@ -29,7 +29,7 @@ export default function VideoPage() {
 
   return (
     <div className="page video-page">
-      <PageHead agent="juno" title="Video" lede="Juno watches your videos and lives, finds the moments worth sharing and cuts them into captioned clips. You review, Atlas schedules.">
+      <PageHead agent="juno" title="Video" lede="Juno cuts your videos and lives into captioned clips for you to review.">
         <Btn variant="primary" onClick={() => nav('/video/sources')}><Plus size={14} />Add a video</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'clips' ? '/video' : `/video/${t}`)} items={[

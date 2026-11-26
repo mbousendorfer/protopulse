@@ -219,7 +219,7 @@ export default function InboxPage() {
 
   return (
     <div className="page ib-page">
-      <PageHead agent="nova" title="Inbox" lede="Every comment, message and review. Nova answers what she can and leaves the rest here for you.">
+      <PageHead agent="nova" title="Inbox" lede="Nova answers every comment, message and review she can, and leaves the rest for you.">
         <Btn variant="ghost" onClick={() => setSaved(true)}><MessageSquareText size={14} />Saved replies</Btn>
         <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
       </PageHead>

@@ -34,7 +34,7 @@ export default function StrategyPage() {
   const tab = seg === 'pillars' ? 'pillars' : 'campaigns'
   return (
     <div className="page strategy">
-      <PageHead agent="sage" title="Strategy" lede="Sage turns a two-line brief into a plan the whole team follows, and keeps the pillars and cadence on track.">
+      <PageHead agent="sage" title="Strategy" lede="Sage turns a brief into a plan and keeps the pillars and cadence on track.">
         {/* Only on the lists: on the brief it would point to itself, in a campaign it would compete with Approve. */}
         {(seg === '' || seg === 'pillars') && <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>}
       </PageHead>

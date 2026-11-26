@@ -54,7 +54,7 @@ export default function PublishingPage() {
 
   return (
     <div className="page pub-page">
-      <PageHead agent="atlas" title="Publishing" lede="Atlas plans the week, writes the posts and picks the slots. You approve the plan, not each post.">
+      <PageHead agent="atlas" title="Publishing" lede="Atlas plans, writes and schedules; you approve the plan, not each post.">
         {s.publishing.hold
           ? <Btn onClick={() => d({ type: 'publishing/resumeAll' })}><Play size={14} />Resume publishing</Btn>
           : <Btn onClick={() => d({ type: 'publishing/pauseAll' })}><Pause size={14} />Pause all publishing</Btn>}

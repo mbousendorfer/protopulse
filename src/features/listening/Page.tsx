@@ -34,7 +34,7 @@ export default function ListeningPage() {
   const tab: Tab = (['competitors', 'mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'needs'
   return (
     <div className="page listening">
-      <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and the trends around you, and turns each signal into a move.`} />
+      <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and trends, and turns signals into moves.`} />
       <Tabs value={tab} onChange={v => nav(v === 'needs' ? '/listening' : `/listening/${v}`)} items={[
         { value: 'needs', label: 'Needs you', count: listeningNeedsCount(s) },
         { value: 'competitors', label: 'Competitors', count: eventsOf(s).filter(e => s.listening.watch.some(w => w.tracking && w.id === e.competitor)).length },
