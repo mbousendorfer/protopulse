@@ -99,7 +99,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
           <ol className="options">
             {h.options.map((o, i) => (
               <li key={o.label}><button className={`choice ${o.recommended ? 'rec' : ''}`} onClick={() => finish('decided', o.label, () => act.option(h, i))}>
-                <span className="kbd">{i + 1}</span><span className="ellipsis">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
+                <span className="kbd">{i + 1}</span><span className="choice-label">{o.label}</span>{o.recommended && <span className="rec-tag"><Star size={12} aria-hidden />Recommended</span>}<ArrowRight size={16} className="go" aria-hidden />
               </button></li>
             ))}
           </ol>
@@ -123,7 +123,7 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
         <span className="spacer" />
         {!waiting && h.kind !== 'news' && mode === 'idle' && <>
           <Btn size="sm" variant="ghost" onClick={() => setMode('snooze')} kbd="S">Snooze</Btn>
-          <Btn size="sm" variant="ghost" onClick={() => finish('claire', 'Sent to Claire', () => act.claire(h))} kbd="C" title="If Claire approves, it goes out">Ask Claire</Btn>
+          <Btn size="sm" variant="ghost" onClick={() => finish('claire', 'Asked Claire', () => act.claire(h))} kbd="C" title="If Claire approves, it goes out">Ask Claire</Btn>
         </>}
         {h.link && <Btn size="sm" variant="ghost" onClick={() => nav(h.link!)}><ArrowUpRight size={14} />Open</Btn>}
         {onDiscuss && <Btn size="sm" variant="ghost" onClick={() => onDiscuss(h.id)}><MessageSquare size={14} />Discuss{h.thread?.length ? <span className="faint num">{h.thread.length}</span> : null}</Btn>}

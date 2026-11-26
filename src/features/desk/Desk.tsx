@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter, Undo2 } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter } from 'lucide-react'
 import type { AgentId, Decision, DoneItem, Handoff, Kind, Urgency } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
@@ -12,7 +12,7 @@ import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
 import { KIND_LABEL, SNOOZE, byPriority, useHandoffActions } from './parts'
 import { BulkBar, SelectBox, useSelection } from '../../ui/Selection'
-import { CountBadge, Notice } from '../../ui/Feedback'
+import { CountBadge, Notice, UndoBar } from '../../ui/Feedback'
 import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
 import './desk.css'
 import './today.css'
@@ -173,7 +173,7 @@ export default function Desk() {
               note: approvable.length < picked.length ? 'decisions and missing info need you one by one' : undefined,
               onRun: () => runBulk(approvable.map(h => h.id), { decision: { kind: 'approve' } }, `Approved ${approvable.length} items from your Desk`) },
             { label: 'Snooze to tomorrow', onRun: () => tomorrow && runBulk(picked.map(h => h.id), { snooze: { until: tomorrow.until, label: tomorrow.label } }, `Snoozed ${picked.length} items until tomorrow 08:00`) },
-            { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Sent ${picked.length} items to Claire`) },
+            { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Asked Claire about ${picked.length} items`) },
             { label: 'Reject', onRun: () => { const ids = picked.filter(h => !h.options).map(h => h.id); runBulk(ids, { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${ids.length} items`) } },
           ]} />
           {GROUPS.filter(g => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(g.id)).map(g => {
@@ -291,13 +291,9 @@ function DoneView({ x, onNext }: { x: DoneItem; onNext: () => void }) {
   const act = useHandoffActions()
   return (
     <div className="done-view">
-      <div className="done-box">
-        <Check size={16} />
-        <div><b>{x.text}</b><p className="faint">Settled at {hhmm(x.at)}.</p></div>
-        <span className="spacer" />
-        <Btn size="sm" onClick={() => act.restore(x.h)}><Undo2 size={13} />Undo</Btn>
-        <Btn size="sm" variant="ghost" onClick={onNext}>Next item</Btn>
-      </div>
+      <UndoBar onUndo={() => act.restore(x.h)} action={<Btn size="xs" variant="ghost" onClick={onNext}>Next item</Btn>}>
+        <b>{x.text}</b> <span className="faint">· settled at {hhmm(x.at)}</span>
+      </UndoBar>
       <div className="dimmed" aria-hidden><Detail h={x.h} keys={false} /></div>
     </div>
   )

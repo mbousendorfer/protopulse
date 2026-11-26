@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 // Minimal SVG charts. Main series in brand coral (or the authoring agent's colour via `color`), comparisons neutral, status colours only for status data.
 
@@ -31,7 +31,17 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
   series: Series[]; labels: string[]; h?: number; format?: (v: number) => string; label: string
 }) {
   const [hover, setHover] = useState<number | null>(null)
-  const W = 640, H = h, padL = 44, padR = 12, padT = 12, padB = 24
+  // Drawn at the width it gets, so axis text stays at its size instead of scaling with the chart.
+  const box = useRef<HTMLElement>(null)
+  const [w, setW] = useState(640)
+  useEffect(() => {
+    const el = box.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([e]) => { const cw = Math.round(e.contentRect.width); if (cw > 0) setW(cw) })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  const W = w, H = h, padL = 44, padR = 12, padT = 12, padB = 24
   const all = series.flatMap(s => s.data)
   const { max } = ext([0, ...all])
   const top = niceMax(max)
@@ -41,8 +51,8 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
   const ticks = [0, top / 2, top]
   const stroke = (s: Series) => s.color ?? (s.tone === 'faint' ? 'var(--ink-3)' : 'var(--chart)')
   return (
-    <figure className="rel">
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={label} onMouseLeave={() => setHover(null)}
+    <figure className="rel" ref={box}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} role="img" aria-label={label} onMouseLeave={() => setHover(null)}
         onMouseMove={e => {
           const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect()
           const px = ((e.clientX - r.left) / r.width) * W
@@ -55,10 +65,11 @@ export function LineChart({ series, labels, h = 200, format = (v: number) => v.t
           </g>
         ))}
         {labels.map((l, i) => {
-          // Every nth label plus the last; a stepped label too close to the last one is dropped so they never overlap,
-          // and the last one sits right-aligned on the edge instead of being cut.
-          const step = Math.ceil(n / 8), last = i === n - 1
-          if (!last && (i % step !== 0 || n - 1 - i < step / 2)) return null
+          // As many labels as fit (10 px mono, ~6 px a character), plus the last; a stepped label closer than a step to
+          // the last one is dropped so they never overlap, and the last one sits right-aligned on the edge.
+          const fit = Math.max(2, Math.floor((W - padL - padR) / (Math.max(...labels.map(x => x.length)) * 6 + 16)))
+          const step = Math.max(1, Math.ceil(n / fit)), last = i === n - 1
+          if (!last && (i % step !== 0 || n - 1 - i < step)) return null
           return <text key={i} x={x(i)} y={H - 6} textAnchor={last && n > 1 ? 'end' : 'middle'} fontSize="10" fill="var(--ink-3)" fontFamily="var(--mono)">{l}</text>
         })}
         {series.map(s => (

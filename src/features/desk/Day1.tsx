@@ -4,14 +4,14 @@ import { Check, ChevronDown, ChevronRight, Clock, Sunrise } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
 import { hhmm } from '../../app/time'
-import { Btn, Mark, Thinking } from '../../ui'
+import { Btn, Thinking } from '../../ui'
 import { BriefScene } from '../../ui/Illustrations'
+import { AgentTiles } from './widgets'
 import { checklist, firstBriefAt, type CheckItem } from '../onboarding/day1'
 
 /** Day 1 replaces the morning brief until the first one is written: who started, what they found, when the brief lands. */
 export function Welcome({ onPick }: { onPick: (key: string) => void }) {
   const { s } = useStore()
-  const nav = useNavigate()
   const now = useNow()
   const started = s.setup.startedAt ?? now
   const open = s.handoffs.filter(h => !h.lane)
@@ -30,20 +30,7 @@ export function Welcome({ onPick }: { onPick: (key: string) => void }) {
         </div>
         <div className="brief-scene"><BriefScene hour={new Date(now).getHours()} /></div>
       </div>
-      <ul className="agent-band">
-        {s.agents.map(a => {
-          const n = open.filter(h => h.agent === a.id && groupOf(h) === 'need').length
-          const line = first(a.id)?.text ?? 'Starts working tonight'
-          return (
-            <li key={a.id} className="agent-line">
-              <Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />
-              <div className="who"><b>{a.name}</b><span className="faint">{line}</span></div>
-              <span className="spark-cell" aria-hidden />
-              {n > 0 ? <Btn size="sm" onClick={() => onPick(`agent:${a.id}`)}>Review {n}</Btn> : <Btn size="sm" variant="ghost" onClick={() => nav(a.route)}>Open</Btn>}
-            </li>
-          )
-        })}
-      </ul>
+      <AgentTiles onPick={onPick} line={id => first(id)?.text ?? 'Starts working tonight'} />
     </section>
   )
 }

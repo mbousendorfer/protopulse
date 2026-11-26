@@ -2,7 +2,8 @@ import { expect, test } from 'vitest'
 import { reducer } from '../../app/reducer'
 import { initialState } from '../../app/state'
 import { T } from '../../app/time'
-import { onResolvePublishing, parseSlot, reducePublishing } from './slice'
+import { onResolvePublishing, parseSlot, reducePublishing, slotComment } from './slice'
+import { BEST_SLOT } from '../../data/publishing'
 import { onResolveInbox, reduceInbox } from '../inbox/slice'
 import { targetsOf } from '../strategy/slice'
 import { behindPillar, gapDays } from './ideasModel'
@@ -187,4 +188,14 @@ test('a new plan after a rejection swaps Atlas’s own posts and keeps the campa
   expect(p.diff!.added.length).toBe(10)
   expect(p.items.filter(i => i.tag === 'Campaign').length).toBe(4)
   expect(p.items.length).toBe(14)
+})
+
+test('slot comment quotes the best day only on that day', () => {
+  const best = BEST_SLOT.instagram
+  const [h, m] = best.time.split(':').map(Number)
+  const on = (dow: number) => new Date(2025, 10, 24 + dow, h, m).getTime() // 24 Nov 2025 is a Monday
+  expect(slotComment('instagram', on(best.day))).toBe(`Good slot. ${best.reason}`)
+  const other = slotComment('instagram', on((best.day + 2) % 7))
+  expect(other.startsWith('Good slot')).toBe(true)
+  expect(other).toContain(`${best.dayName}s at this hour`)
 })

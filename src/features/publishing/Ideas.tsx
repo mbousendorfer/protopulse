@@ -53,7 +53,7 @@ function Primary({ i, size }: { i: Idea; size?: 'sm' }) {
   const stop = (f: () => void) => (e: MouseEvent) => { e.stopPropagation(); f() }
   if (i.kind === 'series') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaToSage', id: i.id }))}>Send to Sage</Btn>
   if (i.origin === 'weekly' && s.publishing.plan.status === 'proposed') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaToPlan', id: i.id }))}>Add to next week’s plan</Btn>
-  if (i.status === 'ready') return <Btn size={size} variant="primary" onClick={stop(() => d({ type: 'publishing/ideaSchedule', ids: [i.id] }))}>Schedule{size ? '' : ` ${slot(i.drafts![0].at)}`}</Btn>
+  if (i.status === 'ready') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaSchedule', ids: [i.id] }))}>Schedule{size ? '' : ` ${slot(i.drafts![0].at)}`}</Btn>
   return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaDraft', id: i.id }))}>Draft it</Btn>
 }
 

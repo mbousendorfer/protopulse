@@ -106,9 +106,10 @@ export function PreviewBlock({ h, editing, draft, setDraft }: { h: Handoff; edit
 export function Sources({ h }: { h: Handoff }) {
   if (!h.sources?.length) return null
   return (
-    <div className="sources" aria-label="Sources">
+    // One source per line: "fact · where it comes from", so the separators never mix two sources.
+    <div className="sources">
       <span className="faint">Sources</span>
-      {h.sources.map(x => <span key={x.label} className="chip source" title={`From ${x.from}`}>{x.label}<span className="faint">· {x.from}</span></span>)}
+      <ul aria-label="Sources">{h.sources.map(x => <li key={x.label}>{x.label} <span className="faint">· {x.from}</span></li>)}</ul>
     </div>
   )
 }

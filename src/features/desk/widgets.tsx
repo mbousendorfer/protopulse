@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sunrise, Undo2 } from 'lucide-react'
+import { ArrowRight, Sunrise, Undo2 } from 'lucide-react'
 import type { AgentId, Handoff } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { Spark } from '../../ui/charts'
@@ -24,7 +24,6 @@ const AGENT_LINE: Record<AgentId, (s: ReturnType<typeof useStore>['s'], need: nu
 
 export function Brief({ onPick }: { onPick: (key: string) => void }) {
   const { s, d } = useStore()
-  const nav = useNavigate()
   const now = useNow()
   const open = s.handoffs.filter(h => !h.lane)
   const since = s.brief.since
@@ -49,7 +48,7 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
   return (
     <section className="brief card" aria-labelledby="brief-title">
       <div className="brief-head">
-        <div className="row tight"><Mark agent="iris" /><span className="faint"><b style={{ color: 'var(--a-iris-ink)', fontWeight: 600 }}>Iris</b> wrote your brief · since {hhmm(since)} yesterday</span></div>
+        <div className="row tight"><Mark agent="iris" /><span className="faint"><b>Iris</b> wrote your brief · since {hhmm(since)} yesterday</span></div>
         <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/briefRead', read: true })}>Got it</Btn>
       </div>
 
@@ -61,55 +60,70 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
         <div className="brief-scene"><BriefScene hour={hour} /></div>
       </div>
 
-      <ul className="agent-band">
-        {s.agents.map(a => {
-          const n = open.filter(h => h.agent === a.id && groupOf(h) === 'need').length
-          const series = Array.from({ length: 12 }, (_, i) => s.log.filter(l => l.agent === a.id && l.at > now - (12 - i) * 70 * MIN && l.at <= now - (11 - i) * 70 * MIN).length)
-          return (
-            <li key={a.id} className="agent-line">
-              <Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />
-              <div className="who"><b>{a.name}</b><span className="faint">{AGENT_LINE[a.id](s, n)}</span></div>
-              <span className="spark-cell" aria-hidden><Spark data={series} w={84} h={22} color={`var(--a-${a.id})`} fill={false} /></span>
-              {n > 0 ? <Btn size="sm" onClick={() => onPick(`agent:${a.id}`)}>Review {n}</Btn> : <Btn size="sm" variant="ghost" onClick={() => nav(a.id === 'atlas' && s.handoffs.some(h => h.id === 'h-plan') ? '/publishing/plan' : a.route)}>Open</Btn>}
-            </li>
-          )
-        })}
-      </ul>
+      <AgentTiles onPick={onPick} line={(id, n) => AGENT_LINE[id](s, n)} />
 
+      {/* Up to three cards, each one target: it opens the card in Your day, where its actions are. */}
       {highlights.length > 0 && (
         <div className="highlights">
           {highlights.map(h => {
-            const rec = h.options ? Math.max(0, h.options.findIndex(o => o.recommended)) : -1
             const p = h.preview
+            const plan = p?.type === 'plan' ? planCounts(p.lines) : null
             return (
-              <article key={h.id} className="hl-card" style={{ ['--tint' as string]: `var(--a-${h.agent}-wash)` }}>
-                <button className="hl-body" onClick={() => onPick(`h:${h.id}`)}>
-                  <span className="row tight"><TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={26} /><span className="faint">{agentName(h.agent)} · {h.topic}</span></span>
-                  {p?.type === 'metric' ? (
-                    <span className="hl-metric">
-                      <span><b className="num">{p.value}</b> <span className={`delta ${p.down ? 'down' : 'up'}`}>{p.delta}</span><br /><span className="faint">{p.label}</span></span>
-                      <Spark data={p.series} w={110} h={40} color={p.down ? 'var(--alert)' : 'var(--ink-3)'} />
-                    </span>
-                  ) : p?.type === 'plan' ? (
-                    <span className="hl-plan" aria-label="Posts per day next week">
-                      {[2, 2, 2, 2, 2, 2, 2].map((n, i) => <span key={i}><i style={{ height: 8 + ((i * 7 + 3) % 5) * 5 }} /><small>{'MTWTFSS'[i]}</small></span>)}
-                    </span>
-                  ) : h.topic === 'Competitor' ? (
-                    <span className="hl-comp"><SocialAvatar name={h.title.split(' ')[0]} org size={32} /><span className="faint">{h.context}</span></span>
-                  ) : null}
-                  <span className="hl-title">{h.title}</span>
-                </button>
-                <div className="hl-act">
-                  {rec >= 0 ? <Btn size="sm" onClick={() => onPick(`h:${h.id}`)}>Review</Btn>
-                    : h.link ? <Btn size="sm" onClick={() => nav(h.link!)}>{p?.type === 'plan' ? 'Review the plan' : 'Open'}</Btn>
-                    : <Btn size="sm" onClick={() => onPick(`h:${h.id}`)}>Open</Btn>}
-                </div>
-              </article>
+              <button key={h.id} className="hl-card" onClick={() => onPick(`h:${h.id}`)}>
+                <span className="row tight"><TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={26} /><span className="faint">{agentName(h.agent)} · {h.topic}</span></span>
+                {p?.type === 'metric' ? (
+                  <span className="hl-metric">
+                    <span><b className="num">{p.value}</b> <span className={`delta ${p.down ? 'down' : 'up'}`}>{p.delta}</span><br /><span className="faint">{p.label}</span></span>
+                    <Spark data={p.series} w={110} h={40} color={p.down ? 'var(--alert)' : 'var(--ink-3)'} />
+                  </span>
+                ) : plan ? (
+                  // The plan's own numbers, named: total posts, then posts per network.
+                  <span className="hl-metric"><span><b className="num">{plan.total}</b> <span className="muted">posts next week</span><br /><span className="faint">{plan.line}</span></span></span>
+                ) : h.topic === 'Competitor' ? (
+                  <span className="hl-comp"><SocialAvatar name={h.title.split(' ')[0]} org size={32} /><span className="faint">{h.context}</span></span>
+                ) : null}
+                <span className="hl-title">{h.title}</span>
+                <span className="hl-go">Review<ArrowRight size={14} aria-hidden /></span>
+              </button>
             )
           })}
         </div>
       )}
     </section>
+  )
+}
+
+/** "Instagram 5 · TikTok 4 · …" from a plan preview: the total and the line it came from. */
+export function planCounts(lines: string[]) {
+  const line = lines.find(l => /^(\p{L}+ \d+)( · \p{L}+ \d+)+$/u.test(l))
+  if (!line) return null
+  return { line, total: [...line.matchAll(/\d+/g)].reduce((n, m) => n + Number(m[0]), 0) }
+}
+
+/**
+ * The team at a glance: one tile per agent, what it did, and where to go. The whole tile is the target;
+ * agents with something for you say "Review N", the others only show the way in.
+ */
+export function AgentTiles({ onPick, line }: { onPick: (key: string) => void; line: (id: AgentId, need: number) => string }) {
+  const { s } = useStore()
+  const nav = useNavigate()
+  const open = s.handoffs.filter(h => !h.lane)
+  return (
+    <ul className="agent-grid" aria-label="Your team">
+      {s.agents.map(a => {
+        const n = open.filter(h => h.agent === a.id && groupOf(h) === 'need').length
+        const go = () => (n > 0 ? onPick(`agent:${a.id}`) : nav(a.route))
+        return (
+          <li key={a.id}>
+            <button className="agent-tile" onClick={go}>
+              <Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />
+              <span className="who"><b>{a.name}</b><span>{line(a.id, n)}</span></span>
+              {n > 0 ? <span className="go">Review {n}<ArrowRight size={14} aria-hidden /></span> : <ArrowRight size={14} className="go-quiet" aria-hidden />}
+            </button>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -132,7 +146,7 @@ export function ShiftBoard() {
       <div className="card-head">
         <h2>Shift board <span className="faint">· last 24 h</span></h2>
         <span className="legend m-0">
-          <span><i style={{ height: 10, width: 3, borderRadius: 2, background: 'var(--a-nova)' }} />Acted alone, in each agent’s colour</span>
+          <span><i className="legend-tick" />Acted alone, in each agent’s colour</span>
           <span><i className="legend-dot" />Raised to you</span>
         </span>
       </div>
@@ -175,7 +189,7 @@ export function LiveFeed() {
   const items = s.log.slice(0, 9)
   return (
     <section className="card">
-      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/activity')}>All activity</Btn></div>
+      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn></div>
       <ul className="feed">
         {items.map(l => {
           const canUndo = l.undoUntil && l.undoUntil > now && l.status !== 'undone'

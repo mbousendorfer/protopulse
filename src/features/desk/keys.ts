@@ -49,7 +49,7 @@ export function useDecisionKeys({ h, enabled, mode, setMode, draft, startEdit, f
         case 'e': if (editable(h)) startEdit(); break
         case 'r': setMode('reject'); break
         case 's': setMode('snooze'); break
-        case 'c': if (h.kind !== 'news') finish('claire', 'Sent to Claire', () => act.claire(h)); break
+        case 'c': if (h.kind !== 'news') finish('claire', 'Asked Claire', () => act.claire(h)); break
       }
     }
     window.addEventListener('keydown', onKey)

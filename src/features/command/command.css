@@ -8,6 +8,8 @@
 .cmdk-input { display: flex; align-items: center; gap: var(--s2); padding: 0 var(--s4); height: 54px; border-bottom: 1px solid var(--line); flex: none; }
 .cmdk-input input { flex: 1; height: 100%; background: transparent; border: 0; outline: none; font-size: var(--t-lg); color: var(--ink); }
 .cmdk-input input::placeholder { color: var(--ink-off); }
+/* The whole bar is the field: no ring around the input, cut by the modal's top edge. */
+.cmdk-input input:focus-visible { box-shadow: none; }
 .cmdk-list { overflow-y: auto; padding: var(--s2); max-height: calc(72vh - 54px); }
 .cmdk-list [cmdk-group-heading] { padding: 10px 8px 4px; font-size: var(--t-sm); color: var(--ink-3); }
 .cmdk-list [cmdk-empty] { padding: var(--s6); text-align: center; color: var(--ink-3); }
