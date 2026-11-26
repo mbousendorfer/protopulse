@@ -50,6 +50,17 @@ export const SCRIPT: ScriptEvent[] = ([
     auto: { text: 'Answered @lucie.alpine and sent a new hip belt', reason: 'Complaint, set to Act', link: '/inbox' },
   },
   {
+    // A legal threat in a public comment: same rule as in a DM, and nothing about refunds said in public.
+    id: 'ev-legal', order: 38, label: 'Nova · legal threat in a public comment (escalation)',
+    handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Complaint', action: 'nova-complaint',
+      title: 'Late order: “my lawyer will hear about it”', context: 'Facebook comment from Thomas Girard under “Rain test on the GR5”.',
+      why: 'Complaint. Complaints are set to Draft.', confidence: 81, link: '/inbox',
+      conv: { type: 'comment', sentiment: 'negative', contact: 'k-thomas', post: 'Facebook · “Rain test on the GR5”' },
+      preview: { type: 'reply', network: 'facebook', author: 'Thomas Girard', text: 'Ordered a Summit Bottle on 9 Nov, still nothing and support doesn’t answer. If it isn’t here by Friday, my lawyer will hear about it.',
+        draft: ['Thomas, sorry for the wait. We’ve refunded your shipping and your bottle ships today.'], attachments: ['Refund: shipping €6.90 · within your €15 limit'] } },
+    auto: { text: 'Answered Thomas Girard about his late Summit Bottle', reason: 'Complaint, set to Act', link: '/inbox' },
+  },
+  {
     id: 'ev-refund-ask', order: 85, label: 'Nova · money-back question (Inbox rule)',
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Product question', action: 'nova-faq',
       title: 'Can I get my money back on a jacket that’s too big?', context: 'Facebook DM from Hélène Dubois.',

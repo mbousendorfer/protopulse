@@ -35,6 +35,8 @@ export const AGENTS: Agent[] = [
         says: says('Nova suggests a code. You decide.', 'Nova adds a single-use code to her draft for your approval.', 'Nova sends single-use codes up to 15% on her own.') },
       { id: 'nova-reviews', perWeek: 6, example: 'A 3-star Trustpilot review says the Storm Jacket runs small', label: 'Reply to reviews (Google, Trustpilot)', risk: 'risky', autonomy: 'draft', reviewed: 27, approvedUnchanged: 81,
         says: says('Nova flags new reviews.', 'Nova drafts a public reply for your approval.', 'Nova replies to reviews on her own.') },
+      { id: 'nova-holding', perWeek: 6, example: 'A customer threatens legal action in a comment under your reel', label: 'Send holding replies on escalations', risk: 'safe', autonomy: 'draft',
+        says: says('Nova suggests a holding reply on each escalation. You send it.', 'Nova drafts the holding reply (in public, “we’ve sent you a DM”, then the DM) and waits for your approval.', 'Nova sends the holding reply herself as soon as she escalates. The answer itself stays yours.') },
       { id: 'nova-sensitive', perWeek: 1, example: 'A journalist asks about a hiker hurt on a trail', label: 'Reply to press, legal, safety or injuries', risk: 'destructive', autonomy: 'suggest', locked: true,
         lockReason: 'Press, legal and safety topics always go through a person.',
         says: says('Nova never replies. She routes the message to you with context and a suggested holding reply.', '', '') },

@@ -121,11 +121,61 @@ describe('review', () => {
 })
 
 describe('Playbook escalations on arrival', () => {
+  it('a legal threat in a public comment: one line in public, the holding reply by DM, no refund said', async () => {
+    const { dmId } = await import('./slice')
+    let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-legal' })
+    const h = s.handoffs.find(x => x.ref === 'ev-legal')!
+    expect(h).toMatchObject({ action: 'nova-holding', lane: 'claire', rules: ['Lawyers and legal threats'] })
+    expect(h.why).toContain('“lawyer” in a public comment')
+    expect(h.sources?.[0]).toMatchObject({ from: 'Contact', label: expect.stringContaining('1 order (1 late)') })
+    const c = s.inbox.convs.find(x => x.handoff === h.id)!
+    expect(c).toMatchObject({ status: 'claire', trigger: 'lawyer', draft: ['Thomas, we’ve sent you a DM.'] })
+    expect(c.dm).toContain('A member of our team will get back to you today')
+    expect(`${c.draft} ${c.dm}`).not.toMatch(/refund/i)
+    // Approved: the line in public, the holding reply in the DM; the journal's Undo takes both back.
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    expect(s.inbox.convs.find(x => x.id === c.id)!.messages.slice(-1)[0].text).toBe('Thomas, we’ve sent you a DM.')
+    expect(s.inbox.convs.find(x => x.id === dmId(c.id))!.messages.slice(-1)[0]).toMatchObject({ from: 'nova', dm: true })
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.inbox.convs.find(x => x.id === dmId(c.id))).toBeUndefined()
+    expect(s.inbox.convs.find(x => x.id === c.id)).toMatchObject({ dm: c.dm, draft: c.draft })
+  })
+
+  it('the same words in a DM escalate the same way, with the holding reply in the DM itself', async () => {
+    const { escalate, escalationOf } = await import('./slice')
+    const s0 = initialState()
+    const ev = (await import('./script')).SCRIPT.find(e => e.id === 'ev-legal')!
+    const h = { ...ev.handoff!, conv: { ...ev.handoff!.conv!, type: 'dm' as const, post: undefined } }
+    const hit = escalationOf(s0, h)!
+    expect(hit).toMatchObject({ id: 'e-legal', match: 'lawyer' })
+    const s = escalate(s0, h, hit, 'x')
+    const c = s.inbox.convs.find(x => x.handoff === s.handoffs[0].id)!
+    expect(c.dm).toBeUndefined()
+    expect(c.draft?.[0]).toContain('A member of our team will get back to you today')
+  })
+
+  it('holding replies on Act: Nova sends the pair herself, the answer waits on Sam in the DM, Undo puts the pair back', async () => {
+    const { dmId } = await import('./slice')
+    let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-holding', level: 'act' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-legal' })
+    const card = s.handoffs.find(x => x.ref === 'ev-legal')!
+    expect(card).toMatchObject({ kind: 'decision', options: [{ label: 'Forward to Claire', recommended: true }, { label: 'I’ll answer in the DM' }] })
+    const dm = s.inbox.convs.find(x => x.handoff === card.id)!
+    const pub = s.inbox.convs.find(x => x.id === dm.id.replace(/-dm$/, ''))!
+    expect(pub).toMatchObject({ status: 'auto' })
+    expect(pub.messages.slice(-1)[0]).toMatchObject({ text: 'Thomas, we’ve sent you a DM.', auto: true })
+    expect(dm).toMatchObject({ status: 'escalated', trigger: 'lawyer' })
+    expect(dm.messages.slice(-1)[0]).toMatchObject({ from: 'nova', dm: true, auto: true })
+    s = reducer(s, { type: 'core/undo', id: s.log[0].id })
+    expect(s.inbox.convs.find(x => x.id === dmId(pub.id))).toBeUndefined()
+    expect(s.inbox.convs.find(x => x.id === pub.id)).toMatchObject({ status: 'escalated', handoff: card.id, draft: ['Thomas, we’ve sent you a DM.'] })
+  })
+
   it('an injury goes to Your call with the rule quoted, even with complaints on Act', async () => {
     let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-complaint', level: 'act' })
     s = reducer(s, { type: 'core/fire', eventId: 'ev-injury' })
     const h = s.handoffs.find(x => x.ref === 'ev-injury')!
-    expect(h).toMatchObject({ action: 'nova-sensitive', topic: 'Safety', rules: ['Injury, safety or product recall'] })
+    expect(h).toMatchObject({ action: 'nova-holding', topic: 'Safety', rules: ['Injury, safety or product recall'] })
     expect(s.log[0].text).toBe('Escalated @lucie.alpine to you · rule: Injury, safety or product recall')
     expect(s.inbox.convs.find(c => c.handoff === h.id)).toMatchObject({ status: 'escalated', note: 'Escalated · rule “Injury, safety or product recall”' })
   })
