@@ -1,7 +1,7 @@
 import type { ScriptEvent } from '../../data/script'
 import { actionOf, agentOf, now, pushHandoff } from '../../app/core'
 import { discover } from './products'
-import { botWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
+import { botWave, complimentWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -66,9 +66,9 @@ export const SCRIPT: ScriptEvent[] = ([
   {
     id: 'ev-which', order: 92, label: 'Nova · “which jacket is that?” under a reel (product link in DM)',
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Buying intent', action: 'nova-links',
-      title: '@julie.trails asks which jacket is in the reel', context: 'Instagram comment under “Storm Jacket vs a garden hose”.',
+      title: '@julie.trails asks which jacket is in the reel', context: 'Instagram comment under “Storm Jacket vs. a garden hose”.',
       why: 'Asks which product it is. Product links in DM are set to Draft.', confidence: 90, link: '/inbox',
-      conv: { type: 'comment', sentiment: 'positive', intent: 0.82, post: 'Reel · “Storm Jacket vs a garden hose”' },
+      conv: { type: 'comment', sentiment: 'positive', intent: 0.82, post: 'Reel · “Storm Jacket vs. a garden hose”' },
       preview: { type: 'reply', network: 'instagram', author: '@julie.trails', text: 'which jacket is that?? need one for the GR20', draft: [''] } },
     auto: { text: 'Answered @julie.trails and sent the Storm Jacket link in DM', reason: 'Product links in DM, set to Act', link: '/inbox' },
   },
@@ -92,6 +92,10 @@ export const SCRIPT: ScriptEvent[] = ([
     // The conversations closest to (or past) their response target, raised now instead of 15 minutes before.
     id: 'ev-sla', order: 195, agent: 'nova', tag: 'sla', label: 'Nova · response targets about to be missed',
     run: s => warnLate(s, now(s), waitingList(s, now(s)).filter(x => !s.inbox.warned?.includes(x.c.id)).sort((a, b) => a.w.due - b.w.due).slice(0, 3)),
+  },
+  {
+    id: 'ev-compliments', order: 207, agent: 'nova', tag: 'rhythm', label: 'Nova · 8 compliments under a reel (like or answer)',
+    run: s => complimentWave(s),
   },
   {
     id: 'ev-bots', order: 205, agent: 'nova', tag: 'spam', label: 'Nova · bot comments under a reel (spam)',

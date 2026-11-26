@@ -68,6 +68,7 @@ export type InboxAction =
   | { type: 'inbox/labelDelete'; name: string }
   | { type: 'inbox/moderate'; ids: string[]; op: ModOp }
   | { type: 'inbox/private'; id: string }
+  | { type: 'inbox/answerThis'; id: string }
   | { type: 'inbox/ingest'; mention: Ingest }
   | { type: 'inbox/viewAdd'; view: Omit<SavedView, 'id'> }
   | { type: 'inbox/viewDelete'; id: string }
@@ -279,6 +280,7 @@ export function reduceInbox(s0: State, a: InboxAction): State {
   if (a.type === 'inbox/ingest') return ingest(s0, a.mention)
   if (a.type === 'inbox/moderate') return moderate(s0, a.ids, a.op, 'sam')
   if (a.type === 'inbox/private') return replyInPrivate(s0, a.id)
+  if (a.type === 'inbox/answerThis') return answerThis(s0, a.id)
   if (a.type === 'inbox/labelAdd' || a.type === 'inbox/labelRename' || a.type === 'inbox/labelDelete') return reduceLabels(s0, a)
   if (a.type === 'inbox/target') return { ...s0, inbox: { ...s0.inbox, targets: { ...s0.inbox.targets, [a.kind]: a.minutes } } }
   if (a.type === 'inbox/bulk') return bulk(s0, a)
@@ -383,6 +385,7 @@ export function handledAlone(s: State, h: Omit<Handoff, 'id' | 'at'>, auto: { te
  */
 export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
   if (h.inboxSpam) return d.kind === 'approve' ? moderate(s0, h.inboxSpam, 'spam', d.act ? 'nova' : 'sam') : s0
+  if (h.compliments) return d.kind === 'approve' ? applyChoices(s0, h.compliments, h.id) : s0
   if (h.inboxRule) return d.kind === 'approve' ? reduceRules(s0, { type: 'inbox/ruleAdd', rule: h.inboxRule, applyNow: true, origin: LEARNED }) : s0
   const p = replyOf(h)
   let s = s0
@@ -426,7 +429,7 @@ export function onResolveInbox(s0: State, h: Handoff, d: Decision): State {
 
 /** The journal's Undo: a card's decision comes off its conversation, and a reply Nova sent alone comes back as a draft. */
 export function onUndoInbox(s: State, entry: LogEntry): State {
-  let next = undoRules(s, entry)
+  let next = undoChoices(undoRules(s, entry), [entry.id, ...(entry.restore ?? []).map(h => h.id)])
   // A learned rule approved from the Desk goes away with its card's Undo.
   for (const h of entry.restore ?? []) {
     const r = h.inboxRule
@@ -800,9 +803,9 @@ export function warnLate(s: State, t: number, items: { c: Conversation; w: Wait 
   })
 }
 
-export const dueInbox = (s: State, t: number) => soon(s, t).length > 0 || staleWarnings(s, t).length > 0 || teamDue(s, t).length > 0
+export const dueInbox = (s: State, t: number) => s.inbox.convs.some(c => c.queued && c.queued.at <= t) || soon(s, t).length > 0 || staleWarnings(s, t).length > 0 || teamDue(s, t).length > 0
 export function tickInbox(s: State, t: number): State {
-  let next = teamReplies(s, t)
+  let next = sendQueued(teamReplies(s, t), t)
   next = staleWarnings(next, t).reduce((x, h) => removeHandoff(x, h.id), next)
   next = warnLate(next, t, soon(next, t))
   return next
@@ -963,6 +966,114 @@ export function botWave(s: State): State {
     why: 'Spam and bots are set to Draft: I hide them when you say so.', inboxSpam: ids,
     preview: { type: 'evidence', lines: convs.map(c => `${c.author}: “${c.messages[0].text}”`) },
   })
+}
+
+/* ---------- Rhythm: Nova doesn't answer everything ---------- */
+
+const FANS: [string, string][] = [
+  ['@sofi.out', '🔥🔥'],
+  ['@jb.alps', 'love this'],
+  ['@ana.walks', 'does it pack small?'],
+  ['@tim.rando', 'best jacket I own, six winters and still dry'],
+  ['@noa.peaks', '😍'],
+  ['@leo_hikes', 'need this'],
+  ['@camille.v', 'the hose at the end 😂'],
+  ['@marius.gr', '🙌🙌'],
+]
+/** Nova's own answers to the two comments that say something. */
+const ANSWERS: Record<string, string> = {
+  'does it pack small?': 'It does: it folds into its own hood, about the size of a water bottle.',
+  'best jacket I own, six winters and still dry': 'Six winters and still dry? That’s exactly the plan. Thank you!',
+}
+/** Short thanks for a compliment Sam wants answered. Nova never uses the same one twice in a day. */
+const THANKS = ['Thank you, {name}!', 'Glad you like it, {name}.', 'That means a lot, {name}.', 'Thanks {name}, see you on the trail.', 'Made our day, {name}.']
+const SPREAD = 7 * MIN
+
+/** Like or answer: a question or a story gets an answer; an emoji or a short compliment gets a like. */
+export function choose(text: string): { did: 'like' | 'answer'; why: string } {
+  const words = text.replace(/\p{Extended_Pictographic}|\uFE0F/gu, ' ').trim().split(/\s+/).filter(Boolean)
+  if (text.includes('?')) return { did: 'answer', why: 'asks a question' }
+  if (words.length >= 6) return { did: 'answer', why: 'tells a story' }
+  return { did: 'like', why: words.length ? 'short compliment, no question' : 'emoji only' }
+}
+
+/** The thanks Nova hasn't said today. */
+export function freshThanks(s: State, c: Conversation): string {
+  const said = s.inbox.convs.flatMap(x => x.messages.filter(m => m.from !== 'them' && m.at >= now(s) - 24 * 60 * MIN).map(m => m.text))
+  const used = (tpl: string) => {
+    const re = new RegExp(`^${tpl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace('\\{name\\}', '.+')}$`)
+    return said.some(t => re.test(t))
+  }
+  const name = firstName(c)
+  return (THANKS.find(x => !used(x)) ?? 'Thanks, {name}.').replaceAll('{name}', name)
+}
+
+/**
+ * Eight comments land under the reel. On Act Nova likes the simple compliments and answers the two that say something,
+ * spread a few minutes apart; one journal line sums it up. On Draft (or Suggest) she lines it all up on one Desk card.
+ */
+export function complimentWave(s: State): State {
+  const t = now(s)
+  const post = 'Reel · “Storm Jacket vs. a garden hose”'
+  const convs: Conversation[] = FANS.map(([author, text], i) => ({
+    id: uid('c'), author, network: 'instagram', type: 'comment', sentiment: 'positive', at: t - i * MIN, status: 'new', labels: [], unread: true, post,
+    messages: [{ id: uid('m'), from: 'them', text, at: t - i * MIN }],
+  }))
+  const ids = convs.map(c => c.id)
+  const plan = convs.map(c => choose(c.messages[0].text))
+  const liked = plan.filter(p => p.did === 'like').length
+  const next: State = { ...s, inbox: { ...s.inbox, convs: [...convs, ...s.inbox.convs] } }
+  if (actionOf(s, 'nova', 'nova-compliments')?.autonomy === 'act') {
+    const logged = pushLog(next, { agent: 'nova', text: `Liked ${liked} compliments, replied to ${ids.length - liked} · under “Storm Jacket vs. a garden hose”`, status: 'done', undoMinutes: 10, reason: 'Compliments, set to Act', link: '/inbox?view=handled' })
+    return applyChoices(logged, ids, logged.log[0].id)
+  }
+  return pushHandoff(next, {
+    agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Compliments', action: 'nova-compliments', confidence: 93, link: '/inbox?view=review',
+    title: `${ids.length} compliments under your Storm Jacket reel: like ${liked}, answer ${ids.length - liked}`, context: 'In the last 8 minutes on Instagram.',
+    why: 'Compliments are set to Draft: I like or answer them when you say so. I answer what has a question or a story.', compliments: ids,
+    preview: { type: 'evidence', lines: convs.map((c, i) => `${c.author}: “${c.messages[0].text}” → ${plan[i].did === 'like' ? 'like' : 'answer'} (${plan[i].why})`) },
+  })
+}
+
+/** Nova's choices, done: likes now, answers queued a few minutes apart. `wave` is what undoes them. */
+export function applyChoices(s: State, ids: string[], wave: string): State {
+  const t = now(s)
+  let k = 0
+  const convs = s.inbox.convs.map(c => {
+    if (!ids.includes(c.id)) return c
+    const ch = choose(c.messages[0]?.text ?? '')
+    const base = { ...c, status: 'auto' as const, unread: false, reviewed: true, reviewedBy: 'nova' as const, choice: { ...ch, wave } }
+    if (ch.did === 'like') return { ...base, liked: true, note: `Liked, no reply · ${ch.why}` }
+    const at = t + SPREAD * k++
+    const text = ANSWERS[c.messages[0].text] ?? ''
+    return { ...base, queued: { text, at }, note: `Nova replies at ${hhmm(at)} · ${ch.why}` }
+  })
+  return sendQueued({ ...s, inbox: { ...s.inbox, convs } }, t)
+}
+
+/** The heartbeat sends what Nova spread out once its time comes. */
+function sendQueued(s: State, t: number): State {
+  if (!s.inbox.convs.some(c => c.queued && c.queued.at <= t)) return s
+  const convs = s.inbox.convs.map(c => (c.queued && c.queued.at <= t
+    ? { ...c, queued: undefined, note: `Answered · ${c.choice?.why ?? 'compliment'}`, messages: [...c.messages, { id: uid('m'), from: 'nova' as const, text: c.queued.text, at: c.queued.at, auto: true, card: c.choice?.wave }] }
+    : c))
+  return { ...s, inbox: { ...s.inbox, convs } }
+}
+
+/** Undo of a wave: likes removed, replies taken back (sent or not), the comments back to New. */
+function undoChoices(s: State, waves: string[]): State {
+  if (!s.inbox.convs.some(c => c.choice && waves.includes(c.choice.wave))) return s
+  const convs = s.inbox.convs.map(c => (c.choice && waves.includes(c.choice.wave)
+    ? { ...c, status: 'new' as const, liked: false, queued: undefined, choice: undefined, reviewed: false, reviewedBy: undefined, note: 'Nova’s like or reply undone', messages: c.messages.filter(m => m.from === 'them') }
+    : c))
+  return { ...s, inbox: { ...s.inbox, convs } }
+}
+
+/** "Answer this one": Sam overrides a like; Nova drafts a short thanks she hasn't used today. */
+export function answerThis(s0: State, id: string): State {
+  const [s, c] = materialize(s0, id)
+  if (!c) return s0
+  return patch(s, c.id, { status: 'draft', draft: [freshThanks(s, c)], note: c.choice ? `You asked Nova to answer · she had ${c.choice.did === 'like' ? 'liked it' : 'answered'}` : c.note, reviewed: false })
 }
 
 /* ---------- Contract for Echo: mentions that need an answer become Inbox conversations ---------- */

@@ -496,3 +496,39 @@ describe('Product links in DM', () => {
     expect(discover(s, ev.handoff!).conv?.dm).toContain('Trail Week: free shipping until Sunday.')
   })
 })
+
+describe('Rhythm: Nova doesn’t answer everything', () => {
+  it('likes the simple compliments, answers the question and the story a few minutes apart, one journal line, one Undo', async () => {
+    const { choose } = await import('./slice')
+    expect(choose('🔥🔥')).toMatchObject({ did: 'like', why: 'emoji only' })
+    expect(choose('does it pack small?')).toMatchObject({ did: 'answer' })
+    let s = reducer(initialState(), { type: 'core/fire', eventId: 'ev-compliments' })
+    expect(s.log[0].text).toBe('Liked 6 compliments, replied to 2 · under “Storm Jacket vs. a garden hose”')
+    const wave = s.inbox.convs.filter(c => c.choice?.wave === s.log[0].id)
+    expect(wave).toHaveLength(8)
+    expect(wave.filter(c => c.liked)).toHaveLength(6)
+    expect(wave.filter(c => c.messages.some(m => m.from === 'nova'))).toHaveLength(1)
+    expect(wave.find(c => c.queued)?.note).toMatch(/^Nova replies at \d\d:\d\d/)
+    s = reducer(s, { type: 'core/advance', minutes: 8 })
+    expect(s.inbox.convs.filter(c => c.choice && c.messages.some(m => m.from === 'nova'))).toHaveLength(2)
+    s = reducer(s, { type: 'core/undo', id: s.log.find(l => l.text.startsWith('Liked 6'))!.id })
+    const back = s.inbox.convs.filter(c => wave.some(w => w.id === c.id))
+    expect(back.every(c => c.status === 'new' && !c.liked && !c.messages.some(m => m.from === 'nova'))).toBe(true)
+  })
+
+  it('on Draft one card lines it all up; “Answer this one” drafts a thanks Nova hasn’t used today', async () => {
+    let s = reducer(initialState(), { type: 'core/autonomy', agent: 'nova', action: 'nova-compliments', level: 'draft' })
+    s = reducer(s, { type: 'core/fire', eventId: 'ev-compliments' })
+    const h = s.handoffs.find(x => x.compliments)!
+    expect(h.title).toBe('8 compliments under your Storm Jacket reel: like 6, answer 2')
+    s = reducer(s, { type: 'core/resolve', id: h.id, decision: { kind: 'approve' } })
+    const liked = s.inbox.convs.filter(c => c.choice?.did === 'like')
+    s = reducer(s, { type: 'inbox/answerThis', id: liked[0].id })
+    s = reducer(s, { type: 'inbox/approve', id: liked[0].id })
+    s = reducer(s, { type: 'inbox/answerThis', id: liked[1].id })
+    const a = s.inbox.convs.find(c => c.id === liked[0].id)!.messages.slice(-1)[0].text
+    const b = s.inbox.convs.find(c => c.id === liked[1].id)!.draft?.[0]
+    expect(a).not.toBe(String(b).replace(/\w+!?\.?$/, ''))
+    expect(String(b).split(',')[0]).not.toBe(a.split(',')[0])
+  })
+})
