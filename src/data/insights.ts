@@ -5,11 +5,11 @@ import { T } from '../app/time'
 export type Cited = string | { n: string; source: string }
 
 /** What a Report Studio section is about; Iris rewrites it from this. */
-export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community' | 'campaign' | 'label' | 'roi' | 'audience'
+export type SectionKind = 'summary' | 'top' | 'dips' | 'besttime' | 'pillars' | 'community' | 'campaign' | 'label' | 'roi' | 'audience' | 'benchmark'
 /** How Iris writes a report on request: its window, networks, reader and sections. Saved as a template, it can be asked for again. */
 export type Recipe = { days: number; networks: Network[]; audience: 'claire' | 'sam'; sections: SectionKind[]; /** Sage's campaign id. */ campaign?: string; /** A label on Atlas's posts. */ label?: string }
 
-export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' | 'campaign'; kind?: SectionKind; short?: boolean }
+export type ReportSection = { heading: string; paras: Cited[][]; chart?: 'reach' | 'tiktok' | 'pillars' | 'campaign' | 'benchmark'; kind?: SectionKind; short?: boolean }
 
 export type Report = {
   id: string
@@ -320,12 +320,12 @@ export const AGE_BANDS = ['13–17', '18–24', '25–34', '35–44', '45+']
 
 /** Who follows Fernway, per network (native analytics, mocked): followers today, age bands (%), gender (%), top countries and cities. */
 export const AUDIENCE: Record<Exclude<Network, 'google' | 'trustpilot'>, { followers: number; age: number[]; gender: { women: number; men: number; other: number }; countries: [string, number][]; cities: string[] }> = {
-  instagram: { followers: 24800, age: [2, 24, 44, 19, 11], gender: { women: 56, men: 42, other: 2 }, countries: [['France', 58], ['Switzerland', 12], ['Belgium', 9], ['Canada', 6], ['Germany', 4]], cities: ['Lyon', 'Paris', 'Annecy', 'Geneva', 'Grenoble'] },
-  tiktok: { followers: 9600, age: [6, 56, 26, 8, 4], gender: { women: 51, men: 46, other: 3 }, countries: [['France', 61], ['Belgium', 11], ['Switzerland', 8], ['Canada', 7], ['Morocco', 3]], cities: ['Paris', 'Lyon', 'Lille', 'Brussels', 'Marseille'] },
-  linkedin: { followers: 6400, age: [0, 9, 41, 31, 19], gender: { women: 41, men: 58, other: 1 }, countries: [['France', 64], ['Switzerland', 15], ['Germany', 6], ['Belgium', 5], ['United Kingdom', 4]], cities: ['Paris', 'Lyon', 'Geneva', 'Annecy', 'Zurich'] },
-  facebook: { followers: 5200, age: [0, 8, 30, 32, 30], gender: { women: 59, men: 40, other: 1 }, countries: [['France', 66], ['Belgium', 10], ['Switzerland', 9], ['Canada', 5], ['Spain', 3]], cities: ['Lyon', 'Grenoble', 'Annecy', 'Chambéry', 'Paris'] },
-  youtube: { followers: 1600, age: [3, 28, 38, 19, 12], gender: { women: 34, men: 65, other: 1 }, countries: [['France', 52], ['Canada', 13], ['Switzerland', 11], ['Belgium', 8], ['United States', 6]], cities: ['Paris', 'Montréal', 'Lyon', 'Geneva', 'Grenoble'] },
-  x: { followers: 600, age: [1, 22, 40, 23, 14], gender: { women: 38, men: 60, other: 2 }, countries: [['France', 70], ['Belgium', 9], ['Switzerland', 8], ['Canada', 6], ['Germany', 3]], cities: ['Paris', 'Lyon', 'Toulouse', 'Geneva', 'Nantes'] },
+  instagram: { followers: 62000, age: [2, 24, 44, 19, 11], gender: { women: 56, men: 42, other: 2 }, countries: [['France', 58], ['Switzerland', 12], ['Belgium', 9], ['Canada', 6], ['Germany', 4]], cities: ['Lyon', 'Paris', 'Annecy', 'Geneva', 'Grenoble'] },
+  tiktok: { followers: 24000, age: [6, 56, 26, 8, 4], gender: { women: 51, men: 46, other: 3 }, countries: [['France', 61], ['Belgium', 11], ['Switzerland', 8], ['Canada', 7], ['Morocco', 3]], cities: ['Paris', 'Lyon', 'Lille', 'Brussels', 'Marseille'] },
+  linkedin: { followers: 16000, age: [0, 9, 41, 31, 19], gender: { women: 41, men: 58, other: 1 }, countries: [['France', 64], ['Switzerland', 15], ['Germany', 6], ['Belgium', 5], ['United Kingdom', 4]], cities: ['Paris', 'Lyon', 'Geneva', 'Annecy', 'Zurich'] },
+  facebook: { followers: 13000, age: [0, 8, 30, 32, 30], gender: { women: 59, men: 40, other: 1 }, countries: [['France', 66], ['Belgium', 10], ['Switzerland', 9], ['Canada', 5], ['Spain', 3]], cities: ['Lyon', 'Grenoble', 'Annecy', 'Chambéry', 'Paris'] },
+  youtube: { followers: 4000, age: [3, 28, 38, 19, 12], gender: { women: 34, men: 65, other: 1 }, countries: [['France', 52], ['Canada', 13], ['Switzerland', 11], ['Belgium', 8], ['United States', 6]], cities: ['Paris', 'Montréal', 'Lyon', 'Geneva', 'Grenoble'] },
+  x: { followers: 1000, age: [1, 22, 40, 23, 14], gender: { women: 38, men: 60, other: 2 }, countries: [['France', 70], ['Belgium', 9], ['Switzerland', 8], ['Canada', 6], ['Germany', 3]], cities: ['Paris', 'Lyon', 'Toulouse', 'Geneva', 'Nantes'] },
 }
 
 /** Where the audience and what Atlas posts don't match: Iris's content recommendation for Atlas. */

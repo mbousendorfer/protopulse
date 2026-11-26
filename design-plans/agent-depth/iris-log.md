@@ -38,3 +38,10 @@
 - 25/11 · Pitch n°7 « Audience » · **Go** (tel que pitché, avec la recommandation à Atlas) · Go plus simple · décision de l'humain.
 - 25/11 · Audience · nouvelle action d'Iris « Recommend content from the audience » (safe, Draft par défaut) : Suggest = listée dans l'onglet, Draft = carte Desk « Worth a look », Act = Iris briefe Atlas (carte d'Atlas en Draft, journal + Undo) · réutiliser `iris-anomaly` · ce n'est pas une anomalie ; un cran propre garde le profil lisible.
 - 25/11 · Audience · série d'abonnés reconstruite à rebours depuis les abonnés du jour et les « New followers » d'Explore · une série seedée de plus · un seul chiffre source (Explore).
+- 25/11 · Pitch n°8 « Benchmark concurrents » · **Go** (tel que pitché) · Go plus simple · décision de l'humain.
+- 26/11 · Pitch n°9 « Historique des boosts et leur résultat » (#10) · **Drop** · — · décision de l'humain, sans commentaire.
+- 26/11 · Demande d'Atlas « chiffres par profil » · **Later** · Go · décision de l'humain ; demande close sans construction.
+- 26/11 · Demande de Nova « temps de réponse » (re-pitch réduit du rapport community) · **Toujours Later** · Go réduit · décision de l'humain ; demande close sans construction.
+- 26/11 · Benchmark · abonnés de l'onglet Audience alignés sur la valeur déjà affichée par Echo (120 000 au lieu de 48 200) ; la ligne Fernway vient d'Iris (`fernwayRow`), les concurrents et la part de voix d'Echo · garder deux chiffres d'abonnés · un même chiffre sur tous les écrans (PROMPT §9). Demande à Echo pour qu'il lise la croissance d'Iris (1,8 % vs 2,1 %).
+- 26/11 · Déclencheurs ⇧D · `ev-audience` → /insights/audience ajouté à côté de `ev-linkedin`. Les rapports quotidiens, hebdo et programmés passent par les boutons d'avance du temps ; Report Studio et ROI sont à la surface d'Insights.
+- 26/11 · Clôture · PROMPT.md §4 (Iris, crans par action), §6.4 (cinq onglets), §9 (volumes Insights) réécrits ; rapport docs/agent-depth/iris.html avec captures avant (73a7ba2) / après (main) prises en Chrome headless.

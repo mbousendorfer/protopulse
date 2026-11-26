@@ -10,7 +10,7 @@ const brief = (s: State) => s.handoffs.find(h => h.ref === 'audience:tiktok')
 
 describe('Audience', () => {
   it('weights networks by followers and finds TikTok’s under-25s', () => {
-    expect(audienceOf('all').followers).toBe(48200)
+    expect(audienceOf('all').followers).toBe(120000)
     expect(audienceOf('tiktok').under25).toBe(62)
     expect(parse('Who follows us on TikTok?').intent).toMatchObject({ kind: 'audience', network: 'tiktok' })
   })

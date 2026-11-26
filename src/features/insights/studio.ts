@@ -9,11 +9,12 @@ import { NETWORKS_SOCIAL, POSTS, type Cited, type Recipe, type Report, type Repo
 import { bestTime, fmt, postPerf, rangeKpis } from './metrics'
 import { roiByNetwork, roiTotals } from './roi'
 import { audienceOf } from './audience'
+import { benchmarkRead, benchmarkRows } from './benchmark'
 import { anomalyList } from './slice'
 
 export const SECTION_LABEL: Record<SectionKind, string> = {
   summary: 'Results', top: 'Top 3 posts', dips: 'What didn’t work', besttime: 'Best times to post', pillars: 'By pillar', community: 'Community',
-  campaign: 'Campaign vs goal', label: 'Labelled posts', roi: 'Website results', audience: 'Audience',
+  campaign: 'Campaign vs goal', label: 'Labelled posts', roi: 'Website results', audience: 'Audience', benchmark: 'Benchmark',
 }
 
 /**
@@ -126,6 +127,11 @@ export function writeSection(s: State, r: Recipe, kind: SectionKind, short = fal
       paras = [[c(`${perf.length} posts`, `Atlas · label “${r.label}”`), ' reached ', c(fmt.k(reach), `Label “${r.label}” · reach`), ' at ', c(fmt.pct(er), `Label “${r.label}” · average engagement`), `. Best: “${best.p.text.slice(0, 60)}” on ${NETWORK_LABEL[best.p.network]}.`]]
     }
   }
+  if (kind === 'benchmark') {
+    const rows = benchmarkRows(s), us = rows[0]
+    paras = [[c(`${fmt.int(us.followers)} followers`, 'Iris · all networks · today'), `, +${us.growth}% a week, `, c(`${fmt.pct(us.er)} engagement`, 'Iris · Explore · 7 days'), ', ', c(`${us.sov}% share of voice`, 'Echo · Listening › Competitors'), `. ${benchmarkRead(rows)}`]]
+    chart = 'benchmark'
+  }
   if (kind === 'audience') {
     const a = audienceOf(r.networks.length === 1 ? r.networks[0] : 'all')
     paras = [[c(`${fmt.int(a.followers)} followers`, `${netNames(r)} · native analytics · today`), `, ${a.under25}% under 25, mostly ${a.peak}. `, c(`${a.countries[0][0]} ${a.countries[0][1]}%`, `${netNames(r)} · followers by country`), `, then ${a.countries.slice(1, 3).map(([x, p]) => `${x} ${p}%`).join(', ')}. Top cities: ${a.cities.slice(0, 3).join(', ')}.`]]
@@ -138,7 +144,7 @@ export function writeSection(s: State, r: Recipe, kind: SectionKind, short = fal
       ...(top ? [[`${NETWORK_LABEL[top.network]} brings the most: `, c(`€${fmt.int(top.revenue)}`, `GA4 · ${NETWORK_LABEL[top.network]} · ${window}`), ` from ${fmt.int(top.sessions)} sessions.`] as Cited[]] : []),
     ]
   }
-  if (short) { paras = kind === 'top' || kind === 'dips' ? paras.slice(0, 1) : firstSentence(paras); if (kind === 'pillars') chart = undefined }
+  if (short) { paras = kind === 'top' || kind === 'dips' ? paras.slice(0, 1) : firstSentence(paras); if (kind === 'pillars' || kind === 'benchmark') chart = undefined }
   return { heading: SECTION_LABEL[kind], paras, chart, kind, short }
 }
 
@@ -176,7 +182,7 @@ export function applyOp(s: State, r: Report, o: StudioOp): Report {
 }
 
 const KIND_WORDS: [RegExp, SectionKind][] = [
-  [/best time|timing|when to post|slot/, 'besttime'], [/\broi\b|revenue|sales|website|ga4/, 'roi'], [/audience|demograph|who follows|followers/, 'audience'], [/result|summary|reach|overview/, 'summary'], [/top \d|top three|top posts|best posts|\bposts\b/, 'top'],
+  [/best time|timing|when to post|slot/, 'besttime'], [/\broi\b|revenue|sales|website|ga4/, 'roi'], [/benchmark|compet|peakline|norr|trailkind|share of voice/, 'benchmark'], [/audience|demograph|who follows|followers/, 'audience'], [/result|summary|reach|overview/, 'summary'], [/top \d|top three|top posts|best posts|\bposts\b/, 'top'],
   [/didn|dip|anomal|problem|\bbad\b/, 'dips'], [/pillar|theme/, 'pillars'], [/community|inbox|repl/, 'community'], [/campaign|goal/, 'campaign'], [/label/, 'label'],
 ]
 const kindIn = (t: string) => KIND_WORDS.find(([re]) => re.test(t))?.[1]

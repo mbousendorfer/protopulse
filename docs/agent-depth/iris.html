@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iris Insights Depth</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Same frame as docs/ui-quality.html: one reading column, measures first, then parity, captures, open items. */
+:root {
+  --bg: #F9F9FA; --panel: #FFFFFF; --ink: #344563; --ink-2: #5D6A82; --line: #D6DAE0; --link: #0E72D6;
+  --ok: #1E7B3A; --ok-bg: #E7F6EC; --open: #8A6100; --open-bg: #FFF7DB;
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #121A28; --panel: #1B2538; --ink: #E6EAF0; --ink-2: #AEB7C6; --line: #2F3B52; --link: #6CB6FF;
+  --ok: #7FD69A; --ok-bg: #173225; --open: #F2CF63; --open-bg: #332B12; color-scheme: dark }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--font); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+main { max-width: 960px; margin: 0 auto; padding-block: 40px 64px; display: grid; gap: 40px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0; text-wrap: balance; }
+h2 { font-size: 21px; margin: 0 0 4px; text-wrap: balance; }
+p { margin: 0; max-width: 72ch; }
+a { color: var(--link); }
+code { font-size: 13px; }
+.lede { color: var(--ink-2); margin-top: 8px; }
+section { display: grid; gap: 12px; }
+.sub { color: var(--ink-2); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 4px; }
+.tile b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.tile span { color: var(--ink-2); font-size: 13px; }
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+.pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.pair.phone { grid-template-columns: repeat(2, minmax(0, 260px)); }
+figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; }
+figure img { width: 100%; border-radius: 8px; display: block; }
+figcaption { font-size: 13px; color: var(--ink-2); }
+figcaption b { color: var(--ink); }
+.check { list-style: none; margin: 0; padding: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; }
+.check li { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); align-items: start; }
+.check li:first-child { border-top: 0; }
+.tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; justify-self: start; white-space: nowrap; }
+.tag.ok { color: var(--ok); background: var(--ok-bg); }
+.tag.open { color: var(--open); background: var(--open-bg); }
+.check p { color: var(--ink-2); }
+@media (max-width: 640px) { .pair, .pair.phone { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Iris · Insights depth</h1>
+    <p class="lede">26 November 2026. Iris brought to the level of Agorapulse's Reports, agentic-first: she computes, watches and writes; Sam asks for a report in a sentence and changes it section by section, and every number on every screen, in Chat and in ⌘K comes from the same place. 15 pull requests on <code>main</code>, from #26 to the closing one.</p>
+  </header>
+
+  <section aria-label="Measures">
+    <h2>In numbers</h2>
+    <div class="tiles">
+      <div class="tile"><b>10</b><span>fixes first (one source for the numbers, alert rules evaluated, real boost budget, reports that renew)</span></div>
+      <div class="tile"><b>6</b><span>features shipped after an explicit Go</span></div>
+      <div class="tile"><b>2 + 2</b><span>later (community report, per-profile figures) · dropped (live data, boost history)</span></div>
+      <div class="tile"><b>5</b><span>contracts for other agents (Atlas, Juno, Sage, Echo)</span></div>
+      <div class="tile"><b>2</b><span>tabs added: Audience and ROI</span></div>
+      <div class="tile"><b>0 → 9</b><span>test files for Iris (none before)</span></div>
+    </div>
+  </section>
+
+  <section aria-label="Parity">
+    <h2>Parity, capability by capability</h2>
+    <p class="sub">Agorapulse's Analytics (from the agorapulse-product reference) against what Protopulse had on 25/11 at 73a7ba2 and what it has now.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Agorapulse</th><th>Before</th><th>Now (agentic version)</th></tr></thead>
+      <tbody>
+        <tr><td>One set of numbers</td><td>Reels vs carousels and best time said three different things in the report, Chat and ⌘K</td><td><code>metrics.ts</code> is the only source: Explore, reports, the brief, Chat, ⌘K and follow-up answers read the same selectors</td></tr>
+        <tr><td>Indicators (alerts)</td><td>Alert rules never evaluated; six constant anomalies</td><td>Rules checked on every heartbeat against what Iris measures; a rule Sam creates can fire within a second; the level of Raise anomalies decides: listed, Desk card, or done by Iris with a real Undo; the anomaly names its rule</td></tr>
+        <tr><td>Profile reports, period, comparison</td><td>7 / 30 / 90 days, fixed best-time heatmap, inert post rows</td><td>Custom range; best time per network, following the filter; sorting by network, pillar and author; a post row opens its numbers against the network's average</td></tr>
+        <tr><td>Report Studio</td><td>Six constant reports</td><td>“Iris, a monthly report for Claire on Instagram and TikTok” in ⌘K, Chat or Insights; sections move, shorten, go and come back by button or sentence, each with Undo; saved templates; a campaign of Sage's or a label of Atlas's in the request brings its own section</td></tr>
+        <tr><td>Scheduled reports, export</td><td>Download .md; share “seen” after a timer</td><td>“Send it to Claire every Monday”; on the day Iris writes it and follows the sharing level (written · Desk card · sent with Undo); Claire's engine answers and her reply shows in the report; PDF by printing the report alone; read-only link</td></tr>
+        <tr><td>Daily and weekly reports</td><td>Constant; Skip to tomorrow wrote a journal line</td><td>A new brief each day after 07:00 and a weekly report on Mondays, written from the journal, the Desk and the anomalies, following each action's level</td></tr>
+        <tr><td>Social Media ROI</td><td>None</td><td>ROI tab (GA4, mocked): sessions, orders, revenue by network, campaign and post; revenue per boost euro; Tell Sage turns it into a Playbook fact</td></tr>
+        <tr><td>Audience</td><td>None</td><td>Audience tab: followers, age, gender, countries, cities; new action Recommend content from the audience turns TikTok's 62% under-25s into a brief for Atlas</td></tr>
+        <tr><td>Competitors in reports</td><td>A fixed sentence</td><td>Benchmark section from Echo's tracked competitors and share of voice, Fernway's line from Iris</td></tr>
+        <tr><td>Paid (boost)</td><td>Budget as text; boosts recorded and read nowhere</td><td>Budget computed and applied: a boost over the cap is refused with the reason; Desk, Insights and Chat boosts all count; Undo gives the money back</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section aria-label="Captures">
+    <h2>Before and after</h2>
+    <div class="pair">
+      <figure><img src="iris/reports-before.jpg" alt="Insights Reports before: six constant reports, three tabs"><figcaption><b>Before</b> · six constant reports; the Reports badge counted reports, not what needs Sam.</figcaption></figure>
+      <figure><img src="iris/reports-after.jpg" alt="Insights Reports after: Ask Iris field, five tabs"><figcaption><b>After</b> · Ask Iris for any report in a sentence; Audience and ROI tabs; a new brief each day and schedules above the list once set.</figcaption></figure>
+    </div>
+    <div class="pair">
+      <figure><img src="iris/explore-before.jpg" alt="Explore before"><figcaption><b>Before</b> · three periods, one fixed best-time window, posts table without network column.</figcaption></figure>
+      <figure><img src="iris/explore-after.jpg" alt="Explore after"><figcaption><b>After</b> · Custom range, best time per network, pillars against Sage's targets, posts sortable by network, pillar and author, rows that open the post.</figcaption></figure>
+    </div>
+    <div class="pair">
+      <figure><img src="iris/roi-after.jpg" alt="ROI tab"><figcaption><b>New</b> · ROI: what link clicks become on the website, by network and campaign, with Tell Sage.</figcaption></figure>
+      <figure><img src="iris/audience-after.jpg" alt="Audience tab"><figcaption><b>New</b> · Audience: who follows Fernway, and Iris's brief for Atlas when it doesn't match the content.</figcaption></figure>
+    </div>
+    <div class="pair phone">
+      <figure><img src="iris/phone-before.jpg" alt="Insights at 375 px before"><figcaption><b>Before</b> · 375 px.</figcaption></figure>
+      <figure><img src="iris/phone-after.jpg" alt="Insights at 375 px after"><figcaption><b>After</b> · 375 px.</figcaption></figure>
+    </div>
+  </section>
+
+  <section aria-label="Open items">
+    <h2>What stays open, and why</h2>
+    <ul class="check">
+      <li><span class="tag open">Dropped</span><div><b>Data that lives</b><p>Explore keeps Iris's own 18 posts instead of Atlas's published ones; refused at the pitch. A post published during the test doesn't move the totals.</p></div></li>
+      <li><span class="tag open">Dropped</span><div><b>Boost history with results</b><p>Paid reach and cost per click per boost; refused at the pitch. The budget itself is real.</p></div></li>
+      <li><span class="tag open">Later</span><div><b>Community report from Nova's Inbox</b><p>Pitched twice (full, then reduced); kept on Later. The Community section quotes Explore's 7-day totals; Nova's <code>responseStats</code> request is closed with that reason.</p></div></li>
+      <li><span class="tag open">Later</span><div><b>Figures per profile (Fernway Repair)</b><p>Atlas's request; held at the pitch. Fernway Repair counts inside Instagram.</p></div></li>
+      <li><span class="tag ok">Skipped</span><div><b>CSV Builder, ads reports, branding and timezones</b><p>Explore's CSV export covers the test; paid campaigns are out of scope (Iris recommends boosts only); branding brings nothing in 45 minutes.</p></div></li>
+      <li><span class="tag ok">Contract</span><div><b>Atlas, Juno, Sage, Echo</b><p><code>bestTime</code>, <code>bestSlotOf</code>, <code>clicksOf</code> for Atlas; <code>postPerf</code>, <code>clipPerf</code> for Juno; <code>writeCampaignReport</code> for Sage (wired in #113); <code>fernwayRow</code> asked of Echo so Listening shows Iris's growth.</p></div></li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>
