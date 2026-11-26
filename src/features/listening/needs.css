@@ -1,0 +1,50 @@
+/*
+ * Decisions first (PROMPT §3.9, matrix §12): Listening › Needs you and Strategy › Campaigns.
+ * Same shape as Inbox › Needs you: one card, a band per gesture, two-line rows with the decision on the right.
+ * To migrate to the agents lot's shared decision primitive once it lands.
+ */
+.needs { overflow: hidden; }
+.need-group + .need-group { border-top: 1px solid var(--line); }
+.need-head { display: flex; align-items: center; gap: var(--s2); padding: 10px var(--s4); background: var(--sunk); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.need-head h2 { font-size: var(--t-md); font-weight: 600; white-space: nowrap; }
+.need-why { font-size: var(--t-sm); min-width: 0; }
+.need-icon { width: 24px; height: 24px; border-radius: var(--r-ctl); display: grid; place-items: center; flex: none; background: var(--lift-2); color: var(--ink-2); }
+.need-g-urgent .need-icon { background: var(--alert-tint); color: var(--alert-strong); }
+
+.need-row { display: flex; align-items: center; gap: var(--s3); padding: 12px var(--s4); }
+.need-group ul > .need-row + .need-row { border-top: 1px solid var(--line); }
+.need-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.need-title, .need-line, .need-meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.need-title { color: var(--ink); }
+.need-title b, .need-title a { font-weight: 600; color: var(--ink); text-decoration: none; margin-right: 8px; }
+.need-title a:hover, .need-title a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+.need-quote { color: var(--ink); }
+.need-line { font-size: var(--t-sm); color: var(--ink-2); }
+.need-line .pill { margin-right: 6px; vertical-align: 1px; }
+.need-meta { font-size: var(--t-sm); color: var(--ink-2); }
+.need-acts { display: flex; align-items: center; gap: 6px; flex: none; }
+.need-acts .btn .mark { width: 16px; height: 16px; }
+/* Echo's move, as a choice (§10): the move in words, the agent who does it, an arrow. */
+.need-choice { width: 320px; min-height: 36px; font-size: var(--t-sm); }
+.need-choice > span { min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.need-choice .mark { width: 18px; height: 18px; flex: none; }
+.need-options { display: flex; flex-direction: column; gap: 6px; margin-top: var(--s2); max-width: 560px; }
+.need-more { display: flex; align-items: center; gap: 4px; width: 100%; padding: 8px var(--s4) 10px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--action-ink); font-weight: 600; font-size: var(--t-sm); text-align: left; cursor: pointer; }
+.need-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+.need-empty { padding: var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+.need-empty b { font-weight: 600; }
+
+/* A narrow column: the decision drops under the text, which keeps the full width. */
+@media (max-width: 1100px) {
+  .need-event { flex-wrap: wrap; }
+  .need-event .need-acts { flex-basis: 100%; padding-left: 44px; flex-wrap: wrap; }
+}
+@media (max-width: 720px) {
+  .need-row { flex-wrap: wrap; align-items: flex-start; }
+  .need-acts, .need-event .need-acts { flex-basis: 100%; flex-wrap: wrap; padding-left: 0; }
+  .need-title, .need-line { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .need-choice { width: 100%; }
+  .need-why { flex-basis: 100%; order: 9; }
+}
+.need-title.need-wrap, .need-line.need-wrap { white-space: normal; }
+.need-line svg { vertical-align: -1px; }
