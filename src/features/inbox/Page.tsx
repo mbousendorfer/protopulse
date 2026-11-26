@@ -23,6 +23,7 @@ import { LabelsSheet } from './LabelsSheet'
 import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
+import { MoreInfo } from '../../ui/More'
 
 type View = 'needs' | 'review' | 'leo' | 'yanis' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 /** Views that are one person's work. */
@@ -685,10 +686,9 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
           {(c.status === 'draft' || (c.status === 'escalated' && c.draft)) && (
             <div className="ib-draft">
               <div className="row tight ib-draft-by">
-                <Mark agent="nova" />{c.status === 'escalated' ? 'Nova never answers this topic. Suggested holding reply:' : 'Nova’s draft'}
+                <Mark agent="nova" />{c.status === 'escalated' ? <>Nova never answers this topic. Suggested holding reply{c.trigger && <MoreInfo label="Why?" title="Why Nova escalated"><WhyEscalated c={c} fan={fanOf(s, c)} /></MoreInfo>}</> : 'Nova’s draft'}
                 {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
-              {c.status === 'escalated' && <WhyEscalated c={c} fan={fanOf(s, c)} />}
               {c.product && <ProductFound d={c.product} />}
               {c.dm && <div className="ib-half">In public</div>}
               {editing ? <textarea className="textarea" rows={c.dm ? 2 : 4} value={text} onChange={e => setText(e.target.value)} aria-label={c.dm ? 'Edit the public reply' : 'Edit Nova’s draft'} autoFocus />
@@ -737,7 +737,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
           {c.status === 'claire' && (c.trigger || !card?.claire?.reply) && (
             <div className="ib-draft">
               {c.trigger && <>
-                <WhyEscalated c={c} fan={fanOf(s, c)} />
+                <div className="row tight ib-draft-by"><Mark agent="nova" />Nova escalated this to Claire with a holding reply<MoreInfo label="Why?" title="Why Nova escalated"><WhyEscalated c={c} fan={fanOf(s, c)} /></MoreInfo></div>
                 {c.dm && <div className="ib-half">In public</div>}
                 {!!c.draft?.length && <p className="ib-draft-text"><FlagText parts={c.draft} /></p>}
                 {c.dm && <><div className="ib-half">Then by DM</div><p className="ib-draft-text">{c.dm}</p></>}

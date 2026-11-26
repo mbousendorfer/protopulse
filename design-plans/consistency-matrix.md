@@ -197,6 +197,29 @@ anything else on the page.
 
 **Exemplars:** Inbox › Needs you (grouped views, PROMPT §6.2), Desk › Your day › Needs you (lots).
 
+## 13. Text levels (PROMPT §10 « Le texte se mérite »)
+
+**Rule.** Every block of text sits at one of three levels: visible, popover, panel. A block earns « visible » only if a
+user needs it to understand the screen or take the decision in front of them.
+
+**Canonical**
+- Visible: title, at most one line of reason (agent · why, cut to the gist), the key number named in words, the action.
+  An agent's sentence is one sentence. One `PageHead` lede per page, one sentence at most.
+- Popover (`InfoPop`, `src/ui/More.tsx`): a definition, a source, the breakdown of a number. Opens on click; `Tip` only
+  for icon-button names and keyboard hints.
+- Panel (`MoreInfo`, `src/ui/More.tsx`): the full reasoning, proofs, the cited Playbook rule, history, alternatives.
+  The trigger is a link at the end of the visible line: « Why? » for an agent's reason, « More info » for anything else.
+  The panel's title names the object (« Why Nova escalated »).
+- A reason shared by several rows is said once at group level (§12), not hidden on each row.
+- Never moves down a level: an alert, a block (« Held », « Failed »), anything irreversible (« can't be undone »),
+  anything a decision needs, a named metric next to its number.
+
+**Exceptions, written:** network previews (`.pv-*`) stay faithful to each network. Onboarding keeps its legal and trust
+lines visible (« Never sees your password », « Publishes nothing without your approval »).
+
+**Exemplar:** Inbox escalation — the « Rule · Why · Who · Never » block sits behind « Why? » on the draft card; the
+public line and the DM stay visible.
+
 ## 11. Vocabulary
 
 | Verb | Used for | Synonyms to remove |
