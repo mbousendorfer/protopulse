@@ -4,7 +4,7 @@ import { SEEDS, SOURCE_DEFS, clipFromSeed, clipsCard } from './video'
 import { TIKTOK_VIEWS } from './insights'
 
 const LIVE = { ...SOURCE_DEFS.live, status: 'ready' as const }
-const LIVE_CARD = clipsCard(LIVE, SEEDS.live.map(seed => clipFromSeed(seed, LIVE, 0)))
+const LIVE_CARD = clipsCard(LIVE, SEEDS.live.filter(seed => !seed.status).map(seed => clipFromSeed(seed, LIVE, 0)))
 
 export const HANDOFFS: Handoff[] = [
   {

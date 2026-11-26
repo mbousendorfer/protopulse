@@ -6,7 +6,7 @@ import { now } from '../../app/core'
 import type { Network } from '../../app/types'
 import { ago } from '../../app/time'
 import { listeningDue, onResolveListening, onUndoListening, tickListening } from './slice'
-import { competitorName, eventsOf, netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
+import { listeningNeedsCount, competitorName, eventsOf, netLabel, networkRead, networkRows, creatorsOf, alertSubjects, moodCount, pct, recent, sentimentOf, topComplaints, WEEK } from './model'
 import { SCRIPT } from './script'
 
 declare module '../../data/command' {
@@ -128,6 +128,7 @@ function Alerts() {
 
 const echo: AgentModule = {
   id: 'echo',
+  needs: listeningNeedsCount,
   script: SCRIPT,
   onResolve: onResolveListening,
   onUndo: onUndoListening,

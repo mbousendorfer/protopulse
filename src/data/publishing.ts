@@ -50,6 +50,8 @@ export type Post = {
   waiting?: 'visual'
   /** What happened to this post, newest last. */
   history?: { at: number; text: string }[]
+  /** Atlas scheduled it alone (Act): it waits in the 10-minute send window. `cleared`: Sam let it go. */
+  alone?: { why: string; cleared?: boolean }
 }
 
 export type PlanTag = 'New' | 'Recycled' | 'Trend' | 'Campaign'

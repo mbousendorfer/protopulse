@@ -13,6 +13,7 @@ import { approvalsDue, sendToClaire, tickApprovals } from './approvals'
 import type { State } from '../../app/state'
 import { FIRST_COMMENT, SIZE_GUIDE } from './formats'
 import { fillQueues, unfill } from './queues'
+import { tickWindow, windowDue } from './window'
 import { actionOf, now } from '../../app/core'
 import { hhmm } from '../../app/time'
 
@@ -174,9 +175,11 @@ const atlas: AgentModule = {
   onUndo: (s, l) => undoCards(unfill(l.idea ? unscheduleIdea(s, l.idea) : s, l.queuePosts ?? []), l.restore ?? []),
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
   // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t) || licencesDue(s),
+  // Send window: what Atlas scheduled alone gets a Stop card 10 minutes before it goes out.
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t) || licencesDue(s) || windowDue(s),
   tick: (s, t) => {
     let next = publishDue(tickIdeas(s, t), t)
+    if (windowDue(next)) next = tickWindow(next)
     if (visualsDue(next)) next = actVisuals(next)
     if (approvalsDue(next)) next = tickApprovals(next)
     if (licencesDue(next)) next = tickLicences(next)
@@ -199,6 +202,6 @@ const atlas: AgentModule = {
   ],
   presets: { calm: { keep: ['h-plan'] }, competitor: { keep: ['h-plan'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-x-fail', to: '/publishing/calendar' }, { event: 'ev-slot', to: '/publishing/calendar' }, { event: 'ev-queue', to: '/publishing/queues' }],
+  triggers: [{ event: 'ev-x-fail', to: '/publishing/calendar' }, { event: 'ev-slot', to: '/publishing/calendar' }, { event: 'ev-queue', to: '/publishing/queues' }, { event: 'ev-window', to: '/' }],
 }
 export default atlas

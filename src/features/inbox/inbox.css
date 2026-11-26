@@ -237,3 +237,10 @@
 
 /* A filter just applied, a note field just opened: each settles in where it appears (under 250 ms, reduced-motion safe). */
 .ib-active .filter, .ib-reply:not(.ib-reply-folded) { animation: settle var(--slow) var(--ease); }
+
+/* Escalations: the words that triggered it, why, and a reply in two halves (public line, then the DM). */
+.ib-trigger { background: var(--alert-wash); box-shadow: inset 0 -1px 0 var(--alert); color: inherit; border-radius: 2px; }
+.ib-half { font-size: var(--t-sm); font-weight: 600; color: var(--ink); }
+.ib-why { display: grid; grid-template-columns: max-content 1fr; gap: 4px var(--s3); font-size: var(--t-sm); }
+.ib-why li { display: contents; }
+.ib-why b { font-weight: 600; color: var(--ink); }

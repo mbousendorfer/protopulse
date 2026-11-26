@@ -3,6 +3,7 @@ import type { Agent, AgentId, Handoff } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { inboxNeedsCount } from '../inbox/slice'
 import { proposalsFor } from './rules'
+import { registry } from '../../app/agents-registry'
 
 /** Open = not snoozed, not with Claire. */
 const open = (h: Handoff) => !h.lane
@@ -17,10 +18,11 @@ export const ruleProposals = (handoffs: Handoff[], agent?: AgentId) =>
 
 /**
  * What waits in the agent's department: the exact number its rail entry shows.
- * Nova's counts Inbox conversations (the Inbox's own Needs you); the others count their Desk cards in Needs you.
+ * Nova's counts Inbox conversations; a module with `needs` (its landing's decisions block) counts that; the others
+ * count their Desk cards in Needs you.
  */
 export const departmentNeeds = (s: State, agent: AgentId) =>
-  agent === 'nova' ? inboxNeedsCount(s) : s.handoffs.filter(h => open(h) && groupOf(h) === 'need' && h.agent === agent).length
+  agent === 'nova' ? inboxNeedsCount(s) : registry().find(m => m.id === agent)?.needs?.(s) ?? s.handoffs.filter(h => open(h) && groupOf(h) === 'need' && h.agent === agent).length
 
 /** The Agents rail badge: what is decided on Agents itself. Department items already badge their own rail entry. */
 export const agentsNeedsCount = (s: State) => autonomyRequests(s.handoffs).length + ruleProposals(s.handoffs).length

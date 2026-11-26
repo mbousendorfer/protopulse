@@ -2,7 +2,8 @@
 import type { Handoff, Network } from '../app/types'
 import { T } from '../app/time'
 import type { Pillar } from './publishing'
-import type { Brand, Captions, Clip, Evidence, Score, Transcript } from '../features/video/model'
+import type { Brand, Captions, Clip, Evidence, Score, Transcript, TrialRecord } from '../features/video/model'
+import { trialHold } from '../features/video/model'
 import TRANSCRIPTS from './video-transcripts.json'
 
 export const TRANSCRIPT = TRANSCRIPTS as Record<string, Transcript>
@@ -151,6 +152,11 @@ export const SEEDS: Record<string, ClipSeed[]> = {
       base: { hook: 74, flow: 76, value: 82, trend: 55 }, why: 'Clear product promise. Shorter and less surprising than the other two.',
       evidence: [ev('7.8%', 'engagement on the bottle drop test', 'Insights', '/insights/explore')],
       networks: ['tiktok', 'instagram'], pillar: 'Gear that lasts', text: 'Dented your Summit Bottle? Lifetime warranty, dents included.' },
+    // Out on TikTok since the live, well under the account's usual views: what Juno's recut is for.
+    { key: 'fabric', from: 'Then buckles', to: 'cheap to replace', title: 'Fabric goes last', hooks: ['Fabric is the last thing to go.', 'The bag outlives the small parts.'], status: 'published', stats: { views: 8400, er: 2.1 },
+      base: { hook: 70, flow: 76, value: 78, trend: 58 }, why: 'Léo’s answer on what lasts. Good line, slow start.',
+      evidence: [ev('8.4k', 'views on TikTok since the live', 'Insights', '/insights/explore')],
+      networks: ['tiktok'], pillar: 'Repair & care', text: 'Fabric is the last thing to go. The bag outlives the small parts.' },
   ],
   gr20: [
     { key: 'refuge', from: 'Three days of rain', to: 'really stop', title: 'Three days of rain, still dry', hooks: ['3 days of rain on the GR20.', 'The forecast said sun.', 'It didn’t stop for three days.'],
@@ -167,6 +173,13 @@ export const SEEDS: Record<string, ClipSeed[]> = {
       networks: ['instagram', 'facebook'], pillar: 'Gear that lasts', text: 'The hood stays on in 40 km/h wind, and the pit zips keep you dry from the inside.' },
   ],
 }
+
+/** Hook trials Juno ran before the demo starts, on Instagram Reels. Both opposed a number to no number, and the number won. */
+const pastTrial = (title: string, a: string, b: string, at: number): TrialRecord => ({ title, hooks: [a, b], held: [trialHold(a), trialHold(b)], at })
+export const TRIALS: TrialRecord[] = [
+  pastTrial('Ridge 28L: 1,000 km later', 'What a year on the trail does to a bag', '1,000 km on one bag.', T(18, 0, -12)),
+  pastTrial('Summit Bottle drop test', 'Will it survive the drop?', 'Dropped from 3 m. Still sealed.', T(18, 0, -5)),
+]
 
 /** Seed anchors → source times, at sentence boundaries. */
 export function anchor(t: Transcript, from: string, to: string): { start: number; end: number } {
