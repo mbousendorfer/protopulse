@@ -7,6 +7,7 @@ import { ANOMALIES, REPORTS, type Anomaly, type Recipe, type Report } from '../.
 import { applyOp, writeStudio, type StudioOp } from './studio'
 import { bestReturn } from './roi'
 import { audienceTips } from './audience'
+import { benchmarkRead, benchmarkRows } from './benchmark'
 import type { Alert } from './alerts'
 import { bestTime, change, fmt, formats, kpi, tiktokViews } from './metrics'
 
@@ -218,7 +219,7 @@ export function actOnAnomaly(s: State, id: string, action: string, card?: string
 }
 
 /** Answers to follow-up questions on a report, read from the same numbers as Explore, Chat and ⌘K. */
-export function answer(q: string): string {
+export function answer(q: string, s?: State): string {
   const t = q.toLowerCase()
   if (/tiktok/.test(t)) {
     const v = tiktokViews()
@@ -233,7 +234,12 @@ export function answer(q: string): string {
     return `Carousels get ${f.savesX}× the saves of reels (${fmt.pct(f.carousel.saves)} vs ${fmt.pct(f.reel.saves)}), reels get ${f.reachX}× the reach. For cold-weather products, carousels convert better: the Storm Jacket carousel drove 920 link clicks.`
   }
   if (/linkedin/.test(t)) return `LinkedIn engagement is ${fmt.pct(kpi('er', 7, 'linkedin').value)} over 7 days, the highest of your networks. Repair content does 1.9× better than product posts there.`
-  if (/compet|peakline|trailkind|norr/.test(t)) return 'Your share of voice is 31% vs Peakline 27%. Peakline’s price cut drove 3× their usual comments, mostly about price, not quality. Details in Listening › Competitors.'
+  if (/compet|peakline|trailkind|norr|basecamp/.test(t) && s) {
+    const rows = benchmarkRows(s), us = rows[0], named = rows.find(r => !r.us && t.includes(r.name.toLowerCase().slice(0, 5)))
+    const vs = named ?? rows.filter(r => !r.us).sort((a, b) => b.sov - a.sov)[0]
+    if (!vs) return 'Echo isn’t tracking any competitor right now. Add one in Listening › Competitors.'
+    return `Share of voice: Fernway ${us.sov}%, ${vs.name} ${vs.sov}%. Engagement ${us.er}% against ${vs.er}%, ${us.cadence} posts a week against ${vs.cadence}. ${benchmarkRead(rows)} Details in Listening › Competitors.`
+  }
   if (/reach|grow/.test(t)) {
     const r = kpi('reach'), ig = kpi('reach', 7, 'instagram'), tt = kpi('reach', 7, 'tiktok')
     return `Reach was ${fmt.k(r.value)} over the last 7 days, ${fmt.signed(change(r))} vs the week before (${fmt.k(r.prev)}). Instagram brings ${Math.round((ig.value / r.value) * 100)}% of it, TikTok ${Math.round((tt.value / r.value) * 100)}%.`
@@ -257,7 +263,7 @@ export function reduceInsights(s: State, a: InsightsAction): State {
     case 'insights/reopen':
       return patch(s, { anomalies: { ...s.insights.anomalies, [a.id]: { open: true } } })
     case 'insights/ask':
-      return patch(s, { followUps: [...s.insights.followUps, { id: `${a.report}-${s.insights.followUps.length}`, report: a.report, q: a.q, a: answer(a.q), at: now(s) }] })
+      return patch(s, { followUps: [...s.insights.followUps, { id: `${a.report}-${s.insights.followUps.length}`, report: a.report, q: a.q, a: answer(a.q, s), at: now(s) }] })
     case 'insights/export':
       return pushLog(s, { agent: 'iris', text: `Exported “${a.title}”`, status: 'done', reason: 'Downloaded from Insights' })
     case 'insights/anomalies': {
