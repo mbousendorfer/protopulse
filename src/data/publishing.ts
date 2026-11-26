@@ -32,7 +32,7 @@ export type Post = {
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
   /** Published as the first comment, on networks that allow it. */
   firstComment?: string
-  stats?: { reach: number; er: number }
+  stats?: { reach: number; er: number; saves?: number }
   handoff?: string
   note?: string
   group?: string
@@ -52,6 +52,8 @@ export type Post = {
   history?: { at: number; text: string }[]
   /** Atlas scheduled it alone (Act): it waits in the 10-minute send window. `cleared`: Sam let it go. */
   alone?: { why: string; cleared?: boolean }
+  /** One of the two versions of a test (see publishing/tests.ts). */
+  test?: { id: string; side: 'a' | 'b' }
 }
 
 export type PlanTag = 'New' | 'Recycled' | 'Trend' | 'Campaign'

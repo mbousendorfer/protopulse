@@ -6,6 +6,7 @@ import { betterSlots, movesAlone, slotCard } from './slots'
 import { canFill, fillQueues } from './queues'
 import { hhmm } from '../../app/time'
 import { fillSoon } from './window'
+import { proposeTest, resultsIn } from './tests'
 
 /** Atlas's scripted events. `order` places each one in the shared feed (see the registry). */
 export const SCRIPT: ScriptEvent[] = [
@@ -45,6 +46,16 @@ export const SCRIPT: ScriptEvent[] = [
     // A slot 10 minutes away is empty. Act: Atlas fills it alone and the send window opens (Stop on the Desk and the post).
     id: 'ev-window', order: 135, label: 'Atlas · fills a slot that goes out in 10 min (send window)', agent: 'atlas', tag: 'send window',
     run: (s, manual) => (manual || agentOf(s, 'atlas').status === 'on' ? fillSoon(s) : s),
+  },
+  {
+    // Two openings of the same reel. Draft: a card to approve; Act: both scheduled alone.
+    id: 'ev-test', order: 165, label: 'Atlas · wants to try two openings on Instagram', agent: 'atlas', tag: 'two versions',
+    run: (s, manual) => (manual || agentOf(s, 'atlas').status === 'on' ? proposeTest(s) : s),
+  },
+  {
+    // Moderator only (no effect unless both versions are scheduled): they went out, Atlas reads Iris and names the winner.
+    id: 'ev-test-result', order: 245, label: 'Atlas · the two openings’ results are in', agent: 'atlas', tag: 'two versions',
+    run: s => resultsIn(s),
   },
   { id: 'ev-idea-gap', order: 160, label: 'Atlas · empty day in the calendar (gap idea)', agent: 'atlas', ...ideaScript({ origin: 'gap', agent: 'atlas' }) },
   {

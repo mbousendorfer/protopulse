@@ -564,3 +564,6 @@
 }
 .media-meta .nowrap { white-space: nowrap; }
 .cal-cell.today > .pub-cell-day:hover { color: var(--panel); }
+
+/* Two versions of a post, on the Desk card */
+.pair-rows { list-style: none; margin: var(--s2) 0 0; padding: 0; display: grid; gap: var(--s3); }

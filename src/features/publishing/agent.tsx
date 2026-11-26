@@ -14,6 +14,8 @@ import type { State } from '../../app/state'
 import { FIRST_COMMENT, SIZE_GUIDE } from './formats'
 import { fillQueues, unfill } from './queues'
 import { tickWindow, windowDue } from './window'
+import { RESULT_TOPIC, TEST_TOPIC, dropTestRule, proposeTest, readTest, testPosts, testsDue } from './tests'
+import { PairPreview } from './PairPreview'
 import { actionOf, now } from '../../app/core'
 import { hhmm } from '../../app/time'
 
@@ -31,6 +33,7 @@ declare module '../../data/command' {
     postClaire: { day?: string; network?: Network }
     firstComment: { day?: string; network?: Network; text: string }
     fillQueue: { queue?: string; nextWeek: boolean }
+    tryTwo: { network?: Network }
   }
 }
 
@@ -168,24 +171,46 @@ const fillQueue = defineIntent({
   },
 })
 
+/** "Try two versions", "test two openings": Atlas proposes its Instagram test (once). */
+const tryTwoText = (s: State) => testPosts(s).length ? 'The two openings are already in the calendar. I’ll tell you which one won once both are out.'
+  : s.handoffs.some(h => h.topic === TEST_TOPIC) ? 'It’s already on your Desk: two openings of the Ridge 28L reel.'
+  : actionOf(s, 'atlas', 'atlas-test')?.autonomy === 'act' ? 'Scheduled two versions of the Ridge 28L reel on Instagram, a question opening and a plain one. I’ll tell you which one people save more.'
+  : 'Wrote two versions of the Ridge 28L reel, a question opening and a plain one. They’re on your Desk.'
+const tryTwo = defineIntent({
+  kind: 'tryTwo', owner: 'atlas', order: 138,
+  parse: t => (/\b(test|try)\b/.test(t) && /(two|2) (versions|openings|hooks)|a\/b|opening/.test(t) ? { kind: 'tryTwo' } : undefined),
+  bar: (_i, { s, d, go }) => ({
+    text: tryTwoText(s),
+    after: testPosts(s).length || s.handoffs.some(h => h.topic === TEST_TOPIC) ? undefined : () => d({ type: 'publishing/tryTwo' }),
+    ctas: [{ label: 'Open the Desk', primary: true, run: () => go('/') }],
+  }),
+  chat: (_i, { s }) => ({ replies: [{ from: 'atlas', text: tryTwoText(s) }], effects: [proposeTest] }),
+})
+
 const atlas: AgentModule = {
   id: 'atlas',
   script: SCRIPT,
   onResolve: onResolvePublishing,
-  onUndo: (s, l) => undoCards(unfill(l.idea ? unscheduleIdea(s, l.idea) : s, l.queuePosts ?? []), l.restore ?? []),
+  onUndo: (s, l) => {
+    // A test result answered "Yes": the rule comes back out of the Playbook.
+    const next = l.restore?.some(h => h.topic === RESULT_TOPIC) ? dropTestRule(s) : s
+    return undoCards(unfill(l.idea ? unscheduleIdea(next, l.idea) : next, l.queuePosts ?? []), l.restore ?? [])
+  },
   // Ideas whose window closed leave; snoozed ones come back. On Act, posts held for a visual get one from Media.
   // Guardrail: during a critical alert, the next 24 h are paused; they resume when it's over.
   // Send window: what Atlas scheduled alone gets a Stop card 10 minutes before it goes out.
-  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t) || licencesDue(s) || windowDue(s),
+  due: (s, t) => ideasDue(s, t) || visualsDue(s) || guardsDue(s) || approvalsDue(s) || publishingDue(s, t) || licencesDue(s) || windowDue(s) || testsDue(s),
   tick: (s, t) => {
     let next = publishDue(tickIdeas(s, t), t)
     if (windowDue(next)) next = tickWindow(next)
+    if (testsDue(next)) next = readTest(next)
     if (visualsDue(next)) next = actVisuals(next)
     if (approvalsDue(next)) next = tickApprovals(next)
     if (licencesDue(next)) next = tickLicences(next)
     return guardsDue(next) ? tickGuards(next) : next
   },
-  intents: [post, postClaire, firstComment, fillQueue],
+  intents: [post, postClaire, firstComment, fillQueue, tryTwo],
+  previews: { pair: p => <PairPreview p={p} /> },
   batches: [{
     // An idea with a short window stands on its own: it opens the idea, and its other networks live there.
     id: 'atlas', agent: 'atlas', match: h => h.kind === 'approval' && h.preview?.type === 'post' && !h.proposal && h.topic !== 'Idea',
@@ -202,6 +227,6 @@ const atlas: AgentModule = {
   ],
   presets: { calm: { keep: ['h-plan'] }, competitor: { keep: ['h-plan'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-x-fail', to: '/publishing/calendar' }, { event: 'ev-slot', to: '/publishing/calendar' }, { event: 'ev-queue', to: '/publishing/queues' }, { event: 'ev-window', to: '/' }],
+  triggers: [{ event: 'ev-x-fail', to: '/publishing/calendar' }, { event: 'ev-slot', to: '/publishing/calendar' }, { event: 'ev-queue', to: '/publishing/queues' }, { event: 'ev-window', to: '/' }, { event: 'ev-test', to: '/' }, { event: 'ev-test-result', to: '/' }],
 }
 export default atlas
