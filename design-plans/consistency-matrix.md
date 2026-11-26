@@ -178,6 +178,25 @@ everywhere except media preview (`publishing/Page.tsx:319`, "Close" secondary + 
 - Agent colours: `--a-<id>` for marks and tiles, `--a-<id>-wash` + `-ink` for tiles. No large tinted backgrounds found.
   `kpi-icon` is Iris-tinted on Explore (Iris owns it): fine.
 
+## 12. Decisions-first landing (PROMPT §3.9)
+
+**Rule.** The landing view of every department (Inbox › Needs you, Publishing › Ideas, Listening, Strategy › Campaigns,
+Video › Clips, Insights, Agents › Team) and the first tab of every agent profile open on what waits for Sam, before
+anything else on the page.
+
+**Canonical**
+- Order: page header → one summary line naming each count (« 3 need a move · 1 plan to approve »), each count a filter
+  on the block → decision groups → the rest of the module (live, done, history, settings).
+- A group is one kind of gesture (« Ready to send », « Plans to review », « Clips to review »). One primary action per
+  group (« Send all 4 »), not per row; each row keeps its quick decision as secondary / ghost buttons plus the reason
+  in one line (agent, why, proof). Opening a row is never required to decide.
+- Same reason shared by several rows (one Echo alert pausing 3 posts) is said once at group level, not on every row.
+- Empty: one line « Nothing needs you here » + what the agent is watching; no illustration on department pages (the
+  All clear illustration stays on the Desk).
+- The rail badge and the summary line count the same items (`needs you` only, §3).
+
+**Exemplars:** Inbox › Needs you (grouped views, PROMPT §6.2), Desk › Your day › Needs you (lots).
+
 ## 11. Vocabulary
 
 | Verb | Used for | Synonyms to remove |

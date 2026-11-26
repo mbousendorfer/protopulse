@@ -38,3 +38,7 @@
 - 25/11 · Pitch n°7 « Audience » · **Go** (tel que pitché, avec la recommandation à Atlas) · Go plus simple · décision de l'humain.
 - 25/11 · Audience · nouvelle action d'Iris « Recommend content from the audience » (safe, Draft par défaut) : Suggest = listée dans l'onglet, Draft = carte Desk « Worth a look », Act = Iris briefe Atlas (carte d'Atlas en Draft, journal + Undo) · réutiliser `iris-anomaly` · ce n'est pas une anomalie ; un cran propre garde le profil lisible.
 - 25/11 · Audience · série d'abonnés reconstruite à rebours depuis les abonnés du jour et les « New followers » d'Explore · une série seedée de plus · un seul chiffre source (Explore).
+- 25/11 · Pitch n°8 « Benchmark concurrents » · **Go** (tel que pitché) · Go plus simple · décision de l'humain.
+- 26/11 · Pitch n°9 « Historique des boosts et leur résultat » (#10) · **Drop** · — · décision de l'humain, sans commentaire.
+- 26/11 · Demande d'Atlas « chiffres par profil » · **Later** · Go · décision de l'humain ; demande close sans construction.
+- 26/11 · Demande de Nova « temps de réponse » (re-pitch réduit du rapport community) · **Toujours Later** · Go réduit · décision de l'humain ; demande close sans construction.
