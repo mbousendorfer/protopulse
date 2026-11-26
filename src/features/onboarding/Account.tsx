@@ -171,7 +171,7 @@ export function TeamOrg({ onBack, onDone }: { onBack: () => void; onDone: () => 
   }
   return (
     <section className="onb-step onb-narrow">
-      <Head title="Your team and organization" lede={s.setup.site ? `We guessed your organization from ${s.setup.site}.` : 'Four questions, then your trial starts.'} />
+      <Head title="Your team and organization" lede={s.setup.site ? `We guessed your organization from ${s.setup.site}.` : 'A few questions, then your trial starts.'} />
       <form className="onb-form" onSubmit={submit} noValidate>
         <Field id="onb-org" label="What is the name of your organization?" error={errors.org}>
           <input id="onb-org" className="input" autoComplete="organization" placeholder="Your company name" value={a.org} aria-invalid={!!errors.org} aria-describedby={errors.org ? 'onb-org-err' : undefined} onChange={e => put({ org: e.target.value })} />

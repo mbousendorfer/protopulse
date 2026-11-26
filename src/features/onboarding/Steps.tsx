@@ -14,11 +14,11 @@ type Ctx = { questions: number; faqAlone: boolean; watched: string[]; nets: numb
 /** What each agent will do, said honestly: what needs an account says so, what takes hours says when. */
 const FOR_YOU: Record<AgentId, (c: Ctx) => { text: string; needs?: boolean }> = {
   nova: c => !c.nets ? { text: 'Answers comments, DMs and reviews once a profile is connected.', needs: true }
-    : { text: c.questions ? `${c.questions} message${c.questions > 1 ? 's' : ''} ${c.questions > 1 ? 'are' : 'is'} waiting in your imported Inbox. Nova ${c.faqAlone ? 'answers them on her own' : 'drafts the replies for you to send'}.` : 'Watches your Inbox and drafts replies from your Playbook.' },
+    : { text: c.questions ? `${c.questions} message${c.questions > 1 ? 's' : ''} ${c.questions > 1 ? 'are' : 'is'} waiting in your imported Inbox. Nova ${c.faqAlone ? `answers ${c.questions > 1 ? 'them' : 'it'} on her own` : `drafts the ${c.questions > 1 ? 'replies' : 'reply'} for you to send`}.` : 'Watches your Inbox and drafts replies from your Playbook.' },
   atlas: () => ({ text: 'Writes your 3 first drafts from your Playbook, right after this screen.' }),
   iris: c => ({ text: c.nets ? 'Writes your first report once your history is imported, later today. First morning brief tomorrow at 07:00.' : 'Writes your first morning brief tomorrow at 07:00. Reports start once a profile is connected.' }),
   echo: c => !c.nets ? { text: 'Watches your competitors once a profile is connected.', needs: true }
-    : { text: c.watched.length ? `Backfills ${andList(c.watched)}. First topics in about 2 hours.` : 'Watches mentions of your brand. Add competitors any time.' },
+    : { text: c.watched.length ? `Backfills ${andList(c.watched).replace(/\.$/, '')}. First topics in about 2 hours.` : 'Watches mentions of your brand. Add competitors any time.' },
   sage: () => ({ text: 'Proposes your editorial pillars and a posting cadence from your Playbook.' }),
   juno: c => ({ text: c.youtube ? 'Watches your YouTube channel and cuts each new video into captioned clips for you to review.' : 'Cuts your YouTube videos into clips once YouTube is connected.' }),
 }

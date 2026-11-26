@@ -100,12 +100,15 @@ function OAuthFlow({ net, onClose }: { net: NetworkDef; onClose: () => void }) {
                 <SocialAvatar name={p.name} org size={32} network={appNet(net.id)} />
                 <div className="grow">
                   <b>{p.name}</b> <span className="muted">· {p.size}</span>
-                  {blocked && <div className="onb-found">Protopulse can’t read its messages yet.</div>}
+                  {blocked && (
+                    <div className="onb-fix">
+                      <Pill tone="caution">Permissions missing</Pill>
+                      <span className="onb-found">Protopulse can’t read its messages yet.</span>
+                      <Btn size="sm" onClick={() => { setFixing(p.id); setStage('fix') }}>Fix permissions</Btn>
+                    </div>
+                  )}
                 </div>
-                {done ? <Pill tone="ok" dot>Connected</Pill> : blocked ? <>
-                  <Pill tone="caution">Permissions missing</Pill>
-                  <Btn size="sm" onClick={() => { setFixing(p.id); setStage('fix') }}>Fix permissions</Btn>
-                </> : null}
+                {done && <Pill tone="ok" dot>Connected</Pill>}
               </li>
             )
           })}
@@ -217,7 +220,7 @@ function SkipModal({ open, onOpenChange, onSkip }: { open: boolean; onOpenChange
   }
   return (
     <Modal open={open} onOpenChange={onOpenChange} title="Skip connecting an account?"
-      footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => onOpenChange(false)}>Connect a profile</Btn><Btn variant="primary" disabled={blocked} onClick={confirm}>Skip</Btn></>}>
+      footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => onOpenChange(false)}>Connect a profile</Btn><Btn disabled={blocked} onClick={confirm}>Skip</Btn></>}>
       <div className="stack">
         <p>A connected account lets us size, format and schedule each draft for the right network.</p>
         <fieldset className="onb-reasons">

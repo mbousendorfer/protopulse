@@ -24,6 +24,8 @@ export function Welcome({ onPick }: { onPick: (key: string) => void }) {
   const line = (id: AgentId) => {
     const p = s.setup.pending.find(x => x.agent === id)
     if (p && !first(id)?.text.startsWith('Found') && !first(id)?.text.startsWith('Wrote your first')) return `${p.label} at ${hhmm(p.at)}`
+    const iris = s.setup.pending.find(x => x.id === 'iris')
+    if (id === 'sage' && iris) return `Pillars and cadence at ${hhmm(iris.at)}, from your history`
     if (!connected && ['nova', 'echo'].includes(id)) return 'Needs an account'
     return first(id)?.text ?? (id === 'juno' ? 'Starts with your next YouTube video' : 'Starts working tonight')
   }

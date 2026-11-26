@@ -33,7 +33,7 @@ export default function Results({ onDone }: { onDone: () => void }) {
       </div>
       <Later />
       <Foot note={waiting ? `${waiting} thing${waiting > 1 ? 's' : ''} need${waiting > 1 ? '' : 's'} you on your Desk` : undefined}>
-        <Btn variant="primary" onClick={onDone}>Open my Desk<ArrowRight size={14} /></Btn>
+        <Btn onClick={onDone}>Open my Desk<ArrowRight size={14} /></Btn>
       </Foot>
     </section>
   )
@@ -94,7 +94,7 @@ function NovaResult() {
   const sent = s.log.find(l => l.text.startsWith('Sent ') && l.restore?.some(h => h.id.startsWith('d1-nova')) && l.status !== 'undone')
   return (
     <>
-      <p className="onb-result-title">{alone ? `${qs.length} messages were waiting in your imported Inbox. Nova answered them on her own.` : `${qs.length} message${qs.length > 1 ? 's were' : ' was'} waiting in your imported Inbox. Nova wrote the replies.`}</p>
+      <p className="onb-result-title">{alone ? `${qs.length} messages were waiting in your imported Inbox. Nova answered them on her own.` : `${qs.length} message${qs.length > 1 ? 's were' : ' was'} waiting in your imported Inbox. Nova wrote the ${qs.length > 1 ? 'replies' : 'reply'}.`}</p>
       <ul className="onb-replies">
         {qs.map(q => {
           const c = s.inbox.convs.find(x => x.id === q.conv)!
@@ -149,7 +149,7 @@ function Later() {
   rows.push({ agent: 'iris', what: 'Your first morning brief', ...(now >= briefAt ? { when: 'Ready', ready: true, to: '/' } : { when: `Tomorrow at ${hhmm(briefAt)}` }) })
   return (
     <div className="onb-group">
-      <h2>On its way</h2>
+      <h2>What takes longer</h2>
       <ul className="card rows onb-later">
         {rows.map(r => (
           <li key={r.what}>

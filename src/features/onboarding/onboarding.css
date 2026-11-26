@@ -230,3 +230,7 @@
 @media (prefers-reduced-motion: reduce) {
   .onb-step, .onb-result, .onb-result-body, .onb-signup-side li, .onb-phase-done { animation: none; }
 }
+.onb-approver .input { flex: 1; min-width: 200px; }
+.onb-mobile > .grow { flex: 1 1 220px; min-width: 0; }
+.onb-fix { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); margin-top: var(--s1); }
+.onb-int .grow { min-width: 0; }

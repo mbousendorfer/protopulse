@@ -125,7 +125,7 @@ test('Day 1 without an account: no Inbox, no Echo, no report; Atlas’s drafts a
   const tried = reducer(s, { type: 'setup/schedule', id: s.setup.drafts[0].id })
   expect(tried.publishing.posts).toHaveLength(0)
   expect(item(s, 'connect').done).toBe(false)
-  expect(item(s, 'schedule').unlocks).toMatch(/connected profile/)
+  expect(item(s, 'schedule').detail).toMatch(/need a connected profile/)
   expect(item(s, 'reply').detail).toBe('Needs a connected profile')
 })
 

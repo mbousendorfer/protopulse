@@ -79,8 +79,8 @@ function novaFirst(convs: Conversation[], nets: Network[], faq: string, rule: st
     })
   }
   const log: Omit<LogEntry, 'id'> | undefined = !questions.length ? undefined : faq === 'act'
-    ? { agent: 'nova', at: t - 20_000, text: `Answered ${questions.length} waiting questions on her own`, reason: 'Product and shipping questions are set to Act', status: 'done', undoUntil: t + 10 * MIN, link: '/inbox' }
-    : { agent: 'nova', at: t - 40_000, text: `Drafted ${questions.length} replies to messages waiting in your Inbox`, reason: 'Product and shipping questions are set to Draft', status: 'done', link: '/inbox' }
+    ? { agent: 'nova', at: t - 20_000, text: `Answered ${questions.length} waiting question${questions.length > 1 ? 's' : ''} on her own`, reason: 'Product and shipping questions are set to Act', status: 'done', undoUntil: t + 10 * MIN, link: '/inbox' }
+    : { agent: 'nova', at: t - 40_000, text: `Drafted ${questions.length > 1 ? `${questions.length} replies to messages` : '1 reply to a message'} waiting in your Inbox`, reason: 'Product and shipping questions are set to Draft', status: 'done', link: '/inbox' }
   return { convs: out, cards, log, count: questions.length }
 }
 
@@ -170,7 +170,7 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
   // Playbook: what Nova learned from the replies (with an account), the facts read on the website (with a site).
   const learned = (id: string) => { const p = PROPOSALS.find(x => x.id === id); return p && nets.length ? pickOf(setup.picks, p) : undefined }
   const asRule = (r: PlaybookRule, origin: string): PlaybookRule => ({ ...r, text: learned(r.id)?.text ?? r.text, uses: 0, addedAt: t, origin })
-  const site = !!brief?.ctaUrls.length || (!setup.pb.noWebsite && !!setup.pb.website)
+  const site = !setup.pb.noWebsite && !!(setup.pb.website || (brief && setup.site))
   const rules = [
     ...RULES.filter(r => learned(r.id)?.keep).map(r => asRule(r, 'Onboarding · learned from your public replies')),
     ...(site ? FACTS.filter(f => /Shopify catalog|Help centre|Onboarding/.test(f.origin)).map(f => asRule(f, 'Onboarding · from your website')) : []),
@@ -197,7 +197,7 @@ export function buildDay1(base: State, setup: Setup, t: number): State {
 
   // Atlas writes 3 drafts from the Playbook right away. Without a profile they're a preview: nothing to schedule on.
   const drafts = atlasDrafts(t)
-  log.push({ agent: 'atlas', at: t - 30_000, text: 'Wrote 3 first drafts from your website and your Playbook', reason: 'Your first setup', status: 'done', link: '/onboarding/results' })
+  log.push({ agent: 'atlas', at: t - 30_000, text: `Wrote 3 first drafts from ${site ? 'your website and ' : ''}your Playbook`, reason: 'Your first setup', status: 'done', link: '/onboarding/results' })
   if (watched.length && nets.length) log.push({ agent: 'echo', at: t - 45_000, text: `Started the backfill on ${andList(brief!.competitors.filter(c => c.on).map(c => c.label))}`, reason: 'First topics in about 2 hours', status: 'done', link: '/listening' })
   if (nets.length) log.push({ agent: 'iris', at: t - 50_000, text: `Started importing the history of ${andList(setup.connected.map(pageLabel))}`, reason: 'Your first report comes later today', status: 'done', link: '/insights' })
 
@@ -265,8 +265,7 @@ export function checklist(s: State, now: number): CheckItem[] {
     },
     {
       id: 'schedule', label: 'Schedule your first post', done: s.publishing.posts.some(p => p.status === 'scheduled'),
-      detail: st.drafts.some(d => d.status === 'draft') ? `Atlas wrote ${st.drafts.filter(d => d.status === 'draft').length} drafts from your Playbook` : 'Write one, or ask Atlas for drafts',
-      unlocks: publishNet(st.connected) ? undefined : 'Needs a connected profile to publish on.',
+      detail: `${st.drafts.some(d => d.status === 'draft') ? `Atlas wrote ${st.drafts.filter(d => d.status === 'draft').length} drafts from your Playbook` : 'Write one, or ask Atlas for drafts'}${publishNet(st.connected) ? '' : '. They need a connected profile to publish on.'}`,
       action: { label: 'Review drafts', to: '/onboarding/results' },
     },
     {
