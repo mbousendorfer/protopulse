@@ -150,7 +150,7 @@ export function EventWhy({ e }: { e: CompEvent }) {
         <div className="section-title flush">Estimated impact <Pill tone={IMPACT_TONE[e.impact]}>{e.impact}</Pill></div>
         <p>{e.impactWhy}</p>
       </section>
-      <section className="row tight need-read"><Mark agent="echo" /><div><div className="section-title flush">Echo’s read</div><p>{e.read}</p></div></section>
+      <section className="echo-read need-read"><Mark agent="echo" /><div><div className="section-title flush">Echo’s read</div><p>{e.read}</p></div></section>
       <Link to={`/listening/competitors/${e.id}`} className="btn sm self-start">Open the event</Link>
     </div>
   )

@@ -56,7 +56,7 @@
 .need-line.need-reason > .ellipsis { flex: 0 1 auto; }
 .need-line.need-reason .pill { margin-right: 0; }
 .need-why .link-btn { margin-left: 4px; }
-.need-read p { color: var(--ink); }
+.echo-read.need-read p { color: var(--ink); font-size: var(--t-md); }
 @media (max-width: 720px) {
   .need-line.need-reason { flex-wrap: wrap; row-gap: 2px; }
   .need-line.need-reason > .ellipsis { flex: 1 1 100%; order: 2; white-space: normal; }

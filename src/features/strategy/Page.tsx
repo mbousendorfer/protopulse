@@ -198,7 +198,7 @@ function MomentRow({ m }: { m: Moment }) {
 function MomentWhy({ m }: { m: Moment }) {
   return (
     <div className="stack">
-      <p className="row tight"><Mark agent="sage" /><span>{m.why}</span></p>
+      <p>{m.why}</p>
       <p className="faint">Source: {m.source} · {fmtRange(m.start, m.end)} · {m.pillars.join(', ')}</p>
       <div className="section-title flush">Ideas for Atlas</div>
       <ul className="bullets">{m.ideas.map(i => <li key={i.title}>{i.title}</li>)}</ul>
