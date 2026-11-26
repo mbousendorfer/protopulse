@@ -35,6 +35,8 @@ export const AGENTS: Agent[] = [
         says: says('Nova suggests a code. You decide.', 'Nova adds a single-use code to her draft for your approval.', 'Nova sends single-use codes up to 15% on her own.') },
       { id: 'nova-reviews', perWeek: 6, example: 'A 3-star Trustpilot review says the Storm Jacket runs small', label: 'Reply to reviews (Google, Trustpilot)', risk: 'risky', autonomy: 'draft', reviewed: 27, approvedUnchanged: 81,
         says: says('Nova flags new reviews.', 'Nova drafts a public reply for your approval.', 'Nova replies to reviews on her own.') },
+      { id: 'nova-compliments', perWeek: 60, example: '“🔥🔥” under your Storm Jacket reel', label: 'Like or answer compliments', risk: 'safe', autonomy: 'act',
+        says: says('Nova says which compliments she would like and which she would answer. You do it.', 'Nova lines up her likes and replies on one card and waits for your approval.', 'Nova likes simple compliments, answers the ones with a question or a story, and spreads her replies. Undo for 10 minutes.') },
       { id: 'nova-links', perWeek: 14, example: '“Which jacket is that?” under your Storm Jacket reel', label: 'Send product links in DM', risk: 'safe', autonomy: 'draft',
         says: says('Nova shows which product they mean. You answer.', 'Nova drafts the public reply and the DM with the product link, and waits for your approval.', 'Nova answers in public and sends the link in DM on her own. You can undo for 10 minutes.') },
       { id: 'nova-holding', perWeek: 6, example: 'A customer threatens legal action in a comment under your reel', label: 'Send holding replies on escalations', risk: 'safe', autonomy: 'draft',

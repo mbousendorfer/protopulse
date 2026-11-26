@@ -80,3 +80,10 @@
 - 26/11 · N2 · lien suivi par la convention d'Atlas (`track`, pilier « Nova DMs », `utm_campaign=nova-dms`) · une UTM propre à Nova · un seul format de lien dans tout le produit.
 - 26/11 · N2 · offre : lue sur la campagne live de Sage (`offer`), absente aujourd'hui → demande `requests/sage-from-nova-campaign-offer.md` ; clics : demande `requests/iris-from-nova-dm-clicks.md`. En attendant, aucune ligne vide.
 - 26/11 · N2 · Suggest traité comme Draft (carte avec le produit et les deux moitiés) · une simple étiquette · même règle que pour l'attente.
+- 26/11 · N5 · nouvelle action `nova-compliments` (« Like or answer compliments », Act par défaut comme pitché) · garder sous `nova-faq` · le pitch le dit ; un like est public mais réversible, visible dans Handled et au journal.
+- 26/11 · N5 · règle : une question ou une histoire (6 mots et plus) → réponse ; un emoji ou un compliment court → like · un pourcentage caché · le pitch refuse le réglage caché ; la raison s'affiche sur chaque conversation.
+- 26/11 · N5 · réponses étalées de 7 min (battement de cœur, `queued`) et affichées « Replies at 08:19 » · réponses immédiates · le rythme humain doit se voir.
+- 26/11 · N5 · formules : « Answer this one » prend un remerciement que Nova n'a pas encore utilisé dans la journée (comparaison au modèle, prénom ignoré) · tirage au hasard · déterministe et testable.
+- 26/11 · N5 · Undo de la vague : likes retirés, réponses retirées (envoyées ou non), commentaires en New · repasser en brouillons · 8 brouillons d'un coup seraient l'inverse du but.
+- 26/11 · N5 · Suggest traité comme Draft (une carte qui aligne tout) · une proposition par commentaire · même règle que N1 et N2 ; 8 propositions séparées seraient du bruit.
+- 26/11 · N2 · post renommé « Storm Jacket vs. a garden hose » comme celui des bots, pour que « By post » les regroupe.

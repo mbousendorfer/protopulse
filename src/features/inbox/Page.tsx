@@ -77,6 +77,8 @@ function statusOf(c: Conversation) {
   const by = [...c.messages].reverse().find(m => m.from === 'you')?.by
   if (c.status === 'you' && by && by !== 'sam') return { ...STATUS.you, label: `${ROSTER[by].short} replied` }
   if (c.status === 'takeover' && c.assignee && c.assignee !== 'sam') return { ...STATUS.takeover, label: `${ROSTER[c.assignee].short} is replying` }
+  if (c.status === 'auto' && c.choice?.did === 'like') return { ...STATUS.auto, label: 'Liked, no reply' }
+  if (c.status === 'auto' && c.queued) return { ...STATUS.auto, label: `Replies at ${hhmm(c.queued.at)}` }
   return STATUS[c.status]
 }
 const lastText = (c: Conversation) => c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
@@ -673,6 +675,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 </div>
               </div>
             ))}
+            {c.choice?.did === 'like' && c.status === 'auto' && <div className="row tight ib-note"><Heart size={14} fill="currentColor" aria-hidden /><span className="grow">Nova liked it instead of answering: {c.choice.why}.</span><Btn size="xs" onClick={() => d({ type: 'inbox/answerThis', id: c.id })}>Answer this one</Btn></div>}
             {c.note && <p className="ib-note faint">{c.note}{PUBLIC.includes(c.type) && s.inbox.convs.some(x => x.id === dmId(c.id)) && <> · <Link className="link-btn" to={`/inbox/${dmId(c.id)}`}>Open the DM</Link></>}</p>}
             {card?.claire?.reply && (
               <div className="ib-claire"><Mark agent="claire" /><div><b>Claire {card.claire.verdict === 'changes' ? 'asked for changes' : 'declined'}</b><p>“{card.claire.reply}”</p></div></div>

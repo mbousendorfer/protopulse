@@ -58,6 +58,10 @@ export type Conversation = {
   trigger?: string
   /** "Which jacket is that?": the product Nova found, the link she sends in DM, the runner-up and the campaign offer. */
   product?: import('../features/inbox/products').Discovery
+  /** Compliments: what Nova chose (like or answer) and why; `wave` is the journal line or card that did it (its Undo). */
+  choice?: { did: 'like' | 'answer'; why: string; wave: string }
+  /** A reply Nova spreads out: it goes when the clock reaches `at` (see the heartbeat). */
+  queued?: { text: string; at: number }
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
   settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; dm?: string; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }
