@@ -1,18 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Check, ChevronDown, ChevronRight, Lock, Minus, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarDays, CalendarPlus, Check, ChevronDown, ChevronRight, ClipboardCheck, Lock, Minus, Pencil, Plus, SlidersHorizontal, Sparkles, Trash2 } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
 import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
-import { GOAL_UNITS, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Pillar } from '../../data/strategy'
+import { GOAL_UNITS, MOMENT_LEAD, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Moment, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, targetsOf } from './slice'
-import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
-import { Reopen } from '../../ui/Feedback'
+import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, strategyNeeds, targetsOf, type StrategyAction } from './slice'
+import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
+import { CountBadge, Notice, Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
 import './strategy.css'
+import '../listening/needs.css'
 
 const STATUS: Record<CampaignStatus, { label: string; tone?: 'ok' | 'caution' | 'signal' }> = {
   brief: { label: 'Brief' }, review: { label: 'Plan to review', tone: 'caution' }, live: { label: 'Live', tone: 'ok' }, done: { label: 'Done' },
@@ -50,72 +51,173 @@ export default function StrategyPage() {
   )
 }
 
-/* ---------- Campaign list ---------- */
+/* ---------- Campaign list: decisions first, then what's live, then what's done ---------- */
+type Need = 'plans' | 'moments' | 'changes'
+const NEED_LABEL: Record<Need, [string, string]> = { plans: ['Plan to approve', 'Plans to approve'], moments: ['Moment to decide', 'Moments to decide'], changes: ['Change to apply', 'Changes to apply'] }
+const NEED_ICON: Record<Need, typeof Check> = { plans: ClipboardCheck, moments: CalendarDays, changes: SlidersHorizontal }
+const NEED_WHY: Record<Need, string> = {
+  plans: 'Sage built these from a brief. Approving puts every post in Atlas’s calendar.',
+  moments: 'Sage raises each date 3 weeks before. Adding one gives Atlas its ideas.',
+  changes: 'Sage proposes, nothing changes until you apply. Undo stays in the journal.',
+}
+
 function Campaigns() {
   const { s } = useStore()
-  const order: CampaignStatus[] = ['review', 'live', 'brief', 'done']
-  const list = [...s.strategy.campaigns].sort((a, b) => order.indexOf(a.status) - order.indexOf(b.status))
+  const now = useNow()
+  const needs = strategyNeeds(s, now)
+  const [only, setOnly] = useState<Need | 'all'>('all')
+  const [doneOpen, setDoneOpen] = useState(false)
+  const count: Record<Need, number> = { plans: needs.plans.length, moments: needs.moments.length, changes: needs.adjustments.length + needs.proposals.length }
+  const groups = (Object.keys(count) as Need[]).filter(g => count[g])
+  const total = groups.reduce((n, g) => n + count[g], 0)
+  const live = s.strategy.campaigns.filter(c => c.status === 'live' || c.status === 'brief')
+  const done = s.strategy.campaigns.filter(c => c.status === 'done')
+  const later = s.strategy.moments.filter(m => !m.status && m.start - MOMENT_LEAD > now)
+  const rows: Record<Need, ReactNode[]> = {
+    plans: needs.plans.map(c => <PlanRow key={c.id} c={c} />),
+    moments: needs.moments.map(m => <MomentRow key={m.id} m={m} />),
+    changes: [
+      ...needs.adjustments.map(({ c, a }) => <ChangeRow key={a.id} text={a.text} why={`${c.name}, live campaign · Sage’s adjustment`}
+        apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} />),
+      ...needs.proposals.map(p => <ChangeRow key={p.id} text={p.text} why={p.why}
+        apply={{ type: 'strategy/proposal', id: p.id, accept: true }} decline={{ type: 'strategy/proposal', id: p.id, accept: false }} />),
+    ],
+  }
   return (
     <div className="stack lg">
-    <Moments />
-    {!list.length ? <Empty title="No campaigns yet" body="Write a two-line brief and Sage builds the plan." action={<Link to="/strategy/new" className="btn primary">New campaign brief</Link>} /> : (
-    <div className="campaigns">
-      {list.map(c => {
-        const pct = Math.round((c.goal.current / c.goal.target) * 100)
-        return (
-          <Link key={c.id} to={`/strategy/campaigns/${c.id}`} className="card campaign-row">
-            <div className="row between">
-              <h2>{c.name}</h2>
-              <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}{c.status === 'review' && c.version > 1 ? ` · v${c.version}` : ''}</Pill>
-            </div>
-            <p className="muted">{c.brief}</p>
-            <div className="campaign-meta">
-              <span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}</span>
-              <span className="faint">{c.posts.length} posts · €{c.budget} boost budget</span>
-            </div>
-            <div className="goal-line">
-              <span>{c.status === 'review' ? 'Goal' : 'Progress'}: <b className="num">{c.status === 'review' ? fmtGoal(c, c.goal.target) : `${fmtGoal(c, c.goal.current)} of ${fmtGoal(c, c.goal.target)}`}</b> {c.goal.label.replace(' (€)', '')}</span>
-              {c.status !== 'review' && <span className="goal-bar" aria-hidden><i style={{ width: `${Math.min(100, pct)}%` }} /></span>}
-              {c.status !== 'review' && <span className="num faint">{pct}%</span>}
-            </div>
-          </Link>
-        )
-      })}
-    </div>
-    )}
+      <Notice scope="strategy" />
+      {total ? (
+        <div className="stack">
+          <Filters label="What needs you" value={groups.includes(only as Need) ? only : 'all'} onChange={setOnly}
+            items={[{ value: 'all', label: 'All', count: total }, ...groups.map(g => ({ value: g, label: NEED_LABEL[g][1], count: count[g] }))]} />
+          <section className="card needs" aria-label="Needs you">
+            {groups.filter(g => only === 'all' || only === g).map(g => {
+              const I = NEED_ICON[g]
+              return (
+                <section key={g} className="need-group" aria-label={NEED_LABEL[g][1]}>
+                  <header className="need-head">
+                    <span className="need-icon" aria-hidden><I size={14} /></span>
+                    <h2>{NEED_LABEL[g][count[g] > 1 ? 1 : 0]}</h2>
+                    <CountBadge n={count[g]} />
+                    <span className="faint need-why">{NEED_WHY[g]}</span>
+                  </header>
+                  <ul>{rows[g]}</ul>
+                </section>
+              )
+            })}
+          </section>
+        </div>
+      ) : (
+        <section className="card need-empty">
+          <p><b>Nothing needs you here.</b> Sage is watching {live.length ? `${live.map(c => c.name).join(' and ')} against ${live.length > 1 ? 'their trajectories' : 'its trajectory'}` : 'your pillars and cadence'}, and the dates ahead.</p>
+        </section>
+      )}
+      {later.length > 0 && <Later list={later} />}
+
+      <section className="stack" aria-label="Live">
+        <h2 className="section-title flush">Live <span className="faint num">{live.length}</span></h2>
+        {live.length ? <div className="campaigns">{live.map(c => <CampaignCard key={c.id} c={c} />)}</div>
+          : <p className="muted">No campaign running. <Link to="/strategy/new">Brief Sage</Link> and approve the plan to launch one.</p>}
+      </section>
+
+      {done.length > 0 && (
+        <section className="stack" aria-label="Done">
+          <button type="button" className="disclose done-toggle" aria-expanded={doneOpen} aria-controls="done-campaigns" onClick={() => setDoneOpen(o => !o)}>
+            <ChevronRight size={14} aria-hidden />Done <span className="faint num">{done.length}</span>
+          </button>
+          {doneOpen && <div id="done-campaigns" className="campaigns">{done.map(c => <CampaignCard key={c.id} c={c} />)}</div>}
+        </section>
+      )}
     </div>
   )
 }
 
-/** Dates worth planning for. Sage raises each one 3 weeks before; added ones show in Atlas's calendar. */
-function Moments() {
-  const { s, d } = useStore()
-  const now = useNow()
-  const list = s.strategy.moments.filter(m => m.end > now)
-  if (!list.length) return null
+function CampaignCard({ c }: { c: Campaign }) {
+  const pct = Math.round((c.goal.current / c.goal.target) * 100)
   return (
-    <section className="card">
-      <div className="card-head moments-head"><h2 className="row tight"><Mark agent="sage" />Moments ahead</h2><span className="faint">Sage raises each one 3 weeks before</span></div>
-      <ul className="rows">
-        {list.map(m => (
-          <li key={m.id} className="moment">
-            <span className="mono faint moment-date">{fmtRange(m.start, m.end)}</span>
-            <div className="moment-body">
-              <b>{m.name}</b>
-              <p className="muted">{m.why} <span className="faint">{m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</span></p>
-            </div>
-            {m.status === 'added' ? <Pill tone="ok">In the calendar</Pill>
-              : m.status === 'skipped' ? <Reopen label="Not this year" onUndo={() => d({ type: 'strategy/reopen', id: m.id })} />
-              : (
-                <div className="row nowrap">
-                  <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add to the calendar</Btn>
-                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
-                </div>
-              )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Link to={`/strategy/campaigns/${c.id}`} className="card campaign-row">
+      <div className="row between">
+        <h3>{c.name}</h3>
+        <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill>
+      </div>
+      <p className="muted">{c.brief}</p>
+      <div className="campaign-meta">
+        <span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}</span>
+        <span className="faint">{c.posts.length} posts · €{c.budget} boost budget</span>
+      </div>
+      <div className="goal-line">
+        <span>Progress: <b className="num">{fmtGoal(c, c.goal.current)} of {fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')}</span>
+        <span className="goal-bar" aria-hidden><i style={{ width: `${Math.min(100, pct)}%` }} /></span>
+        <span className="num faint">{pct}%</span>
+      </div>
+    </Link>
+  )
+}
+
+/** A plan to approve: Approve on the spot (or why it can't launch yet), or open it to change it. */
+function PlanRow({ c }: { c: Campaign }) {
+  const { s, d } = useStore()
+  const block = launchBlock(s, c)
+  return (
+    <li className="need-row">
+      <div className="need-main">
+        <p className="need-title"><Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link><span className="need-quote">{c.version > 1 ? `Version ${c.version} · ` : ''}“{c.brief}”</span></p>
+        {block
+          ? <p className="need-line need-wrap"><Lock size={12} aria-hidden /> {block}</p>
+          : <p className="need-line">Goal {fmtGoal(c, c.goal.target)} {c.goal.label.replace(' (€)', '')} · {c.posts.length} posts · {fmtRange(c.start, c.end)} · €{c.budget.toLocaleString('en-GB')} boost budget</p>}
+      </div>
+      <div className="need-acts">
+        <Btn size="sm" disabled={!!block} onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve</Btn>
+        <Link to={`/strategy/campaigns/${c.id}`} className="btn sm ghost">Open plan</Link>
+      </div>
+    </li>
+  )
+}
+
+function MomentRow({ m }: { m: Moment }) {
+  const { d } = useStore()
+  return (
+    <li className="need-row">
+      <div className="need-main">
+        <p className="need-title"><b>{m.name}</b><span className="mono need-quote">{fmtRange(m.start, m.end)}</span></p>
+        <p className="need-line">{m.why} · {m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</p>
+      </div>
+      <div className="need-acts">
+        <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}><CalendarPlus size={14} />Add to the calendar</Btn>
+        <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
+      </div>
+    </li>
+  )
+}
+
+function ChangeRow({ text, why, apply, decline }: { text: string; why: string; apply: StrategyAction; decline: StrategyAction }) {
+  const { d } = useStore()
+  return (
+    <li className="need-row">
+      <div className="need-main">
+        <p className="need-title need-wrap">{text}</p>
+        <p className="need-line">{why}</p>
+      </div>
+      <div className="need-acts">
+        <Btn size="sm" onClick={() => d(apply)}>Apply</Btn>
+        <Btn size="sm" variant="ghost" onClick={() => d(decline)}>Decline</Btn>
+      </div>
+    </li>
+  )
+}
+
+/** Dates Sage hasn't raised yet: not a decision yet, but Sam can add one early. */
+function Later({ list }: { list: Moment[] }) {
+  const { d } = useStore()
+  return (
+    <ul className="later">
+      {list.map(m => (
+        <li key={m.id}>
+          <span className="muted">Coming up: <b>{m.name}</b>, {fmtRange(m.start, m.end)}. Sage raises it on {fmtDate(m.start - MOMENT_LEAD)}.</span>
+          <Btn size="xs" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add it now</Btn>
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -587,40 +689,59 @@ function Pillars() {
   const repair = accountLastWeek(s, 'ig-repair', now)
   return (
     <div className="stack lg">
-      <section className="card pad">
-        <div className="row between">
-          <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
-          {edit ? null : (
-            <div className="row tight">
-              <span className="row tight faint lock-note"><Lock size={14} />Sage suggests, you decide</span>
-              <Btn size="sm" onClick={() => setEdit(structuredClone(s.strategy.pillars))}><Pencil size={14} />Edit pillars</Btn>
-            </div>
-          )}
-        </div>
-        {edit && <PillarEditor draft={edit} onChange={setEdit} onDone={() => setEdit(null)} />}
-        <div className="pillars" hidden={!!edit}>
-          {s.strategy.pillars.map(p => {
-            const actual = mix[p.name] ?? 0
-            const off = actual - p.target
-            return (
-              <div key={p.id} className="pillar">
-                <div className="row between">
-                  <b>{p.name}</b>
-                  <span className="num">{actual}% <span className="faint">of posts · target {p.target}%</span></span>
-                </div>
-                <p className="faint">{p.desc}</p>
-                <div className="pbar" role="img" aria-label={`${p.name}: ${actual}% of posts, target ${p.target}%`}>
-                  <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
-                  <span className="target" style={{ left: `${p.target * 2}%` }} />
-                </div>
-                {Math.abs(off) > 5 && <span className="off-target">{Math.abs(off)} pt {off > 0 ? 'over' : 'under'} target</span>}
+      <Notice scope="strategy" />
+      {s.strategy.proposals.length > 0 && <section className="card" aria-label="Sage’s proposals">
+        <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Sage’s proposals</h2></div>
+        <ul className="rows">
+          {[...s.strategy.proposals].sort((a, b) => Number(b.status === 'proposed') - Number(a.status === 'proposed')).map(p => (
+            <li key={p.id} className="proposal">
+              <div>
+                <b>{p.text}</b>
+                <p className="muted">{p.why}</p>
               </div>
-            )
-          })}
-        </div>
-      </section>
-
-      <div className="grid-2">
+              {p.status === 'proposed' ? (
+                <div className="row nowrap">
+                  <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
+                </div>
+              ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
+            </li>
+          ))}
+        </ul>
+      </section>}
+      <div className="grid-2 pillars-grid">
+        <section className={`card pad ${edit ? 'span-all' : ''}`}>
+          <div className="row between">
+            <div className="section-title flush">Editorial pillars <span className="faint">· share of posts, last 30 days</span></div>
+            {edit ? null : (
+              <div className="row tight">
+                <span className="row tight faint lock-note"><Lock size={14} />Sage suggests, you decide</span>
+                <Btn size="sm" onClick={() => setEdit(structuredClone(s.strategy.pillars))}><Pencil size={14} />Edit pillars</Btn>
+              </div>
+            )}
+          </div>
+          {edit && <PillarEditor draft={edit} onChange={setEdit} onDone={() => setEdit(null)} />}
+          <div className="pillars" hidden={!!edit}>
+            {s.strategy.pillars.map(p => {
+              const actual = mix[p.name] ?? 0
+              const off = actual - p.target
+              return (
+                <div key={p.id} className="pillar">
+                  <div className="row between">
+                    <b>{p.name}</b>
+                    <span className="num">{actual}% <span className="faint">of posts · target {p.target}%</span></span>
+                  </div>
+                  <p className="faint">{p.desc}</p>
+                  <div className="pbar" role="img" aria-label={`${p.name}: ${actual}% of posts, target ${p.target}%`}>
+                    <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
+                    <span className="target" style={{ left: `${p.target * 2}%` }} />
+                  </div>
+                  {Math.abs(off) > 5 && <span className="off-target">{Math.abs(off)} pt {off > 0 ? 'over' : 'under'} target</span>}
+                </div>
+              )
+            })}
+          </div>
+        </section>
         <section className="card">
           <div className="card-head"><h2>Cadence per week</h2><span className="faint">Atlas plans to these targets</span></div>
           <table className="table">
@@ -644,26 +765,6 @@ function Pillars() {
               ))}
             </tbody>
           </table>
-        </section>
-
-        <section className="card">
-          <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Sage’s proposals</h2></div>
-          <ul className="rows">
-            {s.strategy.proposals.map(p => (
-              <li key={p.id} className="proposal">
-                <div>
-                  <b>{p.text}</b>
-                  <p className="muted">{p.why}</p>
-                </div>
-                {p.status === 'proposed' ? (
-                  <div className="row nowrap">
-                    <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
-                    <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
-                  </div>
-                ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
-              </li>
-            ))}
-          </ul>
         </section>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
+import { registry } from './agents-registry'
 import { inboxNeedsCount } from '../features/inbox/slice'
 import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
@@ -113,7 +114,7 @@ export default function Shell() {
           {DEPTS.map(dp => {
             const ag = s.agents.find(a => a.id === dp.agent)!
             return (
-              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : countFor(dp.agent)} hot={urgentFor(dp.agent)}
+              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : registry().find(m => m.id === dp.agent)?.needs?.(s) ?? countFor(dp.agent)} hot={urgentFor(dp.agent)}
                 icon={<Mark agent={dp.agent} state={ag.status === 'on' ? 'on' : 'paused'} />} />
             )
           })}

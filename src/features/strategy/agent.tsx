@@ -1,3 +1,4 @@
+import { strategyNeedsCount } from './slice'
 // Sage · Strategy: everything Sage plugs into the core (see src/app/agents-registry.ts).
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { HBars, LineChart } from '../../ui/charts'
@@ -111,6 +112,7 @@ const pillarChange = defineIntent({
 })
 
 const sage: AgentModule = {
+  needs: strategyNeedsCount,
   id: 'sage',
   script: SCRIPT,
   onResolve: onResolveStrategy,
