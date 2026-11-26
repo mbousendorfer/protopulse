@@ -234,3 +234,7 @@
 .onb-mobile > .grow { flex: 1 1 220px; min-width: 0; }
 .onb-fix { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s2); margin-top: var(--s1); }
 .onb-int .grow { min-width: 0; }
+.onb-uses { display: grid; gap: 2px; max-width: 320px; }
+.onb-uses dt { font-weight: 600; color: var(--ink); }
+.onb-uses dd { margin: 0 0 var(--s2); color: var(--ink-2); }
+.onb-uses dd:last-child { margin-bottom: 0; }

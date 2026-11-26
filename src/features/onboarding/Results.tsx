@@ -23,12 +23,12 @@ export default function Results({ onDone }: { onDone: () => void }) {
   const waiting = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need').length
   return (
     <section className="onb-step">
-      <Head title="Your team’s first results" lede="Some work is ready now. What takes hours says when it lands. Nothing goes out without you." />
+      <Head title="Your team’s first results" lede="Nothing goes out without you, and what takes hours says when it lands." />
       <div className="onb-group">
         <h2>Ready now</h2>
         <ol className="onb-cards">
-          <Result agent="atlas" got="3 first drafts"><AtlasResult /></Result>
-          {nova > 0 && <Result agent="nova" got={`${nova} ${nova > 1 ? 'replies' : 'reply'}`}><NovaResult /></Result>}
+          <Result agent="atlas"><AtlasResult /></Result>
+          {nova > 0 && <Result agent="nova"><NovaResult /></Result>}
         </ol>
       </div>
       <Later />
@@ -39,10 +39,10 @@ export default function Results({ onDone }: { onDone: () => void }) {
   )
 }
 
-function Result({ agent, got, children }: { agent: AgentId; got: string; children: ReactNode }) {
+function Result({ agent, children }: { agent: AgentId; children: ReactNode }) {
   return (
     <li className="card onb-result">
-      <header><Mark agent={agent} size="md" /><b>{agentName(agent)}</b><span className="muted t-sm">· {got}</span></header>
+      <header><Mark agent={agent} size="md" /><b>{agentName(agent)}</b></header>
       <div className="onb-result-body">{children}</div>
     </li>
   )
@@ -72,7 +72,7 @@ function AtlasResult() {
           <li key={x.id} className="onb-post">
             <span className="onb-a-by">{net && <Net n={net} size={14} />}{x.status === 'scheduled' ? `Scheduled for ${slot(x.at)}` : `Draft for ${slot(x.at)}`}</span>
             <p>{x.text}</p>
-            {net && x.status === 'draft' && <div className="row"><Btn size="sm" onClick={() => d({ type: 'setup/schedule', id: x.id })}>Schedule for {slot(x.at)}</Btn></div>}
+            {net && x.status === 'draft' && <div className="row"><Btn size="sm" aria-label={`Schedule for ${slot(x.at)}`} onClick={() => d({ type: 'setup/schedule', id: x.id })}>Schedule</Btn></div>}
             {x.status === 'scheduled' && (x.undoUntil && x.undoUntil > now
               ? <UndoBar until={x.undoUntil} onUndo={() => d({ type: 'setup/schedule', id: x.id, undo: true })}>Scheduled. It’s in your calendar.</UndoBar>
               : <p className="muted"><Check size={14} className="ok" aria-hidden /> Scheduled. It’s in your calendar.</p>)}
@@ -94,7 +94,7 @@ function NovaResult() {
   const sent = s.log.find(l => l.text.startsWith('Sent ') && l.restore?.some(h => h.id.startsWith('d1-nova')) && l.status !== 'undone')
   return (
     <>
-      <p className="onb-result-title">{alone ? `${qs.length} messages were waiting in your imported Inbox. Nova answered them on her own.` : `${qs.length} message${qs.length > 1 ? 's were' : ' was'} waiting in your imported Inbox. Nova wrote the ${qs.length > 1 ? 'replies' : 'reply'}.`}</p>
+      <p className="onb-result-title">{alone ? `Nova answered the ${qs.length} messages waiting in your imported Inbox on her own.` : `Nova wrote the ${qs.length > 1 ? 'replies' : 'reply'} to the ${qs.length} message${qs.length > 1 ? 's' : ''} waiting in your imported Inbox.`}</p>
       <ul className="onb-replies">
         {qs.map(q => {
           const c = s.inbox.convs.find(x => x.id === q.conv)!
@@ -136,15 +136,15 @@ function Later() {
   const briefAt = firstBriefAt(st.startedAt ?? now)
   const rows: { agent: AgentId; what: string; when: ReactNode; ready?: boolean; to?: string }[] = []
   const nova = pending('nova')
-  if (nova) rows.push({ agent: 'nova', what: 'Replies to the messages your Inbox imports', when: `In about 10 minutes · around ${hhmm(nova.at)}` })
+  if (nova) rows.push({ agent: 'nova', what: 'Replies to the messages your Inbox imports', when: `Around ${hhmm(nova.at)}, in about 10 minutes` })
   const echo = pending('echo')
   rows.push({ agent: 'echo', what: 'First competitor topics',
-    ...(echo ? { when: `In about 2 hours, after the backfill · around ${hhmm(echo.at)}` }
+    ...(echo ? { when: `Around ${hhmm(echo.at)}, after the backfill` }
       : landed('h-peakline') ? { when: 'Ready', ready: true, to: '/?card=h-peakline' }
       : connected ? { when: 'Started. Topics show up in Listening as Echo finds them.', to: '/listening' } : { when: 'Needs a connected profile' }) })
   const iris = pending('iris')
   rows.push({ agent: 'iris', what: 'Your first report',
-    ...(iris ? { when: `Later today, once your history is imported · around ${hhmm(iris.at)}` }
+    ...(iris ? { when: `Around ${hhmm(iris.at)}, once your history is imported` }
       : landed(DAY1_IDS.iris) ? { when: 'Ready', ready: true, to: `/?card=${DAY1_IDS.iris}` } : { when: 'Needs a connected profile: nothing to report on yet' }) })
   rows.push({ agent: 'iris', what: 'Your first morning brief', ...(now >= briefAt ? { when: 'Ready', ready: true, to: '/' } : { when: `Tomorrow at ${hhmm(briefAt)}` }) })
   return (

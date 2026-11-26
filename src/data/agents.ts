@@ -15,7 +15,7 @@ const says = (suggest: string, draft: string, act: string) => ({ suggest, draft,
 export const AGENTS: Agent[] = [
   {
     id: 'nova', unit: 'messages', name: 'Nova', dept: 'Community', route: '/inbox',
-    role: 'Answers comments, DMs and reviews. Hides spam. Fixes orders within limits.',
+    role: 'Answers comments, DMs and reviews, hides spam and fixes orders within limits.',
     status: 'on', shift: '24/7', now: 'Watching 8 inboxes',
     record: { handled: 1204, escalated: 61, approvedUnchanged: 92, undone: 7, series: [38, 41, 36, 44, 47, 39, 42, 45, 40, 38, 46, 49, 44, 41, 39, 43, 48, 51, 46, 42, 40, 44, 47, 43, 45, 49, 52, 47, 44, 46] },
     actions: [
@@ -82,7 +82,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 'iris', unit: 'reports and alerts', name: 'Iris', dept: 'Insights', route: '/insights',
-    role: 'Writes the morning brief and the weekly report. Spots anomalies.',
+    role: 'Writes the morning brief and the weekly report, and spots anomalies.',
     status: 'on', shift: 'Brief at 07:00 · report on Mondays 08:00', now: 'Comparing TikTok reach with October',
     record: { handled: 48, escalated: 9, approvedUnchanged: 88, undone: 0, series: [1, 2, 1, 1, 2, 1, 1, 3, 1, 1, 2, 1, 1, 1, 3, 1, 2, 1, 1, 1, 1, 3, 1, 2, 1, 1, 1, 1, 3, 2] },
     actions: [
@@ -105,7 +105,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 'echo', unit: 'mentions and signals', name: 'Echo', dept: 'Listening', route: '/listening',
-    role: 'Watches competitors, mentions and trends. Turns signals into moves.',
+    role: 'Watches competitors, mentions and trends, and turns signals into moves.',
     status: 'on', shift: '24/7', now: 'Watching comments on Peakline’s price cut',
     record: { handled: 1830, escalated: 44, approvedUnchanged: 84, undone: 1, series: [52, 61, 58, 66, 70, 55, 49, 63, 68, 72, 65, 59, 51, 48, 66, 71, 74, 69, 62, 54, 50, 67, 73, 78, 70, 61, 57, 64, 76, 81] },
     actions: [
@@ -132,7 +132,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 'sage', unit: 'strategy tasks', name: 'Sage', dept: 'Strategy', route: '/strategy',
-    role: 'Turns briefs into campaign plans. Keeps the pillars and the cadence.',
+    role: 'Turns briefs into campaign plans and keeps the pillars and the cadence.',
     status: 'on', shift: 'Monthly review on the 1st · campaigns on request', now: 'Tracking Trail Week against its goal',
     record: { handled: 14, escalated: 6, approvedUnchanged: 71, undone: 0, series: [0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0, 0, 1, 0, 1] },
     actions: [
@@ -155,7 +155,7 @@ export const AGENTS: Agent[] = [
   },
   {
     id: 'juno', unit: 'clips', name: 'Juno', dept: 'Video', route: '/video',
-    role: 'Watches your videos and lives, finds the best moments and cuts them into captioned clips.',
+    role: 'Cuts the best moments of your videos and lives into captioned clips.',
     status: 'on', shift: '24/7 · checks YouTube every 15 minutes', now: 'Captioning the Repair Friday live',
     record: { handled: 212, escalated: 31, approvedUnchanged: 74, undone: 1, series: [4, 6, 3, 9, 7, 2, 1, 5, 8, 6, 4, 3, 2, 1, 6, 9, 7, 5, 4, 2, 1, 7, 8, 6, 9, 4, 2, 1, 8, 7] },
     actions: [

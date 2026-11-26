@@ -40,7 +40,7 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('accounts')
   return (
     <div className="page narrow">
-      <PageHead title="Settings" lede="Accounts your agents use, what pings you, and who approves what." />
+      <PageHead title="Settings" />
       <Tabs value={tab} onChange={setTab} items={[
         { value: 'accounts', label: 'Connected accounts' }, { value: 'notifications', label: 'Notifications' }, { value: 'appearance', label: 'Appearance' },
         { value: 'profile', label: 'Profile' }, { value: 'approver', label: 'Approver' },
@@ -160,7 +160,7 @@ function Approver() {
         <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
         <Link to="/agents/escalation" className="btn sm ghost">Edit in Escalation</Link>
       </div>
-      <p className="card-body muted pb-0">Topics that go straight to Claire instead of you. You can still send her any card with “Ask Claire”.</p>
+      <p className="card-body muted pb-0">Topics that go to Claire instead of you.</p>
       <ul className="rows">
         {claire.map(e => <li key={e.id} className="set-row"><span>{e.label}</span><span className="faint">Watched by {e.agents.map(agentName).join(' and ')}</span></li>)}
         {!claire.length && <li className="set-row faint">Nothing goes to Claire yet.</li>}

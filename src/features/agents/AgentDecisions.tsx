@@ -52,19 +52,19 @@ export function AgentDecisions({ agent }: { agent?: Agent }) {
           ? `${agent.name} keeps watching and raises anything that crosses ${pronoun(agent.id)} ${plural(agent.guardrails.length, 'guardrail')} or an escalation rule.`
           : `${agent.name} is paused${agent.pausedUntil ? ` until ${agent.pausedUntil}` : ''}. Nothing new comes in until you resume.`}</p></>
       ) : (
-        <><p>Nothing needs you here.</p><p>{onShift} of {s.agents.length} agents on shift. {s.agents.filter(a => a.status === 'on').map(a => `${a.name}: ${a.now.charAt(0).toLowerCase()}${a.now.slice(1)}`).join(' · ')}.</p></>
+        <><p>Nothing needs you here.</p><p>{onShift} of {s.agents.length} agents on shift.</p></>
       )}>
 
       {show('autonomy') && (
         <DecisionGroup title="Autonomy requests" icon={<ShieldCheck />} n={requests.length}
-          hint="Each one comes with its proof. A trial week goes back on its own, with a report.">
+          hint="A trial week ends on its own, with a report.">
           {requests.map(h => <RequestRow key={h.id} h={h} decide={decide} />)}
         </DecisionGroup>
       )}
 
       {show('rules') && (
         <DecisionGroup title="Rule proposals" icon={<BookOpen />} n={proposals.length}
-          hint="Spotted in your edits. An added rule applies to the next draft."
+          hint="Applies from the next draft."
           action={proposals.length > 1 && <Btn size="sm" variant="primary" onClick={() => decide(proposals, { kind: 'approve' }, `${plural(proposals.length, 'rule')} added to the Playbook.`)}>Add all {proposals.length} to Playbook</Btn>}>
           {proposals.map(h => (
             <DecisionRow key={h.id} lead={<Mark agent={h.agent} size="md" />}
@@ -79,8 +79,7 @@ export function AgentDecisions({ agent }: { agent?: Agent }) {
       )}
 
       {show('departments') && (
-        <DecisionGroup title={agent ? `Waiting in ${departmentOf(agent)}` : 'Waiting in departments'} icon={<LayoutList />} n={deptTotal}
-          hint="Decided where they live, with the agent’s draft and its reason.">
+        <DecisionGroup title={agent ? `Waiting in ${departmentOf(agent)}` : 'Waiting in departments'} icon={<LayoutList />} n={deptTotal}>
           {depts.map(({ a, n }) => {
             const top = s.handoffs.filter(h => h.agent === a.id && !h.lane && groupOf(h) === 'need' && h.kind !== 'promotion' && !h.proposal)
               .sort((x, y) => RANK[x.urgency] - RANK[y.urgency] || x.at - y.at)[0]
@@ -89,7 +88,7 @@ export function AgentDecisions({ agent }: { agent?: Agent }) {
             return (
               <DecisionRow key={a.id} lead={<Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />}
                 title={agent ? first : `${a.name} · ${n} in ${departmentOf(a)}`}
-                line={agent ? `${n} waiting in ${departmentOf(a)}, urgent first` : first}
+                line={agent ? undefined : first}
                 acts={<Link to={a.route} className="btn sm">Review in {departmentOf(a)}</Link>} />
             )
           })}

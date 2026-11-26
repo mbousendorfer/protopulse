@@ -30,7 +30,7 @@ export function AgentsLayout() {
   const proposals = s.handoffs.filter(h => h.proposal && !h.lane).length
   return (
     <div className="page">
-      <PageHead title="Agents" lede="Your team, the rules they share, and what they always hand to a person." />
+      <PageHead title="Agents" lede="Your agents, the rules they share and what they always escalate." />
       <Tabs value={section} onChange={v => nav(SECTION_PATH[v])} items={[
         { value: 'team', label: 'Team' },
         { value: 'rules', label: <>Shared rules{proposals > 0 && <CountBadge n={proposals} needs label={`${proposals} rule proposal${proposals > 1 ? 's' : ''} need you`} />}</> },
@@ -73,7 +73,6 @@ function TeamRow({ a }: { a: Agent }) {
       <div className="team-cell">
         <span className="team-k">Now</span>
         {a.status === 'on' ? <span>{a.now}</span> : <span className="team-paused"><Pause size={14} aria-hidden />Paused{a.pausedUntil ? ` until ${a.pausedUntil}` : ''}</span>}
-        <span className="team-sub">Shift: {a.shift}</span>
       </div>
       <div className="team-cell" title={PRESET_SAYS[preset]}>
         <span className="team-k">Autonomy</span>

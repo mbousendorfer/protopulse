@@ -151,13 +151,13 @@ export function Connect({ onBack, onDone }: { onBack: () => void; onDone: () => 
   const n = s.setup.connected.length
   return (
     <section className="onb-step">
-      <Head title="Almost there! It’s time to add your first profile" lede="Your agents read and reply through your profiles. Connect one now, or skip and do it when it unlocks something." />
+      <Head title="Almost there! It’s time to add your first profile" lede="Your agents read and reply through your profiles." />
       {narrowScreen() && (
         <div className="card pad onb-mobile">
           <Laptop size={18} aria-hidden />
           <div className="grow">
             <b>Connect from your computer</b>
-            <p className="muted">Network sign-ins work best on a computer. We’ll email you a link to finish there.</p>
+            <p className="muted">We’ll email you a link to finish there.</p>
           </div>
           {mailed ? <span className="onb-sent"><Check size={14} aria-hidden className="ok" />Sent to {s.setup.email}</span> : <Btn size="sm" onClick={() => setMailed(true)}><Send size={14} />Email me the link</Btn>}
         </div>
@@ -166,7 +166,9 @@ export function Connect({ onBack, onDone }: { onBack: () => void; onDone: () => 
       <Reassurance />
       <div className="onb-invite-row">
         <UserPlus size={16} aria-hidden />
-        <p><b>Not ready to connect a profile yet?</b> Invite up to 3 people for free to help you connect social profiles.</p>
+        {/* The product's own question until a profile is connected; then it asks about the profiles still missing. */}
+        {n ? <p><b>Someone else manages your other profiles?</b> Invite up to 3 people for free to connect them.</p>
+          : <p><b>Not ready to connect a profile yet?</b> Invite up to 3 people for free to help you connect social profiles.</p>}
         <Btn size="sm" onClick={() => setInviting(true)}>Invite team members</Btn>
       </div>
       {s.setup.invites.length > 0 && <p className="onb-sent"><Check size={14} aria-hidden className="ok" />Invited {s.setup.invites.join(', ')} · Pending</p>}

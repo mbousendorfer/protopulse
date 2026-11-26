@@ -16,7 +16,7 @@ const STATUS: Record<LogStatus, { label: string; tone?: 'ok' | 'caution' | 'aler
 type StatusFilter = 'all' | 'alone' | 'you' | 'undone'
 
 /** A day shows its latest entries; the rest wait behind “Show N more”, like the Inbox groups. */
-export const DAY_CAP = 12
+export const DAY_CAP = 8
 export const visibleRows = <T,>(rows: T[], open: boolean) => (open || rows.length <= DAY_CAP + 2 ? rows : rows.slice(0, DAY_CAP))
 
 export default function Activity() {
@@ -44,7 +44,7 @@ export default function Activity() {
 
   return (
     <div className="page narrow">
-      <PageHead title="Activity" lede="Everything your agents did, why, and the rule they applied. Undo anything still reversible." />
+      <PageHead title="Activity" lede="Everything your agents did, why, and what you can still undo." />
       <div className="act-filters">
         <Filters label="Agent" value={agent} onChange={setAgent} items={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: <><Mark agent={a.id} />{a.name}</> }))]} />
         <div className="row">
