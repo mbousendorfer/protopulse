@@ -19,6 +19,7 @@ import { targetsOf } from '../strategy/slice'
 import { anomalyList, boostBudget } from './slice'
 import { reportList } from './reports'
 import Roi from './RoiTab'
+import { benchmarkRows } from './benchmark'
 import AudienceTab from './AudienceTab'
 import { ReportOut, SaveTemplate, Schedules, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
 import './insights.css'
@@ -140,6 +141,7 @@ function ReportView() {
             {sec.paras.map((p, i) => <p key={i}><CitedText parts={p} /></p>)}
             {sec.chart === 'reach' && (r.recipe ? <ReachChart days={r.recipe.days} networks={r.recipe.networks} />
               : <div className="report-chart"><LineChart label="Daily reach, last 14 days" labels={dayLabels(14)} series={[{ name: 'Reach (k)', data: DAILY_REACH.slice(-14), color: 'var(--a-iris)' }]} h={160} format={v => `${Math.round(v)}k`} /></div>)}
+            {sec.chart === 'benchmark' && <BenchTable />}
             {sec.chart === 'campaign' && <CampaignChart id={r.recipe?.campaign} />}
             {sec.chart === 'pillars' && <div className="report-chart"><HBars items={PILLAR_PERF.map(p => ({ label: p.pillar, value: p.er }))} format={v => `${v.toFixed(1)}%`} color="var(--a-iris)" /></div>}
             {sec.chart === 'tiktok' && <div className="report-chart"><LineChart label="TikTok views per video" labels={['#1', '#2', '#3', '#4', '#5', '#6', '#7', '#8', '#9', '#10', '#11']} series={[{ name: 'Views per video (k)', data: TIKTOK_VIEWS, color: 'var(--a-iris)' }]} h={140} format={v => `${v.toFixed(1)}k`} /></div>}
@@ -190,6 +192,17 @@ function ReportView() {
         </section>
       </aside>}
     </div>
+  )
+}
+
+/** Fernway against the competitors Echo tracks, read now. */
+function BenchTable() {
+  const { s } = useStore()
+  return (
+    <div className="table-wrap report-chart"><table className="table">
+      <thead><tr><th>Brand</th><th className="r">Followers</th><th className="r">Growth a week</th><th className="r">Engagement</th><th className="r">Posts a week</th><th className="r">Share of voice</th></tr></thead>
+      <tbody>{benchmarkRows(s).map(r => <tr key={r.id}><td>{r.us ? <b>{r.name}</b> : r.name}</td><td className="r">{Math.round(r.followers / 1000)}k</td><td className="r">+{r.growth}%</td><td className="r">{r.er}%</td><td className="r">{r.cadence}</td><td className="r">{r.sov}%</td></tr>)}</tbody>
+    </table></div>
   )
 }
 

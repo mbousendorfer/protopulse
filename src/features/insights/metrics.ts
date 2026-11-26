@@ -2,7 +2,7 @@
 import type { Network } from '../../app/types'
 import type { State } from '../../app/state'
 import { appNow } from '../../app/time'
-import { BEST_CELL, DAILY_REACH, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
+import { AUDIENCE, BEST_CELL, DAILY_REACH, FORMATS, HEAT_COLS, HEAT_ROWS, KPIS, NET_SHARE, TIKTOK_VIEWS, type NetFilter, type Period } from '../../data/insights'
 
 export type SocialNet = keyof typeof BEST_CELL
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
@@ -155,3 +155,10 @@ export function clicksOf(s: State, postId: string): number | undefined {
 /** Clicks on every tracked link of a UTM campaign (utm_campaign). */
 export const campaignClicks = (s: State, utmCampaign: string) =>
   s.publishing.posts.filter(p => p.link?.utm?.utm_campaign === utmCampaign).reduce((t, p) => t + (clicksOf(s, p.id) ?? 0), 0)
+
+/** Fernway's own line next to competitors, from Iris's numbers: followers (Audience), weekly growth and engagement (Explore). */
+export function fernwayRow() {
+  const followers = Object.values(AUDIENCE).reduce((t, a) => t + a.followers, 0)
+  const added = kpi('followers').value
+  return { name: 'Fernway', followers, growth: Math.round(added / (followers - added) * 1000) / 10, er: kpi('er').value }
+}

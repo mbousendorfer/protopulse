@@ -112,16 +112,19 @@ Relais : lit le meilleur créneau chez Iris (`bestTime`), les piliers et temps f
 **Idées (Publishing › Ideas).** Atlas cherche en continu quoi publier à partir de ce qui a marché (Iris), de ce qui monte (Echo), de la marque (Playbook, Strategy) et des trous du calendrier. Une idée est toujours en Suggest ; la rédaction suit le cran de l'action concernée (`atlas-trend`, `atlas-recycle`, `atlas-fill`) ; sur Act, Atlas programme lui-même et le journal garde un Undo réel. Jamais plus de 8 idées ouvertes : une idée plus forte ou urgente remplace la plus faible non rédigée, les idées à fenêtre expirent seules (« Expired: the #GR20 conversation dropped 40% »). Rien qui nomme un concurrent, jamais le Ridge 40L, jamais de stock (brief visuel à la place).
 
 ### Iris — Insights (Analytics)
-Planning : brief à 07:00, rapport hebdo le lundi 08:00, bilans de campagne en fin de campagne.
+Source unique des chiffres de performance (`src/features/insights/metrics.ts` : `kpis`, `rangeKpis`, `bestTime`, `bestSlotOf`, `heat`, `formats`, `tiktokViews`, `postPerf`, `clipPerf`, `clicksOf`, `fernwayRow`) : Explore, les rapports, le brief, le Chat et ⌘K citent les mêmes valeurs, lues dans l'état. Planning : brief au premier battement après 07:00 d'un nouveau jour, rapport hebdo le lundi, rapports programmés à 08:00 (lundi ou le 1er), règles d'alerte évaluées à chaque battement.
 
-| Action | Risque | Cran | Verrou |
-|---|---|---|---|
-| Write and share the morning brief | safe | Act | |
-| Write and share the weekly report with Claire | risky | Draft | |
-| Raise anomalies | safe | Act | |
-| Recommend a paid boost | risky | Suggest | 🔒 |
+| Action | Risque | Cran | Verrou | Ce que fait chaque cran |
+|---|---|---|---|---|
+| Write and share the morning brief | safe | Act | | Suggest : chiffres seuls (journal) · Draft : carte « brief ready » · Act : brief écrit |
+| Write and share the weekly report with Claire | risky | Draft | | Suggest : écrit, Sam l'envoie · Draft : carte « ready to send » · Act : envoyé dans la file de Claire, Undo qui le reprend ; vaut aussi pour les rapports programmés |
+| Raise anomalies | safe | Act | | Suggest : listée dans Insights · Draft : carte Worth a look avec l'option d'Iris · Act : Iris fait l'option recommandée (ex. demande un post à Atlas), Undo réel ; une règle « → Desk and Claire » va dans la file de Claire |
+| Recommend content from the audience | safe | Draft | | Suggest : visible dans Audience · Draft : carte « brief Atlas? » · Act : Iris briefe Atlas (brouillon chez Atlas), Undo |
+| Recommend a paid boost | destructive | Suggest | 🔒 | Iris propose, Sam décide ; jamais recommandé par Act |
 
-Garde-fous : partage uniquement à Sam et Claire · budget boost mensuel affiché (€1,500, €580 utilisés).
+Garde-fous **appliqués** : partage uniquement à Sam et Claire · budget boost mensuel = dernier montant du garde-fou (€1,500), utilisé calculé depuis les boosts du mois (Desk, Insights, Chat passent tous par `recordBoost`), un boost au-delà est refusé avec la raison, l'Undo rend le budget · une règle d'alerte en pause ne se déclenche jamais.
+
+Relais : lit les posts et liens d'Atlas, les clips de Juno, les campagnes de Sage (`s.strategy.campaigns`), les concurrents et la part de voix d'Echo (`competitorsOf`, `shareOfVoice`). Fournit `bestTime`/`bestSlotOf` à Atlas, `clipPerf`/`postPerf` à Juno, `writeCampaignReport` à Sage (bilan en fin de campagne), les faits Playbook « revenu par euro de boost » à Sage, les briefs d'audience à Atlas.
 
 ### Echo — Listening
 Planning : 24/7. Activité type : « Watching Peakline's launch comments ». Echo écoute, trie, chiffre et alerte ; elle
@@ -282,13 +285,15 @@ Onglets : **Ideas** · **Calendar** · **Plan review** · **Drafts** · **Queues
 
 ### 6.4 Insights — Iris
 
-Onglets : **Reports** · **Explore** · **Anomalies**.
+Onglets : **Reports** · **Explore** · **Audience** · **ROI** · **Anomalies** (badge = anomalies ouvertes ; celui de Reports = rapports en Draft qui attendent Sam).
 
-- **Reports** : liste (brief du jour, rapports hebdo des 4 dernières semaines, bilan de campagne). Un rapport se lit comme un texte : titre, résumé en 3 phrases, sections rédigées (ce qui a marché, ce qui n'a pas marché, ce qu'on change), graphes intégrés, **chiffres sourcés** (survol d'un chiffre = la donnée et la période, pattern *cited-answer*). Actions : Share with Claire (statut d'envoi, Claire réagit), Ask a follow-up, Export PDF (mock : toast).
-- **Explore** : sélecteur de période (7 j, 30 j, 90 j, personnalisé) et de réseaux ; KPI avec tendance et comparaison à la période précédente (Reach, Engagement rate, Followers, Link clicks, Replies handled, Median reply time, Sentiment) ; courbes ; **tableau des posts** triable (réseau, date, reach, ER, clics, pilier, auteur Atlas/Sam) ; **meilleurs créneaux** (heatmap jour × heure) ; performance par pilier.
-- Sélection multiple des anomalies : Mark handled, Snooze a week, Reopen. Les **règles d'alerte** d'Iris se règlent sur sa fiche agent (onglet Alerts), pas ici ; un lien y mène.
-- **Anomalies** : liste avec graphe, explication d'Iris (cause probable, confiance), actions proposées (« Ask Atlas to test a new hook format », « Ignore for a week »), historique des anomalies passées et de ce qui a été fait.
-- **Questions à Iris** (barre de commande ou fil) : « How did TikTok do last week? », « Best time to post on LinkedIn? », « Compare reels vs carousels » → carte de réponse avec graphe, chiffres sourcés et relances proposées.
+- **Reports** : en tête, le champ **Ask Iris** (« A monthly report for Claire on Instagram and TikTok ») et les modèles sauvegardés, puis les **planifications** (fréquence, destinataire, prochaine date, ce que fera Iris au cran actuel ; pause, suppression). Liste : briefs du jour (un nouveau à chaque jour), rapports hebdo (le lundi), bilans de campagne, rapports demandés. Un rapport se lit comme un texte, chiffres **sourcés** (survol = donnée et période). Rapport demandé (**Report Studio agentique**) : chaque section monte, descend, se raccourcit ou s'allonge, se retire ; « Add a section » (Results, Top 3 posts, What didn't work, Best times, By pillar, Community, Campaign vs goal, Labelled posts, Website results, Audience, Benchmark) ; champ « Tell Iris what to change » (« make it shorter and add the top 3 posts ») ; chaque changement a son Undo. Une campagne de Sage nommée dans la demande impose sa fenêtre, ses réseaux et la section objectif vs réel ; « labelled X » lit les posts d'Atlas portant ce label. Panneau : Share with Claire (carte dans la file de Claire, sa réponse s'affiche dans le rapport), Save as template, Schedule (chaque lundi ou chaque mois, à Claire ou à soi), Download PDF (impression du rapport seul), Copy read-only link (`?view=read`, sans outils), Download .md, Ask a follow-up (mêmes chiffres qu'Explore).
+- **Explore** : période 7 / 30 / 90 jours ou **Custom** (deux dates dans les 90 jours) ; filtre réseau ; KPI avec comparaison à la période précédente ; portée quotidienne ; **best time** par réseau (heatmap jour × créneau de 2 h, la note suit le filtre) ; perf par pilier contre la cible de Sage ; tableau des posts triable (réseau, date, pilier, auteur, reach, ER, clics), export CSV, une ligne ouvre le panneau du post (chiffres contre la moyenne du réseau, lecture d'Iris).
+- **Audience** : abonnés (120 000, comme Listening), nouveaux abonnés, part des moins de 25 ans, pays et villes, âge et genre, par réseau ou tous ; la recommandation d'Iris quand l'audience ne colle pas au contenu (TikTok à 62 % de moins de 25 ans) avec « Brief Atlas ».
+- **ROI** (GA4 mocké) : sessions, commandes, revenu, revenu par clic, par réseau (depuis les clics d'Explore), par campagne (revenu par euro de boost, boosts du mois compris), posts qui ont vendu ; « Tell Sage » en fait un fait Playbook (Undo).
+- **Anomalies** : ouvertes / fermées, sélection multiple (Mark handled, Snooze a week, Reopen), graphe, cause probable, confiance, **règle qui l'a levée** (lien pour l'éditer), actions (Atlas, Sage, boost avec confirmation et budget restant). Les règles d'alerte se règlent sur la fiche d'Iris (onglet Alerts) et sont évaluées à chaque battement : une règle créée par Sam peut lever une anomalie dans la seconde.
+- **⌘K et Chat** : « Iris, a monthly report for Claire… », « Make the report shorter and add the top 3 posts », « Send it to Claire every Monday », « How did TikTok do last week? », « When should I post on TikTok? », « Reels vs carousels », « How are we doing? », « Which network brings sales? », « Who follows us on TikTok? » : mêmes chiffres qu'à l'écran.
+- **⇧D** : « LinkedIn follower spike » (passe par les règles et le cran), « TikTok audience doesn't match the content » ; Skip to tomorrow écrit le brief du jour (et le lundi le rapport hebdo et les rapports programmés).
 
 ### 6.5 Listening — Echo
 
@@ -463,7 +468,7 @@ Un module de données par domaine, typé. Toutes les dates sont relatives au « 
 - 18 remontées initiales sur le Desk couvrant les 5 agents et tous les types, dont 3 « Good news » ;
 - 55 conversations Inbox (8 réseaux, dont 3 sur Fernway Repair, 4 Trail Week, 4 en langue étrangère) + 15 contacts avec commandes, 8 règles d'Inbox, 8 réponses sauvegardées, 7 labels, une équipe de 4 ;
 - Publishing : 34 posts (semaines passée et courante, dont 3 sur Fernway Repair, 3 brouillons), 14 items de plan + 14 d'un plan v2, 30 médias (1 licence de créateur qui finit en décembre), 2 files (8 textes), 1 note de calendrier, 7 profils dont Fernway Repair ;
-- 4 rapports hebdo, 1 brief, 1 bilan de campagne, 6 anomalies (3 ouvertes) ;
+- Insights : 4 rapports hebdo, 1 brief, 1 bilan de campagne (+ un brief par jour simulé, un hebdo le lundi), 6 anomalies (3 ouvertes) et 9 signaux mesurés pour les règles d'alerte, 4 règles d'alerte, 18 posts suivis, 90 jours de portée quotidienne, 7 profils de best time, audience de 6 réseaux (120 000 abonnés), entonnoir GA4 par réseau et 2 campagnes, 2 boosts du mois (€580 de €1,500) ;
 - 4 concurrents (chiffres par réseau), 15 événements concurrents, 20 top posts concurrents, 8 leçons, 50 mentions (+ 27 du pic), 5 tags à règle, 5 fiches créateurs, 8 tendances, 12 recherches, 3 règles d'alerte ;
 - 3 campagnes (1 live, 1 terminée, 1 à valider), 4 piliers, 6 cibles de cadence, 3 propositions, 4 temps forts ;
 - 25 règles de Playbook, 3 règles proposées, 20 faits ;

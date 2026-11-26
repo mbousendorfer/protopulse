@@ -31,9 +31,11 @@
 | 5 | Community management (rapport) | Chiffres Nova recopiés en texte (`data/insights.ts:53`) | Temps de réponse, volumes par type/réseau, part traitée par Nova seule, lus dans `s.inbox` | 2 | M | later — décision de l’humain au pitch (25/11) |
 | 6 | Social Media ROI | Absent | UTM des liens d'Atlas → clics, sessions, conversions, revenu mockés GA4 par réseau et campagne | 2 | M | done (ROI PR) |
 | 7 | Audience | Absent | Démographie par réseau, croissance des abonnés, heures actives ; recommandation à Atlas | 2 | M | done (audience PR) |
-| 8 | Competitors (benchmark) | Texte dans `answer()` (`slice.ts:59`) | Section benchmark lue chez Echo (`s.listening`) dans les rapports | 2 | S | todo |
+| 8 | Competitors (benchmark) | Texte dans `answer()` (`slice.ts:59`) | Section benchmark lue chez Echo (`s.listening`) dans les rapports | 2 | S | done (benchmark PR) |
 | 9 | Perf des clips | Absent côté Iris | Vues, rétention, partages des clips de Juno ; renvoi à Juno pour son score | 2 | M | done (contrat clipPerf, demande de Juno) |
-| 10 | Boost : résultat mesuré | — (le budget est F2) | Historique des boosts avec résultat (reach payé, coût par clic) dans Explore | 1 | S | todo |
+| 10 | Boost : résultat mesuré | — (le budget est F2) | Historique des boosts avec résultat (reach payé, coût par clic) dans Explore | 1 | S | dropped — décision de l’humain au pitch n°9 (26/11), sans commentaire |
 | 11 | CSV Builder | Export CSV de la table des posts (`Page.tsx:189`) | — | 1 | — | skipped — l'export CSV d'Explore couvre le besoin du test |
 | 12 | Ads reports | Absent | — | 1 | — | skipped — hors périmètre (_common : Paid = boost recommandé par Iris, pas de gestionnaire de campagnes) |
 | 13 | Custom branding, timezones | Absent | — | 1 | — | skipped — sans valeur pour un test de 45 min |
+
+| 14 | Chiffres par profil (Fernway Repair) — demande d’Atlas | Fernway Repair compté dans Instagram | Filtre « Profile » dans Explore + ligne Fernway Repair dans les rapports | 1 | S | later — décision de l’humain (26/11) |
