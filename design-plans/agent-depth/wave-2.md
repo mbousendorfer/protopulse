@@ -37,6 +37,9 @@ ton dossier · Taille · Statut`.
 ## Étape 2 — Pitch, avec cinq tests
 La section « Pitcher une feature » de `_common.md` s'applique, durcie ainsi. **Un pitch ne part que
 s'il passe les cinq tests** ; sinon retravaille-le ou écarte l'idée (`skipped — échoue au test N`).
+**Et avant tout : la règle n°1 de `market-ideas.md`** — compris en 5 secondes, une phrase, un
+exemple Fernway, zéro jargon, un seul agent, la plus petite version visible. L'humain a rejeté la
+première version du catalogue parce qu'elle était trop compliquée.
 1. **Agent-first** : l'agent fait le travail, Sam décide par exception. Une fonction de parité (filtre,
    tri, export, écran de réglages) n'est pitchable que si elle débloque un comportement d'agent, et le
    pitch le dit.
@@ -51,9 +54,10 @@ s'il passe les cinq tests** ; sinon retravaille-le ou écarte l'idée (`skipped 
 Ordre : pitche d'abord **les trois idées les plus fortes**, une par une. Après la troisième réponse,
 demande si l'humain veut la suite (« 4 more ideas ready: go on? ») plutôt que d'enchaîner seul.
 
-Format du pitch (dans la question et l'aperçu de l'option recommandée, un écran maximum) :
-problème (une phrase, preuve dans le code) · référence marché · notre carte · ce que fait l'agent et à
-quel cran · ce que voit le testeur (esquisse ASCII) · taille et ce que ça touche · alternative.
+Format du pitch : **la question = l'idée en une phrase simple**. L'aperçu de l'option recommandée,
+court et en mots de tous les jours : exemple Fernway · vu chez (une ligne) · ce qu'on fait de mieux
+(une ligne) · ce que voit le testeur (petite esquisse) · taille. Les détails techniques restent dans
+ton backlog, pas dans le pitch.
 Options : **Go** · **Go, plus simple** · **Later** · **Drop**, la recommandée en premier.
 
 ## Étape 3 — Construire, merger
