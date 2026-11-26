@@ -5,10 +5,10 @@ import { ArrowLeft, ArrowUpRight, Download, Lock, Pause, Play, Redo2, Scissors, 
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
-import { uid } from '../../app/core'
+import { actionOf, uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BROLL, MUSIC, PEOPLE, TRANSCRIPT, speakerName, type Source } from '../../data/video'
-import { campaignFor, holdReason, noRelease, unreleased } from './slice'
+import { campaignFor, canTrial, holdReason, noRelease, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
@@ -16,7 +16,7 @@ import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
   LANG_LABEL, LANGS, NETWORK_FIT, NET_SPEC, SCORE_LABEL, buildVersions, versionFor, versionIssues, versionOf, applyAsk, captionLines, captionSlips, coverFrames, coverText, shortsTitle, clipPosts, clipText, extend, fillers, fitsLength, keptWords, lengthSpec, removeFillers, rescore, silenceSaved, slipLabel,
-  silences, toSRT, wordText, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
+  silences, toSRT, wordText, hasNumber, numberWins, trialPair, winnerOf, type Captions, type Clip, type Frame as FrameMode, type Lang, type ScoreKey,
 } from './model'
 import { Frame, usePlayback, type Playback } from './Player'
 import Timeline from './Timeline'
@@ -24,7 +24,7 @@ import { TemplatePicker, SwatchPicker } from './BrandKit'
 import { CoverFrame, ScoreBadge, fmt, focusAt, useClip } from './parts'
 import { ClipNotNow } from './Page'
 
-const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow 08:00', dismissed: 'Dismissed' }
+const STATUS: Record<Clip['status'], string> = { ready: 'Ready to review', sent: 'Sent to Atlas', published: 'Published', snoozed: 'Back tomorrow 08:00', dismissed: 'Dismissed', trial: 'On trial on Reels' }
 const CLIP_NETWORKS: Network[] = ['tiktok', 'instagram', 'youtube', 'linkedin', 'facebook']
 const typing = (e: KeyboardEvent) => !!(e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"]'))
 
@@ -500,7 +500,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
       <Field label="Hook">
         <div className="choices" role="radiogroup" aria-label="Hook">
           {[...new Set([...clip.hooks, clip.hook])].map(h => (
-            <label key={h} className={`choice-row ${clip.hook === h ? 'on' : ''}`}><input type="radio" name={`hook-${clip.id}`} checked={clip.hook === h} onChange={() => edit({ hook: h })} /><span>{h}</span></label>
+            <label key={h} className={`choice-row ${clip.hook === h ? 'on' : ''}`}><input type="radio" name={`hook-${clip.id}`} checked={clip.hook === h} disabled={clip.status === 'trial'} onChange={() => edit({ hook: h })} /><span>{h}</span></label>
           ))}
         </div>
         <form className="add-link" onSubmit={e => { e.preventDefault(); if (own.trim()) { edit({ hook: own.trim(), hooks: [...clip.hooks, own.trim()] }); setOwn('') } }}>
@@ -508,6 +508,7 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
           <Btn size="sm" type="submit" disabled={!own.trim()}>Use it</Btn>
         </form>
       </Field>
+      <TrialField clip={clip} edit={edit} />
       <CoverField clip={clip} edit={edit} />
       <Field label="Where it goes">
         <div className="row">{CLIP_NETWORKS.map(n => <label key={n} className="check-row"><input type="checkbox" className="check" checked={clip.post.networks.includes(n)} onChange={e => setNets(n, e.target.checked)} /><Net n={n} size={16} />{NETWORK_FIT[n]}</label>)}</div>
@@ -537,6 +538,49 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
         </Field>
       )}
     </div>
+  )
+}
+
+/* ---------- Hook trial ---------- */
+
+const TRIAL_LEVEL = {
+  act: 'Hook trials are set to Act: Juno trials her best new clips (80+) on her own and puts the winning hook on. Undo from the journal.',
+  draft: 'Hook trials are set to Draft: when a trial ends, Juno asks you on the Desk to use the winner and send the clip to Atlas.',
+  suggest: 'Hook trials are set to Suggest: Juno says which hooks to test. You start the trial and pick the hook.',
+}
+
+/** Two hooks against each other on Reels, non-followers first: what Juno would test, the trial running, or who won. */
+function TrialField({ clip, edit }: { clip: Clip; edit: (p: Partial<Clip>) => void }) {
+  const { s, d } = useStore()
+  const t = clip.trial
+  const pair = t?.hooks ?? trialPair(clip)
+  if (!pair) return null
+  const level = actionOf(s, 'juno', 'juno-trial')?.autonomy ?? 'draft'
+  const ok = canTrial(s, clip)
+  const wins = numberWins(s.video.trials).length
+  const day = (x: number) => new Date(x).toLocaleDateString('en-GB', { weekday: 'short' })
+  const w = t?.held ? winnerOf({ hooks: pair, held: t.held }) : 0
+  return (
+    <Field label="Hook trial">
+      {clip.status === 'trial' && t ? (
+        <>
+          <p className="t-sm">On Instagram Reels since {hhmm(t.from)}, each hook shown to non-followers first. Results {day(t.until)} at {hhmm(t.until)}; nothing reaches your followers before.</p>
+          <ul className="ed-list">{pair.map((h, i) => <li key={h}><span>“{h}”</span><span className="muted t-sm">{i === 0 ? 'Current hook' : 'Challenger'}</span></li>)}</ul>
+          <Btn size="sm" variant="ghost" className="self-start" onClick={() => d({ type: 'video/trialStop', id: clip.id })}>Stop the trial</Btn>
+        </>
+      ) : t?.held ? (
+        <>
+          <ul className="ed-list">{pair.map((h, i) => <li key={h}><span>“{h}”{i === w && <b> · won</b>}</span><span className="num t-sm">{t.held![i]}% still watching at 3 s</span></li>)}</ul>
+          {clip.hook !== pair[w] && (clip.status === 'ready' || clip.status === 'snoozed') && <Btn size="sm" className="self-start" onClick={() => edit({ hook: pair[w] })}>Use the winning hook</Btn>}
+        </>
+      ) : (
+        <>
+          <p className="t-sm"><Mark agent="juno" /> Juno would test “{pair[0]}” against “{pair[1]}”{hasNumber(pair[0]) !== hasNumber(pair[1]) && s.video.trials.length ? ` One opens on a number, the other doesn’t: a hook with a number won ${wins} of your ${s.video.trials.length} trials so far.` : ''}</p>
+          {ok === true ? <Btn size="sm" className="self-start" onClick={() => d({ type: 'video/trial', id: clip.id })}>Trial 2 hooks first</Btn> : <p className="muted t-sm">Can’t trial it now: {ok.charAt(0).toLowerCase()}{ok.slice(1)}.</p>}
+        </>
+      )}
+      <p className="muted t-sm">{TRIAL_LEVEL[level]}</p>
+    </Field>
   )
 }
 

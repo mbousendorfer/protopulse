@@ -2,7 +2,8 @@
 import type { Handoff, Network } from '../app/types'
 import { T } from '../app/time'
 import type { Pillar } from './publishing'
-import type { Brand, Captions, Clip, Evidence, Score, Transcript } from '../features/video/model'
+import type { Brand, Captions, Clip, Evidence, Score, Transcript, TrialRecord } from '../features/video/model'
+import { trialHold } from '../features/video/model'
 import TRANSCRIPTS from './video-transcripts.json'
 
 export const TRANSCRIPT = TRANSCRIPTS as Record<string, Transcript>
@@ -167,6 +168,13 @@ export const SEEDS: Record<string, ClipSeed[]> = {
       networks: ['instagram', 'facebook'], pillar: 'Gear that lasts', text: 'The hood stays on in 40 km/h wind, and the pit zips keep you dry from the inside.' },
   ],
 }
+
+/** Hook trials Juno ran before the demo starts, on Instagram Reels. Both opposed a number to no number, and the number won. */
+const pastTrial = (title: string, a: string, b: string, at: number): TrialRecord => ({ title, hooks: [a, b], held: [trialHold(a), trialHold(b)], at })
+export const TRIALS: TrialRecord[] = [
+  pastTrial('Ridge 28L: 1,000 km later', 'What a year on the trail does to a bag', '1,000 km on one bag.', T(18, 0, -12)),
+  pastTrial('Summit Bottle drop test', 'Will it survive the drop?', 'Dropped from 3 m. Still sealed.', T(18, 0, -5)),
+]
 
 /** Seed anchors → source times, at sentence boundaries. */
 export function anchor(t: Transcript, from: string, to: string): { start: number; end: number } {
