@@ -6,7 +6,8 @@ import {
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
-import { inboxNeedsCount } from '../features/inbox/slice'
+import { agentsNeedsCount, departmentNeeds } from '../features/agents/needs'
+import { virtualConvs } from '../features/inbox/slice'
 import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
@@ -55,9 +56,8 @@ export default function Shell() {
 
   // Counts everywhere mean the same thing: cards in Needs you. Worth a look and Good news never badge.
   const open = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need')
-  // The Inbox badge predicts the Inbox's own Needs you view (conversations), not Nova's Desk cards.
-  const inboxNeeds = inboxNeedsCount(s)
-  const countFor = (agent: AgentId) => open.filter(h => h.agent === agent).length
+  // A department's badge is `departmentNeeds`: Agents › Team shows the same number per agent. The Inbox's counts its
+  // own Needs you view (conversations), not Nova's Desk cards.
   const urgentFor = (agent: AgentId) => open.some(h => h.agent === agent && h.urgency === 'urgent')
 
   // Track navigation for the tester log, close mobile rail.
@@ -84,6 +84,8 @@ export default function Shell() {
   }, [loc.pathname, nav, open.length])
 
   const seg = loc.pathname.split('/')[1] ?? ''
+  // A conversation shows as its author in the crumbs, never as its id (Desk cards open as `h:<card id>`).
+  const inboxConv = (id: string) => (seg === 'inbox' ? [...s.inbox.convs, ...virtualConvs(s)].find(c => c.id === decodeURIComponent(id)) : undefined)
   const sub = loc.pathname.split('/').slice(2).filter(Boolean)
 
   if (!s.onboarded && seg !== 'onboarding') { setTimeout(() => nav('/onboarding')); return null }
@@ -113,7 +115,7 @@ export default function Shell() {
           {DEPTS.map(dp => {
             const ag = s.agents.find(a => a.id === dp.agent)!
             return (
-              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : countFor(dp.agent)} hot={urgentFor(dp.agent)}
+              <RailLink key={dp.to} to={dp.to} label={dp.label} count={departmentNeeds(s, dp.agent)} hot={urgentFor(dp.agent)}
                 icon={<Mark agent={dp.agent} state={ag.status === 'on' ? 'on' : 'paused'} />} />
             )
           })}
@@ -121,7 +123,7 @@ export default function Shell() {
 
         <div className="rail-group">
           <span className="label hide-collapsed">Team</span>
-          <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" />
+          <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" count={agentsNeedsCount(s)} />
           <RailLink to="/activity" icon={<Activity size={16} />} label="Activity" />
         </div>
 
@@ -146,9 +148,10 @@ export default function Shell() {
           <Btn variant="ghost" icon size="sm" className="mobile-only" aria-label="Open menu" onClick={() => setMobileOpen(true)}><MenuIcon size={16} /></Btn>
           <div className="crumbs">
             <b>{CRUMB[seg] ?? seg}</b>
-            {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}-/.test(x) || seg === 'agents').map(x => {
+            {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}[-:]/.test(x) || seg === 'agents' || (seg === 'inbox' && inboxConv(x))).map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
+                : seg === 'inbox' && inboxConv(x) ? inboxConv(x)!.author
                 : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
                 : seg === 'strategy' && s.strategy.campaigns.some(c => c.id === x) ? s.strategy.campaigns.find(c => c.id === x)!.name
                 : seg === 'insights' && sub[0] === 'reports' && x !== 'reports' ? (reportList(s).find(r => r.id === x)?.title ?? x)

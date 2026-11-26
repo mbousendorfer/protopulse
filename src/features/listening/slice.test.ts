@@ -3,7 +3,7 @@ import { initialState, type State } from '../../app/state'
 import { reducer } from '../../app/reducer'
 import { intentDef } from '../../app/agents-registry'
 import { MIN } from '../../app/time'
-import { allMentions, moodCount, recent, visibleMentions, WEEK } from './model'
+import { allMentions, listeningNeeds, listeningNeedsCount, moodCount, recent, visibleMentions, WEEK } from './model'
 
 const s0 = () => initialState()
 const fire = (s: State) => reducer(s, { type: 'core/fire', eventId: 'ev-spike' })
@@ -361,5 +361,31 @@ describe('Echo · competitor answer', () => {
     expect(ask(s)).toMatch(/Aero 30/)
     s = reducer(s, { type: 'listening/move', event: 'e-peak-price', index: 3 })
     expect(ask(s)).toMatch(/Nothing open from Peakline/)
+  })
+})
+
+describe('Echo · Needs you', () => {
+  it('counts what waits for Sam; a move or a dismissal takes the event out, and Undo brings a dismissal back', () => {
+    let s = s0()
+    const n = listeningNeedsCount(s)
+    const [e] = listeningNeeds(s).events
+    s = reducer(s, { type: 'listening/move', event: e.id, index: 0 })
+    expect(listeningNeedsCount(s)).toBe(n - 1)
+    expect(s.notice?.scope).toBe('listening')
+    const [f] = listeningNeeds(s).events
+    s = reducer(s, { type: 'listening/dismiss', event: f.id })
+    expect(listeningNeeds(s).events.some(x => x.id === f.id)).toBe(false)
+    s = reducer(s, { type: 'listening/reopen', kind: 'events', id: f.id })
+    expect(listeningNeedsCount(s)).toBe(n - 1)
+  })
+
+  it('handing all high-fit trends to Atlas clears the group in one go', () => {
+    let s = s0()
+    const ids = listeningNeeds(s).trends.map(t => t.id)
+    const cards = (x: State) => x.handoffs.filter(h => h.topic === 'Trend post').length
+    const before = cards(s)
+    s = reducer(s, { type: 'listening/trends', ids })
+    expect(listeningNeeds(s).trends).toHaveLength(0)
+    expect(cards(s)).toBe(before + ids.length)
   })
 })

@@ -143,3 +143,13 @@ test('versions: Juno builds one per network with its ratio and captions above it
   // Without versions, every network gets the clip as framed.
   expect(versionOf(c, 'linkedin').aspect).toBe(c.aspect)
 })
+
+test('hook trials: Juno opposes a number to no number, and counts the wins of numbered hooks', async () => {
+  const { trialPair, numberWins, trialHold } = await import('./model')
+  const c = { hook: 'What breaks first on a backpack? Not what you think.', hooks: ['What breaks first on a backpack? Not what you think.', 'Zips, not fabric.', '1,200 repairs taught us this.'] } as never
+  expect(trialPair(c)).toEqual(['What breaks first on a backpack? Not what you think.', '1,200 repairs taught us this.'])
+  expect(trialPair({ hook: 'A', hooks: ['A'] } as never)).toBeUndefined()
+  expect(trialHold('42 stitches. 20 minutes. €0.')).toBeGreaterThan(trialHold('This repair cost the owner nothing.'))
+  const r = (a: string, b: string) => ({ title: 't', hooks: [a, b] as [string, string], held: [trialHold(a), trialHold(b)] as [number, number], at: 0 })
+  expect(numberWins([r('3 days of rain.', 'The forecast said sun.'), r('Sweat is water too.', 'It didn’t stop.')])).toHaveLength(1)
+})

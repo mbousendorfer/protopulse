@@ -1,6 +1,7 @@
 import type { ScriptEvent } from '../../data/script'
 import { actionOf, agentOf, now, pushHandoff } from '../../app/core'
-import { botWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
+import { discover } from './products'
+import { botWave, complimentWave, escalate, escalationOf, handledAlone, land, proposeRule, waitingList, warnLate } from './slice'
 
 /**
  * Same rules as the core's `fire`, plus two: the Playbook's escalations are checked first, and work done alone is a real
@@ -18,8 +19,10 @@ const arrive = (ev: ScriptEvent): ScriptEvent => {
       if (agentOf(s, 'nova').status !== 'on' && !manual) return s
       // The Playbook's escalations come first, whatever the action's level.
       if (hit) return escalate(s, handoff, hit, ev.id)
-      if (auto && actionOf(s, 'nova', handoff.action)?.autonomy === 'act') return handledAlone(s, handoff, auto)
-      const next = pushHandoff(s, { ...structuredClone(handoff), ref: handoff.ref ?? ev.id })
+      // "Which jacket is that?": the product, the link and the campaign offer are read now, at arrival.
+      const h = handoff.action === 'nova-links' ? discover(s, handoff) : handoff
+      if (auto && actionOf(s, 'nova', h.action)?.autonomy === 'act') return handledAlone(s, h, auto)
+      const next = pushHandoff(s, { ...structuredClone(h), ref: h.ref ?? ev.id })
       return land(next, next.handoffs[0].id)
     },
   }
@@ -50,6 +53,26 @@ export const SCRIPT: ScriptEvent[] = ([
     auto: { text: 'Answered @lucie.alpine and sent a new hip belt', reason: 'Complaint, set to Act', link: '/inbox' },
   },
   {
+    // A legal threat in a public comment: same rule as in a DM, and nothing about refunds said in public.
+    id: 'ev-legal', order: 38, label: 'Nova · legal threat in a public comment (escalation)',
+    handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Complaint', action: 'nova-complaint',
+      title: 'Late order: “my lawyer will hear about it”', context: 'Facebook comment from Thomas Girard under “Rain test on the GR5”.',
+      why: 'Complaint. Complaints are set to Draft.', confidence: 81, link: '/inbox',
+      conv: { type: 'comment', sentiment: 'negative', contact: 'k-thomas', post: 'Facebook · “Rain test on the GR5”' },
+      preview: { type: 'reply', network: 'facebook', author: 'Thomas Girard', text: 'Ordered a Summit Bottle on 9 Nov, still nothing and support doesn’t answer. If it isn’t here by Friday, my lawyer will hear about it.',
+        draft: ['Thomas, sorry for the wait. We’ve refunded your shipping and your bottle ships today.'], attachments: ['Refund: shipping €6.90 · within your €15 limit'] } },
+    auto: { text: 'Answered Thomas Girard about his late Summit Bottle', reason: 'Complaint, set to Act', link: '/inbox' },
+  },
+  {
+    id: 'ev-which', order: 92, label: 'Nova · “which jacket is that?” under a reel (product link in DM)',
+    handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Buying intent', action: 'nova-links',
+      title: '@julie.trails asks which jacket is in the reel', context: 'Instagram comment under “Storm Jacket vs. a garden hose”.',
+      why: 'Asks which product it is. Product links in DM are set to Draft.', confidence: 90, link: '/inbox',
+      conv: { type: 'comment', sentiment: 'positive', intent: 0.82, post: 'Reel · “Storm Jacket vs. a garden hose”' },
+      preview: { type: 'reply', network: 'instagram', author: '@julie.trails', text: 'which jacket is that?? need one for the GR20', draft: [''] } },
+    auto: { text: 'Answered @julie.trails and sent the Storm Jacket link in DM', reason: 'Product links in DM, set to Act', link: '/inbox' },
+  },
+  {
     id: 'ev-refund-ask', order: 85, label: 'Nova · money-back question (Inbox rule)',
     handoff: { agent: 'nova', kind: 'approval', urgency: 'today', topic: 'Product question', action: 'nova-faq',
       title: 'Can I get my money back on a jacket that’s too big?', context: 'Facebook DM from Hélène Dubois.',
@@ -69,6 +92,10 @@ export const SCRIPT: ScriptEvent[] = ([
     // The conversations closest to (or past) their response target, raised now instead of 15 minutes before.
     id: 'ev-sla', order: 195, agent: 'nova', tag: 'sla', label: 'Nova · response targets about to be missed',
     run: s => warnLate(s, now(s), waitingList(s, now(s)).filter(x => !s.inbox.warned?.includes(x.c.id)).sort((a, b) => a.w.due - b.w.due).slice(0, 3)),
+  },
+  {
+    id: 'ev-compliments', order: 207, agent: 'nova', tag: 'rhythm', label: 'Nova · 8 compliments under a reel (like or answer)',
+    run: s => complimentWave(s),
   },
   {
     id: 'ev-bots', order: 205, agent: 'nova', tag: 'spam', label: 'Nova · bot comments under a reel (spam)',

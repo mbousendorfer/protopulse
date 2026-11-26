@@ -3,10 +3,10 @@ import type { State } from '../../app/state'
 import { defineIntent, type AgentModule } from '../../app/agent-module'
 import { Mark } from '../../ui'
 import { ClipPreview } from './parts'
-import { onResolveVideo, reduceVideo, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent } from './slice'
+import { backToTrialHook, onResolveVideo, reduceVideo, removeRecuts, stopTrials, tickVideo, undoDeskClips, undoVideoWork, unsendClips, validUrl, videoDue, videoEvent, videoNeeds } from './slice'
 import type { Lang } from './model'
 import { SCRIPT } from './script'
-import { clipBest, clipFind, clipVersion, clipWhy } from './intents'
+import { clipBest, clipFind, clipRecut, clipTrial, clipVersion, clipWhy } from './intents'
 
 declare module '../../app/types' {
   interface PreviewTypes { clip: { clip: string } }
@@ -17,6 +17,12 @@ declare module '../../app/types' {
     captionFixes?: Record<string, number[]>
     /** Language versions Juno made alone (clip id → languages): Undo takes them off. */
     dubs?: Record<string, Lang[]>
+    /** Hook trials Juno started alone: Undo stops them. */
+    trials?: string[]
+    /** Clips whose winning hook Juno put on alone: Undo puts their first hook back. */
+    trialHooks?: string[]
+    /** Recuts Juno made alone: Undo takes them (and their posts) out. */
+    recuts?: string[]
   }
   interface Handoff {
     /** A captions card: the fixes approving it makes (clip id → word indexes). */
@@ -60,18 +66,23 @@ const clip = defineIntent({
 const juno: AgentModule = {
   id: 'juno',
   script: SCRIPT,
+  // The rail badge and Agents › Team count the Clips decisions block.
+  needs: s => videoNeeds(s).count,
   onResolve: onResolveVideo,
   // Undoing a Desk decision on a clips card, or clips Juno sent alone, takes back what was sent.
   onUndo: (s, l) => {
     let next = s
     for (const h of l.restore ?? []) next = undoDeskClips(next, h)
     next = undoVideoWork(next, l.captionFixes, l.dubs)
+    if (l.trials) next = stopTrials(next, l.trials)
+    if (l.trialHooks) next = backToTrialHook(next, l.trialHooks)
+    if (l.recuts) next = removeRecuts(next, l.recuts)
     return l.clips ? unsendClips(next, l.clips) : next
   },
   // Videos being processed move on; snoozed clips come back.
   due: videoDue,
   tick: tickVideo,
-  intents: [clipWhy, clipBest, clipVersion, clipFind, clip],
+  intents: [clipWhy, clipBest, clipVersion, clipFind, clipTrial, clipRecut, clip],
   previews: { clip: p => <ClipPreview id={p.clip} /> },
   testerStats: ev => [
     ['Clips opened', ev.filter(e => e.kind === 'video/open').length],
@@ -81,6 +92,8 @@ const juno: AgentModule = {
     ['Clips sent modified', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'modified').length],
     ['Clips dismissed', ev.filter(e => e.kind === 'video/decision' && e.detail?.outcome === 'dismissed').length],
     ['Dubs approved', ev.filter(e => e.kind === 'video/dub-approved').length],
+    ['Hook trials started', ev.filter(e => e.kind === 'video/trial').length],
+    ['Recuts asked', ev.filter(e => e.kind === 'video/recut').length],
   ],
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
   // New upload: processing, then clips with a held one (Hugo, no release), captions fixed, dubs to review by level.
@@ -88,6 +101,8 @@ const juno: AgentModule = {
     { event: 'ev-video-gr20', to: '/video', label: 'New upload: watch it being cut, one clip held for a missing release' },
     { event: 'ev-video-captions', to: '/video' },
     { event: 'ev-video-more', to: '/video?source=repair', label: '4 more moments: “Send all” hits the 5-a-week quota' },
+    { event: 'ev-video-recut', to: '/video', label: 'A published clip did worse than usual: Juno recuts it, product first' },
+    { event: 'ev-video-trial', to: '/', label: 'Hook trial results: the winner, then a Playbook rule after 3 wins' },
   ],
 }
 export default juno

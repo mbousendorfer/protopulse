@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, CalendarCheck, CalendarClock, Check, ChevronDown, Copy, History, ImageUp, Link2, ListOrdered, Megaphone, Pencil, Play, Plus, Recycle, RotateCw, Tag, Target, Trash2, TriangleAlert, UserRound, X } from 'lucide-react'
+import { BookOpen, CalendarCheck, CalendarClock, Check, ChevronDown, Copy, Hand, History, ImageUp, Link2, ListOrdered, Megaphone, Pencil, Play, Plus, Recycle, RotateCw, Tag, Target, Trash2, TriangleAlert, UserRound, X } from 'lucide-react'
 import type { AgentId, Decision, Flagged, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, hhmm } from '../../app/time'
@@ -17,6 +17,7 @@ import { FORMAT_LABEL } from './formats'
 import { perfOf } from './perf'
 import { STATUS_LABEL, knownLabels } from './labels'
 import { actorOf, cardOfPost } from './approvals'
+import { WINDOW_TOPIC } from './window'
 import { captionOf, commentOf, query, shown as shownLink } from './links'
 import { accountLabel, accountOf } from './accounts'
 import { versionOf } from '../video/model'
@@ -208,10 +209,25 @@ export function PostPreview() {
               <Btn onClick={() => retry('nolink')}>{RETRY_OPTIONS[1].label}</Btn>
               <Btn variant="ghost" onClick={() => retry('skip')}>{RETRY_OPTIONS[2].label}</Btn>
             </>
+          } else if (p.status === 'paused' && s.publishing.hold) {
+            head = 'Paused by you'
+            body = <p className="pd-say"><span>You paused all publishing. Nothing goes out until you resume.</span></p>
+            acts = <Btn variant="primary" onClick={() => d({ type: 'publishing/resumeAll' })}><Play size={14} />Resume publishing</Btn>
           } else if (p.status === 'paused') {
             head = 'Paused by Atlas'
             body = <p className="pd-say"><Mark agent="atlas" /><span>{p.note} It goes out on its own once the alert is over.</span></p>
             acts = <Btn variant="primary" onClick={() => d({ type: 'publishing/resume', ids: [p.id] })}><Play size={14} />Resume this post</Btn>
+          } else if (card?.topic === WINDOW_TOPIC && card.options) {
+            // The send window: Atlas scheduled it alone, Sam can still stop it. The reason is the Desk card's option.
+            head = card.title
+            body = <p className="pd-say"><Mark agent="atlas" /><span>{card.why}</span></p>
+            acts = <>
+              <Menu align="start" trigger={<Btn variant="primary"><Hand size={14} />Stop it<ChevronDown size={14} /></Btn>} items={[
+                { heading: 'What’s wrong with it?' },
+                ...card.options.slice(1).map((o, i) => ({ label: o.label.replace('Stop: ', '').replace(/^./, c => c.toUpperCase()), onSelect: () => resolve({ kind: 'option', index: i + 1, option: o.label }) })),
+              ]} />
+              <Btn variant="ghost" onClick={() => resolve({ kind: 'option', index: 0, option: card.options![0].label })}>Let it go out</Btn>
+            </>
           } else if (p.status === 'unapproved' || card?.lane === 'claire') {
             const asked = [...(p.comments ?? [])].reverse().find(c => c.from !== 'claire')
             head = 'Waiting on Claire'
@@ -306,7 +322,7 @@ export function PostPreview() {
           const commentAt = new Set((p.comments ?? []).map(c => c.at))
           // named: "Atlas asked…" (an action, lower case); said: "Claire: …" (their own words).
           const lines: { at: number; by?: By; text: string; named?: boolean; said?: boolean }[] = [
-            ...(card?.at && card.lane !== 'claire' ? [{ at: card.at, by: card.agent, named: true, text: card.kind === 'approval' ? 'asked for your approval on the Desk' : 'asked you on the Desk' }] : []),
+            ...(card?.at && card.lane !== 'claire' && card.topic !== WINDOW_TOPIC ? [{ at: card.at, by: card.agent, named: true, text: card.kind === 'approval' ? 'asked for your approval on the Desk' : 'asked you on the Desk' }] : []),
             ...(card?.thread ?? []).filter(m => !(m.from === 'agent' && m.text === card!.why)).map(m => ({ at: m.at, by: (m.from === 'agent' ? card!.agent : m.from) as By, named: m.from === 'you', said: m.from !== 'you', text: m.from === 'you' ? `asked “${m.text}”` : m.text })),
             ...(p.history ?? []).filter(h => !commentAt.has(h.at)).map(h => ({ at: h.at, by: actorOf(h.text), text: h.text })),
             ...(p.comments ?? []).map(c => ({ at: c.at, by: c.from as By, said: true, text: c.text })),

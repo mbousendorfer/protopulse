@@ -104,3 +104,19 @@
 .roi-sold .hbars { gap: var(--s3); }
 .roi-sold .hbar { grid-template-columns: minmax(0, 1fr) 64px; row-gap: 4px; }
 .roi-sold .hbar > span:first-child { grid-column: 1 / -1; white-space: normal; overflow: visible; color: var(--ink); }
+
+/* Landing: what Iris waits on Sam for, first (PROMPT §3.9). The block and rows are the `.dq-*` pattern defined with
+   Video (video.css), to migrate to the agents lot's DecisionGroup primitive once it lands. */
+.dq-row.in-dq-anomaly, .dq-row.in-dq-card { grid-template-columns: 32px minmax(0, 1fr) auto; align-items: start; cursor: default; }
+.dq-row.in-dq-anomaly .dq-check, .dq-row.in-dq-card .dq-check { margin-top: 2px; }
+.dq-row.in-dq-anomaly .dq-hook .delta { margin-left: 2px; }
+.dq-line.in-dq-cause { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; color: var(--ink); }
+.in-dq-decide { margin-top: var(--s2); }
+.in-dq-decide .btn { max-width: 100%; white-space: normal; text-align: left; height: auto; min-height: 30px; padding-block: 4px; }
+.in-week { margin-bottom: var(--s2); }
+.in-week .section-title { margin: 0; }
+@media (max-width: 640px) {
+  .dq-row.in-dq-anomaly, .dq-row.in-dq-card { grid-template-columns: 32px minmax(0, 1fr); }
+  .dq-row.in-dq-anomaly .dq-acts, .dq-row.in-dq-card .dq-acts { grid-column: 2; }
+  .dq-row .in-dq-spark { display: none; }
+}
