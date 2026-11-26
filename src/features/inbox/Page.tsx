@@ -711,7 +711,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 </ul>
               )}
               {savedFrom && <div className="row tight"><span className="faint t-xs">Saved reply:</span><span className="chip">{savedFrom.name} · adapted by Nova</span></div>}
-              {!!c.rules?.length && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
+              {!!c.rules?.length && c.status !== 'escalated' && <div className="row tight"><span className="faint t-xs">Playbook:</span>{c.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>}
               <div className="row">
                 {editing ? (
                   <>
