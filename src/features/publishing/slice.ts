@@ -101,7 +101,8 @@ export function slotComment(network: Network, at: number) {
   const hour = d.getHours()
   const best = BEST_SLOT[network]
   const [bh] = best.time.split(':').map(Number)
-  if (Math.abs(hour - bh) <= 1) return `Good slot. ${best.reason}`
+  // The reason names the best day: only quote it as is on that day, or it reads as if Wednesday were a Friday.
+  if (Math.abs(hour - bh) <= 1) return (d.getDay() + 6) % 7 === best.day ? `Good slot. ${best.reason}` : `Good slot: the right time of day. ${best.dayName}s at this hour do best, ${best.reason.replace(/ on \w+s,/, ',')}`
   const day = d.toLocaleDateString('en-GB', { weekday: 'long' })
   return `${day} ${hhmm(at)} works, but ${best.time} would likely do better. ${best.reason}`
 }
