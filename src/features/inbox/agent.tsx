@@ -178,6 +178,7 @@ const nova: AgentModule = {
   triggers: [
     { event: 'ev-sla', to: '/', label: 'Nova · warning before a response target is missed (Desk)' },
     { event: 'ev-injury', to: '/inbox', label: 'Nova · Playbook escalation, rule quoted (Your call)' },
+    { event: 'ev-legal', to: '/inbox', label: 'Nova · legal threat in public: “we’ve sent you a DM”, the rest in private' },
     { event: 'ev-refund-ask', to: '/inbox?label=Refund', label: 'Nova · Inbox rule labels a new message Refund' },
     { event: 'ev-teach-rule', to: '/', label: 'Nova · proposes a rule learned from your labels (Desk)' },
     { event: 'ev-bots', to: '/inbox?view=hidden', label: 'Nova · reports bot comments as spam (Hidden)' },

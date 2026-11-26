@@ -61,3 +61,15 @@
 - 25/11 · Demande d'Atlas (Fernway Repair) · `account` sur la conversation, seed et filtre Profile · une vue par profil · le filtre suffit et se sauvegarde en vue.
 - 25/11 · Clôture · PROMPT.md §4 (Nova), §6.2 et §9 réécrits ; rapport `docs/agent-depth/nova.html` avec captures avant (73a7ba2) / après.
 - 25/11 · Triggers ⇧D (« Hard to see ») · 6 déclencheurs : SLA et règle apprise → Desk, escalade → Inbox, règle Refund → `?label=Refund`, bots → Hidden, allemand → Handled by Nova · garder /activity pour la règle · la page où l'effet se voit vaut mieux que le journal.
+
+## Vague 2
+- 26/11 · pitch N2 Product discovery · **Go** · — · tel que pitché (produit + candidats, réponse publique + DM, lien suivi, offre de la campagne live de Sage, clics chez Iris).
+- 26/11 · pitch N1 Escalade complète · **Go** · — · tel que pitché (attente publique « We've sent you a DM » + DM, phrase surlignée, profil du fan, mêmes règles partout).
+- 26/11 · pitch N5 Rythme humain · **Go** · — · tel que pitché, cran Act par défaut (like public seulement, visible dans Handled et au journal, Undo).
+- 26/11 · suite des pitchs · construire N2, N1, N5 d'abord · pitcher les six autres maintenant · réponse de l'humain.
+- 26/11 · N1 · nouvelle action `nova-holding` (« Send holding replies on escalations », Draft par défaut) qui porte la carte d'escalade ; `nova-sensitive` reste verrouillée pour les décisions · garder la carte sous `nova-sensitive` · le pitch dit qu'en Act Nova envoie l'attente seule : il fallait une action réglable.
+- 26/11 · N1 · le DM vit dans la conversation `<id>-dm` (même mécanisme que « Reply in private ») · un message `dm` dans la même conversation · l'Inbox montre déjà les DM comme des conversations ; le testeur répond là où le client répondra.
+- 26/11 · N1 · avis : pas de DM possible (Google, Trustpilot), l'attente reste publique et sobre ; mention et annonce comptent comme publiques.
+- 26/11 · N1 · Act : l'attente part à l'arrivée, la conversation publique passe dans Handled, le DM reste Your call (ou Claire) avec une carte décision « I'll answer in the DM / Forward to Claire » ; Undo barre les deux messages et remet la paire en brouillon · approuver la carte en Act · l'attente doit partir vite, la réponse reste humaine.
+- 26/11 · N1 · Suggest traité comme Draft pour l'attente (la carte d'escalade existe toujours) · une suggestion sans brouillon · une escalade sans réponse d'attente proposée serait un recul.
+- 26/11 · N1 · le DM n'apparaît pas encore sur la carte Desk : demande `requests/trust-from-nova-reply-extra.md` ; en attendant le « why » le dit et l'Inbox montre les deux moitiés.
