@@ -6,7 +6,7 @@ import {
 } from 'lucide-react'
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
-import { inboxNeedsCount } from '../features/inbox/slice'
+import { agentsNeedsCount, departmentNeeds } from '../features/agents/needs'
 import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
@@ -55,9 +55,8 @@ export default function Shell() {
 
   // Counts everywhere mean the same thing: cards in Needs you. Worth a look and Good news never badge.
   const open = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need')
-  // The Inbox badge predicts the Inbox's own Needs you view (conversations), not Nova's Desk cards.
-  const inboxNeeds = inboxNeedsCount(s)
-  const countFor = (agent: AgentId) => open.filter(h => h.agent === agent).length
+  // A department's badge is `departmentNeeds`: Agents › Team shows the same number per agent. The Inbox's counts its
+  // own Needs you view (conversations), not Nova's Desk cards.
   const urgentFor = (agent: AgentId) => open.some(h => h.agent === agent && h.urgency === 'urgent')
 
   // Track navigation for the tester log, close mobile rail.
@@ -113,7 +112,7 @@ export default function Shell() {
           {DEPTS.map(dp => {
             const ag = s.agents.find(a => a.id === dp.agent)!
             return (
-              <RailLink key={dp.to} to={dp.to} label={dp.label} count={dp.agent === 'nova' ? inboxNeeds : countFor(dp.agent)} hot={urgentFor(dp.agent)}
+              <RailLink key={dp.to} to={dp.to} label={dp.label} count={departmentNeeds(s, dp.agent)} hot={urgentFor(dp.agent)}
                 icon={<Mark agent={dp.agent} state={ag.status === 'on' ? 'on' : 'paused'} />} />
             )
           })}
@@ -121,7 +120,7 @@ export default function Shell() {
 
         <div className="rail-group">
           <span className="label hide-collapsed">Team</span>
-          <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" />
+          <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" count={agentsNeedsCount(s)} />
           <RailLink to="/activity" icon={<Activity size={16} />} label="Activity" />
         </div>
 
