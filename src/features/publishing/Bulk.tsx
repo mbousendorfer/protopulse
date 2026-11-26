@@ -304,11 +304,12 @@ export function PostPreview() {
 
           // Activity: the Desk card, its thread, the post's history and comments, oldest first.
           const commentAt = new Set((p.comments ?? []).map(c => c.at))
-          const lines: { at: number; by?: By; text: string; named?: boolean }[] = [
-            ...(card?.at && card.lane !== 'claire' ? [{ at: card.at, by: card.agent, named: true, text: card.kind === 'approval' ? 'Asked for your approval on the Desk' : 'Asked you on the Desk' }] : []),
-            ...(card?.thread ?? []).filter(m => !(m.from === 'agent' && m.text === card!.why)).map(m => ({ at: m.at, by: (m.from === 'agent' ? card!.agent : m.from) as By, named: true, text: m.from === 'you' ? `Asked “${m.text}”` : m.text })),
+          // named: "Atlas asked…" (an action, lower case); said: "Claire: …" (their own words).
+          const lines: { at: number; by?: By; text: string; named?: boolean; said?: boolean }[] = [
+            ...(card?.at && card.lane !== 'claire' ? [{ at: card.at, by: card.agent, named: true, text: card.kind === 'approval' ? 'asked for your approval on the Desk' : 'asked you on the Desk' }] : []),
+            ...(card?.thread ?? []).filter(m => !(m.from === 'agent' && m.text === card!.why)).map(m => ({ at: m.at, by: (m.from === 'agent' ? card!.agent : m.from) as By, named: m.from === 'you', said: m.from !== 'you', text: m.from === 'you' ? `asked “${m.text}”` : m.text })),
             ...(p.history ?? []).filter(h => !commentAt.has(h.at)).map(h => ({ at: h.at, by: actorOf(h.text), text: h.text })),
-            ...(p.comments ?? []).map(c => ({ at: c.at, by: c.from as By, named: true, text: c.text })),
+            ...(p.comments ?? []).map(c => ({ at: c.at, by: c.from as By, said: true, text: c.text })),
             ...(p.status === 'published' ? [{ at: p.at, text: `Published on ${net}` }] : []),
           ].sort((a, b) => a.at - b.at)
           const flags = pending?.text.filter((x): x is Exclude<Flagged, string> => typeof x !== 'string') ?? []
@@ -354,7 +355,7 @@ export function PostPreview() {
                     {lines.length ? (
                       <ol className="pd-activity">
                         {lines.map((l, i) => (
-                          <li key={i}><Who by={l.by} /><span>{l.named && l.by && <b>{NAME(l.by)} </b>}{l.text}</span><time className="mono">{stamp(l.at)}</time></li>
+                          <li key={i}><Who by={l.by} /><span>{l.by && (l.named || l.said) && <b>{NAME(l.by)}{l.said ? ':' : ''} </b>}{l.text}</span><time className="mono">{stamp(l.at)}</time></li>
                         ))}
                       </ol>
                     ) : <p className="muted">No activity recorded on this post yet.</p>}
