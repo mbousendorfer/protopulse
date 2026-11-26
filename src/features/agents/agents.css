@@ -1,14 +1,42 @@
-.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--s4); }
-.agent-card { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
-.agent-card h2 { font-size: var(--t-lg); font-weight: 600; }
-.agent-link { color: var(--ink); }
+/* Team: one line per agent, columns aligned so trust and autonomy compare at a glance. */
+.team-card { overflow: hidden; container-type: inline-size; }
+.team-cols, .team-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 1.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr) 32px; column-gap: var(--s4); align-items: center; padding: 0 var(--s4); }
+.team-cols { padding-top: var(--s2); padding-bottom: var(--s2); font-size: var(--t-sm); color: var(--ink-2); border-bottom: 1px solid var(--line); }
+.team-row { padding-top: 12px; padding-bottom: 12px; }
+.team-list > .team-row + .team-row { border-top: 1px solid var(--line); }
+.team-row:hover { background: var(--row-hover); }
+.team-who { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
+.team-who > div, .team-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--ink); }
+.agent-link { color: var(--ink); font-weight: 600; }
 .agent-link:hover { color: var(--action-ink); }
-.now-line { font-size: var(--t-md); color: var(--ink-2); }
-.agent-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s2); padding: var(--s3) 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin: 0; }
-.agent-stats div { display: flex; flex-direction: column-reverse; justify-content: flex-end; }
-.autonomy-line { margin-bottom: 4px; min-height: 22px; }
-.agent-stats dt { font-size: var(--t-xs); color: var(--ink-3); }
-.agent-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; }
+.team-sub { font-size: var(--t-sm); color: var(--ink-2); }
+.team-k { display: none; }
+.team-paused { display: inline-flex; align-items: center; gap: 6px; color: var(--caution-strong); font-weight: 500; }
+@container (max-width: 820px) {
+  .team-cols { display: none; }
+  .team-row { grid-template-columns: repeat(3, minmax(0, 1fr)) 32px; row-gap: var(--s3); align-items: start; }
+  .team-who { grid-column: 1 / 4; }
+  .team-row > button { grid-column: 4; grid-row: 1; }
+  .team-k { display: block; font-size: var(--t-sm); color: var(--ink-2); }
+}
+@container (max-width: 520px) {
+  .team-row { grid-template-columns: minmax(0, 1fr) 32px; }
+  .team-who { grid-column: 1; }
+  .team-row > button { grid-column: 2; }
+  .team-cell { grid-column: 1 / -1; }
+  /* Phone: what, how free, how trusted. Shift and weekly volume stay on the profile. */
+  .team-cell:nth-child(2) .team-sub, .team-cell:nth-child(3) .team-sub { display: none; }
+}
+
+/* Profile › Overview */
+.ov { display: flex; flex-direction: column; gap: 4px; }
+.ov h2 { font-size: var(--t-md); font-weight: 600; margin-bottom: 4px; }
+.ov-big { font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
+.ov-undos { margin-top: var(--s2); font-size: var(--t-sm); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+.ov-link { align-self: flex-start; margin-top: var(--s2); font-size: var(--t-sm); }
+.dec-proof { margin-top: var(--s2); padding-left: var(--s4); list-style: disc; font-size: var(--t-sm); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+.ov-now { margin-top: 2px; font-size: var(--t-sm); color: var(--ink); }
+@media (max-width: 900px) { .ov-cards { grid-template-columns: minmax(0, 1fr); } }
 .h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }
 
 /* Autonomy: one line per action, grouped by risk. The chosen level takes the agent's colour (--tone). */
@@ -63,5 +91,4 @@
 .record-kpis dd { margin: 0; }
 .record-kpis .stat { flex-direction: column; }
 
-@media (max-width: 820px) { .team-grid { grid-template-columns: minmax(0, 1fr); } .agent-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .struck { text-decoration: line-through; }

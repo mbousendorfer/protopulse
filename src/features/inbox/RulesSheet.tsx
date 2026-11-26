@@ -31,7 +31,7 @@ export function RulesSheet({ open, onOpenChange, labels }: { open: boolean; onOp
           {level === 'act' ? 'Nova applies these as messages arrive. Each one is in the journal with Undo.'
             : level === 'draft' ? 'Nova lines up what these rules would do. You apply them in one go.'
               : 'Nova shows which rule fits on each conversation. You apply them.'}
-          {' '}<Link to="/agents/nova" className="link-btn">Rules are on {AUTONOMY_LABEL[level]}</Link>
+          {' '}<Link to="/agents/nova?tab=autonomy" className="link-btn">Rules are on {AUTONOMY_LABEL[level]}</Link>
         </p>
         {level !== 'act' && waiting > 0 && (
           <div className="ib-rule-wait row">
