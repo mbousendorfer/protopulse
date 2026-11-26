@@ -67,6 +67,8 @@ export type AgentModule = {
   /** Desk renderers for the preview types this agent adds (see PreviewTypes). */
   previews?: { [K in Preview['type']]?: (p: PreviewOf<K>, h: Handoff) => ReactNode }
   batches?: BatchDef[]
+  /** What the department's landing lists as waiting for Sam (PROMPT §3.9). The rail badge shows it; without it, the agent's Needs you cards. */
+  needs?: (s: State) => number
   /** Extra tabs on the agent's profile, between Escalation and Track record. */
   profileTabs?: { id: string; label: string; count?: (s: State) => number; render: () => ReactNode }[]
   /** Lines of the moderator's tester log. */

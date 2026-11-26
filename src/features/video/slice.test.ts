@@ -330,3 +330,106 @@ test('the feed replays “more moments”: Juno never cuts the same moment twice
   s = run(s, { type: 'video/find', source: 'repair', query: 'stitches webbing bin carbon', len: 20, count: 4 })
   expect(s.video.clips.length).toBe(before)
 })
+
+/* ---------- Hook trials ---------- */
+
+const DAY_MS = 24 * 3600_000
+
+test('a hook trial: the clip leaves review for a day, the results raise a Draft card, approving uses the winner and sends it', () => {
+  let s = run(initialState(), { type: 'video/trial', id: 'clip-repair-twenty' })
+  expect(clipOf(s, 'clip-repair-twenty').status).toBe('trial')
+  expect(clipOf(s, 'clip-repair-twenty').trial?.hooks).toEqual(['42 stitches. 20 minutes. €0.', 'This repair cost the owner nothing.'])
+  s = run(later(s, DAY_MS + 1000), { type: 'core/heartbeat' })
+  const c = clipOf(s, 'clip-repair-twenty')
+  expect(c.status).toBe('ready')
+  expect(c.trial?.held?.[0]).toBeGreaterThan(c.trial!.held![1])
+  expect(s.video.trials).toHaveLength(3)
+  const card = s.handoffs.find(h => h.topic === 'Hook trial')!
+  expect(card.title).toMatch(/won the hook trial/)
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(s, 'clip-repair-twenty').status).toBe('sent')
+  expect(clipOf(s, 'clip-repair-twenty').hook).toBe('42 stitches. 20 minutes. €0.')
+})
+
+test('the third win of a hook with a number proposes a Playbook rule once; adding it feeds the score, Undo takes it out', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-trial' })
+  const card = s.handoffs.find(h => h.topic === 'Hook rule')!
+  expect(card.context).toMatch(/won 3 of 3/)
+  const before = rescore(clipOf(s, 'clip-live-zips'), TRANSCRIPT.live).total
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(s.playbook.rules.some(r => r.text === 'Open clip hooks on a number')).toBe(true)
+  // “Zips break, not fabric” opens on a question: the rule says so, and a numbered hook scores higher.
+  const zips = clipOf(s, 'clip-live-zips')
+  expect(rescore(zips, TRANSCRIPT.live).track?.why).toMatch(/Playbook says to open on a number/)
+  expect(rescore({ ...zips, hook: '1,200 repairs taught us this.' }, TRANSCRIPT.live).total).toBe(rescore(zips, TRANSCRIPT.live).total + 3)
+  expect(rescore(zips, TRANSCRIPT.live).total).toBe(before)
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(s.playbook.rules.some(r => r.text === 'Open clip hooks on a number')).toBe(false)
+  // Juno doesn't ask twice.
+  s = run(s, { type: 'core/fire', eventId: 'ev-video-trial' })
+  expect(s.handoffs.filter(h => h.topic === 'Hook rule')).toHaveLength(1)
+})
+
+test('on Act, Juno trials her best new clips alone (Undo stops them) and puts the winner on; on Suggest the result is only logged', () => {
+  let s = level(initialState(), 'juno-trial', 'act')
+  s = done(run(s, { type: 'core/fire', eventId: 'ev-video-gr20' }))
+  const trialled = s.video.clips.filter(c => c.status === 'trial')
+  expect(trialled.length).toBeGreaterThan(0)
+  const line = s.log.find(l => l.trials)!
+  const undone = run(s, { type: 'core/undo', id: line.id })
+  expect(undone.video.clips.filter(c => c.status === 'trial')).toHaveLength(0)
+  s = run(later(s, DAY_MS + 1000), { type: 'core/heartbeat' })
+  const won = clipOf(s, trialled[0].id)
+  expect(won.hook).toBe(won.trial!.hooks[won.trial!.held![1] > won.trial!.held![0] ? 1 : 0])
+  expect(s.handoffs.some(h => h.topic === 'Hook trial')).toBe(false)
+
+  let q = level(initialState(), 'juno-trial', 'suggest')
+  q = run(q, { type: 'core/fire', eventId: 'ev-video-trial' })
+  expect(q.handoffs.some(h => h.topic === 'Hook trial')).toBe(false)
+  expect(q.log[0].text).toMatch(/Pick the hook in the editor|Hook trial on/)
+})
+
+test('only a clip waiting for review, going to Instagram, can be trialled', () => {
+  const s = run(initialState(), { type: 'video/trial', id: 'clip-live-bottle' })
+  expect(clipOf(s, 'clip-live-bottle').status).toBe('trial')
+  // Already sent, TikTok only: no trial.
+  const t = run(initialState(), { type: 'video/trial', id: 'clip-repair-unpick' })
+  expect(clipOf(t, 'clip-repair-unpick').status).toBe('sent')
+})
+
+/* ---------- Recut ---------- */
+
+test('a published clip under half its network’s average: on Draft Juno recuts it, product first, and asks before Atlas posts it', () => {
+  let s = run(initialState(), { type: 'core/fire', eventId: 'ev-video-recut' })
+  const r = clipOf(s, 'clip-live-fabric-recut')
+  expect(r.status).toBe('ready')
+  expect(r.recutOf).toBe('clip-live-fabric')
+  expect(r.broll[0]).toMatchObject({ at: clipOf(s, 'clip-live-fabric').start, dur: 2 })
+  expect(r.hook).toBe('The bag outlives the small parts.')
+  const card = s.handoffs.find(h => h.topic === 'Recut')!
+  expect(card.context).toMatch(/8\.4k views on TikTok/)
+  // Only once.
+  expect(run(s, { type: 'core/fire', eventId: 'ev-video-recut' }).handoffs.filter(h => h.topic === 'Recut')).toHaveLength(1)
+  s = run(s, { type: 'core/resolve', id: card.id, decision: { kind: 'approve' } })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('sent')
+  s = run(s, { type: 'core/undo', id: s.log[0].id })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('ready')
+  // Rejecting the card drops the new cut.
+  const t = run(initialState(), { type: 'core/fire', eventId: 'ev-video-recut' })
+  const no = run(t, { type: 'core/resolve', id: t.handoffs.find(h => h.topic === 'Recut')!.id, decision: { kind: 'reject' } })
+  expect(no.video.clips.some(c => c.id === 'clip-live-fabric-recut')).toBe(false)
+})
+
+test('recut on Act: made and sent alone, Undo takes it out; on Suggest only a journal line, you recut it', () => {
+  let s = run(level(initialState(), 'juno-recut', 'act'), { type: 'core/fire', eventId: 'ev-video-recut' })
+  expect(clipOf(s, 'clip-live-fabric-recut').status).toBe('sent')
+  const line = s.log.find(l => l.recuts)!
+  s = run(s, { type: 'core/undo', id: line.id })
+  expect(s.video.clips.some(c => c.id === 'clip-live-fabric-recut')).toBe(false)
+  expect(s.publishing.posts.some(p => p.media === 'clip:clip-live-fabric-recut')).toBe(false)
+
+  let q = run(level(initialState(), 'juno-recut', 'suggest'), { type: 'core/fire', eventId: 'ev-video-recut' })
+  expect(q.video.clips.some(c => c.recutOf)).toBe(false)
+  q = run(q, { type: 'video/recut', id: 'clip-live-fabric' })
+  expect(clipOf(q, 'clip-live-fabric-recut').status).toBe('ready')
+})

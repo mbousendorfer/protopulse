@@ -138,7 +138,12 @@ Avant d'écrire la moindre ligne d'une nouvelle feature, pitche-la à l'humain a
 reporté d'un pitch à l'autre. Le pitch tient en un écran, dans la question et l'aperçu des options :
 - **Le problème** : ce que le testeur ne peut pas faire aujourd'hui, en une phrase, avec la preuve
   (fichier:ligne ou capture).
-- **Ce que fait Agorapulse** : la fonction équivalente, d'après le skill `agorapulse-product`.
+- **Référence marché** : qui le fait et comment, en une phrase (Agorapulse d'après le skill
+  `agorapulse-product`, ou un outil agentique du catalogue `market-ideas.md`) ; ou « personne ne le
+  fait », avec la raison de le croire.
+- **Notre carte** : en quoi on fait mieux que cette référence (plus sûr, plus explicable, plus relié
+  aux autres agents). Une simple copie de parité n'est pas un pitch : elle doit débloquer un
+  comportement d'agent, et le pitch le dit.
 - **La version agentique** : ce que l'agent fait seul et à quel cran (Suggest / Draft / Act), ce qu'il
   remonte à Sam, comment ça s'annule — les sept questions de la grille, en bref.
 - **Ce que le testeur verra** : où (écran, onglet, carte Desk), et une esquisse ASCII ou une capture
@@ -150,6 +155,10 @@ Options proposées, la recommandée en premier : **Go** (tel que pitché) · **G
 (la version réduite que tu proposes) · **Later** (reste au backlog, `Statut : later`) · **Drop**
 (`Statut : dropped — <raison de l'humain>`). Si l'humain répond par du texte libre, c'est sa
 version qui fait foi. Note sa décision dans le journal.
+
+Avant d'envoyer, vérifie que l'idée n'a pas déjà été refusée (« Déjà refusé » de
+`market-ideas.md` et ton log) : un Drop ne revient jamais ; un Later seulement s'il a changé de
+nature, dit en première ligne. En vague 2, `wave-2.md` ajoute cinq tests obligatoires.
 
 Pendant que tu attends une réponse, ne commence pas la feature. Si le backlog contient encore des
 corrections « À corriger d'abord », fais-les d'abord pour ne pas bloquer, puis pitche.
@@ -202,7 +211,8 @@ Contrats déjà attribués (source unique, les autres lisent) :
 | Chiffres de performance (reach, engagement, perfs de posts et de clips) | Iris | tous (Chat et ⌘K compris) |
 | Mentions, concurrents, tendances | Echo | Atlas, Sage, Iris, Nova |
 | Clips, sources vidéo | Juno | Atlas, Iris |
-| Règles, faits, escalades (Playbook) | partagé via `src/features/playbook/slice.ts` | tous |
+| Règles, faits, escalades (Playbook) | partagé via `src/features/playbook/slice.ts` (Trust en vague 2) | tous |
+| Autonomie, promotions, shadow, test, trust metric (vague 2) | Trust | tous |
 
 ## Journal de décisions
 L'humain tranche les features (pitch) ; tu tranches seul tout le reste, sans t'arrêter. Chaque choix

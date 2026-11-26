@@ -7,9 +7,9 @@ import { PEOPLE, PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/vi
 import { Btn, Filters, Mark, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
-import { LANG_LABEL, captionSlips, lengthSpec, type Clip } from './model'
+import { LANG_LABEL, NETWORK_FIT, captionSlips, lengthSpec, winnerOf, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipLength, clipScore } from './parts'
-import { holdReason, unreleased, vetClips, videoNeeds, WEEKLY_QUOTA } from './slice'
+import { flopOf, holdReason, recutOf, unreleased, vetClips, videoNeeds, WEEKLY_QUOTA } from './slice'
 import Sources, { SourceDetail } from './Sources'
 import BrandKit from './BrandKit'
 import Editor from './Editor'
@@ -78,11 +78,15 @@ function leftToCheck(c: Clip, src: Source) {
  * `check`: the selection box (ready to send only). `note`: the row's own reason (held for length). `acts`: its decisions.
  */
 function ClipRow({ c, src, now, check, note, acts }: { c: Clip; src: Source; now: number; check?: ReactNode; note?: ReactNode; acts: ReactNode }) {
+  const { s } = useStore()
   const nav = useNavigate()
+  // A finished hook trial is the clip's best proof; a published clip that did worse than usual says by how much.
+  const won = c.trial?.held ? winnerOf({ hooks: c.trial.hooks, held: c.trial.held }) : undefined
+  const flop = flopOf(s, c)
   // A clip found on request is titled after its own first line: say that line once, and prove it with something else.
   const echo = c.hook.startsWith(c.title.replace(/…$/, ''))
   const proof = c.evidence.find(e => !e.label.includes(c.hook.slice(0, 24)))
-  const todo = c.status === 'ready' ? leftToCheck(c, src) : []
+  const todo = c.status === 'ready' ? [...leftToCheck(c, src), won !== undefined && c.hook !== c.trial!.hooks[won] ? 'Its hook isn’t the trial winner yet' : ''].filter(Boolean) : []
   return (
     <li className={`dq-row ${now - c.arrivedAt < 120_000 ? 'arrive' : ''}`} onClick={e => { if (!isInteractive(e)) nav(`/video/clips/${c.id}`) }}>
       <span className="dq-check">{check}</span>
@@ -94,10 +98,13 @@ function ClipRow({ c, src, now, check, note, acts }: { c: Clip; src: Source; now
           <span className="row tight nowrap">{c.post.networks.map(n => <Net key={n} n={n} size={14} />)}</span>
           {c.audio.dubs.length > 0 && <span title={c.audio.dubs.map(l => LANG_LABEL[l]).join(', ')}>{c.audio.dubs.map(l => l.toUpperCase()).join(' ')}</span>}
           {c.edited && <span>Edited by you</span>}
-          {proof && !c.stats && <span className="dq-proof"><b className="num">{proof.value}</b> {proof.label}</span>}
+          {won !== undefined
+            ? <span className="dq-proof"><b className="num">{Math.max(...c.trial!.held!)}%</b> still watching at 3 s: “{c.trial!.hooks[won]}” won its hook trial</span>
+            : proof && !c.stats && <span className="dq-proof"><b className="num">{proof.value}</b> {proof.label}</span>}
           <span className="dq-src">From {src.title}</span>
         </p>
         {note}
+        {flop && <p className="dq-todo"><TriangleAlert size={12} aria-hidden />Did worse than usual: {Math.round(flop.share * 100)}% of your {NETWORK_FIT[flop.net] ?? flop.net} average views</p>}
         {todo.length > 0 && <p className="dq-todo"><TriangleAlert size={12} aria-hidden />{todo.join(' · ')}</p>}
       </div>
       <div className="dq-acts">{acts}</div>
@@ -125,7 +132,7 @@ function MakingRow({ src, now }: { src: Source; now: number }) {
   )
 }
 
-type Show = 'all' | 'send' | 'held' | 'videos'
+type Show = 'all' | 'send' | 'held' | 'recut' | 'videos'
 
 function Clips() {
   const { s, d } = useStore()
@@ -142,7 +149,9 @@ function Clips() {
   const ready = by('ready')
   const toSend = ready.filter(c => !holdReason(s, c))
   const held = ready.filter(c => holdReason(s, c))
-  const videos = videoNeeds(s).sources.filter(x => only === 'all' || x.id === only)
+  const needs = videoNeeds(s)
+  const videos = needs.sources.filter(x => only === 'all' || x.id === only)
+  const flops = needs.flops.filter(c => only === 'all' || c.source === only)
   const sendIds = useMemo(() => toSend.map(c => c.id), [toSend.map(c => c.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(sendIds)
   // The weekly quota is per batch: say once, at the group, which clips the group action would keep here.
@@ -157,7 +166,7 @@ function Clips() {
   const withClips = s.video.sources.filter(x => s.video.clips.some(c => c.source === x.id))
   const working = s.video.sources.find(x => x.status === 'processing')
   const from = new Set(ready.map(c => c.source)).size
-  const total = toSend.length + held.length + videos.length
+  const total = toSend.length + held.length + flops.length + videos.length
   const on = (k: Show) => show === 'all' || show === k
   const count = (k: Show, n: number, label: string) => n > 0 && (
     <button type="button" className="dq-count" aria-pressed={show === k} onClick={() => setShow(show === k ? 'all' : k)}>{label}</button>
@@ -175,7 +184,9 @@ function Clips() {
           {count('send', toSend.length, `${toSend.length} ready to send`)}
           {toSend.length > 0 && held.length > 0 && <span aria-hidden>·</span>}
           {count('held', held.length, `${held.length} held`)}
-          {(toSend.length > 0 || held.length > 0) && videos.length > 0 && <span aria-hidden>·</span>}
+          {(toSend.length > 0 || held.length > 0) && flops.length > 0 && <span aria-hidden>·</span>}
+          {count('recut', flops.length, `${flops.length} to recut`)}
+          {(toSend.length > 0 || held.length > 0 || flops.length > 0) && videos.length > 0 && <span aria-hidden>·</span>}
           {count('videos', videos.length, `${plural(videos.length, 'new video')} to start`)}
           <span className="dq-sum-note">{ready.length > 0 && `from ${plural(from, 'video')}. `}{working ? `I’m working on “${working.title}”.` : 'I check your channel every 15 minutes.'}</span>
         </> : <span>Nothing needs you here. {working ? `I’m working on “${working.title}”.` : 'I check your channel every 15 minutes.'}</span>}
@@ -238,6 +249,16 @@ function Clips() {
         </section>
       )}
 
+      {on('recut') && flops.length > 0 && (
+        <section className="dq" aria-labelledby="vq-recut">
+          <header className="dq-head">
+            <h3 id="vq-recut">Did worse than usual</h3><CountBadge n={flops.length} />
+            <span className="dq-hint">Published, under half their network’s average views. Juno can recut them with the product first.</span>
+          </header>
+          {rowsOf(flops, c => <Btn size="sm" onClick={stop(() => d({ type: 'video/recut', id: c.id }))}>Recut, product first</Btn>)}
+        </section>
+      )}
+
       {on('videos') && videos.length > 0 && (
         <section className="dq" aria-labelledby="vq-videos">
           <header className="dq-head">
@@ -269,6 +290,15 @@ function Clips() {
           <ul className="dq-rows">{making.map(x => <MakingRow key={x.id} src={x} now={now} />)}</ul>
         </section>
       )}
+      {by('trial').length > 0 && (
+        <section className="card dq-rest">
+          <div className="card-head"><h2>On trial <span className="faint num">{by('trial').length}</span></h2><span className="faint t-sm">Two hooks on Reels, non-followers first</span></div>
+          {rowsOf(by('trial'), c => <>
+            <span className="t-sm nowrap">On trial on Reels · results {new Date(c.trial!.until).toLocaleDateString('en-GB', { weekday: 'short' })} {hhmm(c.trial!.until)}</span>
+            <Btn size="sm" variant="ghost" onClick={stop(() => d({ type: 'video/trialStop', id: c.id }))}>Stop the trial</Btn>
+          </>)}
+        </section>
+      )}
       {by('snoozed').length > 0 && (
         <section className="card dq-rest">
           <div className="card-head"><h2>Later <span className="faint num">{by('snoozed').length}</span></h2><span className="faint t-sm">Back tomorrow at 08:00</span></div>
@@ -285,10 +315,16 @@ function Clips() {
           })}
         </section>
       )}
-      {by('published').length > 0 && (
+      {by('published').some(c => !flops.includes(c)) && (
         <section className="card dq-rest">
-          <div className="card-head"><h2>Published <span className="faint num">{by('published').length}</span></h2></div>
-          {rowsOf(by('published'), c => c.stats ? <span className="t-sm nowrap">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span> : <Pill>Published</Pill>)}
+          <div className="card-head"><h2>Published <span className="faint num">{by('published').filter(c => !flops.includes(c)).length}</span></h2></div>
+          {rowsOf(by('published').filter(c => !flops.includes(c)), c => {
+            const recut = recutOf(s, c)
+            return <>
+              {c.stats ? <span className="t-sm nowrap">{(c.stats.views / 1000).toFixed(1)}k views · {c.stats.er}% engagement{c.stats.retention ? ` · ${c.stats.retention}% watched` : ''}</span> : <Pill>Published</Pill>}
+              {recut && <Link className="link-btn t-sm nowrap" to={`/video/clips/${recut.id}`}>{recut.status === 'ready' ? 'New cut ready to review' : 'New cut sent to Atlas'}</Link>}
+            </>
+          })}
         </section>
       )}
     </div>

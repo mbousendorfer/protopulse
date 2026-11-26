@@ -1,7 +1,7 @@
 .campaigns { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr)); gap: var(--s4); }
 .campaign-row { padding: var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s2); color: var(--ink); transition: border-color var(--fast) var(--ease); }
 .campaign-row:hover { color: var(--ink); }
-.campaign-row h2 { font-size: var(--t-lg); font-weight: 600; }
+.campaign-row h3 { font-size: var(--t-lg); font-weight: 600; }
 .campaign-meta { display: flex; gap: var(--s3); flex-wrap: wrap; font-size: var(--t-sm); }
 .goal-line { display: grid; grid-template-columns: auto 1fr auto; gap: var(--s3); align-items: center; padding-top: var(--s2); border-top: 1px solid var(--line); color: var(--ink-2); }
 .goal-line b { color: var(--ink); font-weight: 600; }
@@ -114,8 +114,14 @@
 .pillar-edit .warn { color: var(--caution); }
 .sage-check { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); }
 .sage-check p { max-width: 72ch; }
-.moment { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; gap: var(--s4); align-items: center; padding: 12px var(--s4); }
-.moment-body p { margin-top: 2px; }
-@media (max-width: 640px) { .moment { grid-template-columns: minmax(0, 1fr); gap: var(--s2); } }
-.moments-head { flex-wrap: wrap; }
 .cad-incl { display: block; }
+/* Moments Sage has not raised yet, under the decisions: a line each, addable early. */
+.later { display: flex; flex-direction: column; gap: 4px; margin-top: calc(-1 * var(--s3)); }
+.later li { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.later b { font-weight: 600; color: var(--ink); }
+.done-toggle { font-size: var(--t-md); font-weight: 600; }
+/* Pillars beside the cadence they drive; the editor takes the full width. */
+.pillars-grid { align-items: start; }
+.pillars-grid .pillars { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
+.pillars-grid .span-all { grid-column: 1 / -1; }
+.pillars-grid > .card > .row.between { flex-wrap: wrap; row-gap: var(--s2); }

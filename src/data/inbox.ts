@@ -9,7 +9,9 @@ export type Sentiment = 'positive' | 'neutral' | 'negative'
 export type Attachment = { id: string; kind: 'exchange' | 'refund' | 'code'; label: string; limit: string; removed?: boolean }
 export type Msg = { id: string; from: 'them' | 'nova' | 'you'; text: string; at: number; /** A teammate wrote it (from 'you' = the team). */ by?: Assignee; auto?: boolean; approved?: boolean; undoUntil?: number; undone?: boolean
   /** The Desk card this reply settled, and the journal entry Nova wrote when she sent it alone: their Undo deletes it. */
-  card?: string; log?: string }
+  card?: string; log?: string
+  /** Sent in private: the DM half of a reply that answered a public message (see `Conversation.dm`). */
+  dm?: boolean }
 
 export type Conversation = {
   id: string
@@ -50,8 +52,18 @@ export type Conversation = {
   teamDue?: number
   /** Inbox rules that fit but that Nova only proposes (her rules action is on Suggest or Draft). */
   suggested?: string[]
+  /** The private half of Nova's draft on a public message: sent as a DM (in `<id>-dm`) right after the public line. */
+  dm?: string
+  /** The words that made Nova escalate, highlighted in the customer's message. */
+  trigger?: string
+  /** "Which jacket is that?": the product Nova found, the link she sends in DM, the runner-up and the campaign offer. */
+  product?: import('../features/inbox/products').Discovery
+  /** Compliments: what Nova chose (like or answer) and why; `wave` is the journal line or card that did it (its Undo). */
+  choice?: { did: 'like' | 'answer'; why: string; wave: string }
+  /** A reply Nova spreads out: it goes when the clock reaches `at` (see the heartbeat). */
+  queued?: { text: string; at: number }
   /** Set when a Desk card settled this conversation: what it looked like before, so the card's Undo puts it back. */
-  settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
+  settled?: { card: string; created?: boolean; status: ConvStatus; draft?: Flagged[]; dm?: string; note?: string; unread?: boolean; reviewed?: boolean; reviewedBy?: Conversation['reviewedBy'] }
 }
 
 export type Assignee = 'sam' | 'claire' | 'leo' | 'yanis'

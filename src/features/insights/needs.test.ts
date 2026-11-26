@@ -12,10 +12,15 @@ test('the Insights block counts open anomalies once (their Desk cards are the sa
   expect(insightsNeeds(s).count).toBe(0)
 })
 
-test('the Video block counts clips to send or unblock and videos waiting for a go', () => {
+test('the Video block counts clips to send or unblock, flops to recut and videos waiting for a go', () => {
   let s = initialState()
   const ready = s.video.clips.filter(c => c.status === 'ready').length
-  expect(videoNeeds(s).count).toBe(ready)
+  const flops = videoNeeds(s).flops.length
+  expect(videoNeeds(s).count).toBe(ready + flops)
   s = reducer(s, { type: 'video/snooze', ids: [s.video.clips.find(c => c.status === 'ready')!.id] })
-  expect(videoNeeds(s).count).toBe(ready - 1)
+  expect(videoNeeds(s).count).toBe(ready + flops - 1)
+  // A recut leaves the flop out of the block and joins the clips to review: the count stays.
+  for (const c of videoNeeds(s).flops) s = reducer(s, { type: 'video/recut', id: c.id })
+  expect(videoNeeds(s).flops).toHaveLength(0)
+  expect(videoNeeds(s).count).toBe(ready + flops - 1)
 })
