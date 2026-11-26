@@ -14,6 +14,7 @@ import type { BarAnswer } from '../../app/agent-module'
 import { AGENTS, agentName } from '../../data/agents'
 import { EXAMPLES, ownerOf, parse, type Intent } from '../../data/command'
 import { Btn, Kbd, Mark, Menu, Thinking } from '../../ui'
+import { SocialAvatar } from '../../ui/SocialAvatar'
 import './command.css'
 
 type Answer = BarAnswer
@@ -90,7 +91,8 @@ export default function CommandBar({ open, onOpenChange }: { open: boolean; onOp
                   </Command.Group>
                 )}
                 <Command.Group heading="Try asking">
-                  {EXAMPLES.map(x => {
+                  {/* Six examples on an empty bar, so Actions and Go to stay in view; typing searches them all. */}
+                  {(q.trim() ? EXAMPLES : EXAMPLES.slice(0, 6)).map(x => {
                     const p = parse(x)
                     const a = p.forced ?? ownerOf(p.intent.kind)
                     return <Command.Item key={x} value={x} onSelect={() => start(x)} className="cmdk-item"><Mark agent={a} /><span className="ellipsis">{x}</span></Command.Item>
@@ -125,7 +127,7 @@ function AnswerView({ run, agentName: name, onReroute }: { run: Run; agentName: 
   const words = run.answer.text.split(' ')
   return (
     <div className="cmdk-answer" aria-live="polite">
-      <div className="cmdk-q"><span className="avatar sm">SR</span><p>{run.query}</p></div>
+      <div className="cmdk-q"><SocialAvatar name="Sam Rivera" size={24} /><p>{run.query}</p></div>
       <div className="cmdk-route mono">
         <span className="faint">Routed to</span>
         <Menu align="start" trigger={<button className="route-btn"><Mark agent={run.agent} />{name}<ChevronDown size={12} /></button>}

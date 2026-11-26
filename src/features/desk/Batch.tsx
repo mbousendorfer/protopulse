@@ -50,7 +50,9 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
   const [open, setOpen] = useState<string | null>(null)
   // Ready items start selected; the ones to decide wait for a look.
   const sel = useSelection(b.items.map(h => h.id), b.id)
-  useEffect(() => { sel.set(b.ready.map(h => h.id)) }, [b.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Re-seeded whenever none of the shown items is selected (a new batch, or the same batch rebuilt after a reset).
+  const itemsKey = b.items.map(h => h.id).join()
+  useEffect(() => { if (!b.items.some(h => sel.has(h.id))) sel.set(b.ready.map(h => h.id)) }, [b.id, itemsKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const chosen = b.items.filter(h => sel.has(h.id))
   const decide = b.items.filter(h => !b.ready.includes(h))
   const leads = b.items.filter(isLead)
@@ -79,10 +81,10 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
     <article className="detail batch" aria-label={b.title}>
       <div className="handoff-top">
         <div className="slip"><span className="chain">{[...new Set(b.items.map(h => h.agent))].map(a => <Mark key={a} agent={a} />)}</span><span><b>{b.id === 'rules' ? 'Your agents' : agentName(b.agent)}</b> {b.id === 'rules' ? 'suggest rules' : 'prepared a batch'}</span><span className="faint">· {b.items.length} items</span></div>
-        {b.urgency === 'urgent' ? <Pill tone="alert" dot>Has urgent</Pill> : b.urgency === 'today' ? <Pill tone="caution">Today</Pill> : <Pill>This week</Pill>}
+        {b.urgency === 'urgent' ? <Pill tone="alert" dot>Includes urgent</Pill> : b.urgency === 'today' ? <Pill tone="caution">Today</Pill> : <Pill>This week</Pill>}
       </div>
       <h2 className="detail-title">{b.title}</h2>
-      <p className="handoff-ctx">{b.meta}. {b.id === 'nova' ? 'Nova sorted them: buying questions first, then the replies she’s sure of, then the ones to check.' : b.id === 'atlas' ? 'Atlas checked each one against the Playbook and Sage’s cadence.' : 'Add them all, or review them one by one.'}</p>
+      <p className="handoff-ctx">{b.meta}. {b.id === 'nova' ? 'Nova sorted them: buying questions first, then the replies she’s sure of, then the ones to check.' : b.id === 'atlas' ? 'Atlas checked each one against the Playbook and Sage’s cadence.' : 'Add them all, or open one to read it in full.'}</p>
 
       <div className="batch-head row">
         <SelectAll sel={sel} label="Select every item" />
@@ -91,7 +93,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
       {groups.map(g => (
         <section key={g.id} className="batch-group" aria-label={g.label}>
           <h3>{g.label}<span className="n">{g.items.length}</span><span className="note">· {g.note}</span>
-            <Btn size="xs" variant="ghost" onClick={() => setReview(g.id)}>Review one by one</Btn></h3>
+            <Btn size="xs" variant="ghost" onClick={() => setReview(g.id)} aria-label={`Review ${g.label} one by one`}>Review</Btn></h3>
           <ul className="batch-rows">
             {g.items.map(h => {
               const isOpen = open === h.id
@@ -125,7 +127,8 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
         <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {chosen.length > 0 && <Btn variant="primary" onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>}
+        {/* The footer action stays in place with nothing selected, so the batch always says how it ends. */}
+        <Btn variant="primary" disabled={!chosen.length} title={chosen.length ? undefined : 'Select at least one item'} onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>
       </footer>
 
       <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>

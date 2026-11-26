@@ -34,14 +34,15 @@ export default function Moderator({ open, onOpenChange }: { open: boolean; onOpe
     ['Autonomy changes', count('core/autonomy', 'core/preset')], ['Commands typed', count('command')],
   ]
   const more: [string, number | string][] = [
-    ['Sent to Claire', count('core/askClaire')], ['Thread messages', count('core/thread')], ['Pages visited', count('nav')],
+    ['Asked Claire', count('core/askClaire')], ['Thread messages', count('core/thread')], ['Pages visited', count('nav')],
     ['Onboarding screens', new Set(ev.filter(e => e.kind === 'setup/patch' && (e.detail?.patch as { step?: string })?.step).map(e => (e.detail?.patch as { step: string }).step)).size],
     ['Seconds per Focus card', focus.length ? avg : '–'],
     ...registry().flatMap(m => m.testerStats?.(ev) ?? []),
   ]
   const triggers = registry().flatMap(m => (m.triggers ?? []).flatMap(t => {
     const e = SCRIPT.find(x => x.id === t.event)
-    return e ? [{ ...t, agent: m.id, label: t.label ?? short(e.label) }] : []
+    // The mark already names the agent: every label drops its "Nova · " prefix, written or derived.
+    return e ? [{ ...t, agent: m.id, label: short(t.label ?? e.label) }] : []
   }))
   const where = s.phase === 'day1' ? 'Day 1 workspace' : s.onboarded ? 'Day 30 workspace' : `onboarding, at “${s.setup.step}”`
 

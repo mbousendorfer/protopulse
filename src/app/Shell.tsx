@@ -131,9 +131,12 @@ export default function Shell() {
             <SocialAvatar name="Sam Rivera" size={24} />
             <span className="hide-collapsed">Sam Rivera</span>
           </div>
-          <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
-          </button>
+          {/* The phone drawer closes on its own: collapsing it would only shrink it. */}
+          {!mobileOpen && (
+            <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
+            </button>
+          )}
         </div>
       </nav>
       {mobileOpen && <div className="overlay mobile-only" onClick={() => setMobileOpen(false)} />}
@@ -218,7 +221,7 @@ function Notifications() {
             <li key={l.id} className="row nowrap py-2 items-start">
               <Mark agent={l.agent} />
               <div className="grow">
-                <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
+                <div className={l.status === 'undone' ? 'struck' : undefined}>{l.text}</div>
                 <div className="faint mono">{ago(l.at, now)}</div>
               </div>
               {l.undoUntil && l.undoUntil > now && l.status !== 'undone' && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={12} />Undo</Btn>}

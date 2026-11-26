@@ -72,7 +72,7 @@ export default function Focus() {
                 <button aria-current={x.id === h.id} onClick={() => setCurrentId(x.id)}>
                   <TopicIcon agent={x.agent} kind={x.kind} topic={x.topic} size={24} />
                   <span className="ellipsis">{x.title}</span>
-                  {x.urgency === 'urgent' && <span className="dot" style={{ color: 'var(--alert)' }} aria-label="Urgent" />}
+                  {x.urgency === 'urgent' && <span className="dot urgent" aria-label="Urgent" />}
                   <span className="mono faint">{i + 1}</span>
                 </button>
               </li>

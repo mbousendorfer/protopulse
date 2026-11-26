@@ -16,6 +16,8 @@
 .chats-head h2 { font-size: var(--t-lg); font-weight: 600; }
 
 .chat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+/* In a sheet the chat fills the body, so the composer sits at the bottom, not under the last message. */
+.chat.compact { min-height: 100%; }
 .chat-context { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s5) 0; font-size: var(--t-sm); }
 .chat-msgs { flex: 1; display: flex; flex-direction: column; gap: var(--s4); padding: var(--s5); overflow-y: auto; }
 .chat.compact .chat-msgs { padding: var(--s2) 0 var(--s4); }
@@ -23,14 +25,18 @@
 .msg-row { display: flex; gap: 10px; align-items: flex-start; animation: rise var(--base) var(--ease) both; }
 .msg-row.you { justify-content: flex-end; }
 .bubble { max-width: min(640px, 88%); border-radius: var(--r-card); padding: 10px 14px; }
-.bubble.you { background: var(--brand-soft); border-top-right-radius: 6px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+/* Your messages are content, not controls: a neutral fill, never the interactive blue. */
+.bubble.you { background: var(--lift-2); border-top-right-radius: 6px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
 .bubble.you .mono { font-size: var(--t-xs); }
 .bubble.agent { background: var(--sunk); border-top-left-radius: 6px; flex: 1; }
+/* In dark, --sunk is the sheet's own colour: the agent's bubble takes one step up to stay a shape. */
+[data-theme='dark'] .bubble.agent { background: var(--lift); }
 .bubble .who { display: flex; align-items: baseline; gap: var(--s2); margin-bottom: 2px; }
 .bubble .who b { color: var(--agent-ink); font-weight: 600; }
 .bubble .who .mono { font-size: var(--t-xs); }
 
 .ccard { margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: var(--s2); }
+.ccard-bars { width: 200px; }
 .ccard.dim { opacity: 0.55; }
 .ccard .big { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
 .ccard .ctext { font-size: var(--t-md); }
@@ -64,4 +70,13 @@
   .chats-grid { grid-template-columns: minmax(0, 1fr); }
   .chats-list { position: static; max-height: 260px; }
   .chat-msgs, .chat-composer { padding-left: var(--s3); padding-right: var(--s3); }
+}
+
+/* Prompt and suggestion chips keep their pill when the text runs to two lines. */
+.chat-prompts .filter, .chat-mentions .filter { height: auto; min-height: 28px; padding-block: 4px; white-space: normal; text-align: left; }
+/* On a phone the mention row scrolls sideways instead of stacking three rows above the field. */
+@media (max-width: 600px) {
+  .chat-mentions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chat-mentions > * { flex: none; }
+  .chat-mentions .filter { white-space: nowrap; }
 }
