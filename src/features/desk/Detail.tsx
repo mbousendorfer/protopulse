@@ -55,10 +55,11 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
       <ClaireNote h={h} />
       <PreviewBlock h={h} editing={mode === 'edit'} draft={draft} setDraft={setDraft} />
       {h.proposal && <div className="well preview"><div className="faint t-xs">Proposed rule</div><p className="strong">“{h.proposal.text}”</p></div>}
-      <Sources h={h} />
+      {/* Facts that go out in public stay under the draft; other sources are behind « Why? ». */}
+      {(h.preview?.type === 'reply' || h.preview?.type === 'post') && <Sources h={h} />}
       <WhyLine h={h} />
       <WontGuess h={h} />
-      {hasFlags && keys && <p className="faint flags-hint">Marked passages are where {agentName(h.agent)} is unsure. Hover them, or press <Kbd>Tab</Kbd> to reach each note.</p>}
+      {hasFlags && keys && <p className="faint flags-hint">Marked: where {agentName(h.agent)} is unsure. Hover or <Kbd>Tab</Kbd> for the note.</p>}
 
       <div className="detail-acts">
         {waiting ? (
