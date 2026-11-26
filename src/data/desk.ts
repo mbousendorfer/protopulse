@@ -116,7 +116,7 @@ export const HANDOFFS: Handoff[] = [
   {
     id: 'h-visual', agent: 'atlas', kind: 'info', urgency: 'week', topic: 'Missing visual', action: 'atlas-fill',
     title: 'Missing visual for Wednesday’s LinkedIn post',
-    context: 'Post about the repair programme. No photo in the library shows a repair.',
+    context: 'No photo in the library shows a repair for this post about the repair programme.',
     why: 'Atlas never uses stock photos (Playbook rule).',
     confidence: 90, at: T(6, 31), link: '/publishing/media',
     options: [{ label: 'Use the workshop photo from October', recommended: true }, { label: 'I’ll upload one' }, { label: 'Move the post to next week' }],

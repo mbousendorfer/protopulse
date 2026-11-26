@@ -19,7 +19,7 @@ export default function Queues() {
   const level = s.agents.find(a => a.id === 'atlas')!.actions.find(x => x.id === 'atlas-fill')?.autonomy
   return (
     <div className="stack">
-      <p className="muted">Each queue is one kind of post on recurring slots. Atlas keeps the next two weeks filled{level === 'act' ? ' and schedules them' : ', and asks you to approve what it writes'}.</p>
+      <p className="muted">Atlas keeps each queue filled two weeks ahead{level === 'act' ? ' and schedules the posts' : ', for you to approve'}.</p>
       {s.publishing.queues.map(q => {
         const slots = upcoming(s, q)
         const empty = slots.filter(x => !x.post).length

@@ -18,7 +18,8 @@ import { variantsOf, type Variant } from './copilot'
 import { ACCOUNTS, GROUPS, ROUTE_REASON, accountById, accountLabel } from './accounts'
 import { FIRST_COMMENT, FORMATS, FORMAT_LABEL, firstCommentFor, formatFor, type Format } from './formats'
 import { LINK_IN_COMMENT, PLAIN_ONLY, UTM_CONVENTION, captionOf, commentOf, query, shown, track } from './links'
-import { forLinkedIn, shorten } from './ideasModel'
+import { forLinkedIn, sentences, shorten } from './ideasModel'
+import { InfoPop } from '../../ui/More'
 import { STATUS_LABEL } from './labels'
 
 const FALLBACK_WORDS = ['cheap', 'guys', 'game-changer', 'eco-friendly', 'best ever', 'limited time only']
@@ -243,7 +244,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
 
             <div className="cmp-atlas" aria-label="Atlas copilot">
               <Mark agent="atlas" />
-              {!text.trim() ? <span className="faint t-sm">Write a first line: Atlas can then offer variants, shorten it or adapt it for LinkedIn.</span>
+              {!text.trim() ? <span className="faint t-sm">Write a first line, then ask Atlas for variants.</span>
                 : busy ? <Thinking label={busy} />
                 : <>
                     <Btn size="sm" variant="ghost" onClick={() => { setBusy('Writing 3 variants'); setTimeout(() => { setIdeas(variantsOf(text, { pillar, network: net, words, rules: s.playbook.rules ?? [] })); setBusy(null) }, 700) }}><Sparkles size={14} />3 variants</Btn>
@@ -325,7 +326,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 </div>
               </Pop>
             </div>
-            <p className="cmp-atlas-says"><Mark agent="atlas" /><span>{comment}</span>
+            <p className="cmp-atlas-says"><Mark agent="atlas" /><span>{sentences(comment)[0]}{sentences(comment).length > 1 && <> <InfoPop label="Why?">{sentences(comment).slice(1).join(" ")}</InfoPop></>}</span>
               {!comment.startsWith('Good slot') && bestAt > now && <Btn size="xs" onClick={() => setAt(bestAt)}>Use {best.time}</Btn>}</p>
             {full.length > 0 && (
               <p className="cmp-hint bad"><AlertTriangle size={14} aria-hidden />{L(full[0])} already has 3 posts that day, the most Atlas schedules. {dayLabel(room)} has room.
@@ -366,7 +367,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
               {textFor(acc).trim() || media
                 ? <NetworkPreview network={net} who={accountById(acc)} text={captionOf({ text: textFor(acc), network: net, link: linkFor(acc) })} media={media} words={words} at={at} format={formatOf(acc)}
                     firstComment={commentOf({ network: net, firstComment: commentFor(acc) || undefined, link: linkFor(acc) }) || undefined} />
-                : <Empty title={`Your ${L(acc)} post shows here`} body="Write the caption and pick a visual: the preview follows as you type, cut where the network cuts it." />}
+                : <Empty title={`Your ${L(acc)} post shows here`} body="It follows as you type, cut where the network cuts it." />}
             </>
           ) : <Empty title="Pick an account" body="The preview shows the post the way each network will." />}
         </aside>

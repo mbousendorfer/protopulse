@@ -7,6 +7,7 @@ import { PEOPLE, PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/vi
 import { Btn, Filters, Mark, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
+import { InfoPop } from '../../ui/More'
 import { LANG_LABEL, NETWORK_FIT, captionSlips, lengthSpec, winnerOf, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipLength, clipScore } from './parts'
 import { flopOf, holdReason, recutOf, unreleased, vetClips, videoNeeds, WEEKLY_QUOTA } from './slice'
@@ -29,7 +30,7 @@ export default function VideoPage() {
 
   return (
     <div className="page video-page">
-      <PageHead agent="juno" title="Video" lede="Juno watches your videos and lives, finds the moments worth sharing and cuts them into captioned clips. You review, Atlas schedules.">
+      <PageHead agent="juno" title="Video" lede="Juno cuts your videos into clips; you review, Atlas schedules.">
         <Btn variant="primary" onClick={() => nav('/video/sources')}><Plus size={14} />Add a video</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'clips' ? '/video' : `/video/${t}`)} items={[
@@ -86,6 +87,7 @@ function ClipRow({ c, src, now, check, note, acts }: { c: Clip; src: Source; now
   // A clip found on request is titled after its own first line: say that line once, and prove it with something else.
   const echo = c.hook.startsWith(c.title.replace(/…$/, ''))
   const proof = c.evidence.find(e => !e.label.includes(c.hook.slice(0, 24)))
+  const dubs = c.audio.dubs.filter(l => c.status !== 'ready' || !c.audio.review?.includes(l))
   const todo = c.status === 'ready' ? [...leftToCheck(c, src), won !== undefined && c.hook !== c.trial!.hooks[won] ? 'Its hook isn’t the trial winner yet' : ''].filter(Boolean) : []
   return (
     <li className={`dq-row ${now - c.arrivedAt < 120_000 ? 'arrive' : ''}`} onClick={e => { if (!isInteractive(e)) nav(`/video/clips/${c.id}`) }}>
@@ -96,12 +98,13 @@ function ClipRow({ c, src, now, check, note, acts }: { c: Clip; src: Source; now
         <p className="dq-line">
           <ScoreBadge value={clipScore(c, src).total} />
           <span className="row tight nowrap">{c.post.networks.map(n => <Net key={n} n={n} size={14} />)}</span>
-          {c.audio.dubs.length > 0 && <span title={c.audio.dubs.map(l => LANG_LABEL[l]).join(', ')}>{c.audio.dubs.map(l => l.toUpperCase()).join(' ')}</span>}
+          {/* Languages still to review are named once, in the to-do line below. */}
+          {dubs.length > 0 && <span title={dubs.map(l => LANG_LABEL[l]).join(', ')}>{dubs.map(l => l.toUpperCase()).join(' ')}</span>}
           {c.edited && <span>Edited by you</span>}
           {won !== undefined
-            ? <span className="dq-proof"><b className="num">{Math.max(...c.trial!.held!)}%</b> still watching at 3 s: “{c.trial!.hooks[won]}” won its hook trial</span>
+            ? <span className="dq-proof"><b className="num">{Math.max(...c.trial!.held!)}%</b> still watching at 3 s{c.hook === c.trial!.hooks[won] ? <> · won its hook trial</> : <>: “{c.trial!.hooks[won]}” won its hook trial</>}</span>
             : proof && !c.stats && <span className="dq-proof"><b className="num">{proof.value}</b> {proof.label}</span>}
-          <span className="dq-src">From {src.title}</span>
+          {/* The source video is the filter above and the first line of the editor: not repeated on every row. */}
         </p>
         {note}
         {flop && <p className="dq-todo"><TriangleAlert size={12} aria-hidden />Did worse than usual: {Math.round(flop.share * 100)}% of your {NETWORK_FIT[flop.net] ?? flop.net} average views</p>}
@@ -165,7 +168,6 @@ function Clips() {
   const making = s.video.sources.filter(x => x.status === 'processing' && (only === 'all' || x.id === only))
   const withClips = s.video.sources.filter(x => s.video.clips.some(c => c.source === x.id))
   const working = s.video.sources.find(x => x.status === 'processing')
-  const from = new Set(ready.map(c => c.source)).size
   const total = toSend.length + held.length + flops.length + videos.length
   const on = (k: Show) => show === 'all' || show === k
   const count = (k: Show, n: number, label: string) => n > 0 && (
@@ -188,7 +190,7 @@ function Clips() {
           {count('recut', flops.length, `${flops.length} to recut`)}
           {(toSend.length > 0 || held.length > 0 || flops.length > 0) && videos.length > 0 && <span aria-hidden>·</span>}
           {count('videos', videos.length, `${plural(videos.length, 'new video')} to start`)}
-          <span className="dq-sum-note">{ready.length > 0 && `from ${plural(from, 'video')}. `}{working ? `I’m working on “${working.title}”.` : 'I check your channel every 15 minutes.'}</span>
+          <span className="dq-sum-note">{working ? `I’m working on “${working.title}”.` : 'I check your channel every 15 minutes.'}</span>
         </> : <span>Nothing needs you here. {working ? `I’m working on “${working.title}”.` : 'I check your channel every 15 minutes.'}</span>}
       </p>
       {withClips.length > 1 && (
@@ -202,11 +204,11 @@ function Clips() {
           <header className="dq-head">
             <SelectAll sel={sel} label="Select every clip ready to send" />
             <h3 id="vq-send">Ready to send</h3><CountBadge n={toSend.length} />
-            <span className="dq-hint">Best first. Atlas puts them in your best slots.</span>
+            <span className="dq-hint">Best first · Atlas picks the slots</span>
             <span className="spacer" />
             {!sel.count && batch.go.length > 0 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'video/send', ids: sendIds })}>Send {batch.go.length} to Atlas</Btn>}
           </header>
-          {quota.length > 0 && <p className="dq-note">{plural(quota.length, 'clip')} from “{quotaFrom.join('” and “')}” would wait for next week: Juno sends {WEEKLY_QUOTA} clips per video per week, the best first.</p>}
+          {quota.length > 0 && <p className="dq-note">{plural(quota.length, 'clip')} from “{quotaFrom.join('” and “')}” would wait for next week: {WEEKLY_QUOTA} clips per video a week, best first.</p>}
           {sel.count > 0 && <BulkBar count={sel.count} noun={sel.count > 1 ? 'clips selected' : 'clip selected'} onClear={sel.clear} actions={[
             { label: `Send ${sel.count} to Atlas`, primary: true, onRun: () => { d({ type: 'video/send', ids: [...sel.selected] }); sel.clear() } },
             { label: 'Not now', onRun: () => { d({ type: 'video/snooze', ids: [...sel.selected] }); sel.clear() } },
@@ -223,7 +225,6 @@ function Clips() {
         <section className="dq" aria-labelledby="vq-held">
           <header className="dq-head">
             <h3 id="vq-held">Held</h3><CountBadge n={held.length} />
-            <span className="dq-hint">Juno won’t send these until the reason is fixed.</span>
           </header>
           {people.map(p => {
             const list = held.filter(c => unreleased(s, c).includes(p))
@@ -253,7 +254,7 @@ function Clips() {
         <section className="dq" aria-labelledby="vq-recut">
           <header className="dq-head">
             <h3 id="vq-recut">Did worse than usual</h3><CountBadge n={flops.length} />
-            <span className="dq-hint">Published, under half their network’s average views. Juno can recut them with the product first.</span>
+            <InfoPop label="What’s usual?">Published clips under half their network’s average views. Juno can recut them with the product first.</InfoPop>
           </header>
           {rowsOf(flops, c => <Btn size="sm" onClick={stop(() => d({ type: 'video/recut', id: c.id }))}>Recut, product first</Btn>)}
         </section>
@@ -263,7 +264,6 @@ function Clips() {
         <section className="dq" aria-labelledby="vq-videos">
           <header className="dq-head">
             <h3 id="vq-videos">New videos</h3><CountBadge n={videos.length} />
-            <span className="dq-hint">Juno asks before cutting a new video.</span>
           </header>
           <ul className="dq-rows">{videos.map(x => (
             <li key={x.id} className="dq-row is-source" onClick={e => { if (!isInteractive(e)) nav(`/video/sources/${x.id}`) }}>
@@ -294,7 +294,7 @@ function Clips() {
         <section className="card dq-rest">
           <div className="card-head"><h2>On trial <span className="faint num">{by('trial').length}</span></h2><span className="faint t-sm">Two hooks on Reels, non-followers first</span></div>
           {rowsOf(by('trial'), c => <>
-            <span className="t-sm nowrap">On trial on Reels · results {new Date(c.trial!.until).toLocaleDateString('en-GB', { weekday: 'short' })} {hhmm(c.trial!.until)}</span>
+            <span className="t-sm nowrap">Results {new Date(c.trial!.until).toLocaleDateString('en-GB', { weekday: 'short' })} {hhmm(c.trial!.until)}</span>
             <Btn size="sm" variant="ghost" onClick={stop(() => d({ type: 'video/trialStop', id: c.id }))}>Stop the trial</Btn>
           </>)}
         </section>

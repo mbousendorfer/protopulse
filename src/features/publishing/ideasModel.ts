@@ -22,7 +22,7 @@ const offsetOf = (dayStart: number) => Math.round((dayStart - DAY0) / DAY)
 
 export const shorten = (t: string) => { const first = t.split(/(?<=[.!?])\s/)[0]; return first.length > 100 ? first.slice(0, 97).replace(/\s\S*$/, '') + '…' : first }
 export const forLinkedIn = (t: string) => `${t.replace(EMOJI, '').replace(/#\w+/g, '').replace(/\s+/g, ' ').trim()}\n\nAt Fernway we build gear to last, and we repair what breaks. What would you add?`
-const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean)
+export const sentences = (t: string) => t.split(/(?<=[.!?])\s+/).filter(Boolean)
 /** Closes a sentence that has no final punctuation ("Photo: @camille.outdoors"), so the next one doesn't run into it. */
 const stop = (t: string) => (/[.!?…:]$/.test(t.trim()) ? t.trim() : `${t.trim()}.`)
 /** Text without its trailing emojis, and those emojis. */
