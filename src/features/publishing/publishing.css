@@ -622,3 +622,40 @@
 .media-meta .nowrap { white-space: nowrap; }
 .cal-cell.today > .pub-cell-day:hover { color: var(--panel); }
 
+/* ---------- Publishing landing: Needs you (decisions first, PROMPT §3.9) ---------- */
+.pub-needs { margin-bottom: var(--s6); padding: 0; overflow: hidden; }
+.pub-needs-none { margin-bottom: var(--s5); font-size: var(--t-sm); color: var(--ink); }
+.pub-needs-none p { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pub-needs-none svg { color: var(--ok); flex: none; }
+.pub-needs-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s3); padding: var(--s3) var(--s4); }
+.pub-needs-head h2 { font-size: var(--t-md); font-weight: 600; }
+.pub-needs-head .filters { flex-wrap: wrap; gap: 6px; margin-left: var(--s2); }
+.pub-needs-head .filter .num { font-weight: 600; color: var(--ink); }
+.pub-need-group { border-top: 1px solid var(--line); }
+.pub-need-head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s2); padding: 10px var(--s4); background: var(--sunk); border-bottom: 1px solid var(--line); }
+.pub-need-head h3 { font-size: var(--t-md); font-weight: 600; white-space: nowrap; }
+.pub-need-hint { flex: 1 1 240px; min-width: 0; font-size: var(--t-sm); color: var(--ink-2); }
+.pub-need-main { display: flex; align-items: center; gap: var(--s2); margin-left: auto; }
+.pub-need-icon { width: 24px; height: 24px; border-radius: var(--r-ctl); display: grid; place-items: center; flex: none; background: var(--lift-2); color: var(--ink-2); }
+.pub-g-fix .pub-need-icon { background: var(--alert-tint); color: var(--alert-strong); }
+.pub-g-paused .pub-need-icon, .pub-g-answer .pub-need-icon { background: var(--caution-tint); color: var(--caution-strong); }
+.pub-g-approve .pub-need-icon { background: var(--ok-tint); color: var(--ok-strong); }
+.pub-need { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 10px var(--s4); border-top: 1px solid var(--line); }
+.pub-need-group ul > .pub-need:first-child { border-top: 0; }
+.pub-need-text { min-width: 0; }
+.pub-need-title { display: block; max-width: 100%; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); text-align: left; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.pub-need-title:hover { color: var(--action-ink); text-decoration: underline; text-underline-offset: 3px; }
+.pub-need-why { margin-top: 2px; font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pub-need-why .mono { font-size: var(--t-xs); color: var(--ink); }
+.pub-need-acts { display: flex; align-items: center; gap: var(--s2); }
+.pub-need-answer { display: flex; align-items: center; gap: var(--s2); }
+.pub-need-answer .input { width: 140px; height: 32px; }
+/* With an idea open, the landing is navigation only (Inbox pattern): the rows stay, their buttons go. */
+.ideas-layout.has-current .pub-need-acts, .ideas-layout.has-current .pub-need-main, .ideas-layout.has-current .pub-need-hint { display: none; }
+@media (max-width: 640px) {
+  .pub-need { grid-template-columns: 22px minmax(0, 1fr); align-items: start; }
+  .pub-need-acts { grid-column: 2; flex-wrap: wrap; }
+  .pub-need-title, .pub-need-why { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .pub-need-main { margin-left: 0; flex-wrap: wrap; }
+  .pub-needs-head .filters { margin-left: 0; }
+}

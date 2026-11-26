@@ -17,6 +17,7 @@ import { checkPost } from './checks'
 import { ANGLES, diffWords, freshness, isOpen, mixVariants, summarize, variantText, variantsOf, type Angle, type Variant } from './ideasModel'
 import { targetsOf } from '../strategy/slice'
 import { slotComment } from './slice'
+import { PublishingNeeds } from './Needs'
 
 /*
  * Three levels, so the list can be scanned:
@@ -150,6 +151,7 @@ export default function Ideas({ id }: { id?: string }) {
   return (
     <div className={`ideas-layout ${current || id ? 'has-current' : ''}`}>
       <div className="ideas-main">
+        <PublishingNeeds watching={`the calendar, the queues and ${ideas.filter(isOpen).length} open ideas`} />
         <p className="ideas-lede" aria-live="polite"><Mark agent="atlas" /><span>{summarize(ideas, targetsOf(s))}</span></p>
         {sel.count > 0 ? (
           <BulkBar count={sel.count} noun={sel.count > 1 ? 'ideas selected' : 'idea selected'} onClear={sel.clear} actions={[
