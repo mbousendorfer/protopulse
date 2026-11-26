@@ -7,6 +7,7 @@ import {
 import { useNow, useStore } from './store'
 import { groupOf } from './reducer'
 import { inboxNeedsCount } from '../features/inbox/slice'
+import { reportList } from '../features/insights/reports'
 import { useTheme } from './theme'
 import type { AgentId } from './types'
 import { Btn, Kbd, Mark, Modal, Pop } from '../ui'
@@ -130,9 +131,12 @@ export default function Shell() {
             <SocialAvatar name="Sam Rivera" size={24} />
             <span className="hide-collapsed">Sam Rivera</span>
           </div>
-          <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
-          </button>
+          {/* The phone drawer closes on its own: collapsing it would only shrink it. */}
+          {!mobileOpen && (
+            <button className="rail-link bare" onClick={() => setCollapsed(c => !c)} aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
+              {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}<span className="hide-collapsed">Collapse</span>
+            </button>
+          )}
         </div>
       </nav>
       {mobileOpen && <div className="overlay mobile-only" onClick={() => setMobileOpen(false)} />}
@@ -146,6 +150,8 @@ export default function Shell() {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
                 : seg === 'listening' && s.listening.searches.some(q => q.id === x) ? s.listening.searches.find(q => q.id === x)!.name
+                : seg === 'strategy' && s.strategy.campaigns.some(c => c.id === x) ? s.strategy.campaigns.find(c => c.id === x)!.name
+                : seg === 'insights' && sub[0] === 'reports' && x !== 'reports' ? (reportList(s).find(r => r.id === x)?.title ?? x)
                 : decodeURIComponent(x).replace(/-/g, ' ')
               return <span key={x} className="row tight nowrap"><ChevronRight size={14} /> <span className="ellipsis mw-200">{CRUMB_WORD[t] ?? t.charAt(0).toUpperCase() + t.slice(1)}</span></span>
             })}
@@ -215,7 +221,7 @@ function Notifications() {
             <li key={l.id} className="row nowrap py-2 items-start">
               <Mark agent={l.agent} />
               <div className="grow">
-                <div style={{ textDecoration: l.status === 'undone' ? 'line-through' : undefined, color: l.status === 'undone' ? 'var(--ink-3)' : undefined }}>{l.text}</div>
+                <div className={l.status === 'undone' ? 'struck' : undefined}>{l.text}</div>
                 <div className="faint mono">{ago(l.at, now)}</div>
               </div>
               {l.undoUntil && l.undoUntil > now && l.status !== 'undone' && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={12} />Undo</Btn>}

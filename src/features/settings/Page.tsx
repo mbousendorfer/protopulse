@@ -7,6 +7,7 @@ import { useTheme, type Theme } from '../../app/theme'
 import { ago, MIN } from '../../app/time'
 import { agentName } from '../../data/agents'
 import { Btn, Net, PageHead, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
+import { ShopifyMark } from '../onboarding/parts'
 import './settings.css'
 
 type Account = { id: string; name: string; handle: string; net?: Network; followers?: string; state: 'ok' | 'expiring' | 'error'; syncedMin: number; note?: string }
@@ -73,7 +74,7 @@ function Accounts() {
     <ul className="card rows">
       {list.map(a => (
         <li key={a.id} className="set-acc">
-          {a.net ? <Net n={a.net} /> : <span className="net">SH</span>}
+          {a.net ? <Net n={a.net} /> : <ShopifyMark />}
           <div className="grow">
             <div className="row tight"><b>{a.name}</b><span className="faint">{a.handle}</span></div>
             <div className="faint t-xs">
@@ -82,10 +83,9 @@ function Accounts() {
           </div>
           {busy === a.id ? <Thinking label={off(a) ? 'Connecting…' : 'Reconnecting…'} /> : off(a) ? <Btn size="sm" onClick={() => reconnect(a)}>Connect</Btn> : (
             <>
-              {a.state === 'ok' && <Pill tone="ok" dot>Connected</Pill>}
               {a.state === 'expiring' && <Pill tone="caution" dot>Expires soon</Pill>}
               {a.state === 'error' && <Pill tone="alert" dot>Disconnected</Pill>}
-              <Btn size="sm" variant={a.state === 'ok' ? 'ghost' : 'primary'} onClick={() => reconnect(a)}><RefreshCw size={13} />{a.state === 'ok' ? 'Resync' : 'Reconnect'}</Btn>
+              <Btn size="sm" variant={a.state === 'ok' ? 'ghost' : undefined} onClick={() => reconnect(a)}><RefreshCw size={14} />{a.state === 'ok' ? 'Resync' : 'Reconnect'}</Btn>
             </>
           )}
         </li>

@@ -12,8 +12,6 @@ import { HBars } from '../../ui/charts'
 import Photo from '../../ui/Photo'
 import { PLAN_MONDAY } from './slice'
 
-const TAG_TONE = { Campaign: 'signal', Trend: 'caution', Recycled: undefined, New: undefined } as const
-
 export default function PlanReview() {
   const { s, d } = useStore()
   const plan = s.publishing.plan
@@ -57,7 +55,7 @@ export default function PlanReview() {
       <section className="card pad-lg plan-head">
         <div className="row between items-start">
           <div>
-            <div className="row tight"><Mark agent="atlas" /><span className="mono faint">Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
+            <div className="row tight t-sm muted"><Mark agent="atlas" /><span>Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
             <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks. Uncheck what you don’t want, then approve the week in one go.</p>
           </div>
@@ -101,30 +99,33 @@ export default function PlanReview() {
         )}
       </section>
 
-      <div className="plan-week">
+      {/* The week as a list to read and uncheck: one row per post, grouped by day, the reason under the words. */}
+      <section className="card plan-list" aria-label="Posts in the plan">
         {Array.from({ length: 7 }, (_, day) => {
           const items = plan.items.filter(i => i.day === day).sort((a, b) => a.time.localeCompare(b.time))
+          const kept = items.filter(i => i.included).length
           return (
-            <section key={day} className="plan-day" aria-label={new Date(PLAN_MONDAY + day * DAY).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}>
-              <h3>{new Date(PLAN_MONDAY + day * DAY).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}</h3>
-              {items.map(i => (
-                <label key={i.id} className={`plan-item ${i.included ? '' : 'out'}`}>
-                  <div className="row nowrap tight">
-                    <input type="checkbox" className="check" checked={i.included} onChange={() => d({ type: 'publishing/planToggle', id: i.id })} aria-label={`Include: ${i.text}`} />
-                    <span className="mono">{i.time}</span><Net n={i.network} />
-                    <span className="spacer" />
-                    <Pill tone={TAG_TONE[i.tag]}>{i.tag}</Pill>
-                  </div>
-                  {i.media && <span className="plan-photo"><Photo name={i.media} /></span>}
-                  <p>{i.text}</p>
-                  <span className="faint plan-reason">{i.reason}</span>
-                </label>
-              ))}
-              {!items.length && <div className="aempty">No post</div>}
+            <section key={day} className="plan-day" aria-labelledby={`plan-d${day}`}>
+              <h3 id={`plan-d${day}`}>{new Date(PLAN_MONDAY + day * DAY).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}<span className="plan-day-n">{items.length ? `${kept} of ${items.length} post${items.length > 1 ? 's' : ''}` : 'No post'}</span></h3>
+              {items.length > 0 && (
+                <ul>
+                  {items.map(i => (
+                    <li key={i.id}>
+                      <label className={`plan-item ${i.included ? '' : 'out'}`}>
+                        <input type="checkbox" className="check" checked={i.included} onChange={() => d({ type: 'publishing/planToggle', id: i.id })} aria-label={`Include: ${i.text}`} />
+                        <span className="plan-when"><span className="mono">{i.time}</span><Net n={i.network} /></span>
+                        <span className="plan-what"><p>{i.text}</p><span className="plan-reason">{i.reason}</span></span>
+                        <Pill>{i.tag}</Pill>
+                        <span className="plan-photo">{i.media && <Photo name={i.media} />}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
           )
         })}
-      </div>
+      </section>
 
       <div className="plan-foot card">
         {asking ? (
@@ -148,7 +149,7 @@ export default function PlanReview() {
       </div>
 
       <Modal open={confirmReject} onOpenChange={setConfirmReject} title="Reject the whole plan?"
-        footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setConfirmReject(false)}>Keep it</Btn><Btn variant="primary" onClick={() => { d({ type: 'publishing/planReject' }); setConfirmReject(false) }}>Reject the plan</Btn></>}>
+        footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setConfirmReject(false)}>Cancel</Btn><Btn variant="danger" onClick={() => { d({ type: 'publishing/planReject' }); setConfirmReject(false) }}>Reject the plan</Btn></>}>
         <p className="muted">Nothing gets scheduled for the week of 1 December. Atlas will propose posts one by one on your Desk instead. You can ask for a new plan at any time.</p>
       </Modal>
     </div>

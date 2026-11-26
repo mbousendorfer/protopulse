@@ -137,7 +137,7 @@ export function Frame({ clip, source, pb, safe, outro }: { clip: Clip; source: S
       {broll && brollFile(broll.asset) && <video key={broll.id} className="frame-broll" src={mediaUrl(brollFile(broll.asset)!)} muted autoPlay playsInline aria-hidden />}
       {clip.brand.intro && t < 2 && <div className="frame-hook">{clip.hook}</div>}
       <CaptionText c={clip.captions} line={cap.line} active={clip.captions.template === 'clean' || clip.captions.template === 'boxed' ? -1 : cap.active} />
-      {clip.brand.logo && <svg className="frame-logo" viewBox="0 0 90 20" aria-hidden><text x="0" y="15" fontSize="15" fontWeight="700" fill="#fff">fernway</text></svg>}
+      {clip.brand.logo && <svg className="frame-logo" viewBox="0 0 90 20" aria-hidden><text x="0" y="15" fontSize="15" fontWeight="700" fill="currentColor">fernway</text></svg>}
       {clip.brand.outro && total > 4 && t > total - 2 && <div className="frame-outro"><b>fernway</b><span>{outro}</span></div>}
       {clip.brand.progress && <div className="frame-progress" style={{ width: `${total ? (t / total) * 100 : 0}%` }} />}
       {safe === true && <div className={`frame-safe ${clip.aspect === '9:16' ? 'vertical' : ''}`} aria-hidden><span className="safe-rail" /><span className="safe-bottom" /></div>}

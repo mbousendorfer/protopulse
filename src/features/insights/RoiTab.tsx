@@ -52,7 +52,7 @@ export default function Roi() {
             </div></div>
           )}
         </section>
-        <section className="card pad">
+        <section className="card pad roi-sold">
           <div className="section-title">Posts that sold <span className="faint">· revenue from their link clicks</span></div>
           {posts.length ? <HBars items={posts.map(x => ({ label: x.p.title.split(/[,:]/)[0], value: x.revenue }))} format={eur} color="var(--a-iris)" />
             : <p className="muted">No post with a link in the last {days} days.</p>}

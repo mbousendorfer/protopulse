@@ -7,11 +7,11 @@
 .clip-thumb { position: relative; display: block; overflow: hidden; border-radius: var(--r-sm); background: var(--lift-2); flex: none; }
 .clip-thumb img, .clip-thumb svg, .cover-frame { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* Cover text is content (Fernway's look inside the video), not UI. */
-.cover-text { position: absolute; left: 6%; right: 6%; top: 12%; color: #fff; font-weight: 800; font-size: 11px; line-height: 1.15; text-align: center; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+.cover-text { position: absolute; left: 6%; right: 6%; top: 12%; color: var(--on-media); font-weight: 800; font-size: 11px; line-height: 1.15; text-align: center; text-shadow: 0 1px 3px var(--media-shadow); }
 .cover-pick { position: relative; display: block; width: 72px; height: 128px; overflow: hidden; border-radius: var(--r-sm); border: 2px solid transparent; padding: 0; background: var(--lift-2); cursor: pointer; }
 .cover-pick[aria-checked="true"] { border-color: var(--signal); }
 .cover-pick:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-.cover-pick .mono { position: absolute; left: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: var(--t-xs); }
+.cover-pick .mono { position: absolute; left: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: var(--media-badge); color: var(--on-media); font-size: var(--t-xs); }
 .clip-thumb.sm { width: 40px; height: 71px; }
 .clip-thumb.md { width: 54px; height: 96px; }
 .clip-thumb.lg { width: 90px; height: 160px; }
@@ -20,7 +20,7 @@
 .clip-thumb.a-4x5.sm { height: 50px; } .clip-thumb.a-4x5.lg { height: 112px; }
 .ed-version { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; font-size: var(--t-sm); }
 .ed-version .ed-range { flex: 1; min-width: 200px; }
-.clip-thumb-len { position: absolute; right: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, 0.72); color: #fff; font-size: var(--t-xs); line-height: 16px; }
+.clip-thumb-len { position: absolute; right: 3px; bottom: 3px; padding: 0 4px; border-radius: 4px; background: var(--media-badge); color: var(--on-media); font-size: var(--t-xs); line-height: 16px; }
 .clip-thumb.sm .clip-thumb-len { right: 2px; bottom: 2px; }
 .src-thumb { display: block; width: 80px; height: 45px; border-radius: var(--r-sm); overflow: hidden; background: var(--lift-2); flex: none; }
 .src-thumb img, .src-thumb svg { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -29,10 +29,28 @@
 .score-badge b { font-size: var(--t-sm); }
 .score-badge.high b { color: var(--ok-strong); }
 
-/* Clip rows reuse the Ideas list; the thumbnail is taller. */
-.idea-row.clip-row { grid-template-columns: 24px 71px minmax(0, 1fr) auto; }
-.idea-row.clip-row .clip-thumb { justify-self: center; }
-.idea-row.clip-row.making { cursor: pointer; }
+/* Clips: cards, the frame at a size you can judge, two or three to a row. Clickable card = blue border on hover. */
+.clip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: var(--s3); }
+.clip-card { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: var(--s4); padding: var(--s3); border: 1px solid var(--line); border-radius: var(--r-card); background: var(--panel); cursor: pointer; transition: border-color var(--fast) var(--ease), background-color var(--fast) var(--ease); }
+.clip-card:hover { border-color: var(--signal); }
+.clip-card.picked { background: var(--signal-wash); border-color: var(--signal-edge); }
+.clip-card.arrive { animation: idea-arrive var(--slow) var(--ease); }
+.clip-card-thumb { position: relative; align-self: start; display: grid; justify-items: center; }
+.clip-card-thumb .src-thumb { width: 90px; height: 51px; }
+.clip-card-check { position: absolute; top: 4px; left: 4px; }
+.clip-card-check .select-box { width: 28px; height: 28px; background: var(--panel); }
+.clip-card-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.clip-card-body h3 { font-size: var(--t-lg); font-weight: 600; line-height: 1.3; }
+.clip-card-hook { color: var(--ink); }
+.clip-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px var(--s3); margin-top: 2px; font-size: var(--t-xs); color: var(--ink-2); }
+.clip-card-proof, .clip-card-src { font-size: var(--t-sm); color: var(--ink-2); }
+.clip-card-proof b { color: var(--ink); font-weight: 600; }
+.clip-card-src { font-size: var(--t-xs); }
+.clip-card-todo { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sm); color: var(--ink); }
+.clip-card-todo li { display: flex; align-items: center; gap: 6px; }
+.clip-card-todo svg { flex: none; color: var(--caution); }
+.clip-card-acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); margin-top: auto; padding-top: var(--s2); }
+.clip-card.making { cursor: pointer; }
 .idea-row.src-row { grid-template-columns: 80px minmax(0, 1fr) auto; }
 .progress { height: 6px; border-radius: 999px; background: var(--lift-2); margin-top: var(--s2); overflow: hidden; max-width: 320px; }
 .progress > span { display: block; height: 100%; background: var(--chart); border-radius: inherit; transition: width var(--base) linear; }
@@ -41,7 +59,7 @@
 .clip-preview { display: flex; gap: var(--s4); align-items: flex-start; }
 .clip-preview-thumb { position: relative; padding: 0; border: 0; background: none; cursor: pointer; border-radius: var(--r-sm); }
 .clip-preview-thumb:focus-visible { box-shadow: var(--focus); outline: none; }
-.clip-play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6)); }
+.clip-play { position: absolute; inset: 0; display: grid; place-items: center; color: var(--on-media); filter: drop-shadow(0 1px 3px var(--media-shadow)); }
 
 /* Sources */
 .src-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
@@ -51,8 +69,8 @@
 .check-row { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--ink); cursor: pointer; }
 .src-head h2 { font-size: var(--t-xl); font-weight: 600; }
 .src-body { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr); gap: var(--s4); align-items: start; }
-.src-video { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-card); background: #000; display: block; }
-.src-video.gone { display: grid; place-items: center; padding: var(--s6); color: #fff; text-align: center; }
+.src-video { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--r-card); background: var(--media-bg); display: block; }
+.src-video.gone { display: grid; place-items: center; padding: var(--s6); color: var(--on-media); text-align: center; }
 .src-transcript { max-height: calc(100vh - 220px); overflow-y: auto; }
 .src-transcript .card-head { position: sticky; top: 0; background: var(--panel); z-index: 1; }
 .chapters { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s1) var(--s3); padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); margin: 0; }
@@ -79,11 +97,12 @@
 .swatches { display: flex; gap: var(--s2); }
 .swatch { position: relative; cursor: pointer; }
 .swatch input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
-.swatch span { display: block; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12); }
+.swatch span { display: block; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--photo-edge); }
 .swatch input:checked + span { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--signal); }
 .swatch input:focus-visible + span { box-shadow: var(--focus); }
 
-/* ---------- Captions, inside the video (content: Fernway colours and capitals are allowed here) ---------- */
+/* ---------- Captions, inside the video. Content, not UI: Fernway colours, capitals and the burnt-in shadows below are the
+   clip's look, like an illustration, so they keep their own values (written exception, quality pass 2026-11-25). ---------- */
 .cap { position: absolute; left: 6%; right: 6%; transform: translateY(-50%); display: flex; justify-content: center; text-align: center; pointer-events: none; z-index: 4; line-height: 1.15; font-family: var(--font); font-weight: 800; color: #fff; }
 .cap-line { display: inline; }
 .cap-w { display: inline-block; margin: 0 0.12em; text-shadow: 0 0.06em 0 rgba(0, 0, 0, 0.85), 0 0 0.25em rgba(0, 0, 0, 0.6); transition: transform 90ms var(--ease), color 90ms var(--ease); }
@@ -110,6 +129,7 @@
 }
 .ed-head { grid-area: head; display: flex; align-items: center; gap: var(--s3); min-width: 0; }
 .ed-title { display: flex; flex-direction: column; min-width: 0; flex: 0 1 420px; }
+.ed-acts { display: flex; align-items: center; gap: var(--s2); }
 .ed-title-input { font: inherit; font-size: var(--t-lg); font-weight: 600; color: var(--ink); border: 1px solid transparent; background: none; border-radius: var(--r-sm); padding: 2px 6px; margin-left: -6px; min-width: 0; }
 .ed-title-input:hover { border-color: var(--line); }
 .ed-title-input:focus { outline: none; border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }
@@ -144,7 +164,7 @@
 .ed-transport { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s2) var(--s3); border-top: 1px solid var(--line); background: var(--panel); }
 
 /* The frame: aspect from the clip, layers on top of the video. */
-.frame { position: relative; overflow: hidden; background: #000; border-radius: var(--r-ctl); container-type: size; max-width: 100%; max-height: 100%; }
+.frame { position: relative; overflow: hidden; background: var(--media-bg); border-radius: var(--r-ctl); container-type: size; max-width: 100%; max-height: 100%; }
 .frame.a-9x16 { aspect-ratio: 9 / 16; height: 100%; }
 .frame.a-1x1 { aspect-ratio: 1; height: min(100%, 560px); }
 .frame.a-16x9 { aspect-ratio: 16 / 9; width: 100%; }
@@ -155,13 +175,13 @@
 .frame.f-split .frame-video { height: 50%; }
 .frame-split { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 50%; object-fit: cover; }
 .frame-broll { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 2; animation: fade-in 200ms var(--ease); }
-.frame-gone { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; padding: var(--s4); text-align: center; }
+.frame-gone { position: absolute; inset: 0; display: grid; place-items: center; color: var(--on-media); padding: var(--s4); text-align: center; }
 .frame-hook { position: absolute; top: 9%; left: 8%; right: 8%; z-index: 5; padding: 0.5em 0.7em; border-radius: 0.4em; background: #fff; color: #111; font-weight: 800; font-size: 4.4cqh; line-height: 1.2; text-align: center; animation: fade-in 200ms var(--ease); }
-.frame-logo { position: absolute; top: 3.5%; right: 5%; width: 18cqw; z-index: 5; opacity: 0.9; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)); }
+.frame-logo { position: absolute; top: 3.5%; right: 5%; width: 18cqw; z-index: 5; color: var(--on-media); opacity: 0.9; filter: drop-shadow(0 1px 2px var(--media-shadow)); }
 .frame-outro { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4em; background: rgba(20, 28, 24, 0.9); color: #fff; text-align: center; padding: 8%; animation: fade-in 200ms var(--ease); }
 .frame-outro b { font-size: 7cqh; }
 .frame-outro span { font-size: 3.6cqh; }
-.frame-progress { position: absolute; left: 0; bottom: 0; height: 0.8cqh; min-height: 3px; background: #fff; z-index: 6; }
+.frame-progress { position: absolute; left: 0; bottom: 0; height: 0.8cqh; min-height: 3px; background: var(--on-media); z-index: 6; }
 .frame-safe { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
 .frame-safe span { position: absolute; background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 6px, transparent 6px 12px); border: 1px dashed rgba(255, 255, 255, 0.55); }
 .frame-safe .safe-bottom { left: 0; right: 0; bottom: 0; height: 18%; }
@@ -222,11 +242,11 @@
 .tl-seg { position: absolute; top: 4px; bottom: 4px; border-radius: 4px; background-color: var(--lift-2); background-repeat: no-repeat; background-size: auto 100%; box-shadow: inset 0 0 0 1px var(--line); }
 .tl-cut { position: absolute; left: -2px; top: -4px; bottom: -4px; width: 2px; background: var(--alert); border-radius: 1px; }
 .tl-handle { position: absolute; top: 2px; bottom: 2px; width: 12px; border: 0; border-radius: 4px; background: var(--signal); cursor: ew-resize; z-index: 2; touch-action: none; padding: 0; }
-.tl-handle::after { content: ''; position: absolute; left: 5px; top: 30%; bottom: 30%; width: 2px; border-radius: 1px; background: #fff; }
+.tl-handle::after { content: ''; position: absolute; left: 5px; top: 30%; bottom: 30%; width: 2px; border-radius: 1px; background: var(--signal-ink); }
 .tl-handle:focus-visible { outline: none; box-shadow: var(--focus); }
 /* Captions read as running text: each line starts at its time and is clipped by the next, no boxes. The line on
    screen is the current item. */
-.tl-cap { position: absolute; top: 4px; bottom: 4px; padding: 0 4px; border-left: 1px solid var(--line); border-radius: 0 4px 4px 0; font-size: 10px; line-height: 20px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+.tl-cap { position: absolute; top: 4px; bottom: 4px; padding: 0 4px; border-left: 1px solid var(--line); border-radius: 0 4px 4px 0; font-size: 10px; line-height: 20px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-cap.on { background: var(--brand-soft); font-weight: 600; }
 .tl-empty { position: absolute; left: var(--s2); top: 0; bottom: 0; display: flex; align-items: center; font-size: var(--t-xs); color: var(--ink-2); white-space: nowrap; }
 .tl-broll { position: absolute; top: 4px; bottom: 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--lift-2); font: inherit; font-size: 10px; color: var(--ink); text-align: left; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: grab; touch-action: none; }
@@ -250,11 +270,13 @@
   .ed-head { flex-wrap: wrap; }
 }
 @media (max-width: 640px) {
-  .idea-row.clip-row { grid-template-columns: 24px 40px minmax(0, 1fr); }
+  .clip-card { grid-template-columns: 72px minmax(0, 1fr); gap: var(--s3); }
+  .clip-card .clip-thumb.lg { width: 72px; height: 128px; }
   .idea-row.src-row { grid-template-columns: 64px minmax(0, 1fr); }
   .idea-row.src-row .idea-acts { grid-column: 2; padding: var(--s2) 0 0; }
   .src-thumb { width: 64px; height: 36px; }
   .ed-title { flex-basis: 100%; order: 10; }
+  .ed-acts { order: 11; flex-basis: 100%; justify-content: flex-end; }
   .ed-stage { height: 70vh; }
 }
 .content:has(> .editor), .content:has(.editor) { padding-bottom: var(--s4); }

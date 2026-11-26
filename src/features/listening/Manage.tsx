@@ -21,7 +21,7 @@ export default function ManageCompetitors() {
   return (
     <div className="stack lg">
       <div className="row between">
-        <Link to="/listening/competitors" className="btn sm ghost"><ArrowLeft size={14} />Competitor events</Link>
+        <Link to="/listening/competitors" className="btn sm ghost"><ArrowLeft size={14} />All events</Link>
         <Btn variant="primary" onClick={() => setEdit(blank())}><Plus size={14} />Add a competitor</Btn>
       </div>
 
@@ -37,7 +37,7 @@ export default function ManageCompetitors() {
               <li key={w.id} className={`ls-watch ${w.tracking ? '' : 'ls-paused'}`}>
                 <SocialAvatar name={w.name} org size={40} />
                 <div className="ls-watch-main">
-                  <div className="row tight"><b>{w.name}</b>{w.website && <a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight">{w.website}<ExternalLink size={11} /></a>}</div>
+                  <div className="row tight"><b>{w.name}</b>{w.website && <a href={`https://${w.website}`} target="_blank" rel="noreferrer" className="faint row tight">{w.website}<ExternalLink size={12} /></a>}</div>
                   <div className="row tight">
                     {w.accounts.map(acc => <span key={acc.network + acc.handle} className="chip"><Net n={acc.network} size={14} />{acc.handle}</span>)}
                   </div>
