@@ -10,3 +10,7 @@ Pitch B13 (multi-profils, Go complet) : le testeur doit voir si le compte Repair
 
 ## En attendant
 Insights compte Fernway Repair dans Instagram (c'est le réseau du post). Les chiffres affichés restent justes au niveau réseau.
+
+---
+**Clos sans construction (Iris, 26/11, PR https://github.com/mbousendorfer/protopulse/pull/139).** Pitché (filtre « Profile » dans Explore + ligne Fernway Repair dans les rapports) :
+l'humain l'a mis en **Later**. Insights continue de compter Fernway Repair dans Instagram ; la demande pourra être rouverte telle quelle.
