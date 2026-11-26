@@ -1,6 +1,6 @@
-import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, FileText, ImageOff, Lightbulb, Pause, Play, Plus, Sparkles, StickyNote, Upload, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarX, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, FileText, ImageOff, Lightbulb, Pause, PenLine, Play, Plus, Sparkles, StickyNote, TriangleAlert, Upload, UserRound, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
@@ -89,6 +89,20 @@ export default function PublishingPage() {
 }
 
 /* ---------- Calendar ---------- */
+/** What waits for Sam in the calendar. Only these statuses are named on a card; the rest is the post itself. */
+type Focus = 'needs' | 'failed' | 'paused' | 'draft' | 'idea'
+const ATTN: { key: Focus; one: string; many: string; Icon: typeof Pause; tone?: 'alert' | 'caution' }[] = [
+  { key: 'needs', one: 'needs you', many: 'need you', Icon: CircleAlert, tone: 'caution' },
+  { key: 'failed', one: 'failed', many: 'failed', Icon: TriangleAlert, tone: 'alert' },
+  { key: 'paused', one: 'paused', many: 'paused', Icon: Pause, tone: 'caution' },
+  { key: 'draft', one: 'draft to schedule', many: 'drafts to schedule', Icon: PenLine },
+  { key: 'idea', one: 'idea from Atlas', many: 'ideas from Atlas', Icon: Lightbulb },
+]
+const STATUS_ICON: Partial<Record<PostStatus, typeof Pause>> = { needs: CircleAlert, failed: TriangleAlert, paused: Pause, draft: PenLine, unapproved: UserRound }
+const NAMED: PostStatus[] = ['needs', 'failed', 'paused', 'draft', 'unapproved']
+const dayLong = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+const mondayOf = (t: number) => t - ((new Date(t).getDay() + 6) % 7) * DAY
+
 function Calendar() {
   const { s, d } = useStore()
   const now = useNow(30000)
@@ -97,26 +111,43 @@ function Calendar() {
   const [anchor, setAnchor] = useState(MONDAY_THIS_WEEK)
   const [network, setNetwork] = useState<Network | 'all'>('all')
   const [filters, setFilters] = useState<CalFilters>({})
+  const [focus, setFocus] = useState<Focus | null>(null)
   const [over, setOver] = useState<number | null>(null)
-  const posts = s.publishing.posts.filter(p => (network === 'all' || p.network === network) && passes(p, filters)).sort((a, b) => a.at - b.at)
+  const base = s.publishing.posts.filter(p => (network === 'all' || p.network === network) && passes(p, filters)).sort((a, b) => a.at - b.at)
   const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0)).getTime()
 
   const days = view === 'month' ? 35 : 7
-  const start = view !== 'month' ? anchor : (() => { const f = new Date(anchor); const first = new Date(f.getFullYear(), f.getMonth(), 1); const dow = (first.getDay() + 6) % 7; return first.getTime() - dow * DAY })()
+  const start = view !== 'month' ? anchor : (() => { const f = new Date(anchor); const first = new Date(f.getFullYear(), f.getMonth(), 1); return mondayOf(first.getTime()) })()
   const cells = Array.from({ length: days }, (_, i) => start + i * DAY)
-  const inDay = (t: number) => posts.filter(p => p.at >= t && p.at < t + DAY)
   const label = view !== 'month'
     ? `${new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${new Date(start + 6 * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
     : new Date(anchor).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
   const shift = (dir: number) => setAnchor(a => (view !== 'month' ? a + dir * 7 * DAY : new Date(new Date(a).getFullYear(), new Date(a).getMonth() + dir, 1).getTime()))
+  const openWeek = (day: number) => { setAnchor(mondayOf(day)); setView('week') }
 
   /** For a future day with fewer than 2 posts: the network Atlas recommends (cadence first, then the pillar behind target). */
   const recommend = (day: number): Network | null => (view !== 'week' || isQuiet(s.publishing.notes ?? [], day) ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
   const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
+  // The summary counts what's in the period shown; each count narrows the calendar to it.
+  const inRange = base.filter(p => p.at >= start && p.at < start + days * DAY)
+  const count: Record<Focus, number> = {
+    needs: inRange.filter(p => p.status === 'needs').length, failed: inRange.filter(p => p.status === 'failed').length,
+    paused: inRange.filter(p => p.status === 'paused').length, draft: inRange.filter(p => p.status === 'draft').length,
+    idea: view === 'week' ? cells.filter(gapIdea).length : 0,
+  }
+  const f = focus && count[focus] ? focus : null
+  const posts = f === 'idea' ? [] : f ? base.filter(p => p.status === f) : base
+  const inDay = (t: number) => posts.filter(p => p.at >= t && p.at < t + DAY)
+  // One alert pausing several posts: its reason is said once, here, not on every card.
+  const paused = inRange.filter(p => p.status === 'paused')
+  const pauseNotes = [...new Set(paused.map(p => p.note ?? ''))]
+  const sharedPause = paused.length > 1 && pauseNotes.length === 1 && pauseNotes[0] ? pauseNotes[0].replace(/^Paused:\s*/, '') : undefined
+
   const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
   const ids = useMemo(() => visible.map(p => p.id), [visible.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, `${view}-${start}-${network}-${JSON.stringify(filters)}`)
+  const sel = useSelection(ids, `${view}-${start}-${network}-${JSON.stringify(filters)}-${f}`)
+  const period = view === 'month' ? 'this month' : 'this week'
 
   const drop = (e: DragEvent, day: number) => {
     e.preventDefault(); setOver(null)
@@ -129,91 +160,120 @@ function Calendar() {
     const HALF = 30 * 60_000
     d({ type: 'publishing/move', id, at: at < now ? Math.ceil(now / HALF) * HALF : at })
   }
+  const nowLine = <div className="cal-now"><span>Now <span className="mono">{hhmm(now)}</span></span></div>
 
   return (
-    <div className="cal">
+    <div className={`cal cal-v-${view}`}>
       <div className="cal-bar">
         <div className="row tight">
-          <Btn size="sm" icon aria-label={view === 'week' ? 'Previous week' : 'Previous month'} onClick={() => shift(-1)}><ChevronLeft size={16} /></Btn>
+          <Btn size="sm" icon aria-label={view === 'month' ? 'Previous month' : 'Previous week'} onClick={() => shift(-1)}><ChevronLeft size={16} /></Btn>
           <Btn size="sm" onClick={() => setAnchor(MONDAY_THIS_WEEK)}>Today</Btn>
-          <Btn size="sm" icon aria-label={view === 'week' ? 'Next week' : 'Next month'} onClick={() => shift(1)}><ChevronRight size={16} /></Btn>
+          <Btn size="sm" icon aria-label={view === 'month' ? 'Next month' : 'Next week'} onClick={() => shift(1)}><ChevronRight size={16} /></Btn>
           <h2 className="cal-title">{label}</h2>
         </div>
-        <div className="row">
+        <div className="row cal-tools">
           <Menu trigger={<button className="select-btn">{network === 'all' ? 'All networks' : NETWORK_LABEL[network]}<ChevronDown size={14} /></button>}
             items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...PUBLISH_NETWORKS.map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
           <CalendarFilters value={filters} onChange={setFilters} />
-          {view === 'week' && <span className="row tight faint pub-selall"><SelectAll sel={sel} label="Select every post shown" />Select all</span>}
           <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'list', label: 'List' }]} />
         </div>
       </div>
+
+      {/* What needs Sam in this period, named; each count narrows the calendar to it. */}
+      <div className="cal-attn">
+        {ATTN.some(a => count[a.key]) ? (
+          <div className="filters" role="group" aria-label={`What needs you ${period}`}>
+            {ATTN.filter(a => count[a.key]).map(a => (
+              <button key={a.key} className={`filter cal-attn-btn ${a.tone ?? ''}`} aria-pressed={f === a.key} onClick={() => setFocus(f === a.key ? null : a.key)}>
+                <a.Icon size={14} aria-hidden /><span className="num">{count[a.key]}</span>{count[a.key] > 1 ? a.many : a.one}
+              </button>
+            ))}
+          </div>
+        ) : <p className="cal-attn-none"><Check size={14} aria-hidden />Nothing needs you {period}. Atlas publishes the rest on its own.</p>}
+        {f && <button className="link-btn t-sm" onClick={() => setFocus(null)}>Show every post</button>}
+        <span className="spacer" />
+        {view === 'week' && visible.length > 0 && <span className="row tight pub-selall"><SelectAll sel={sel} label={`Select the ${visible.length} posts shown`} />Select all {visible.length}</span>}
+      </div>
+      {sharedPause && (!f || f === 'paused') && (
+        <div className="cal-shared" role="note">
+          <Pause size={14} aria-hidden />
+          <p><b>{paused.length} posts paused by Atlas</b> during {sharedPause.replace(/\.$/, '')}. They go out on their own once it’s over.</p>
+          <Btn size="xs" onClick={() => d({ type: 'publishing/resume', ids: paused.map(p => p.id) })}><Play size={12} />Resume all {paused.length}</Btn>
+        </div>
+      )}
 
       <PostsBulk sel={sel} posts={visible} />
       {view === 'week' ? (
         <div className="cal-week">
           {cells.map(day => {
             const items = inDay(day)
-            const rec = recommend(day)
+            const rec = !f ? recommend(day) : null
+            const idea = !f || f === 'idea' ? gapIdea(day) : undefined
             const past = day + DAY <= now
+            const today = day === todayStart
+            const next = today ? items.findIndex(p => p.at > now) : -1
             return (
-              <section key={day} className={`cal-day ${day === todayStart ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
+              <section key={day} className={`cal-day ${today ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={`${dayLong(day)}${today ? ', today' : ''}`}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <DayNotes day={day} past={past} head={
-                  <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{day === todayStart && <span className="sr-only">, today</span>}{items.length > 0 && <span className="cal-day-n">{items.length} post{items.length > 1 ? 's' : ''}</span>}</h3>
+                  <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{today && <span className="sr-only">, today</span>}{items.length > 0 && <span className="cal-day-n">{items.length} post{items.length > 1 ? 's' : ''}</span>}</h3>
                 }>
                   <Themes day={day} />
                 </DayNotes>
-                {items.map(p => <PostChip key={p.id} p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} />)}
-                {(() => {
-                  const idea = view === 'week' ? gapIdea(day) : undefined
-                  if (idea) return (
-                    <Link className="cal-rec" to={`/publishing/ideas/${idea.id}`}>
-                      <span className="row tight"><Net n={idea.networks[0]} /><span className="mono">{idea.drafts ? hhmm(idea.drafts[0].at) : BEST_SLOT[idea.networks[0]].time}</span><span className="faint">Idea from Atlas</span></span>
-                      <span className="cal-rec-text">{idea.copy[idea.networks[0]]}</span>
-                      <span className="row tight"><Lightbulb size={12} />Review the idea</span>
-                    </Link>
-                  )
-                  if (!rec || s.handoffs.some(h => h.topic === 'Empty slot' && h.preview?.type === 'post' && h.preview.network === rec)) return null
-                  return (
-                    <button className="cal-rec" onClick={() => d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec })}>
-                      <span className="row tight"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="faint">Recommended</span></span>
-                      <span className="row tight"><Sparkles size={12} />Ask Atlas for an idea</span>
-                    </button>
-                  )
-                })()}
-                {!items.length && !rec && <div className="cal-empty">{past ? 'Nothing posted' : 'Nothing planned'}</div>}
+                {items.map((p, i) => (
+                  <Fragment key={p.id}>
+                    {i === next && nowLine}
+                    <PostChip p={p} shared={sharedPause} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={sh => sel.toggle(p.id, sh)} />
+                  </Fragment>
+                ))}
+                {today && items.length > 0 && next === -1 && nowLine}
+                {idea ? (
+                  <Link className="cal-rec" to={`/publishing/ideas/${idea.id}`}>
+                    <span className="cal-post-top"><Net n={idea.networks[0]} /><span className="mono">{idea.drafts ? hhmm(idea.drafts[0].at) : BEST_SLOT[idea.networks[0]].time}</span><span className="spacer" /><Lightbulb size={12} aria-hidden /></span>
+                    <span className="cal-rec-text">{idea.copy[idea.networks[0]]}</span>
+                    <span className="cal-rec-act">Idea from Atlas · Review it</span>
+                  </Link>
+                ) : rec && !s.handoffs.some(h => h.topic === 'Empty slot' && h.preview?.type === 'post' && h.preview.network === rec) ? (
+                  <button className="cal-rec" onClick={() => d({ type: 'publishing/askFill', day: Math.round((day - T(0, 0, 0)) / DAY), network: rec })} aria-label={`Ask Atlas for an idea: ${NETWORK_LABEL[rec]} at ${BEST_SLOT[rec].time}, a recommended slot`}>
+                    <span className="cal-post-top"><Net n={rec} /><span className="mono">{BEST_SLOT[rec].time}</span><span className="spacer" /><Sparkles size={12} aria-hidden /></span>
+                    <span className="cal-rec-act">Ask Atlas for an idea</span>
+                  </button>
+                ) : null}
+                {!f && !items.length && !rec && !idea && <p className="cal-empty">{past ? 'Nothing posted' : 'Nothing planned'}</p>}
               </section>
             )
           })}
         </div>
-      ) : (
-        view === 'month' ? (
+      ) : view === 'month' ? (
         <div className="cal-month">
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => <div key={x} className="cal-dow faint">{x}</div>)}
-          {cells.map(day => {
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => <div key={x} className="cal-dow" aria-hidden>{x}</div>)}
+          {cells.map((day, n) => {
             const items = inDay(day)
             const other = new Date(day).getMonth() !== new Date(anchor).getMonth()
+            // A week with nothing in it takes one line, so the weeks that matter get the room.
+            const week = cells.slice(n - (n % 7), n - (n % 7) + 7)
+            const slim = week.every(x => x !== todayStart && !inDay(x).length)
+            // Three lines fit: what needs you first, then by time.
+            const shown = items.length <= 3 ? items : [...items].sort((a, b) => Number(NAMED.includes(b.status)) - Number(NAMED.includes(a.status)) || a.at - b.at).slice(0, 3).sort((a, b) => a.at - b.at)
             return (
-              <div key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''}`}>
-                <button className="pub-cell-day num" onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }}
-                  aria-label={`Open the week of ${new Date(day).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}, ${items.length} posts`}>{new Date(day).getDate()}</button>
+              <div key={day} className={`cal-cell ${other ? 'other' : ''} ${day === todayStart ? 'today' : ''} ${slim ? 'slim' : ''}`}>
+                <button className="pub-cell-day num" onClick={() => openWeek(day)}
+                  aria-label={`Open the week of ${dayLong(day)}, ${items.length} post${items.length === 1 ? '' : 's'}`}>{new Date(day).getDate()}{n === 0 || new Date(day).getDate() === 1 ? <span className="cal-cell-m"> {new Date(day).toLocaleDateString('en-GB', { month: 'short' })}</span> : null}</button>
                 <Themes day={day} compact />
-                {items.slice(0, 3).map(p => {
-                  const flag = p.status === 'needs' || p.status === 'failed' ? STATUS[p.status] : undefined
+                {shown.map(p => {
+                  const I = STATUS_ICON[p.status]
                   return (
-                    <button key={p.id} className={`cal-mini ${p.status}`} onClick={() => open(p.id)} aria-label={`Preview${flag ? `, ${flag.label.toLowerCase()}` : ''}: ${p.text}`} title={flag?.label}>
-                      <Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="cal-mini-text">{p.text}</span>{flag && <span className={`dot ${flag.tone}`} aria-hidden />}
+                    <button key={p.id} className={`cal-mini ${p.status}`} onClick={() => open(p.id)} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}${NAMED.includes(p.status) ? `, ${STATUS_LABEL[p.status].toLowerCase()}` : ''}: ${p.text}`}>
+                      <Net n={p.network} /><span className="mono">{hhmm(p.at)}</span><span className="cal-mini-text">{p.text}</span>{I && <I size={12} className="cal-mini-flag" aria-hidden />}
                     </button>
                   )
                 })}
-                {items.length > 3 && <button className="link-btn cal-more" onClick={() => { const dow = (new Date(day).getDay() + 6) % 7; setAnchor(day - dow * DAY); setView('week') }}>{items.length - 3} more</button>}
+                {items.length > shown.length && <button className="link-btn cal-more" onClick={() => openWeek(day)} aria-label={`Open the week of ${dayLong(day)}: ${items.length - shown.length} more posts`}>+{items.length - shown.length} more</button>}
               </div>
             )
           })}
         </div>
-        ) : <PostTable posts={visible} sel={sel} onOpen={open} />
-      )}
-      {view === 'week' && <p className="cal-hint">Drag a post to another day to move it. Atlas tells you if the new slot is worse.</p>}
+      ) : <PostTable posts={visible} sel={sel} onOpen={open} now={now} shared={sharedPause} filtered={!!f} />}
     </div>
   )
 }
@@ -226,6 +286,7 @@ function Themes({ day, compact }: { day: number; compact?: boolean }) {
     <Link key={m.id} to="/strategy" className={`cal-theme ${compact ? 'compact' : ''}`} title={m.why}><Mark agent="sage" />{compact ? m.name : <>{m.name} <span className="faint">· Sage</span></>}</Link>
   ))}</>
 }
+
 
 /** A day's header and its notes (what's on, or a quiet day Atlas keeps empty). "Add a note" sits in the header, so it never pushes the posts down. */
 function DayNotes({ day, past, head, children }: { day: number; past: boolean; head: ReactNode; children?: ReactNode }) {
@@ -297,21 +358,35 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
   )
 }
 
-function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
+/** The one line under a post's words: why it needs a look, how it did, or what Atlas changed. Never all three. */
+function postLine(p: Post, shared?: string): { text: string; kind: 'reason' | 'stats' | 'atlas' } | undefined {
+  // A pause the calendar already explains once isn't repeated on the card.
+  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note, kind: 'reason' }
+  if (p.stats) return { text: `${k(p.stats.reach)} reach · ${p.stats.er}% engagement`, kind: 'stats' }
+  const moved = p.note?.match(/^Moved from (\S+) to \S+ by Atlas/)
+  if (moved) return { text: `Moved by Atlas from ${moved[1]}`, kind: 'atlas' }
+}
+
+/** A post in the week: when and where, the words, then one line only if there's something to know. */
+function PostChip({ p, shared, onOpen, checked, anySelected, onToggle }: { p: Post; shared?: string; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
   const { s } = useStore()
   const going = s.handoffs.find(h => h.topic === WINDOW_TOPIC && h.ref === p.id)
   const draggable = p.status !== 'published'
+  const line = postLine(p, shared)
+  const named = NAMED.includes(p.status)
   return (
-    <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
+    <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} title={draggable ? 'Drag it to another day to move it' : undefined}
+      onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move' }}>
       <span className="pub-chip-check"><SelectBox checked={checked} visible={anySelected} onToggle={onToggle} label={`Select the ${NETWORK_LABEL[p.network]} post at ${hhmm(p.at)}`} /></span>
-      <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}: ${p.text}`}>
-        <span className="cal-post-top"><Net n={p.network} /><span className="mono">{hhmm(p.at)}</span>{p.author === 'atlas' ? <Mark agent="atlas" /> : <SocialAvatar name="Sam Rivera" size={16} />}{p.account && <span className="cal-acc">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}<span className="spacer" />{p.media && <span className="cal-photo"><Photo name={p.media} /></span>}</span>
-        <p className="cal-post-text">{p.text}</p>
-        {(p.status === 'needs' || p.status === 'draft' || p.status === 'failed' || p.status === 'paused' || p.status === 'unapproved') && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}
-        {going && <Pill tone="caution">{going.title.split(':')[0]}</Pill>}
-        {p.stats && <span className="cal-stats">{k(p.stats.reach)} reach · {p.stats.er}% engagement</span>}
-        {p.note && <span className="cal-note">{p.note}</span>}
-        {p.campaign && <span className="chip">{p.campaign}</span>}
+      <button className="cal-post-btn" onClick={e => (e.shiftKey || anySelected ? onToggle(e.shiftKey) : onOpen())} aria-label={`Preview ${NETWORK_LABEL[p.network]} ${hhmm(p.at)}, ${STATUS_LABEL[p.status].toLowerCase()}: ${p.text}`}>
+        <span className="cal-post-top">
+          <Net n={p.network} /><span className="mono">{hhmm(p.at)}</span>
+          {p.account && <span className="cal-acc">{accountById(p.account).name.replace(/^Fernway /, '')}</span>}
+        </span>
+        <span className="cal-post-text">{p.text}</span>
+        {/* The status is named only when it asks something of Sam; its reason follows on the same line. */}
+        {(named || going) && <span className="cal-post-state">{named && <Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill>}{going && <Pill tone="caution">{going.title.split(':')[0]}</Pill>}</span>}
+        {line && <span className={`cal-post-line ${line.kind}`}>{line.kind === 'atlas' && <Mark agent="atlas" />}{line.text}</span>}
       </button>
     </article>
   )
@@ -319,36 +394,51 @@ function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOp
 
 /* ---------- List ---------- */
 type SortKey = 'at' | 'network' | 'status' | 'pillar' | 'author'
-function PostTable({ posts, sel, onOpen }: { posts: Post[]; sel: ReturnType<typeof useSelection>; onOpen: (id: string) => void }) {
+function PostTable({ posts, sel, onOpen, now, shared, filtered }: { posts: Post[]; sel: ReturnType<typeof useSelection>; onOpen: (id: string) => void; now: number; shared?: string; filtered: boolean }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'at', dir: 1 })
   const rows = [...posts].sort((a, b) => (a[sort.key] > b[sort.key] ? 1 : a[sort.key] < b[sort.key] ? -1 : 0) * sort.dir)
-  const head = (key: SortKey, label: string) => (
-    <th aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+  // Sorted by time, the list reads like an agenda: one heading per day.
+  const byDay = sort.key === 'at'
+  const dayOf = (t: number) => new Date(t).setHours(0, 0, 0, 0)
+  const today = dayOf(now)
+  const head = (key: SortKey, label: string, cls = '') => (
+    <th className={cls} aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <button onClick={() => setSort(x => ({ key, dir: x.key === key ? (-x.dir as 1 | -1) : 1 }))}>{label}{sort.key === key && (sort.dir === 1 ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</button>
     </th>
   )
-  if (!posts.length) return <Empty title="No posts this week" body="Move to another week, or ask Atlas to fill the recommended slots." />
+  if (!posts.length) return <Empty title={filtered ? 'Nothing left here this week' : 'No posts this week'} body={filtered ? 'Show every post, or move to another week.' : 'Move to another week, or ask Atlas to fill the recommended slots.'} />
   return (
     <div className="card pub-table-wrap">
       <table className="table pub-table">
-        <thead><tr><th className="w-40"><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar')}{head('author', 'Author')}</tr></thead>
+        <thead><tr><th className="w-40"><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network', 'pub-col-net')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar', 'pub-col-pillar')}{head('author', 'Author', 'pub-col-author')}</tr></thead>
         <tbody>
-          {rows.map(p => (
-            <tr key={p.id} className={sel.has(p.id) ? 'pub-picked' : ''} onClick={e => (e.shiftKey ? sel.toggle(p.id, true) : onOpen(p.id))}>
-              <td onClick={e => e.stopPropagation()}><SelectBox checked={sel.has(p.id)} visible onToggle={shift => sel.toggle(p.id, shift)} label={`Select: ${p.text}`} /></td>
-              <td className="mono">{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} {hhmm(p.at)}</td>
-              <td><Net n={p.network} size={20} /></td>
-              <td className="pub-table-text"><span className="ellipsis">{p.text}</span></td>
-              <td><Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill></td>
-              <td>{p.pillar}</td>
-              <td><span className="row tight nowrap">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={16} />You</>}</span></td>
-            </tr>
-          ))}
+          {rows.map((p, i) => {
+            const line = postLine(p, shared)
+            const newDay = byDay && (i === 0 || dayOf(rows[i - 1].at) !== dayOf(p.at))
+            return (
+              <Fragment key={p.id}>
+                {newDay && <tr className="pub-day-row"><th colSpan={7} scope="colgroup">{dayLong(p.at)}{dayOf(p.at) === today && <span className="cal-today">Today</span>}</th></tr>}
+                <tr className={sel.has(p.id) ? 'pub-picked' : ''} onClick={e => (e.shiftKey ? sel.toggle(p.id, true) : onOpen(p.id))}>
+                  <td onClick={e => e.stopPropagation()}><SelectBox checked={sel.has(p.id)} visible onToggle={sh => sel.toggle(p.id, sh)} label={`Select: ${p.text}`} /></td>
+                  <td className="mono nowrap pub-col-when">{!byDay && `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} `}{hhmm(p.at)}</td>
+                  <td className="pub-col-net"><Net n={p.network} size={20} /></td>
+                  <td className="pub-table-text">
+                    <span className="ellipsis">{p.text}</span>
+                    {line && <span className={`cal-post-line ${line.kind}`}>{line.kind === 'atlas' && <Mark agent="atlas" />}{line.text}</span>}
+                  </td>
+                  <td className="pub-col-status"><Pill tone={STATUS[p.status].tone}>{STATUS[p.status].label}</Pill></td>
+                  <td className="pub-col-pillar">{p.pillar}</td>
+                  <td className="pub-col-author"><span className="row tight nowrap">{p.author === 'atlas' ? <><Mark agent="atlas" />Atlas</> : <><SocialAvatar name="Sam Rivera" size={16} />You</>}</span></td>
+                </tr>
+              </Fragment>
+            )
+          })}
         </tbody>
       </table>
     </div>
   )
 }
+
 
 /* ---------- Drafts ---------- */
 function Drafts() {
