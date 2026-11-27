@@ -22,3 +22,10 @@
   .ldetail { padding-left: var(--s4); }
 }
 .act-more { padding: 6px var(--s4); }
+/* Who did it, in the agent's ink, then what it did. Each day says who worked. */
+.lagent { font-weight: 600; }
+.lagent::after { content: '·'; margin: 0 6px; color: var(--ink-2); font-weight: 400; }
+.act-day-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s2); }
+.act-day-head h2 { margin: 0; }
+.act-who { display: flex; flex-wrap: wrap; gap: 4px var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
+.act-who > span { display: inline-flex; align-items: center; gap: 4px; }

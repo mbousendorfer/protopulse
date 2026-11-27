@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { Check, ChevronDown, Flame, MessageSquareReply, Sparkles } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { State } from '../../app/state'
+import type { Handoff } from '../../app/types'
 import { ago } from '../../app/time'
 import { TRENDS, type CompEvent, type Move, type Trend } from '../../data/listening'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -16,8 +17,9 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 import { gist } from '../../ui/gist'
 import { InfoPop, MoreInfo } from '../../ui/More'
 import { MENTION_NET } from './slice'
-import { COLLAB_MIN_REACH, competitorName, competitorOf, creatorsOf, eventState, eventsOf, listeningNeeds, sentimentOf, watchedCount, type Creator } from './model'
+import { COLLAB_MIN_REACH, strongestEvent, competitorName, competitorOf, creatorsOf, eventState, eventsOf, listeningNeeds, sentimentOf, watchedCount, type Creator } from './model'
 import { Status, plural } from './list'
+import { CompetitorsAside, FeaturedMove, FeaturedUrgent, Overview } from './Overview'
 
 export const IMPACT_TONE = { High: 'alert', Medium: 'caution', Low: undefined } as const
 
@@ -27,7 +29,8 @@ type Kind = 'urgent' | 'events' | 'mentions' | 'creators' | 'trends'
 const KIND_LABEL: Record<Kind, string> = { urgent: 'Urgent', events: 'Competitor moves', mentions: 'Mentions', creators: 'Creators', trends: 'Trends' }
 /** The verb for a move, on its button. Every move, in full, is in the menu next to it. */
 const VERB: Record<Move['kind'], string> = { counter: 'Hand to Atlas', sage: 'Brief Sage', sales: 'Tell the sales team', nova: 'Hand to Nova', lesson: 'Add to Echo’s lessons', none: 'Nothing to do' }
-const PAGE = 20
+/** The queue stays short: the first rows, then « Show more ». */
+const PAGE = 8
 
 type Undo = { text: string; run: () => void }
 
@@ -75,10 +78,14 @@ export default function NeedsYou() {
   const sel = useSelection(ids, `${show}-${kind}`)
   const trends = on('trends') && show === 'needs' ? needs.trends : []
 
+  // Set apart: the spike if Echo raised one, else the strongest competitor move. It leaves the queue below.
+  const top = show !== 'needs' ? undefined : on('urgent') && needs.urgent[0] ? needs.urgent[0] : on('events') ? strongestEvent(s) : undefined
+  const dismissTop = (e: CompEvent) => { d({ type: 'listening/dismiss', event: e.id }); setUndo({ text: `Dismissed “${e.title}”. Echo keeps watching ${competitorName(s, e.competitor)}.`, run: () => d({ type: 'listening/reopen', kind: 'events', id: e.id }) }) }
+
   const creator = creatorsOf(s).find(c => c.handle === params.get('c'))
   const rows: ReactNode[] = show === 'needs' ? [
-    ...(on('urgent') ? needs.urgent.map(h => <UrgentRow key={h.id} h={h} />) : []),
-    ...(on('events') ? needs.events.map(e => <EventNeedRow key={e.id} e={e} onUndo={setUndo} />) : []),
+    ...(on('urgent') ? needs.urgent.filter(h => h !== top).map(h => <UrgentRow key={h.id} h={h} />) : []),
+    ...(on('events') ? needs.events.filter(e => e !== top).map(e => <EventNeedRow key={e.id} e={e} onUndo={setUndo} />) : []),
     ...(on('creators') ? needs.creators.map(c => <CreatorRow key={c.handle} c={c} onUndo={setUndo} />) : []),
     ...trends.map(t => <TrendRow key={t.id} t={t} onUndo={setUndo} />),
     ...mentions.map(m => <MentionRow key={m.id} m={m} onUndo={setUndo} check={<SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />} />),
@@ -108,7 +115,13 @@ export default function NeedsYou() {
     ) : null
 
   return (
-    <div>
+    <div className="stack lg">
+      <Overview />
+      <div className="ls-landing">
+      <div className="ls-main">
+      {top && (!('moves' in top)
+        ? <FeaturedUrgent h={top as Handoff} />
+        : <FeaturedMove e={top as CompEvent} onDismiss={() => dismissTop(top as CompEvent)} />)}
       <div className="sl-bar">
         <Filters label="Show" value={show} onChange={v => { set({ show: v === 'needs' ? null : v }); sel.clear() }}
           items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
@@ -122,12 +135,15 @@ export default function NeedsYou() {
           {undo && <UndoBar onUndo={() => { undo.run(); setUndo(null) }} onDismiss={() => setUndo(null)}>{undo.text}</UndoBar>}
           {head}
           <ul className="rows">{rows.slice(0, page)}</ul>
-          {rows.length > page && <button type="button" className="dec-more" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, rows.length - page)} more of {rows.length - page}<ChevronDown size={14} aria-hidden /></button>}
+          {rows.length > page && <div className="sl-more"><Btn size="sm" variant="ghost" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, rows.length - page)} more of {rows.length - page}<ChevronDown size={14} aria-hidden /></Btn></div>}
         </section>
       ) : <>
         {undo && <UndoBar onUndo={() => { undo.run(); setUndo(null) }} onDismiss={() => setUndo(null)}>{undo.text}</UndoBar>}
-        <Empty title={show === 'needs' ? 'Nothing needs you here' : `Nothing ${SHOW_LABEL[show].toLowerCase()}`} body={show === 'needs' ? `Echo watches ${watchedCount(s)} competitors, your mentions and the trends around you.` : undefined} />
+        {!top && <Empty title={show === 'needs' ? 'Nothing needs you here' : `Nothing ${SHOW_LABEL[show].toLowerCase()}`} body={show === 'needs' ? `Echo watches ${watchedCount(s)} competitors, your mentions and the trends around you.` : undefined} />}
       </>}
+      </div>
+      <CompetitorsAside />
+      </div>
       <CreatorSheet c={creator} onClose={() => set({ c: null })} />
     </div>
   )

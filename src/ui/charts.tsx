@@ -121,13 +121,15 @@ export function HBars({ items, format = (v: number) => `${v}`, highlight, color 
   )
 }
 
-/** Vertical bars with labels. */
-export function Bars({ data, labels, h = 120, label, format = (v: number) => `${v}`, color = 'var(--chart)' }: { data: number[]; labels: string[]; h?: number; label: string; format?: (v: number) => string; color?: string }) {
-  const max = Math.max(...data, 1)
+/** Vertical bars with labels. `stack` piles more series on top of `data`, each in its own colour (named by the caller). */
+export function Bars({ data, labels, h = 120, label, format = (v: number) => `${v}`, color = 'var(--chart)', stack = [] }: { data: number[]; labels: string[]; h?: number; label: string; format?: (v: number) => string; color?: string; stack?: { name: string; data: number[]; color: string }[] }) {
+  const total = (i: number) => data[i] + stack.reduce((n, s) => n + (s.data[i] ?? 0), 0)
+  const max = Math.max(...data.map((_, i) => total(i)), 1)
   return (
     <div className="vbars" role="img" aria-label={label} style={{ height: h, ['--bar' as string]: color }}>
       {data.map((v, i) => (
-        <div key={i} className="vbar" title={`${labels[i]}: ${format(v)}`}>
+        <div key={i} className="vbar" title={[`${labels[i]}: ${format(v)}`, ...stack.map(s => `${s.name} ${format(s.data[i] ?? 0)}`)].join(' · ')}>
+          {[...stack].reverse().map(s => (s.data[i] ? <i key={s.name} className="part" style={{ height: `${(s.data[i] / max) * 100}%`, background: s.color }} /> : null))}
           <i style={{ height: `${(v / max) * 100}%` }} />
           <span className="mono">{labels[i]}</span>
         </div>

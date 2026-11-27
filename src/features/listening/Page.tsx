@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
 import NeedsYou, { IMPACT_TONE } from './Needs'
+import { CompetitorCards, MoodBar } from './Overview'
+import { LineChart } from '../../ui/charts'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, Frown, Meh, MessageSquareReply, Smile, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { Network } from '../../app/types'
 import { ago, dayLabel } from '../../app/time'
@@ -10,13 +12,11 @@ import { NETWORK_LABEL } from '../../data/agents'
 import { FERNWAY_ROW, LESSONS, TOP_POSTS, type Mention, type Search, type Sentiment } from '../../data/listening'
 import { MENTION_NET, type MentionOp } from './slice'
 import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
-import { eventState, listeningNeedsCount, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
+import { eventState, listeningNeedsCount, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, sovTrend, competitorMood } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { DecisionRow } from '../../ui/Decisions'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Tabs } from '../../ui'
 import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
-import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { InfoPop } from '../../ui/More'
@@ -146,6 +146,7 @@ function Benchmark() {
         <Link to="/listening/competitors/manage" className="btn sm ghost"><Settings2 size={14} />Manage competitors</Link>
       </div>
       {net !== 'all' ? <NetworkBench n={net} /> : <>
+      <CompetitorCards />
       <section className="card">
         <div className="card-head"><h2>Side by side <span className="faint">· last 30 days</span></h2></div>
         <div className="table-wrap">
@@ -166,11 +167,9 @@ function Benchmark() {
             </tbody>
           </table>
         </div>
-        <div className="card-body">
-          {backfilling.map(w => <p key={w.id} className="row tight muted mb-2"><Mark agent="echo" />Echo is reading {w.name}’s last 30 days. Their row appears in about {Math.max(1, Math.ceil((w.since + BACKFILL_MS - now) / 60_000))} min.</p>)}
-          <div className="faint caption">Share of voice · mentions in the last 30 days</div>
-          <StackBar h={10} parts={rows.map((r, i) => ({ label: r.name, value: r.sov, color: r.us ? 'var(--chart)' : `color-mix(in srgb, var(--ink-3) ${Math.round((0.7 - i * 0.12) * 100)}%, transparent)` }))} />
-        </div>
+        {backfilling.length > 0 && <div className="card-body">
+          {backfilling.map(w => <p key={w.id} className="row tight muted"><Mark agent="echo" />Echo is reading {w.name}’s last 30 days. Their row appears in about {Math.max(1, Math.ceil((w.since + BACKFILL_MS - now) / 60_000))} min.</p>)}
+        </div>}
       </section>
       </>}
 
@@ -226,19 +225,45 @@ function Profile() {
   const sov = shareOfVoice(s)
   if (!c) return <Empty title="Unknown competitor" action={<Btn onClick={() => nav('/listening/competitors')}>Competitors</Btn>} />
   const events = eventsOf(s).filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
+  const waiting = events.find(e => !eventState(s, e))
+  const trend = sovTrend(s)
+  const mood = competitorMood(c.id)
+  const weeks = (trend.fernway ?? []).map((_, i, a) => (i === a.length - 1 ? 'This week' : `${a.length - 1 - i} wk ago`))
+  const VS = [
+    { k: 'Followers', them: `${(c.followers / 1000).toFixed(0)}k`, you: `${(FERNWAY_ROW.followers / 1000).toFixed(0)}k` },
+    { k: 'Engagement rate', them: `${c.er}%`, you: `${FERNWAY_ROW.er}%` },
+    { k: 'Posts per week', them: `${c.cadence}`, you: `${FERNWAY_ROW.cadence}` },
+    { k: 'Share of voice', them: `${sov[c.id] ?? 0}%`, you: `${sov.fernway}%` },
+  ]
   return (
     <div className="stack lg">
       <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} className="self-start"><ArrowLeft size={14} />Competitors</Btn>
-      <header>
-        <h1 className="event-title">{c.name} <span className="faint mono t-md">{c.handle}</span></h1>
-        <p className="muted mw-70ch">{c.positioning}</p>
+      <header className="comp-hero">
+        <SocialAvatar name={c.name} org size={48} />
+        <div className="grow">
+          <h1 className="event-title">{c.name}</h1>
+          <p className="muted">{c.handle} · {c.price}</p>
+        </div>
+        {waiting && <Link to={`/listening/competitors/${waiting.id}`} className="btn primary">Answer their {waiting.type.toLowerCase()}</Link>}
       </header>
-      <dl className="grid-4 comp-stats">
-        <div className="card pad stat"><dd><b className="num">{(c.followers / 1000).toFixed(0)}k</b></dd><dt className="label">Followers · you have {(FERNWAY_ROW.followers / 1000).toFixed(0)}k</dt></div>
-        <div className="card pad stat"><dd><b className="num">{c.er}%</b></dd><dt className="label">Engagement rate · you {FERNWAY_ROW.er}%</dt></div>
-        <div className="card pad stat"><dd><b className="num">{c.cadence}</b></dd><dt className="label">Posts per week · you {FERNWAY_ROW.cadence}</dt></div>
-        <div className="card pad stat"><dd><b className="num">{sov[c.id] ?? 0}%</b></dd><dt className="label">Share of voice · you {sov.fernway}%</dt></div>
-      </dl>
+      <p className="muted mw-70ch">{c.positioning}</p>
+      <section className="card">
+        <div className="card-head"><h2>Against you <span className="faint">· last 30 days</span></h2></div>
+        <dl className="comp-vs">
+          {VS.map(v => <div key={v.k}><dt>{v.k}</dt><dd><b className="num">{v.them}</b><span>you {v.you}</span></dd></div>)}
+        </dl>
+        <div className="comp-charts">
+          <div>
+            <div className="section-title">Share of voice <span className="faint">· 6 weeks</span></div>
+            <LineChart h={160} labels={weeks} format={v => `${Math.round(v)}%`} label={`Share of voice, ${c.name} and Fernway, last 6 weeks`}
+              series={[{ name: c.name, data: trend[c.id] ?? [], tone: 'faint', dashed: true }, { name: 'Fernway', data: trend.fernway ?? [] }]} />
+          </div>
+          <div>
+            <div className="section-title">How people talk about them <span className="faint">· 30 days</span></div>
+            <MoodBar positive={mood.positive} negative={mood.negative} label={`How people talk about ${c.name}`} />
+          </div>
+        </div>
+      </section>
       <div className="grid-2">
         <section className="card">
           <div className="card-head"><h2>Recent events</h2></div>
@@ -274,6 +299,7 @@ function Profile() {
 /* ---------- Mentions ---------- */
 const PAGE = 20
 const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
+const MOOD_ICON = { positive: Smile, neutral: Meh, negative: Frown } as const
 type MShow = 'all' | Sentiment | 'risk' | 'hidden'
 const MSHOW_LABEL: Record<MShow, string> = { all: 'All', negative: 'Negative', neutral: 'Neutral', positive: 'Positive', risk: 'At risk', hidden: 'Hidden' }
 
@@ -361,25 +387,35 @@ function Mentions() {
               <Btn size="sm" variant="ghost" onClick={exportCSV}><Download size={14} />Export CSV</Btn>
             </div>
           )}
-          <ul className="rows">
+          {/* A feed (matrix §15): who said it, where, how it sounds, what they said, how far it went. */}
+          <ul className="ls-feed">
             {shown.map(m => {
               const st = s.listening.mentions[m.id]
               const tags = s.listening.tags[m.id] ?? []
+              const pending = s.listening.pendingTags[m.id] ?? []
               const md = mood(m)
+              const MoodIcon = MOOD_ICON[md]
               const openIt = () => { setOpenId(m.id); d({ type: 'listening/seen', ids: [m.id] }) }
               return (
-                <DecisionRow key={m.id}
-                  lead={<SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />}
-                  title={<><button type="button" className={`link-title ${seenOf(s, m) ? '' : 'new'}`} onClick={openIt}>{m.author}</button><span className="sl-quote">“{m.text}”</span></>}
-                  line={<>
-                    <SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={16} />
-                    {show !== md && <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>}
-                    {m.risk && show !== 'risk' && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
-                    <span>Reach {m.reach.toLocaleString('en-GB')}</span><span>{ago(m.at, now)}</span>
-                    {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
-                    {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
-                  </>}
-                  acts={<>
+                <li key={m.id} className={`ls-item ${sel.has(m.id) ? 'picked' : ''}`}>
+                  <SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />
+                  <SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={40} />
+                  <div className="ls-item-main">
+                    <p className="ls-item-head">
+                      <button type="button" className={`link-title ${seenOf(s, m) ? '' : 'new'}`} onClick={openIt}>{m.author}</button>
+                      <span className="ls-item-where">{m.network} · {ago(m.at, now)}</span>
+                      <span className={`ls-mood ${md}`}><MoodIcon size={12} aria-hidden />{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
+                      {m.risk && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
+                    </p>
+                    <p className="ls-item-text">{m.text}</p>
+                    <p className="ls-item-meta">
+                      <span>Reach <b className="num">{m.reach.toLocaleString('en-GB')}</b></span>
+                      {m.product && <span>{m.product}</span>}
+                      {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
+                      {pending.map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
+                    </p>
+                  </div>
+                  <div className="ls-item-acts">
                     {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill>
                       : <Btn size="sm" onClick={() => run('nova', {}, [m.id])} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>}
                     <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${m.author}’s mention`}><ChevronDown size={14} /></Btn>} items={[
@@ -387,11 +423,12 @@ function Mentions() {
                       { label: hidden ? 'Unhide' : 'Hide', onSelect: () => run(hidden ? 'unhide' : 'hide', {}, [m.id]) },
                       ...(st ? [] : [{ label: 'Hand to Atlas', onSelect: () => run('atlas', {}, [m.id]) }]),
                     ]} />
-                  </>} />
+                  </div>
+                </li>
               )
             })}
           </ul>
-          {list.length > page && <button type="button" className="dec-more" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, list.length - page)} more of {list.length - page}<ChevronDown size={14} aria-hidden /></button>}
+          {list.length > page && <div className="sl-more"><Btn size="sm" variant="ghost" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, list.length - page)} more of {list.length - page}<ChevronDown size={14} aria-hidden /></Btn></div>}
         </section>
       )}
 

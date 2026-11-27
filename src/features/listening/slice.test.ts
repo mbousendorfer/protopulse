@@ -3,7 +3,7 @@ import { initialState, type State } from '../../app/state'
 import { reducer } from '../../app/reducer'
 import { intentDef } from '../../app/agents-registry'
 import { MIN } from '../../app/time'
-import { allMentions, listeningNeeds, listeningNeedsCount, moodCount, recent, visibleMentions, WEEK } from './model'
+import { allMentions, brandWeek, listeningNeeds, listeningNeedsCount, moodCount, recent, shareOfVoice, sovTrend, strongestEvent, visibleMentions, WEEK } from './model'
 
 const s0 = () => initialState()
 const fire = (s: State) => reducer(s, { type: 'core/fire', eventId: 'ev-spike' })
@@ -387,5 +387,22 @@ describe('Echo · Needs you', () => {
     s = reducer(s, { type: 'listening/trends', ids })
     expect(listeningNeeds(s).trends).toHaveLength(0)
     expect(cards(s)).toBe(before + ids.length)
+  })
+})
+
+describe('Listening overview (matrix §15)', () => {
+  it('counts the week the Brand search counts, plus what arrived during the session', () => {
+    const s = s0()
+    expect(brandWeek(s).total).toBe(s.listening.searches.find(x => x.id === 's1')!.volume)
+    const after = fire(s)
+    expect(brandWeek(after).total - brandWeek(s).total).toBe(after.listening.live.length)
+  })
+  it('ends the share-of-voice trend on the share shown everywhere else', () => {
+    const s = s0()
+    const t = sovTrend(s), now = shareOfVoice(s)
+    for (const id of Object.keys(now)) expect(t[id][t[id].length - 1]).toBe(now[id])
+  })
+  it('sets apart the highest-impact open move', () => {
+    expect(strongestEvent(s0())?.impact).toBe('High')
   })
 })

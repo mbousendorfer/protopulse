@@ -30,6 +30,13 @@ export function inFilter(l: LogEntry, f: StatusFilter, now: number) {
 export const DAY_CAP = 8
 export const visibleRows = <T,>(rows: T[], open: boolean) => (open || rows.length <= DAY_CAP + 2 ? rows : rows.slice(0, DAY_CAP))
 
+/** Who worked in a day's entries, most active first. */
+export function whoWorked(rows: LogEntry[]): [LogEntry['agent'], number][] {
+  const by = new Map<LogEntry['agent'], number>()
+  for (const l of rows) by.set(l.agent, (by.get(l.agent) ?? 0) + 1)
+  return [...by].sort((a, b) => b[1] - a[1])
+}
+
 /** Agents › Activity: the journal of every agent action (PROMPT §6.8). State filters with counts, the agent in a menu. */
 export default function Activity() {
   const { s, d } = useStore()
@@ -67,7 +74,11 @@ export default function Activity() {
 
       {groups.map(([day, rows]) => (
         <section key={day} className="act-day">
-          <h2>{day} <span className="faint num">{rows.length}</span></h2>
+          {/* The day, and who worked that day: each agent's avatar with its count. */}
+          <div className="act-day-head">
+            <h2>{day} <span className="faint num">{rows.length}</span></h2>
+            <span className="act-who">{whoWorked(rows).map(([a, n]) => <span key={a} title={`${agentName(a)}: ${n}`}><Mark agent={a} /><span className="num">{n}</span></span>)}</span>
+          </div>
           <ul className="card ledger">
             {visibleRows(rows, full.includes(day)).map(l => {
               const isOpen = open === l.id
@@ -79,7 +90,7 @@ export default function Activity() {
                     <Mark agent={l.agent} size="md" />
                     <button className="ltext" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : l.id)}>
                       {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      <span>{l.text}</span>
+                      <span><b className="lagent" style={{ color: `var(--a-${l.agent}-ink)` }}>{agentName(l.agent)}</b>{l.text}</span>
                     </button>
                     {/* Done is what agents do all day: only what differs (your decisions, undos) gets a status. */}
                     {l.status === 'done' ? <span aria-hidden /> : <Pill tone={st.tone}>{st.label}</Pill>}

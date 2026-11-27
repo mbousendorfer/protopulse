@@ -36,3 +36,20 @@ export function trustOf(a: Agent) {
     sub: `${r.handled.toLocaleString('en-GB')} handled alone · ${r.undone ? `${r.undone} undone` : 'nothing undone'}`,
   }
 }
+
+/**
+ * A 30-day total spread over the days in proportion to the work done, largest remainders first (Track record chart).
+ * ponytail: the record keeps totals for escalations and undos, not days; add per-day series to the data if a day must be exact.
+ */
+export function spread(total: number, weights: number[]) {
+  const sum = weights.reduce((a, b) => a + b, 0) || 1
+  const raw = weights.map(w => (total * w) / sum)
+  const out = raw.map(Math.floor)
+  const left = total - out.reduce((a, b) => a + b, 0)
+  raw.map((v, i) => [v - Math.floor(v), i] as const).sort((a, b) => b[0] - a[0]).slice(0, left).forEach(([, i]) => out[i]++)
+  return out
+}
+
+/** “Paused for 1 hour”, “Paused until Monday”, “Paused”: the pause menu stores “in 1 hour” or a moment. */
+export const pausedLabel = (a: Pick<Agent, 'pausedUntil'>) =>
+  !a.pausedUntil ? 'Paused' : a.pausedUntil.startsWith('in ') ? `Paused for ${a.pausedUntil.slice(3)}` : `Paused until ${a.pausedUntil}`

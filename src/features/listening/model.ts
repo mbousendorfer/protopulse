@@ -2,7 +2,7 @@
 import type { State } from '../../app/state'
 import { now } from '../../app/core'
 import { DAY, MIN } from '../../app/time'
-import { COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, TRENDS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
+import { BRAND_DAYS, COMP_MOOD, SOV_WEEKS, COMP_NETWORKS, COMPETITORS, CREATOR_INFO, TOP_POSTS, TRENDS, type NetStat, EVENTS, FERNWAY_ROW, MENTIONS, type CompEvent, type Competitor, type Mention, type Search, type Sentiment } from '../../data/listening'
 import type { Network } from '../../app/types'
 import { NET_SHARE, POSTS } from '../../data/insights'
 import { lastWeekOf } from '../strategy/slice'
@@ -332,3 +332,40 @@ export function listeningNeeds(s: State) {
   }
 }
 export const listeningNeedsCount = (s: State) => Object.values(listeningNeeds(s)).reduce((n, xs) => n + xs.length, 0)
+
+/* ---------- Overview and competitor cards (matrix §15) ---------- */
+
+/** Brand mentions per day, the last 7 days: the seeded week, today's bar plus what arrived during the session. */
+export function brandWeek(s: State) {
+  const days = BRAND_DAYS.map((v, i) => (i === BRAND_DAYS.length - 1 ? v + s.listening.live.length : v))
+  return { days, total: days.reduce((a, b) => a + b, 0) }
+}
+
+/** Share of voice per week, the last 6 weeks, among the brands Echo watches (same rule as shareOfVoice, week by week). */
+export function sovTrend(s: State): Record<string, number[]> {
+  const ids = ['fernway', ...competitorsOf(s).filter(c => s.listening.watch.find(w => w.id === c.id)?.tracking).map(c => c.id)]
+  const raw: Record<string, number[]> = Object.fromEntries(ids.map(id => [id, SOV_WEEKS[id as keyof typeof SOV_WEEKS] ?? Array(6).fill(competitorOf(s, id)?.sov ?? 0)]))
+  const weeks = raw.fernway.map((_, w) => ids.reduce((n, id) => n + raw[id][w], 0))
+  return Object.fromEntries(ids.map(id => [id, raw[id].map((v, w) => Math.round((v / (weeks[w] || 1)) * 100))]))
+}
+
+/** How people talk about a competitor: % positive and % negative. One Sam added reads as average. */
+export const competitorMood = (id: string) => COMP_MOOD[id as keyof typeof COMP_MOOD] ?? { positive: 45, negative: 15 }
+
+const IMPACT_RANK = { High: 0, Medium: 1, Low: 2 } as const
+/** The open competitor move to answer first: highest impact, then newest. */
+export const strongestEvent = (s: State): CompEvent | undefined =>
+  [...openEvents(s)].sort((a, b) => IMPACT_RANK[a.impact] - IMPACT_RANK[b.impact] || b.at - a.at)[0]
+
+/** Echo's read of the week, in one sentence, from the same numbers as the overview. */
+export function echoWeekRead(s: State) {
+  const week = recent(s, WEEK)
+  const top = topComplaints(s, week)[0]
+  const ev = strongestEvent(s)
+  const c = moodCount(s, week)
+  const move = ev && `${competitorName(s, ev.competitor)}’s ${ev.type.toLowerCase()}`
+  // The spike is the card under this band: the sentence says what it means for the week, not its title again.
+  if (listeningNeeds(s).urgent.length) return `${top ? `Complaints about the ${top[0]}` : 'Negative mentions'} are spiking${move ? `; ${move} is the next move to answer` : ''}.`
+  const about = top ? `most complaints are about the ${top[0]}` : `${pct(c.positive, c.total)} of mentions are positive`
+  return move ? `${move} is the move to answer; ${about}.` : `A calm week: ${about}.`
+}
