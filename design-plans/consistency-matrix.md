@@ -227,6 +227,32 @@ lines visible (« Never sees your password », « Publishes nothing without your
 **Exemplar:** Inbox escalation — the « Rule · Why · Who · Never » block sits behind « Why? » on the draft card; the
 public line and the DM stay visible.
 
+## 14. Standard list (Matt, 27/11: « features tailored to our example make the interface too verbose »)
+
+**Rule.** A module's landing and every list of things to act on use one pattern, built only from existing primitives.
+A rule that exists for one case of the demo (a weekly quota, one person's release, a hook trial, a flop) is a status
+on the row, never a group, banner, note or component of its own.
+
+**Canonical**
+- Bar: `Filters` by state with counts, non-empty states only (« Needs you 14 · On trial 2 · Later 1 · Sent 6 »). The
+  « Needs you » count equals the rail badge. A second criterion (video, competitor, network) is a `Menu` behind a
+  ghost button on the right (« All videos ▾ »), never a second row of chips.
+- List: one `.card` of rows (`.dq-rows` / `.rows`). A row is: lead (thumb, avatar, select box), title, one meta line
+  (named key number, networks, short proof), a `Pill` only when the row's state differs from the filter's
+  (« Held », « Next week », « Below usual », « Failed ») followed by « Why? » (`InfoPop`), then the row's actions: one
+  visible decision, the rest in a `Menu`.
+- Selection: `useSelection` + `SelectAll` + `BulkBar`. The filter's primary action (« Send 13 to Atlas ») sits in the
+  list head, right, and gives way to `BulkBar` while rows are selected.
+- Empty: `Empty`, one line.
+- Gone: summary sentences above the list (the counts are the filters), agent sentences on the page (« I check your
+  channel every 15 minutes » belongs to the agent's profile), group headers and their hints, rule banners, sub-groups
+  by cause.
+- One cause blocking several rows (Hugo's release) has no banner: its action is on each row it blocks (« Release
+  signed ») and in `BulkBar`.
+
+**Exemplar:** Video › Clips. **Supersedes** §12's summary line and decision groups: « Needs you » is the first filter
+of the list. §12's other rules (decisions on the row, empty state, rail badge) stand.
+
 ## 11. Vocabulary
 
 | Verb | Used for | Synonyms to remove |

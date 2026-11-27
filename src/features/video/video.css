@@ -34,6 +34,12 @@
    decisions on the row. To migrate to the agents lot's DecisionGroup primitive once it lands. */
 .dq-page { display: flex; flex-direction: column; }
 .dq-page > .filters, .dq-page > .video-notice { margin-bottom: var(--s4); }
+/* Clips as a standard list (matrix §14): state filters, the video in a menu on the right, one card of rows. */
+.vq-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
+.vq-bar > .filters { margin: 0; }
+.vq-list { padding: 0; overflow: hidden; }
+.vq-list-head { display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 8px var(--s4) 8px var(--s2); border-bottom: 1px solid var(--line); }
+.vq-list > .bulk-bar { margin: var(--s2); }
 .dq-sum { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s2); margin: 0 0 var(--s4); color: var(--ink); }
 .dq-count { font: inherit; font-weight: 600; color: var(--action-ink); background: none; border: 0; padding: 2px 8px; margin: 0 -4px; border-radius: 999px; cursor: pointer; }
 .dq-count:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -47,10 +53,6 @@
 .dq-hint { font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .dq-head .btn { flex: none; }
 .dq > .bulk-bar { margin: var(--s2) var(--s4); }
-.dq-note { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); padding: 8px var(--s4); font-size: var(--t-sm); color: var(--ink); border-bottom: 1px solid var(--line); }
-.dq-note > svg { flex: none; color: var(--ink-2); }
-.dq-note b { font-weight: 600; }
-.dq-sub + .dq-sub { border-top: 1px solid var(--line); }
 .dq-rows { list-style: none; margin: 0; padding: 0; }
 .dq-rows > li + li { border-top: 1px solid var(--line); }
 .dq-row { display: grid; grid-template-columns: 32px auto minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 8px var(--s4) 8px var(--s2); cursor: pointer; transition: background-color var(--fast) var(--ease); }
@@ -59,7 +61,7 @@
 .dq-row.arrive { animation: settle var(--slow) var(--ease); }
 .dq-check { display: grid; place-items: center; width: 32px; }
 .dq-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.dq-title, .dq-line, .dq-todo, .dq-why { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dq-title, .dq-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dq-name { font-weight: 600; color: var(--ink); text-decoration: none; margin-right: var(--s2); }
 .dq-name:hover, .dq-name:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
 .dq-hook { color: var(--ink); }
@@ -68,10 +70,6 @@
 .dq-line > .dq-proof, .dq-line > .dq-src { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dq-line > .dq-src { flex-shrink: 4; }
 .dq-proof b { color: var(--ink); font-weight: 600; }
-.dq-todo, .dq-why { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--ink); }
-.dq-todo svg { flex: none; color: var(--caution); }
-.dq-why { font-weight: 600; }
-.dq-why svg { flex: none; color: var(--alert-strong); }
 .dq-acts { display: flex; align-items: center; gap: 6px; flex: none; }
 .dq-row.is-source .src-thumb { width: 71px; height: 40px; }
 .dq-row .progress { margin-top: 4px; }
