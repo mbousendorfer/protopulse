@@ -63,6 +63,6 @@ export const SCRIPT: ScriptEvent[] = [
     rule: { text: 'Keep TikTok captions under 100 characters', agents: ['atlas'] },
     handoff: { agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “Keep TikTok captions under 100 characters”', context: 'You shortened 8 of my last 10 TikTok captions.',
-      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/agents/atlas?tab=rules' },
+      why: 'Same edit repeated 8 times in 3 weeks.', confidence: 86, link: '/agents/rules?agent=atlas' },
   },
 ]

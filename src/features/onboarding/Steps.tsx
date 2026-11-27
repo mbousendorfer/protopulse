@@ -107,7 +107,7 @@ function Approver() {
         </form>
       )}
       {error && <p className="onb-error" role="alert">Enter a valid email address.</p>}
-      <p className="muted t-sm">Optional. You can invite them later from Settings.</p>
+      <p className="muted t-sm">Optional.</p>
     </div>
   )
 }

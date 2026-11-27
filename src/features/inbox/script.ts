@@ -147,7 +147,7 @@ export const SCRIPT: ScriptEvent[] = ([
     rule: { text: 'No emojis in LinkedIn replies', agents: ['nova', 'atlas'] },
     handoff: { agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Playbook rule',
       title: 'New rule? “No emojis in LinkedIn replies”', context: 'You removed emojis from 9 of my last 10 LinkedIn drafts.',
-      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/agents/nova?tab=rules' },
+      why: 'Same edit repeated 9 times in 2 weeks.', confidence: 90, link: '/agents/rules?agent=nova' },
   },
   {
     id: 'ev-intent', order: 210, label: 'Nova · buying intent DM',
