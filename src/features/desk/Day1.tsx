@@ -80,7 +80,7 @@ function Item({ i, n, next }: { i: CheckItem; n: number; next: boolean }) {
       </div>
       <b>{i.label}</b><span className="sr-only">{i.done ? ' (done)' : ''}</span>
       {/* A done step only needs its name; an open one says what it takes and what it unlocks. */}
-      <p className="muted">{i.done ? i.detail.replace(/\.$/, '') : i.detail}</p>
+      {!i.done && <p className="muted">{i.detail}</p>}
       {i.unlocks && !i.done && <p className="check-unlocks">{i.unlocks}</p>}
       <div className="check-act">
         {i.done ? <Pill tone="ok">Done</Pill>
