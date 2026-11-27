@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
-  Activity, Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
+  Bot, ChevronRight, Inbox, LayoutDashboard, LineChart, Menu as MenuIcon, PanelLeftClose, PanelLeftOpen,
   Radar, Search, Clapperboard, Send, Settings, Target, Undo2, Bell, MessageCircle, Sun, Moon,
 } from 'lucide-react'
 import { useNow, useStore } from './store'
@@ -15,7 +15,6 @@ import { Btn, Kbd, Mark, Modal, Pop } from '../ui'
 import { ago } from './time'
 import CommandBar from '../features/command/CommandBar'
 import Boundary from './Boundary'
-import ChatDrawer from '../features/chats/Drawer'
 import { SocialAvatar } from '../ui/SocialAvatar'
 import Moderator from '../features/moderator/Moderator'
 
@@ -34,11 +33,11 @@ const CRUMB: Record<string, string> = {
 }
 
 // Agents › Shared rules and Escalation are tabs of the Agents page, named in the crumbs.
-const AGENT_TABS: Record<string, string> = { rules: 'Shared rules', escalation: 'Escalation' }
+const AGENT_TABS: Record<string, string> = { rules: 'Shared rules', escalation: 'Escalation', activity: 'Activity' }
 // Crumbs a capital first letter can't spell.
 const CRUMB_WORD: Record<string, string> = { roi: 'ROI' }
 
-const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/activity', b: '/agents/rules' }
+const GOTO: Record<string, string> = { d: '/', i: '/inbox', p: '/publishing', n: '/insights', l: '/listening', s: '/strategy', v: '/video', a: '/agents', y: '/agents/activity', b: '/agents/rules' }
 
 export default function Shell() {
   const { s, d } = useStore()
@@ -49,8 +48,6 @@ export default function Shell() {
   const [cmd, setCmd] = useState(false)
   const [mod, setMod] = useState(false)
   const [help, setHelp] = useState(false)
-  const [chatOpen, setChatOpen] = useState(false)
-  const [chatId, setChatId] = useState<string | null>(null)
   const unread = s.chats.list.reduce((n, c) => n + c.unread, 0)
   const gPressed = useRef(0)
 
@@ -121,10 +118,9 @@ export default function Shell() {
           })}
         </div>
 
+        {/* The team that works the departments: its rules, its escalation and its journal are tabs of Agents. */}
         <div className="rail-group">
-          <span className="label hide-collapsed">Team</span>
           <RailLink to="/agents" icon={<Bot size={16} />} label="Agents" count={agentsNeedsCount(s)} />
-          <RailLink to="/activity" icon={<Activity size={16} />} label="Activity" />
         </div>
 
         <div className="rail-foot">
@@ -147,7 +143,8 @@ export default function Shell() {
         <header className="top">
           <Btn variant="ghost" icon size="sm" className="mobile-only" aria-label="Open menu" onClick={() => setMobileOpen(true)}><MenuIcon size={16} /></Btn>
           <div className="crumbs">
-            <b>{CRUMB[seg] ?? seg}</b>
+            {/* The first crumb leads back to the section's landing: no separate Back button on sub-pages. */}
+            {sub.length ? <Link to={`/${seg}`} className="link-btn">{CRUMB[seg] ?? seg}</Link> : <b>{CRUMB[seg] ?? seg}</b>}
             {sub.slice(0, 2).filter(x => !/^[a-z]{1,4}[-:]/.test(x) || seg === 'agents' || (seg === 'inbox' && inboxConv(x))).map(x => {
               // Ids never show as crumbs; an agent id shows as the agent's name.
               const t = seg === 'agents' ? (s.agents.find(a => a.id === x)?.name ?? AGENT_TABS[x] ?? x)
@@ -163,7 +160,6 @@ export default function Shell() {
           <button className="cmd-trigger" onClick={() => setCmd(true)}>
             <Search size={14} aria-hidden /><span>Ask or brief an agent…</span><Kbd>⌘K</Kbd>
           </button>
-          <Btn size="sm" onClick={() => setChatOpen(true)} aria-label="Chat with your agents"><MessageCircle size={14} /><span className="hide-sm">Chat</span></Btn>
           <ClaireStatus />
           <ThemeToggle />
           <Notifications />
@@ -176,7 +172,6 @@ export default function Shell() {
       <CommandBar open={cmd} onOpenChange={setCmd} />
       <Moderator open={mod} onOpenChange={setMod} />
       <ShortcutHelp open={help} onOpenChange={setHelp} />
-      <ChatDrawer open={chatOpen} onOpenChange={setChatOpen} chatId={chatId} setChatId={setChatId} />
     </div>
   )
 }
@@ -203,8 +198,8 @@ function ClaireStatus() {
     }>
       <div className="stack w-280">
         <div className="row nowrap"><Mark agent="claire" size="md" /><div><b>Claire Dubois</b><div className="muted t-xs">Head of Brand · approves what you send her</div></div></div>
-        <div className="muted">Usually replies in about a minute.</div>
-        <div className="faint t-xs">{waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
+        <div className="muted">Usually replies in about a minute. {waiting ? `${waiting} card${waiting > 1 ? 's' : ''} waiting on her decision.` : 'Nothing waiting on her right now.'}</div>
+        <Link to="/agents/escalation" className="link-btn t-sm">What goes to Claire</Link>
       </div>
     </Pop>
   )
@@ -231,7 +226,7 @@ function Notifications() {
             </li>
           ))}
         </ul>
-        <Btn size="sm" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn>
+        <Btn size="sm" variant="ghost" onClick={() => nav('/agents/activity')}>See all activity</Btn>
       </div>
     </Pop>
   )
@@ -239,7 +234,7 @@ function Notifications() {
 
 const SHORTCUTS: [string, string][] = [
   ['⌘K or /', 'Ask or brief an agent'], ['F', 'Process the Desk in Focus'], ['G then D', 'Desk'], ['G then I', 'Inbox'], ['G then P', 'Publishing'],
-  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then V', 'Video'], ['G then A', 'Agents'], ['G then Y', 'Activity'], ['G then B', 'Shared rules'],
+  ['G then N', 'Insights'], ['G then L', 'Listening'], ['G then S', 'Strategy'], ['G then V', 'Video'], ['G then A', 'Agents'], ['G then Y', 'Agents › Activity'], ['G then B', 'Shared rules'],
   ['↑ / ↓ or J / K', 'Desk and Focus: next / previous card'], ['A', 'Desk and Focus: approve, or pick the recommended option'], ['1–9', 'Desk and Focus: pick an option'],
   ['E', 'Desk and Focus: edit (⌘↵ approves the edit)'], ['R then 1–4', 'Desk and Focus: reject with a reason'], ['S then 1–4', 'Desk and Focus: snooze'],
   ['T / N', 'Autonomy request: try for a week / not yet'], ['C', 'Desk and Focus: ask Claire'], ['Z', 'Focus: undo the last decision'],
