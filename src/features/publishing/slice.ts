@@ -185,7 +185,7 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       const n = s.publishing.plan.items.filter(i => i.included).length
       let next = approvePlan(s)
       next = s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(next, 'h-plan') : next
-      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call from Plan review', link: '/publishing/calendar' })
+      return pushLog(next, { agent: 'atlas', text: `Next week’s plan approved: ${n} of ${s.publishing.plan.items.length} posts`, status: n < s.publishing.plan.items.length ? 'edited' : 'approved', reason: 'Your call on next week’s plan', link: '/publishing/calendar' })
     }
     case 'publishing/planReject': {
       const next = setPlan(s.handoffs.some(h => h.id === 'h-plan') ? removeHandoff(s, 'h-plan') : s, { status: 'rejected' })

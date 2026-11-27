@@ -280,7 +280,7 @@ export function PostPreview() {
             head = 'Needs you'
             body = p.note && <p className="pd-say"><Mark agent="atlas" /><span>{p.note}</span></p>
             acts = p.waiting === 'visual'
-              ? <Link className="btn primary" to="/publishing/media"><ImageUp size={14} />Upload it in Media</Link>
+              ? <Link className="btn primary" to={`/publishing/media?for=${p.id}`}><ImageUp size={14} />Upload it in Media</Link>
               : <><Btn variant="primary" onClick={approveAlone}><Check size={14} />Approve and schedule</Btn>{edit}</>
             shown = ['edit']
           } else if (p.status === 'draft') {
