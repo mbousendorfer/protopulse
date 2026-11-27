@@ -66,14 +66,32 @@
 /* ---------- Plan review ---------- */
 .plan { display: flex; flex-direction: column; gap: var(--s4); }
 .plan-head h2 { font-size: var(--t-xl); font-weight: 600; margin-top: var(--s2); }
-.plan-stats { display: grid; grid-template-columns: minmax(0, 440px); margin-top: var(--s4); }
-.cadence, .mix { display: flex; flex-direction: column; gap: 6px; }
-.cadence li { display: grid; grid-template-columns: 26px 1fr auto 16px; gap: 8px; align-items: center; color: var(--ink-2); }
-.cadence li b { color: var(--ink); font-weight: 500; }
-.cadence li svg { color: var(--ok); }
-.cadence li.under svg, .cadence li.under b { color: var(--caution); }
+.plan-top { display: flex; align-items: flex-start; gap: var(--s3) var(--s4); flex-wrap: wrap; }
+.plan-decide { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.plan-ask { display: flex; align-items: center; gap: var(--s2); margin-top: var(--s4); }
+.plan-ask .input { flex: 1; min-width: 0; }
+.mix { display: flex; flex-direction: column; gap: 6px; }
 .mix li { display: flex; justify-content: space-between; color: var(--ink-2); }
 .mix b { color: var(--ink); font-weight: 500; }
+/* The week at a glance: seven columns, each post a picture-led chip (network, time); left-out posts are struck. */
+.plan-week { list-style: none; margin: var(--s5) 0 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s2); }
+.plan-week > li { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: var(--s2); border-radius: var(--r-ctl); background: var(--sunk); }
+.plan-week-day { font-size: var(--t-sm); color: var(--ink-2); }
+.plan-week-day b { color: var(--ink); font-weight: 600; }
+.plan-week ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.plan-chip { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.plan-chip-pic { display: grid; place-items: center; height: 44px; border-radius: var(--r-sm); overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
+.plan-chip-pic > .photo { width: 100%; height: 100%; }
+.plan-chip-meta { display: flex; align-items: center; gap: 4px; font-size: var(--t-xs); color: var(--ink); min-width: 0; }
+.plan-chip.out .plan-chip-pic { opacity: 0.35; }
+.plan-chip.out .plan-chip-meta .mono { text-decoration: line-through; color: var(--ink-2); }
+.plan-chip-none { font-size: var(--t-xs); }
+.plan-cadence { list-style: none; margin: var(--s4) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font-size: var(--t-sm); color: var(--ink-2); }
+.plan-cadence li { display: inline-flex; align-items: center; gap: 6px; }
+.plan-cadence b { color: var(--ink); font-weight: 600; }
+.plan-cadence svg { color: var(--ok); }
+.plan-cadence li.under svg, .plan-cadence li.under b { color: var(--caution-strong); }
+.plan-day h3 { scroll-margin-top: calc(var(--topbar) + var(--s4)); }
 .plan-warn, .plan-diff { margin-top: var(--s4); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); border: 1px solid var(--line-strong); }
 .plan-warn ul, .plan-diff ul { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .plan-warn li, .plan-diff li { display: flex; gap: 8px; align-items: center; color: var(--ink-2); }
@@ -96,7 +114,6 @@
 .plan-item.out .plan-what p { text-decoration: line-through; color: var(--ink-2); }
 .plan-item.out .plan-photo { opacity: 0.4; }
 .plan-photo { display: block; width: 48px; height: 48px; border-radius: var(--r-sm); overflow: hidden; }
-.plan-foot { position: sticky; bottom: var(--s4); display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4); box-shadow: var(--float); z-index: 5; flex-wrap: wrap; }
 
 /* ---------- Media ---------- */
 .media-bar { display: flex; align-items: flex-start; gap: var(--s3); }
@@ -358,6 +375,15 @@
 @media (max-width: 820px) {
   .cal-week { grid-template-columns: minmax(0, 1fr); }
   .plan-item { grid-template-columns: 20px minmax(0, 1fr) 48px; row-gap: var(--s1); }
+  /* The week on a phone: seven narrow columns of pictures and network icons; the time is in each chip's title and in the list below. */
+  .plan-week { gap: 4px; }
+  .plan-week > li { padding: 4px; }
+  .plan-week-day { font-size: var(--t-xs); text-align: center; }
+  .plan-week-day b { display: block; }
+  .plan-chip-meta { justify-content: center; }
+  .plan-chip-meta .mono, .plan-chip-none { display: none; }
+  .plan-chip-pic { height: 32px; }
+  .plan-decide { width: 100%; }
   .plan-when { grid-column: 2; grid-row: 1; }
   .plan-what { grid-column: 2; }
   .plan-item > .pill { grid-column: 2; justify-self: start; }
@@ -380,7 +406,6 @@
   .cmp[data-pane="write"] .cmp-side, .cmp[data-pane="preview"] .cmp-edit { display: none; }
   .cmp-side { max-width: none; }
   .cmp-status { flex: 1 1 100%; }
-  .plan-foot { position: static; }
 }
 
 /* ---------- Selection, list, preview ---------- */
@@ -417,12 +442,6 @@
 /* Level 1: rows to scan. Level 2: the panel. Level 3: disclosures inside the panel. */
 .ideas-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .ideas-layout.has-current { grid-template-columns: minmax(0, 1fr) minmax(480px, 600px); }
-.idea-thumb { width: 48px; height: 48px; border-radius: var(--r-sm); overflow: hidden; display: grid; place-items: center; background: var(--lift-2); color: var(--ink-2); }
-.idea-thumb svg, .idea-thumb img { width: 100%; height: 100%; object-fit: cover; }
-.idea-thumb > svg.lucide { width: 16px; height: 16px; }
-.idea-rule { grid-column: 3 / -1; }
-.idea-rule { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-top: var(--s3); padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--a-atlas-wash); color: var(--ink); cursor: default; }
-.idea-rule p { flex: 1; min-width: 200px; font-size: var(--t-sm); }
 
 /* Panel: three zones that don't look alike. Why (Atlas speaks, on its wash) · The post (the preview at real size) · Ask Atlas (docked, like a chat bar). */
 /* Fits under the page header on first view, so the Ask Atlas bar and Schedule are always on screen. */
@@ -556,22 +575,130 @@
 .media-meta .nowrap { white-space: nowrap; }
 .cal-cell.today > .pub-cell-day:hover { color: var(--panel); }
 
-/* ---------- Landing list (matrix §14): the `.dq-*` rows of Video › Clips ---------- */
-.idea-thumb { width: 40px; height: 40px; }
-.dq-row.current { background: var(--brand-soft); }
-.dq-row.settled { cursor: default; }
-.dq-row.settled:hover { background: transparent; }
-.dq-row > .idea-rule { grid-column: 3 / -1; margin-top: 0; }
-button.dq-name { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* ---------- Landing (matrix §15): the week's overview, Needs you as a short queue, ideas as cards ---------- */
+.ideas-main { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+.ideas-main > .mb-3 { margin-bottom: 0; }
+
+/* Overview: Atlas's read, the week by day, the pillar mix against Sage's target */
+.pub-overview { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr); gap: var(--s4) var(--s6); align-items: center; padding: var(--s4) var(--s5); }
+.pub-ov-say { display: flex; gap: var(--s3); align-items: center; color: var(--ink); line-height: 1.5; }
+.pub-ov-week { display: flex; align-items: flex-end; gap: var(--s4); min-width: 0; }
+.pub-ov-nums { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-sm); color: var(--ink-2); white-space: nowrap; }
+.pub-ov-nums b { font-size: var(--t-xl); font-weight: 600; color: var(--ink); margin-right: 4px; }
+.pub-ov-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, 14px); gap: 6px; }
+.pub-ov-days li { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pub-ov-days .bar { width: 10px; height: 44px; border-radius: 3px; background: var(--lift-2); display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.pub-ov-days .bar i { display: block; width: 100%; }
+.pub-ov-days .out { background: var(--chart); }
+.pub-ov-days .planned { background: color-mix(in srgb, var(--chart) 40%, transparent); }
+.pub-ov-days .d { font-size: var(--t-xs); color: var(--ink-2); }
+.pub-ov-days .today .d { color: var(--ink); font-weight: 600; }
+.pub-ov-h { font-size: var(--t-sm); font-weight: 600; margin-bottom: 6px; }
+.pub-ov-mix ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.pub-ov-mix li { display: grid; grid-template-columns: minmax(0, 7.5em) minmax(40px, 1fr) auto; gap: var(--s2); align-items: center; font-size: var(--t-xs); color: var(--ink); }
+.pub-ov-mix .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pub-ov-mix .track { position: relative; height: 6px; border-radius: 3px; background: var(--lift-2); }
+.pub-ov-mix .track i { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--chart); }
+.pub-ov-mix .track em { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink); }
+.pub-ov-mix .v { white-space: nowrap; }
+.pub-ov-mix .v.behind { color: var(--caution-strong); font-weight: 600; }
+
+/* Needs you: the §14 queue, short */
+.pub-needs .section-title { margin: 0; }
+.pub-needs-empty { padding: var(--s3) var(--s4); }
+.pub-needs-more { display: inline-flex; align-items: center; gap: 4px; padding: var(--s3) var(--s4); font-size: var(--t-sm); border-top: 1px solid var(--line) !important; width: 100%; }
+.pub-needs-more .flip { transform: rotate(180deg); }
 .pub-need-row { cursor: default; }
 .pub-need-lead { display: grid; place-items: center; width: 40px; }
 .pub-need-answer { display: flex; align-items: center; gap: var(--s2); }
 .pub-need-answer .input { width: 140px; height: 32px; }
-/* With an idea open, the list is navigation only (Inbox pattern): the rows stay, their buttons go. */
-.ideas-layout.has-current .dq-acts, .ideas-layout.has-current .vq-list-head .btn { display: none; }
-.ideas-layout.has-current .dq-row { grid-template-columns: 32px auto minmax(0, 1fr); }
+button.dq-name { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.pub-objects-head { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s2); }
+.pub-objects-head .section-title { margin: 0; }
+
+/* Cards: an idea or a draft, in the shape of a post */
+.idea-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s4); align-items: stretch; }
+.idea-card { display: flex; flex-direction: column; overflow: hidden; cursor: pointer; min-width: 0; transition: border-color var(--fast) var(--ease); }
+.idea-card.current, .idea-series.current, .idea-feature.current { border-color: var(--signal); }
+.idea-card.arrive { animation: drop-in var(--slow) var(--ease); }
+.idea-visual { position: relative; aspect-ratio: 16 / 9; background: var(--sunk); border-bottom: 1px solid var(--line); overflow: hidden; }
+.idea-visual > .photo { position: absolute; inset: 0; }
+.idea-nets { position: absolute; left: var(--s3); bottom: var(--s3); display: flex; gap: 4px; }
+.idea-nets .net { box-shadow: 0 0 0 2px var(--panel); }
+.idea-check { position: absolute; top: var(--s2); right: var(--s2); }
+.idea-noart { position: absolute; inset: 0; display: grid; place-items: center; }
+.idea-mini { position: absolute; inset: 0; padding: var(--s3) var(--s4) var(--s8); display: flex; flex-direction: column; gap: 6px; font-size: var(--t-sm); color: var(--ink); }
+.idea-mini > p:first-child { font-size: var(--t-xs); }
+.idea-mini-text { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45; }
+.idea-body { display: flex; flex-direction: column; gap: var(--s2); padding: var(--s3) var(--s4) 0; flex: 1; min-width: 0; }
+.idea-angle { font-size: var(--t-md); font-weight: 600; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.idea-angle a, .idea-angle .dq-name { color: var(--ink); text-decoration: none; }
+.idea-angle a:hover, .idea-angle .dq-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+.idea-angle .dq-name { white-space: normal; font-weight: 600; }
+.idea-proof { display: flex; gap: var(--s2); align-items: flex-start; font-size: var(--t-sm); color: var(--ink); line-height: 1.4; }
+.idea-proof > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.idea-proof b { font-weight: 600; }
+.idea-proof.big b { font-size: var(--t-xl); }
+.idea-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px var(--s2); font-size: var(--t-xs); color: var(--ink-2); margin-top: auto; }
+.idea-acts { display: flex; align-items: center; flex-wrap: wrap; gap: 4px var(--s2); padding: var(--s3) var(--s4) var(--s4); }
+.idea-card > .idea-rule, .idea-settled > .idea-rule { margin: 0 var(--s4) var(--s4); }
+.idea-rule { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--a-atlas-wash); color: var(--ink); cursor: default; }
+.idea-rule p { flex: 1; min-width: 180px; font-size: var(--t-sm); }
+
+/* The strongest idea, set apart: wider, the picture large, the zone's one orange button */
+.idea-feature { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); overflow: hidden; cursor: pointer; min-width: 0; }
+.idea-feature .idea-visual { aspect-ratio: auto; min-height: 240px; border-bottom: 0; border-right: 1px solid var(--line); }
+.idea-feature-body { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5) var(--s6); min-width: 0; }
+.idea-feature h3 { font-size: var(--t-xl); font-weight: 600; line-height: 1.3; }
+.idea-feature h3 a { color: var(--ink); text-decoration: none; }
+.idea-feature h3 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.idea-pick { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); font-weight: 600; color: var(--a-atlas-ink); }
+.idea-caption { margin: 0; padding: var(--s2) var(--s3); border-radius: var(--r-ctl); background: var(--sunk); color: var(--ink); line-height: 1.5; max-width: 72ch; }
+.idea-caption span { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.idea-feature .idea-meta { margin-top: 0; font-size: var(--t-sm); }
+.idea-feature .idea-acts { padding: var(--s1) 0 0; }
+.idea-feature > .idea-feature-body > .idea-rule { margin: 0; }
+
+/* A series: one wide card, its posts as linked tiles in order */
+.idea-series { grid-column: 1 / -1; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s4); cursor: pointer; min-width: 0; }
+.idea-series-head { display: flex; align-items: flex-start; gap: var(--s3); flex-wrap: wrap; }
+.idea-series-head .idea-acts { padding: 0; }
+.idea-series-head .idea-meta { margin-top: 4px; }
+.idea-series-icon { width: 36px; height: 36px; flex: none; border-radius: var(--r-ctl); display: grid; place-items: center; background: var(--a-atlas-wash); color: var(--a-atlas-ink); }
+.idea-steps-row { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--s3); counter-reset: step; }
+.idea-steps-row li { position: relative; display: flex; flex-direction: column; gap: 6px; padding: var(--s3); border-radius: var(--r-ctl); background: var(--sunk); font-size: var(--t-sm); min-width: 0; }
+/* The thread between steps: a short line from one tile to the next */
+.idea-steps-row li + li::before { content: ''; position: absolute; top: 50%; left: calc(-1 * var(--s3)); width: var(--s3); height: 2px; background: var(--line); }
+.idea-step-text { color: var(--ink); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Put away: the title and Undo, in place */
+.idea-settled { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--s2); padding: var(--s4); background: var(--sunk); min-width: 0; }
+.idea-settled.wide { grid-column: 1 / -1; }
+.idea-settled > .idea-rule { margin: 0; align-self: stretch; }
+
+/* With an idea open, the cards are navigation only (Inbox pattern): the overview, Needs you and the card buttons go. */
+.ideas-layout.has-current .pub-overview, .ideas-layout.has-current .pub-needs, .ideas-layout.has-current .idea-acts, .ideas-layout.has-current .pub-objects-head .btn { display: none; }
+.ideas-layout.has-current .idea-feature { grid-template-columns: minmax(0, 1fr); }
+.ideas-layout.has-current .idea-feature .idea-visual { min-height: 0; aspect-ratio: 16 / 10; border-right: 0; border-bottom: 1px solid var(--line); }
+
+@media (max-width: 1200px) {
+  .pub-overview { grid-template-columns: minmax(0, 1fr) auto; }
+  .pub-ov-mix { grid-column: 1 / -1; }
+  .pub-ov-mix ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px var(--s6); }
+}
+@media (max-width: 720px) {
+  .idea-feature { grid-template-columns: minmax(0, 1fr); }
+  .idea-feature .idea-visual { min-height: 0; aspect-ratio: 16 / 10; border-right: 0; border-bottom: 1px solid var(--line); }
+  .idea-feature-body { padding: var(--s4); }
+  .idea-steps-row li + li::before { display: none; }
+}
 @media (max-width: 640px) {
-  .dq-row > .idea-rule { grid-column: 1 / -1; }
+  /* The overview in two lines: Atlas's read, then the week's two numbers. The mix is in Atlas's sentence. */
+  .pub-overview { grid-template-columns: minmax(0, 1fr); gap: var(--s2); padding: var(--s3) var(--s4); }
+  .pub-ov-days, .pub-ov-mix { display: none; }
+  .pub-ov-nums { flex-direction: row; gap: var(--s3); align-items: baseline; }
+  .pub-ov-nums b { font-size: var(--t-lg); }
+  .idea-grid { grid-template-columns: minmax(0, 1fr); }
   /* A long answer (« Use the workshop photo from October ») wraps instead of leaving its card. */
   .pub-need-row .dq-acts { min-width: 0; }
   .pub-need-row .dq-acts .btn { max-width: 100%; white-space: normal; text-align: left; height: auto; min-height: 30px; padding-block: 4px; }

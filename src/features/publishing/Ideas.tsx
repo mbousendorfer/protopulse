@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowUpRight, BookOpen, CalendarDays, ChartLine, Check, ChevronDown, ChevronRight, FileText, Flame, Layers, Lightbulb, MessageCircle, Radar, Sparkles, TriangleAlert, X } from 'lucide-react'
+import { ArrowUpRight, BookOpen, CalendarDays, ChartLine, Check, ChevronDown, ChevronRight, Flame, Layers, Lightbulb, MessageCircle, Radar, Sparkles, TriangleAlert, X } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { T, ago, hhmm } from '../../app/time'
+import { DAY, T, ago, hhmm } from '../../app/time'
 import { NETWORK_LABEL, agentName } from '../../data/agents'
 import { MEDIA, type Post } from '../../data/publishing'
 import { BANNED } from '../../data/playbook'
@@ -13,6 +13,7 @@ import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { InfoPop, MoreInfo } from '../../ui/More'
 import Photo from '../../ui/Photo'
+import { mixOf, targetsOf } from '../strategy/slice'
 import { NetworkPreview } from './Previews'
 import { checkPost } from './checks'
 import { ANGLES, diffWords, sentences, freshness, isOpen, mixVariants, variantText, variantsOf, type Angle, type Variant } from './ideasModel'
@@ -21,9 +22,9 @@ import { NeedRow, atlasNeeds, gestureOf } from './Needs'
 import { PostsBulk, useOpenPost } from './Bulk'
 
 /*
- * Publishing's landing (matrix §14): one list, filtered by state. Needs you (Atlas's cards, the rail badge),
- * Ideas (Atlas's suggestions, ready first) and Drafts (posts without a slot). Opening an idea shows its panel beside
- * the list; the list then only navigates.
+ * Publishing's landing (matrix §15): an overview of the week, Needs you as a short queue (§14, the rail badge), then
+ * Atlas's ideas as cards (the strongest one set apart, series as a row of linked posts) or the drafts in the same
+ * shape. Opening an idea shows its panel beside the cards.
  */
 
 export const DISMISS_REASONS = ['Off-brand', 'Not timely', 'Already covered', 'Wrong pillar']
@@ -36,11 +37,11 @@ const iconOf = (x: IdeaSource) => (x.link.includes('/competitors') ? Radar : /^(
 const finders = (i: Idea) => [...new Set(i.sources.map(x => x.agent))].filter(a => a !== 'atlas') as AgentId[]
 const isInteractive = (e: MouseEvent) => !!(e.target as Element).closest('a, button, input, label, form, [role="menu"]')
 
-/** Not now (back tomorrow) or dismiss with a reason: one menu instead of two buttons. */
+/** Not this one: back tomorrow, or dismiss with a reason. One menu instead of two buttons. */
 function NotNow({ i, size, onDone }: { i: Idea; size?: 'sm'; onDone?: () => void }) {
   const { d } = useStore()
   return (
-    <Menu align="end" trigger={<Btn size={size} variant="ghost" onClick={e => e.stopPropagation()}>Not now<ChevronDown size={12} /></Btn>}
+    <Menu align="end" trigger={<Btn size={size} variant="ghost" onClick={e => e.stopPropagation()}>Not this one<ChevronDown size={12} /></Btn>}
       items={[
         { label: 'Back tomorrow at 08:00', onSelect: () => { d({ type: 'publishing/ideaSnooze', ids: [i.id] }); onDone?.() } },
         'sep', { heading: 'Dismiss: why?' },
@@ -54,7 +55,7 @@ function Primary({ i, size }: { i: Idea; size?: 'sm' }) {
   const { s, d } = useStore()
   const stop = (f: () => void) => (e: MouseEvent) => { e.stopPropagation(); f() }
   if (i.kind === 'series') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaToSage', id: i.id }))}>Send to Sage</Btn>
-  if (i.origin === 'weekly' && s.publishing.plan.status === 'proposed') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaToPlan', id: i.id }))}>Add to next week’s plan</Btn>
+  if (i.origin === 'weekly' && s.publishing.plan.status === 'proposed') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaToPlan', id: i.id }))}>{size ? 'Add to plan' : 'Add to next week’s plan'}</Btn>
   if (i.status === 'ready') return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaSchedule', ids: [i.id] }))}>Schedule{size ? '' : ` ${slot(i.drafts![0].at)}`}</Btn>
   return <Btn size={size} variant={size ? undefined : 'primary'} onClick={stop(() => d({ type: 'publishing/ideaDraft', id: i.id }))}>Draft it</Btn>
 }
@@ -73,78 +74,225 @@ function RuleProposal({ i }: { i: Idea }) {
   )
 }
 
-/** One idea, one row: what, then one line (networks, when, a deadline only when it's close, the strongest proof). */
-function IdeaRow({ i, current, check, now, settled }: { i: Idea; current: boolean; check?: ReactNode; now: number; settled: (id: string) => void }) {
-  const nav = useNavigate()
-  const d0 = i.drafts?.[0]
-  const proof = i.sources[0] && evidence(i.sources[0])
-  const P = i.sources[0] ? iconOf(i.sources[0]) : Lightbulb
-  const f = freshness(i, now)
-  const thumb = d0?.media ? <Photo name={d0.media} /> : i.kind === 'series' ? <Layers size={16} aria-hidden /> : <P size={16} aria-hidden />
-  const when = d0 ? slot(d0.at) : i.steps ? `${day(T(0, 0, 6 + i.steps[0].day))} to ${day(T(0, 0, 6 + i.steps.at(-1)!.day))}` : undefined
+/* ---------- Overview: the week, the pillar mix, Atlas's read ---------- */
+
+const WEEKDAY = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+
+/** One short band (matrix §15): this week's posts by day, the pillar mix against Sage's target, Atlas's sentence. Never what Needs you already counts. */
+function Overview({ now }: { now: number }) {
+  const { s } = useStore()
+  const today = new Date(now).setHours(0, 0, 0, 0)
+  const monday = today - ((new Date(today).getDay() + 6) % 7) * DAY
+  const week = s.publishing.posts.filter(p => p.at >= monday && p.at < monday + 7 * DAY && p.status !== 'draft')
+  const days = WEEKDAY.map((_, n) => {
+    const inDay = week.filter(p => p.at >= monday + n * DAY && p.at < monday + (n + 1) * DAY)
+    return { out: inDay.filter(p => p.status === 'published').length, planned: inDay.filter(p => p.status !== 'published').length }
+  })
+  const top = Math.max(1, ...days.map(x => x.out + x.planned))
+  const published = days.reduce((n, x) => n + x.out, 0)
+  const planned = days.reduce((n, x) => n + x.planned, 0)
+
+  const mix = mixOf(s, now)
+  const pillars = targetsOf(s).pillars.map(p => ({ ...p, share: mix[p.name] ?? 0 }))
+  const scale = Math.max(...pillars.map(p => Math.max(p.share, p.target))) * 1.15 || 1
+  const behind = [...pillars].sort((a, b) => (b.target - b.share) - (a.target - a.share))[0]
+  const open = s.publishing.ideas.filter(isOpen)
+  const ready = open.filter(i => i.status === 'ready').length
+  const onBehind = behind && behind.target - behind.share >= 3 ? open.filter(i => i.pillar === behind.name).length : 0
+  const say = `${open.length} idea${open.length === 1 ? '' : 's'} this week, ${ready} ready to schedule.`
+    + (behind && behind.target - behind.share >= 3 ? ` ${behind.name} is behind target${onBehind ? `, so ${onBehind} of them ${onBehind === 1 ? 'is' : 'are'} ${behind.name}` : ''}.` : '')
+
   return (
-    <li className={`dq-row idea-dq ${current ? 'current' : ''} ${now - i.at < 120_000 ? 'arrive' : ''}`} onClick={e => { if (!isInteractive(e)) nav(`/publishing/ideas/${i.id}`) }}>
-      <span className="dq-check">{check}</span>
-      <span className="idea-thumb">{thumb}</span>
-      <div className="dq-main">
-        <p className="dq-title"><Link to={`/publishing/ideas/${i.id}`} className="dq-name" aria-current={current || undefined}>{i.title}</Link></p>
-        <p className="dq-line">
-          <span className="row tight nowrap">{i.networks.map(n => <Net key={n} n={n} size={14} />)}</span>
-          {i.kind === 'series' && <span>Series · {i.steps?.length} posts</span>}
-          {when && <span>{when}</span>}
-          {f.soon && <Pill tone="caution">{f.label}</Pill>}
-          {proof && <span className="dq-proof">{proof.value && <b className="num">{proof.value} </b>}{proof.measure}</span>}
-        </p>
+    <section className="card pub-overview" aria-label="This week">
+      <p className="pub-ov-say"><Mark agent="atlas" size="md" /><span>{say}</span></p>
+      <div className="pub-ov-week">
+        <p className="pub-ov-nums"><span><b className="num">{published}</b> published</span><span><b className="num">{planned}</b> scheduled</span><span className="faint">this week</span></p>
+        <ol className="pub-ov-days" aria-hidden>
+          {days.map((x, n) => (
+            <li key={n} className={monday + n * DAY === today ? 'today' : ''}>
+              <span className="bar"><i className="planned" style={{ height: `${(x.planned / top) * 100}%` }} /><i className="out" style={{ height: `${(x.out / top) * 100}%` }} /></span>
+              <span className="d">{WEEKDAY[n]}</span>
+            </li>
+          ))}
+        </ol>
       </div>
-      <div className="dq-acts"><Primary i={i} size="sm" /><NotNow i={i} size="sm" onDone={() => settled(i.id)} /></div>
-      <RuleProposal i={i} />
-    </li>
+      <div className="pub-ov-mix">
+        <p className="pub-ov-h">Pillar mix <span className="faint">· vs Sage’s target</span></p>
+        <ul>
+          {pillars.map(p => (
+            <li key={p.name}>
+              <span className="name">{p.name}</span>
+              <span className="track" aria-hidden><i style={{ width: `${(p.share / scale) * 100}%` }} /><em style={{ left: `${(p.target / scale) * 100}%` }} /></span>
+              <span className={`num v ${p === behind && p.target - p.share >= 3 ? 'behind' : ''}`}>{p.share}% <span className="faint">of {p.target}%</span></span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   )
 }
 
-/** An idea you just put away: one line, with Undo. */
+/* ---------- Ideas as cards (matrix §15) ---------- */
+
+/** The picture, or a miniature of the caption on the network's side when there is none. */
+function Visual({ media, text }: { media?: string; text: string }) {
+  return media ? <Photo name={media} /> : (
+    <div className="idea-mini">
+      <p><b>Fernway</b></p>
+      <p className="idea-mini-text">{text}</p>
+    </div>
+  )
+}
+
+/** The number that made Atlas suggest it, with the agent who found it (Iris, Echo). */
+function Proof({ i, big }: { i: Idea; big?: boolean }) {
+  const x = i.sources[0]
+  if (!x) return null
+  const e = evidence(x)
+  return (
+    <p className={`idea-proof ${big ? 'big' : ''}`}>
+      <Mark agent={x.agent} />
+      <span>{e.value && <b className="num">{e.value} </b>}{e.measure}</span>
+    </p>
+  )
+}
+
+const whenOf = (i: Idea) => (i.drafts?.[0] ? slot(i.drafts[0].at) : undefined)
+
+function Acts({ i, settled }: { i: Idea; settled: (id: string) => void }) {
+  const nav = useNavigate()
+  return (
+    <div className="idea-acts">
+      <Primary i={i} size="sm" />
+      <Btn size="sm" variant="ghost" onClick={() => nav(`/publishing/ideas/${i.id}`)}>Edit</Btn>
+      <NotNow i={i} size="sm" onDone={() => settled(i.id)} />
+    </div>
+  )
+}
+
+/** One idea, one card: the visual, its networks, the angle, the proof, the pillar and slot, the decision. */
+function IdeaCard({ i, current, now, settled }: { i: Idea; current: boolean; now: number; settled: (id: string) => void }) {
+  const nav = useNavigate()
+  const d0 = i.drafts?.[0]
+  const f = freshness(i, now)
+  const when = whenOf(i)
+  return (
+    <article className={`card hoverable idea-card ${current ? 'current' : ''} ${now - i.at < 120_000 ? 'arrive' : ''}`} onClick={e => { if (!isInteractive(e)) nav(`/publishing/ideas/${i.id}`) }}>
+      <div className="idea-visual">
+        <Visual media={d0?.media ?? i.media} text={d0?.text ?? i.copy[i.networks[0]] ?? i.title} />
+        <span className="idea-nets">{i.networks.map(n => <Net key={n} n={n} size={18} />)}</span>
+      </div>
+      <div className="idea-body">
+        <h3 className="idea-angle"><Link to={`/publishing/ideas/${i.id}`} aria-current={current || undefined}>{i.title}</Link></h3>
+        <Proof i={i} />
+        <p className="idea-meta">{f.soon && <Pill tone="caution">{f.label}</Pill>}<span>{i.pillar}{when && ` · ${when}`}</span></p>
+      </div>
+      <Acts i={i} settled={settled} />
+      <RuleProposal i={i} />
+    </article>
+  )
+}
+
+/** The strongest idea, set apart: the one you can schedule as is, in one click. */
+function Featured({ i, current, now, settled }: { i: Idea; current: boolean; now: number; settled: (id: string) => void }) {
+  const nav = useNavigate()
+  const d0 = i.drafts?.[0]
+  const f = freshness(i, now)
+  const when = whenOf(i)
+  const fmt = d0?.format ?? i.format
+  return (
+    <article className={`card hoverable idea-feature ${current ? 'current' : ''}`} aria-label={`Atlas’s pick: ${i.title}`} onClick={e => { if (!isInteractive(e)) nav(`/publishing/ideas/${i.id}`) }}>
+      <div className="idea-visual">
+        <Visual media={d0?.media ?? i.media} text={d0?.text ?? i.copy[i.networks[0]] ?? i.title} />
+        <span className="idea-nets">{i.networks.map(n => <Net key={n} n={n} size={20} />)}</span>
+      </div>
+      <div className="idea-feature-body">
+        <p className="idea-pick"><Mark agent="atlas" /><span>Atlas’s pick</span>{f.soon && <Pill tone="caution">{f.label}</Pill>}</p>
+        <h3><Link to={`/publishing/ideas/${i.id}`}>{i.title}</Link></h3>
+        {/* What gets published, word for word: schedule it as is. */}
+        <blockquote className="idea-caption"><span>{d0?.text ?? i.copy[i.networks[0]]}</span></blockquote>
+        <Proof i={i} big />
+        <p className="idea-meta"><span>{i.pillar} · {i.networks.map(n => NETWORK_LABEL[n]).join(', ')}{fmt ? ` ${fmt.split(' ·')[0].toLowerCase()}` : ''}{when && ` · ${when}`}</span></p>
+        <div className="idea-acts">
+          <Primary i={i} />
+          <Btn variant="ghost" onClick={() => nav(`/publishing/ideas/${i.id}`)}>Edit</Btn>
+          <NotNow i={i} onDone={() => settled(i.id)} />
+        </div>
+        <RuleProposal i={i} />
+      </div>
+    </article>
+  )
+}
+
+/** A series: its posts as a row of linked tiles, in the order they go out. */
+function SeriesCard({ i, current, settled }: { i: Idea; current: boolean; settled: (id: string) => void }) {
+  const nav = useNavigate()
+  const steps = i.steps ?? []
+  return (
+    <article className={`card hoverable idea-series ${current ? 'current' : ''}`} onClick={e => { if (!isInteractive(e)) nav(`/publishing/ideas/${i.id}`) }}>
+      <div className="idea-series-head">
+        <span className="idea-series-icon"><Layers size={16} aria-hidden /></span>
+        <div className="grow">
+          <h3 className="idea-angle"><Link to={`/publishing/ideas/${i.id}`} aria-current={current || undefined}>{i.title}</Link></h3>
+          <p className="idea-meta"><span>Series · {steps.length} posts · {i.pillar}</span></p>
+        </div>
+        <Acts i={i} settled={settled} />
+      </div>
+      <Proof i={i} />
+      <ol className="idea-steps-row">
+        {steps.map(st => (
+          <li key={st.step}>
+            <p className="row tight"><Net n={st.network} size={14} /><b>{st.step}</b><span className="faint">{day(T(0, 0, 6 + st.day))}</span></p>
+            <p className="idea-step-text">{st.text}</p>
+          </li>
+        ))}
+      </ol>
+    </article>
+  )
+}
+
+/** An idea you just put away: its title and Undo, in place. */
 function Settled({ i }: { i: Idea }) {
   const { d } = useStore()
   const label = i.status === 'dismissed' ? `Dismissed · ${i.dismissReason?.toLowerCase()}` : i.status === 'snoozed' ? 'Back tomorrow 08:00' : i.status === 'sent-to-sage' ? 'With Sage' : i.status === 'expired' ? 'Expired' : 'Scheduled'
   return (
-    <li className="dq-row idea-dq settled">
-      <span className="dq-check" /><span />
-      <div className="dq-main"><p className="dq-title">{i.title}</p></div>
-      <div className="dq-acts">{i.status === 'dismissed' || i.status === 'snoozed' ? <Reopen label={label} onUndo={() => d({ type: 'publishing/ideaReopen', id: i.id })} /> : <Pill>{label}</Pill>}</div>
+    <article className={`card idea-settled ${i.kind === 'series' ? 'wide' : ''}`}>
+      <p className="idea-angle">{i.title}</p>
+      {i.status === 'dismissed' || i.status === 'snoozed' ? <Reopen label={label} onUndo={() => d({ type: 'publishing/ideaReopen', id: i.id })} /> : <Pill>{label}</Pill>}
       <RuleProposal i={i} />
-    </li>
+    </article>
   )
 }
 
-/** A post without a slot yet: its words, one line, and Schedule. The rest (edit, move, delete) is in its panel. */
-function DraftRow({ p, check, now }: { p: Post; check: ReactNode; now: number }) {
+/** A post without a slot yet, in the same shape as an idea: its visual, its words, Schedule. The rest is in its panel. */
+function DraftCard({ p, check, now }: { p: Post; check: ReactNode; now: number }) {
   const { d } = useStore()
   const open = useOpenPost()
   const later = p.at > now
   return (
-    <li className="dq-row" onClick={e => { if (!isInteractive(e)) open(p.id) }}>
-      <span className="dq-check">{check}</span>
-      <span className="idea-thumb">{p.media ? <Photo name={p.media} /> : <FileText size={16} aria-hidden />}</span>
-      <div className="dq-main">
-        <p className="dq-title"><button className="dq-name" onClick={() => open(p.id)}>{p.text}</button></p>
-        <p className="dq-line">
-          <Net n={p.network} size={14} />
-          <span>{slot(p.at)}</span>
-          <span className="dq-src">{p.pillar} · by {p.author === 'atlas' ? 'Atlas' : 'you'}</span>
-          {p.note && <InfoPop label="Why?">{p.note}</InfoPop>}
-        </p>
+    <article className="card hoverable idea-card" onClick={e => { if (!isInteractive(e)) open(p.id) }}>
+      <div className="idea-visual">
+        {/* No picture: the network alone (the words are the card's title). */}
+        {p.media ? <><Photo name={p.media} /><span className="idea-nets"><Net n={p.network} size={18} /></span></> : <span className="idea-noart"><Net n={p.network} size={32} /></span>}
+        <span className="idea-check">{check}</span>
       </div>
-      <div className="dq-acts">
+      <div className="idea-body">
+        <h3 className="idea-angle"><button className="dq-name" onClick={() => open(p.id)}>{p.text}</button></h3>
+        <p className="idea-meta"><span>{slot(p.at)} · {p.pillar} · by {p.author === 'atlas' ? 'Atlas' : 'you'}</span>{p.note && <InfoPop label="Why?">{p.note}</InfoPop>}</p>
+      </div>
+      <div className="idea-acts">
         {later ? <Btn size="sm" onClick={() => d({ type: 'publishing/bulk', ids: [p.id], op: 'approve' })}>Schedule</Btn>
           : <Btn size="sm" onClick={() => open(p.id)}>Pick a new time</Btn>}
       </div>
-    </li>
+    </article>
   )
 }
 
-type Show = 'needs' | 'ideas' | 'drafts'
-const SHOW_LABEL: Record<Show, string> = { needs: 'Needs you', ideas: 'Ideas', drafts: 'Drafts' }
-const RANK = { ready: 0, new: 1 } as Record<string, number>
+type Show = 'ideas' | 'drafts'
+/** Written ideas (ready) before new ones; an idea keeps its drafts when you put it away, so it keeps its place. */
+const written = (i: Idea) => (i.drafts?.length ? 0 : 1)
+/** Needs you stays a short queue: the rest one click away. */
+const NEEDS_SHOWN = 3
 
 export default function Ideas({ id }: { id?: string }) {
   const { s, d } = useStore()
@@ -152,75 +300,99 @@ export default function Ideas({ id }: { id?: string }) {
   const loc = useLocation()
   const now = useNow(15000)
   const [recent, setRecent] = useState<string[]>([])
+  const [allNeeds, setAllNeeds] = useState(false)
   const ideas = s.publishing.ideas
   const current = id ? ideas.find(i => i.id === id) : undefined
   const settled = (x: string) => setRecent(r => [...r, x])
 
-  // What's blocked first: a failed post, then paused ones, then the rest as Atlas raised them.
+  // Needs you (matrix §14): what's blocked first, a failed post, then paused ones, then the rest as Atlas raised them.
   const cards = [...atlasNeeds(s.handoffs)].sort((a, b) => Number(gestureOf(b) === 'fix') - Number(gestureOf(a) === 'fix') || Number(gestureOf(b) === 'paused') - Number(gestureOf(a) === 'paused'))
-  const approvable = cards.filter(h => gestureOf(h) === 'approve')
-  // Ready first, then new ideas, then series; the ones you just put away stay in place with their Undo.
-  const listed = ideas.filter(i => isOpen(i) || recent.includes(i.id))
-    .sort((a, b) => Number(a.kind === 'series') - Number(b.kind === 'series') || (RANK[a.status] ?? 2) - (RANK[b.status] ?? 2))
-  const ready = listed.filter(i => isOpen(i) && i.kind === 'post' && i.status === 'ready')
-  const drafts = s.publishing.posts.filter(p => p.status === 'draft').sort((a, b) => a.at - b.at)
-
-  const counts: Record<Show, number> = { needs: cards.length, ideas: listed.filter(isOpen).length, drafts: drafts.length }
-  const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'needs' || counts[k] > 0 || (k === 'ideas' && listed.length > 0))
-  const [pick, setPick] = useState<Show>((new URLSearchParams(loc.search).get('show') as Show) ?? 'needs')
-  // An idea opened from elsewhere (the calendar, a link) shows the Ideas filter beside it.
-  const show: Show = current ? 'ideas' : shown.includes(pick) ? pick : 'needs'
-  const selectable = show === 'needs' ? approvable.map(h => h.id) : show === 'ideas' ? ready.map(i => i.id) : drafts.map(p => p.id)
-  const ids = useMemo(() => selectable, [selectable.join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, show)
-  const box = (key: string, label: string) => ids.includes(key) ? <SelectBox checked={sel.has(key)} visible onToggle={sh => sel.toggle(key, sh)} label={`Select: ${label}`} /> : undefined
-  const undo = s.publishing.undo && s.publishing.undo.until > now && s.publishing.undo.ideas ? s.publishing.undo : undefined
-  const choose = (v: Show) => { setPick(v); sel.clear(); nav(v === 'needs' ? '/publishing' : `/publishing?show=${v}`, { replace: true }) }
+  const approvable = useMemo(() => cards.filter(h => gestureOf(h) === 'approve').map(h => h.id), [cards.map(h => h.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const needSel = useSelection(approvable, 'needs')
   const approve = (list: string[]) => list.forEach(x => d({ type: 'core/resolve', id: x, decision: { kind: 'approve' } }))
+  const shownNeeds = allNeeds ? cards : cards.slice(0, NEEDS_SHOWN)
 
-  const rows = show === 'needs' ? cards.map(h => <NeedRow key={h.id} h={h} check={box(h.id, h.title)} />)
-    : show === 'ideas' ? listed.map(i => (isOpen(i) ? <IdeaRow key={i.id} i={i} current={i.id === id} check={box(i.id, i.title)} now={now} settled={settled} /> : <Settled key={i.id} i={i} />))
-    : drafts.map(p => <DraftRow key={p.id} p={p} now={now} check={box(p.id, p.text)} />)
+  // Ideas: ready before new, then by confidence; the ones you just put away stay in place with their Undo.
+  const listed = ideas.filter(i => isOpen(i) || recent.includes(i.id))
+    .sort((a, b) => written(a) - written(b) || b.confidence - a.confidence)
+  const open = listed.filter(isOpen)
+  // Set apart: the strongest idea you can schedule as is. Written first, then one whose moment ends soon, then one Iris
+  // or Echo found in the data (a gap in the calendar is a weaker reason), then confidence.
+  const byData = (i: Idea) => Number(['iris', 'echo'].includes(i.sources[0]?.agent))
+  const soon = (i: Idea) => Number(freshness(i, now).soon)
+  const featured = open.filter(i => i.kind === 'post').sort((a, b) => written(a) - written(b) || soon(b) - soon(a) || byData(b) - byData(a) || b.confidence - a.confidence)[0]
+  const posts = listed.filter(i => i.kind === 'post' && i !== featured)
+  const series = listed.filter(i => i.kind === 'series')
+  const ready = open.filter(i => i.kind === 'post' && i.status === 'ready').map(i => i.id)
+  const drafts = s.publishing.posts.filter(p => p.status === 'draft').sort((a, b) => a.at - b.at)
+  const draftIds = useMemo(() => drafts.map(p => p.id), [drafts.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const draftSel = useSelection(draftIds, 'drafts')
+  const undo = s.publishing.undo && s.publishing.undo.until > now && s.publishing.undo.ideas ? s.publishing.undo : undefined
 
-  // The filter's main action sits in the list head, and gives way to the bulk bar while rows are selected.
-  const head = show === 'drafts' ? null : sel.count > 0
-    ? <BulkBar count={sel.count} noun={show === 'needs' ? (sel.count > 1 ? 'posts selected' : 'post selected') : (sel.count > 1 ? 'ideas selected' : 'idea selected')} onClear={sel.clear} actions={show === 'needs'
-        ? [{ label: `Approve ${sel.count}`, primary: true, onRun: () => { approve([...sel.selected]); sel.clear() } }]
-        : [
-            { label: `Schedule ${sel.count} ready`, primary: true, onRun: () => { d({ type: 'publishing/ideaSchedule', ids: [...sel.selected] }); sel.clear() } },
-            { label: 'Not now', onRun: () => { [...sel.selected].forEach(settled); d({ type: 'publishing/ideaSnooze', ids: [...sel.selected] }); sel.clear() } },
-          ]} />
-    : ids.length > 0 && (
-      <div className="vq-list-head">
-        <SelectAll sel={sel} label={show === 'needs' ? 'Select every post to approve' : 'Select every ready idea'} />
-        <span className="spacer" />
-        {ids.length > 1 && !current && (show === 'needs'
-          ? <Btn size="sm" variant="primary" onClick={() => approve(ids)}>Approve {ids.length}</Btn>
-          : <Btn size="sm" variant="primary" onClick={() => d({ type: 'publishing/ideaSchedule', ids })}>Schedule {ids.length} ready</Btn>)}
-      </div>
-    )
+  const [pick, setPick] = useState<Show>(new URLSearchParams(loc.search).get('show') === 'drafts' ? 'drafts' : 'ideas')
+  const show: Show = current || !drafts.length ? 'ideas' : pick
+  const choose = (v: Show) => { setPick(v); nav(v === 'ideas' ? '/publishing' : `/publishing?show=${v}`, { replace: true }) }
+  const draftBox = (p: Post) => <SelectBox checked={draftSel.has(p.id)} visible onToggle={sh => draftSel.toggle(p.id, sh)} label={`Select: ${p.text}`} />
 
   return (
     <div className={`ideas-layout ${current || id ? 'has-current' : ''}`}>
-      <div className="ideas-main dq-page">
-        <div className="vq-bar">
-          <Filters label="Show" value={show} onChange={choose} items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
+      <div className="ideas-main">
+        <Overview now={now} />
+
+        <section className="card vq-list pub-needs" aria-labelledby="pub-needs-h">
+          {needSel.count > 0
+            ? <BulkBar count={needSel.count} noun={needSel.count > 1 ? 'posts selected' : 'post selected'} onClear={needSel.clear} actions={[{ label: `Approve ${needSel.count}`, primary: true, onRun: () => { approve([...needSel.selected]); needSel.clear() } }]} />
+            : (
+              <div className="vq-list-head">
+                {approvable.length > 0 && <SelectAll sel={needSel} label="Select every post to approve" />}
+                <h2 id="pub-needs-h" className="section-title">Needs you <span className="faint num">{cards.length}</span></h2>
+                <span className="spacer" />
+                {approvable.length > 1 && !current && <Btn size="sm" variant="primary" onClick={() => approve(approvable)}>Approve {approvable.length}</Btn>}
+              </div>
+            )}
+          {cards.length ? (
+            <ul className="dq-rows">
+              {shownNeeds.map(h => <NeedRow key={h.id} h={h} check={approvable.includes(h.id) ? <SelectBox checked={needSel.has(h.id)} visible onToggle={sh => needSel.toggle(h.id, sh)} label={`Select: ${h.title}`} /> : undefined} />)}
+            </ul>
+          ) : <p className="pub-needs-empty faint">Nothing needs you here.</p>}
+          {cards.length > NEEDS_SHOWN && (
+            <button className="link-btn pub-needs-more" onClick={() => setAllNeeds(v => !v)}>{allNeeds ? 'Show less' : `Show ${cards.length - NEEDS_SHOWN} more`}<ChevronDown size={14} aria-hidden className={allNeeds ? 'flip' : ''} /></button>
+          )}
+        </section>
+
+        <div className="pub-objects-head">
+          {drafts.length > 0
+            ? <Filters label="Show" value={show} onChange={choose} items={[{ value: 'ideas', label: 'Ideas', count: open.length }, { value: 'drafts', label: 'Drafts', count: drafts.length }]} />
+            : <h2 className="section-title">Ideas <span className="faint num">{open.length}</span></h2>}
+          <span className="spacer" />
+          {show === 'ideas' && ready.length > 1 && !current && <Btn size="sm" onClick={() => d({ type: 'publishing/ideaSchedule', ids: ready })}>Schedule {ready.length} ready</Btn>}
         </div>
-        {show === 'drafts' ? <PostsBulk sel={sel} posts={drafts} />
-          : undo ? <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })} action={<Btn size="xs" variant="ghost" onClick={() => nav('/publishing/calendar')}>Open the calendar</Btn>}>{undo.label}</UndoBar>
-          : <Notice scope="publishing" className="mb-3" />}
-        {rows.length ? (
-          <section className="card vq-list" aria-label={SHOW_LABEL[show]}>
-            {head}
-            <ul className="dq-rows">{rows}</ul>
-          </section>
-        ) : <Empty title={show === 'needs' ? 'Nothing needs you here' : `No ${SHOW_LABEL[show].toLowerCase()}`} />}
+
+        {show === 'drafts' ? (
+          <>
+            <PostsBulk sel={draftSel} posts={drafts} />
+            <div className="idea-grid">{drafts.map(p => <DraftCard key={p.id} p={p} now={now} check={draftBox(p)} />)}</div>
+          </>
+        ) : (
+          <>
+            {undo ? <UndoBar className="mb-3" until={undo.until} onUndo={() => d({ type: 'publishing/restore' })} action={<Btn size="xs" variant="ghost" onClick={() => nav('/publishing/calendar')}>Open the calendar</Btn>}>{undo.label}</UndoBar>
+              : <Notice scope="publishing" className="mb-3" />}
+            {listed.length === 0 ? <Empty title="No ideas" /> : (
+              <div className="idea-grid">
+                {featured && <Featured key={featured.id} i={featured} current={featured.id === id} now={now} settled={settled} />}
+                {posts.map(i => (isOpen(i) ? <IdeaCard key={i.id} i={i} current={i.id === id} now={now} settled={settled} /> : <Settled key={i.id} i={i} />))}
+                {series.map(i => (isOpen(i) ? <SeriesCard key={i.id} i={i} current={i.id === id} settled={settled} /> : <Settled key={i.id} i={i} />))}
+              </div>
+            )}
+          </>
+        )}
       </div>
-      {current && <IdeaPanel key={current.id} i={current} onClose={() => nav('/publishing?show=ideas')} />}
+      {current && <IdeaPanel key={current.id} i={current} onClose={() => nav('/publishing')} />}
       {id && !current && <aside className="card idea-panel"><Empty title="This idea is gone" body="It may have expired or been cleared by a reset." action={<Btn onClick={() => nav('/publishing')}>Back to Ideas</Btn>} /></aside>}
     </div>
   )
 }
+
 
 
 /* ---------- Side panel ---------- */
