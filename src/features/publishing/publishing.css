@@ -133,7 +133,7 @@
 /* ---------- Composer: who gets it, what it says, what it shows, when it goes out. The preview sits beside it. ---------- */
 .cmp { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
 .cmp-edit { display: flex; flex-direction: column; min-width: 0; }
-.cmp-sec { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5) 0; scroll-margin: var(--s4); }
+.cmp-sec { display: flex; flex-direction: column; gap: var(--s3); padding: var(--s6) 0; scroll-margin: var(--s4); }
 .cmp-sec:first-of-type { padding-top: 0; }
 .cmp-sec + .cmp-sec { border-top: 1px solid var(--line); }
 .cmp-sec .section-title label { cursor: text; }
@@ -181,13 +181,35 @@
 .cmp-pick-row:focus-visible { outline: none; box-shadow: var(--focus); }
 .cmp-pick > p { padding: 0 6px; }
 .cmp-pick-row > .muted:last-child { margin-left: auto; white-space: nowrap; }
-.cmp-tools { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1); margin-top: calc(var(--s2) * -1); }
+/* The caption and its tools are one control: the toolbar sits inside the field's frame. */
+.cmp-field { display: flex; flex-direction: column; background: var(--sunk); border: 1px solid var(--line-strong); border-radius: var(--r-ctl); transition: border-color var(--fast) var(--ease); }
+.cmp-field:hover { border-color: var(--line-loud); }
+.cmp-field:focus-within { border-color: var(--signal); box-shadow: 0 0 0 3px var(--signal-wash); }
+.cmp-field textarea { width: 100%; min-height: 132px; padding: 10px 12px; border: 0; background: none; color: var(--ink); line-height: 1.5; resize: vertical; }
+.cmp-field textarea:focus { outline: none; box-shadow: none; }
+.cmp-field textarea::placeholder { color: var(--ink-off); }
+.cmp-tools { display: flex; align-items: center; gap: 2px; padding: 4px 8px 4px 4px; border-top: 1px solid var(--line); }
+/* The network tabs head the section: everything below them follows the tab picked. */
+.cmp-scope .tabs { margin-bottom: 0; scrollbar-width: none; }
+.cmp-scope .tabs::-webkit-scrollbar { display: none; }
+/* What only one network sees, framed so it reads as belonging to that tab. */
+.cmp-sub { display: flex; flex-direction: column; gap: var(--s3); margin-top: var(--s2); padding: var(--s4); border: 1px solid var(--line); border-radius: var(--r-ctl); }
+.cmp-sub-title { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-md); font-weight: 600; }
+.cmp-sub .field { align-items: flex-start; }
+.cmp-sub .field .input { width: 100%; }
+.cmp-netlist { display: flex; flex-direction: column; }
+.cmp-netlist li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px var(--s2); min-height: 36px; font-size: var(--t-sm); }
+.cmp-netlist li + li { border-top: 1px solid var(--line); }
+.cmp-netlist li .btn { margin-left: auto; }
+.cmp-netlist .cmp-over { display: inline-flex; align-items: center; gap: 4px; }
+.cmp-netlist .cmp-over svg { color: var(--caution); }
+.cmp-pv-head { display: flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); }
+.cmp-addtime { align-self: flex-start; }
 .cmp-emoji { display: grid; grid-template-columns: repeat(5, 36px); gap: 2px; }
 .cmp-emoji button { width: 36px; height: 36px; border: 0; border-radius: var(--r-ctl); background: none; font-size: 18px; cursor: pointer; }
 .cmp-emoji button:hover { background: var(--sunk); }
 .cmp-emoji button:focus-visible { outline: none; box-shadow: var(--focus); }
 .cmp-over { color: var(--ink); font-weight: 600; }
-.cmp-captabs { margin-bottom: calc(var(--s2) * -1); overflow-x: auto; }
 .cmp-more summary { cursor: pointer; list-style: none; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); }
 .cmp-more summary::-webkit-details-marker { display: none; }
 .cmp-more summary .muted, .cmp-more summary .cmp-over { font-weight: 400; }
@@ -219,11 +241,7 @@
 .cmp-atlas-says { display: flex; align-items: center; flex-wrap: wrap; gap: 6px var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
 .cmp-side { display: flex; flex-direction: column; gap: var(--s3); position: sticky; top: 0; min-width: 0; }
 .cmp-side .empty { padding: var(--s8) var(--s4); border: 1px solid var(--line); border-radius: var(--r-ctl); }
-.cmp-net { display: flex; flex-direction: column; gap: var(--s3); }
-.cmp-side > .seg { align-self: flex-start; }
-.cmp-side > .seg .net { flex: none; padding: 0; }
 .cmp-atlas > .faint { flex: 1 1 0; min-width: 0; }
-.cmp-net .field { align-items: flex-start; }
 .cmp-status { display: inline-flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--t-sm); color: var(--ink-2); }
 .cmp-status.bad { color: var(--ink); }
 .cmp-status.ok svg { color: var(--ok); flex: none; }
