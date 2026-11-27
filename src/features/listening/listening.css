@@ -1,9 +1,4 @@
 
-.ev-done { display: flex; align-items: center; gap: var(--s3); padding: 10px var(--s4); }
-.ev-done > .mono { font-size: var(--t-sm); flex: none; }
-.ev-status { display: inline-flex; align-items: center; gap: 6px; }
-.ev-status svg { color: var(--ok); flex: none; }
-.ev-status.dismissed svg { color: var(--ink-3); }
 
 .event-layout { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: var(--s5); align-items: start; }
 .event-title { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.015em; }
@@ -23,7 +18,6 @@
 .lesson { display: flex; gap: var(--s4); align-items: center; padding: 12px var(--s4); }
 .lesson > div:first-child { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .lesson b { font-weight: 600; }
-.lesson.dismissed b { color: var(--ink-3); }
 .top-posts { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1px; background: var(--line); }
 .top-posts li { background: var(--panel); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: 4px; }
 .top-posts b { font-weight: 600; }
@@ -35,31 +29,10 @@
 .comp-stats .stat { flex-direction: column; }
 .prof-ev { display: flex; flex-direction: column; gap: 4px; padding: 10px var(--s4); }
 
-.ls-mentions > li { display: grid; grid-template-columns: 8px minmax(0, 1fr) auto; gap: var(--s3); padding: 12px var(--s4); border-top: 1px solid var(--line); align-items: start; }
-.ls-mentions > li:first-child { border-top: 0; }
-.mention-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.mention-main b { font-weight: 600; }
-
-.trend-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--s4); }
-.trend { display: flex; flex-direction: column; gap: var(--s2); }
-.trend h3 { font-size: var(--t-lg); font-weight: 600; }
-.trend .examples { font-size: var(--t-sm); display: flex; flex-direction: column; gap: 2px; }
-.trend .examples li::before { content: '–'; margin-right: 6px; }
-.trend .row:last-child { margin-top: auto; }
-.trend .btn .mark { width: 16px; height: 16px; }
-
-.table tr.paused td { color: var(--ink-3); }
-.kw { max-width: 280px; }
-
 @media (max-width: 1100px) { .event-layout { grid-template-columns: minmax(0, 1fr); } .moves { position: static; } }
 @media (max-width: 820px) { .lesson { flex-direction: column; align-items: flex-start; } }
 
 /* ---------- Mentions: selection, panel ---------- */
-.ls-mentions > li { grid-template-columns: 32px minmax(0, 1fr) auto; }
-.ls-mentions > li.ls-picked { background: var(--signal-wash); }
-.ls-open { background: none; border: 0; padding: 0; text-align: left; color: var(--ink); cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
-.ls-open:hover .ls-text { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--line-loud); }
-.ls-text { display: block; }
 .ls-mood { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: var(--t-xs); font-weight: 600; }
 .ls-mood.negative { background: var(--alert-tint); color: var(--alert-strong); }
 .ls-mood.positive { background: var(--ok-tint); color: var(--ok-strong); }
@@ -84,30 +57,18 @@
   .ls-watch > :nth-child(3) { margin-left: 52px; }
 }
 
-.ls-creator { display: flex; gap: var(--s3); align-items: center; padding: 12px var(--s4); }
-.ls-creator-main { flex: 1; min-width: 0; display: flex; gap: var(--s3); align-items: flex-start; text-align: left; color: var(--ink); background: none; border: 0; padding: 0; cursor: pointer; }
-.ls-creator-main b { font-weight: 600; }
-@media (max-width: 720px) { .ls-creator { flex-direction: column; align-items: stretch; } }
-.ls-creator-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
 .ls-tagdefs li { display: flex; gap: var(--s2); align-items: center; padding: 8px 0; flex-wrap: wrap; }
 .ls-tagdefs .input { flex: 1; min-width: 140px; }
 .ls-tagdefs .input:first-child { flex: 0 0 200px; }
 .ls-tag-used { min-width: 96px; text-align: right; }
-.ls-unseen .mention-main b { font-weight: 700; }
 
-/* Card heads wrap on a narrow screen instead of squeezing their title into a column. */
-.listening .card-head { flex-wrap: wrap; }
-.ls-creator-acts { justify-content: flex-end; }
-/* Narrow mentions: the reply and hide actions go under the text, which keeps the full width. */
-@media (max-width: 720px) {
-  .ls-mentions > li { grid-template-columns: 32px minmax(0, 1fr); }
-  .ls-mentions > li > .row { grid-column: 2; flex-wrap: wrap; }
-}
+/* Card heads and the bulk bar wrap on a narrow screen instead of squeezing or hiding their controls. */
+.listening .card-head, .listening .bulk-bar { flex-wrap: wrap; }
 /* Tinted tags need no dot between them. */
 .chip + .chip.ls-tag::before { content: none; }
-/* Mentions carry five bulk actions: the bar wraps rather than hiding Cancel off its edge. */
-.listening .bulk-bar { flex-wrap: wrap; }
-
-/* A run of mentions that share their sentiment, product, risk and tags: said once above the run. */
-.ls-mentions > li.ls-run { padding: 8px var(--s4); background: var(--sunk); border-bottom: 1px solid var(--line); font-size: var(--t-sm); align-items: center; }
-.ls-mentions > li.ls-run + li { border-top: 0; }
+.sl-bar.flush { margin-bottom: 0; }
+/* Searches, managed from Mentions. */
+.ls-searches li { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) 0; }
+.ls-searches p { margin-top: 2px; }
+.ls-search-name { font-weight: 600; }

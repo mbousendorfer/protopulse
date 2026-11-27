@@ -1,62 +1,64 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
-import NeedsYou, { EventNeedRow, IMPACT_TONE } from './Needs'
-import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import NeedsYou, { IMPACT_TONE } from './Needs'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, MessageSquareReply, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { Network } from '../../app/types'
 import { ago, dayLabel } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
-import {
-  FERNWAY_ROW, LESSONS, TOP_POSTS, TRENDS,
-  type CompEvent, type Mention, type Search, type Sentiment,
-} from '../../data/listening'
+import { FERNWAY_ROW, LESSONS, TOP_POSTS, type Mention, type Search, type Sentiment } from '../../data/listening'
 import { MENTION_NET, type MentionOp } from './slice'
 import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
-import { runsOf, eventState, listeningNeedsCount, openEvents, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
+import { eventState, listeningNeedsCount, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
+import { DecisionRow } from '../../ui/Decisions'
 import { downloadFile, toCSV } from '../insights/alerts'
-import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
-import { CountBadge, Notice, Reopen, UndoBar } from '../../ui/Feedback'
+import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Tabs } from '../../ui'
+import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { InfoPop } from '../../ui/More'
+import { plural } from './list'
 
+type Tab = 'needs' | 'mentions' | 'competitors'
 
-type Tab = 'needs' | 'competitors' | 'mentions' | 'creators' | 'trends' | 'searches'
+/** Old addresses (Desk cards, the journal, other agents) land on their new place: a dead route is a dead button. */
+function Moved({ to }: { to: (p: URLSearchParams, id?: string) => string }) {
+  const [params] = useSearchParams()
+  const { sid } = useParams()
+  return <Navigate to={to(params, sid)} replace />
+}
 
 export default function ListeningPage() {
   const loc = useLocation()
   const nav = useNavigate()
   const { s } = useStore()
   const seg = loc.pathname.split('/')[2] ?? ''
-  // The landing is Needs you (PROMPT §3.9): what waits for Sam across Listening, before the feeds.
-  const tab: Tab = (['competitors', 'mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'needs'
+  // The landing is Needs you (PROMPT §3.9). Creators and trends are kinds of it; searches are a setting of Mentions.
+  const tab: Tab = seg === 'mentions' || seg === 'competitors' ? seg : 'needs'
   return (
     <div className="page listening">
-      <PageHead agent="echo" title="Listening" lede="Echo turns what she hears into moves." />
+      <PageHead agent="echo" title="Listening" />
       <Tabs value={tab} onChange={v => nav(v === 'needs' ? '/listening' : `/listening/${v}`)} items={[
         { value: 'needs', label: 'Needs you', count: listeningNeedsCount(s) },
-        { value: 'competitors', label: 'Competitors', count: eventsOf(s).filter(e => s.listening.watch.some(w => w.tracking && w.id === e.competitor)).length },
-        { value: 'mentions', label: 'Mentions', count: allMentions(s).filter(m => s.listening.mentions[m.id] !== 'hidden').length },
-        { value: 'creators', label: 'Creators', count: creatorsOf(s).length },
-        { value: 'trends', label: 'Trends', count: TRENDS.length },
-        { value: 'searches', label: 'Searches', count: s.listening.searches.length },
+        { value: 'mentions', label: 'Mentions' },
+        { value: 'competitors', label: 'Competitors' },
       ]} />
       <Notice scope="listening" className="mb-3" />
       <Routes>
         <Route index element={<NeedsYou />} />
-        <Route path="competitors" element={<Competitors view="events" />} />
-        <Route path="competitors/benchmark" element={<Competitors view="benchmark" />} />
+        <Route path="competitors" element={<Benchmark />} />
+        <Route path="competitors/benchmark" element={<Moved to={p => `/listening/competitors${p.get('net') ? `?net=${p.get('net')}` : ''}`} />} />
         <Route path="competitors/manage" element={<ManageCompetitors />} />
         <Route path="competitors/profile/:cid" element={<Profile />} />
         <Route path="competitors/:id" element={<EventView />} />
         <Route path="mentions" element={<Mentions />} />
-        <Route path="creators" element={<Creators />} />
-        <Route path="trends" element={<Trends />} />
-        <Route path="searches" element={<Searches />} />
-        <Route path="searches/:sid" element={<SearchView />} />
+        <Route path="creators" element={<Moved to={p => `/listening?kind=creators${p.get('c') ? `&c=${encodeURIComponent(p.get('c')!)}` : ''}`} />} />
+        <Route path="trends" element={<Navigate to="/listening?kind=trends" replace />} />
+        <Route path="searches" element={<Navigate to="/listening/mentions?searches=manage" replace />} />
+        <Route path="searches/:sid" element={<Moved to={(_, sid) => `/listening/mentions?search=${sid}`} />} />
         <Route path="*" element={<NeedsYou />} />
       </Routes>
     </div>
@@ -64,80 +66,19 @@ export default function ListeningPage() {
 }
 
 /* ---------- Competitors ---------- */
-function Competitors({ view }: { view: 'events' | 'benchmark' }) {
-  const nav = useNavigate()
-  const { s } = useStore()
-  return (
-    <div className="stack lg">
-      <div className="row between">
-        <Filters label="View" value={view} onChange={v => nav(v === 'events' ? '/listening/competitors' : '/listening/competitors/benchmark')}
-          items={[{ value: 'events', label: 'Events' }, { value: 'benchmark', label: 'Benchmark' }]} />
-        <Link to="/listening/competitors/manage" className="btn sm"><Settings2 size={14} />Manage competitors<span className="faint num">{s.listening.watch.filter(w => w.tracking).length}</span></Link>
-      </div>
-      {view === 'events' ? <Events /> : <Benchmark />}
-    </div>
-  )
-}
-
-/** Events: the ones that need a move first, decided in place as on Needs you; then what was done about the others. */
-function Events() {
-  const { s, d } = useStore()
-  const now = useNow()
-  const [comp, setComp] = useState<string>('all')
-  const [undo, setUndo] = useState<{ text: string; run: () => void } | null>(null)
-  const watched = s.listening.watch.filter(w => w.tracking)
-  const mine = (e: CompEvent) => comp === 'all' || e.competitor === comp
-  const open = openEvents(s).filter(mine)
-  const handled = eventsOf(s).filter(e => watched.some(w => w.id === e.competitor) && mine(e) && eventState(s, e)).sort((a, b) => b.at - a.at)
-  const who = watched.find(w => w.id === comp)?.name
-  return (
-    <div className="stack">
-      <Menu align="start" trigger={<Btn size="sm" className="self-start">{who ?? 'All competitors'}<ChevronDown size={14} /></Btn>}
-        items={[{ label: 'All competitors', onSelect: () => setComp('all') }, ...watched.map(w => ({ label: w.name, hint: comp === w.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setComp(w.id) }))]} />
-      {undo && <UndoBar onUndo={() => { undo.run(); setUndo(null) }} onDismiss={() => setUndo(null)}>{undo.text}</UndoBar>}
-      <section className="card needs" aria-label="Needs a move">
-        <header className="need-head"><h2>Needs a move</h2><CountBadge n={open.length} /><span className="faint need-why">Anything public stays yours to publish</span></header>
-        {open.length ? <ul>{open.map(e => <EventNeedRow key={e.id} e={e} onUndo={setUndo} />)}</ul>
-          : <p className="need-empty">Nothing needs a move{who ? ` from ${who}` : ''}. Echo watches for launches, price cuts, campaigns and viral posts.</p>}
-      </section>
-      {handled.length > 0 && (
-        <section className="card">
-          <div className="card-head"><h2>Handled <span className="faint num">{handled.length}</span></h2></div>
-          <ul className="rows">
-            {handled.map(e => {
-              const st = eventState(s, e)!
-              return (
-                <li key={e.id} className="ev-done">
-                  <SocialAvatar name={competitorName(s, e.competitor)} network={e.proof.network} org size={24} />
-                  <div className="need-main">
-                    <p className="need-title"><Link to={`/listening/competitors/${e.id}`}>{e.title}</Link></p>
-                    <p className="need-line"><span className={`ev-status ${st.status}`}><Check size={14} aria-hidden />{st.result}</span></p>
-                  </div>
-                  <span className="mono faint">{ago(e.at, now)}</span>
-                  {s.listening.events[e.id]?.status === 'dismissed' && <button type="button" className="link-btn t-sm" onClick={() => d({ type: 'listening/reopen', kind: 'events', id: e.id })}>Undo</button>}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-    </div>
-  )
-}
-
 function EventView() {
   const { id } = useParams()
   const { s, d } = useStore()
   const now = useNow()
   const nav = useNavigate()
   const e = eventsOf(s).find(x => x.id === id)
-  if (!e) return <Empty title="This event doesn’t exist" action={<Btn onClick={() => nav('/listening/competitors')}>All events</Btn>} />
+  if (!e) return <Empty title="This event doesn’t exist" action={<Btn onClick={() => nav('/listening?kind=events')}>Competitor moves</Btn>} />
   const st = eventState(s, e)
   const c = competitorOf(s, e.competitor) ?? { id: e.competitor, name: competitorName(s, e.competitor), handle: competitorName(s, e.competitor) }
   return (
     <div className="event-layout">
       <div className="stack">
-        <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} className="self-start"><ArrowLeft size={14} />All events</Btn>
+        <Btn variant="ghost" size="sm" onClick={() => nav('/listening?kind=events')} className="self-start"><ArrowLeft size={14} />Competitor moves</Btn>
         <div className="row tight"><Link to={`/listening/competitors/profile/${c.id}`}><b>{c.name}</b></Link><span className="chip">{e.type}</span><span className="mono faint">{dayLabel(e.at, now)} · {ago(e.at, now)}</span></div>
         <h1 className="event-title">{e.title}</h1>
         <section className="card pad proof">
@@ -200,7 +141,10 @@ function Benchmark() {
   const posts = TOP_POSTS.filter(p => watched.has(p.competitor) && (comp === 'all' || p.competitor === comp) && (net === 'all' || p.network === net))
   return (
     <div className="stack lg">
-      <Filters label="Network" value={net} onChange={v => setParams(v === 'all' ? {} : { net: v })} items={[{ value: 'all', label: 'All networks' }, ...nets.map(n => ({ value: n, label: NETWORK_LABEL[n] }))]} />
+      <div className="sl-bar flush">
+        <Filters label="Network" value={net} onChange={v => setParams(v === 'all' ? {} : { net: v })} items={[{ value: 'all', label: 'All networks' }, ...nets.map(n => ({ value: n, label: NETWORK_LABEL[n] }))]} />
+        <Link to="/listening/competitors/manage" className="btn sm ghost"><Settings2 size={14} />Manage competitors</Link>
+      </div>
       {net !== 'all' ? <NetworkBench n={net} /> : <>
       <section className="card">
         <div className="card-head"><h2>Side by side <span className="faint">· last 30 days</span></h2></div>
@@ -231,7 +175,7 @@ function Benchmark() {
       </>}
 
       <section className="card">
-        <div className="card-head"><h2 className="row tight"><Mark agent="echo" />Lessons</h2><span className="faint">What Echo would test, from what works for them</span></div>
+        <div className="card-head"><h2 className="row tight"><Mark agent="echo" />Lessons</h2></div>
         <ul className="rows">
           {LESSONS.map(l => {
             const st = s.listening.lessons[l.id]
@@ -284,7 +228,7 @@ function Profile() {
   const events = eventsOf(s).filter(e => e.competitor === c.id).sort((a, b) => b.at - a.at)
   return (
     <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors/benchmark')} className="self-start"><ArrowLeft size={14} />Benchmark</Btn>
+      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/competitors')} className="self-start"><ArrowLeft size={14} />Competitors</Btn>
       <header>
         <h1 className="event-title">{c.name} <span className="faint mono t-md">{c.handle}</span></h1>
         <p className="muted mw-70ch">{c.positioning}</p>
@@ -330,33 +274,38 @@ function Profile() {
 /* ---------- Mentions ---------- */
 const PAGE = 20
 const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
+type MShow = 'all' | Sentiment | 'risk' | 'hidden'
+const MSHOW_LABEL: Record<MShow, string> = { all: 'All', negative: 'Negative', neutral: 'Neutral', positive: 'Positive', risk: 'At risk', hidden: 'Hidden' }
 
-/** The mention feed. `scope` narrows it to one search (search page). */
-function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
+/** The mention feed as a standard list (matrix §14): sentiment and state are filters, the search and product or tag
+ *  are menus, searches are managed from the search menu. */
+function Mentions() {
   const { s, d } = useStore()
   const now = useNow()
-  const [params] = useSearchParams()
-  const [sent, setSent] = useState<'all' | Sentiment>(() => (params.get('sentiment') as Sentiment) || 'all')
+  const [params, setParams] = useSearchParams()
+  const [show, setShow] = useState<MShow>(() => (params.get('sentiment') as Sentiment) || 'all')
   const [product, setProduct] = useState(() => params.get('product') || 'all')
-  const [risk, setRisk] = useState(false)
-  const [hidden, setHidden] = useState(false)
   const [tag, setTag] = useState('all')
   const [managing, setManaging] = useState(false)
   const [openId, setOpenId] = useState<string | null>(null)
+  const setParam = (k: string, v?: string) => { const p = new URLSearchParams(params); if (v) p.set(k, v); else p.delete(k); setParams(p, { replace: true }) }
+  const search = s.listening.searches.find(x => x.id === params.get('search'))
   const TAGS = s.listening.tagDefs.map(t => t.name)
   const mood = (m: Mention) => sentimentOf(s, m)
-  const feed = scope ? allMentions(s).filter(scope) : allMentions(s)
-  const all = feed.filter(m => (s.listening.mentions[m.id] === 'hidden') === hidden)
-  const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk) && (tag === 'all' || (s.listening.tags[m.id] ?? []).includes(tag))).sort((a, b) => b.at - a.at)
-  const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
+  const feed = search ? allMentions(s).filter(m => inSearch(search, m)) : allMentions(s)
+  const visible = feed.filter(m => s.listening.mentions[m.id] !== 'hidden')
+  const narrowed = (ms: Mention[]) => ms.filter(m => (product === 'all' || m.product === product) && (tag === 'all' || (s.listening.tags[m.id] ?? []).includes(tag)))
+  const of = (k: MShow) => narrowed(k === 'hidden' ? feed.filter(m => s.listening.mentions[m.id] === 'hidden') : k === 'all' ? visible : k === 'risk' ? visible.filter(m => m.risk) : visible.filter(m => mood(m) === k))
+  const counts = Object.fromEntries((Object.keys(MSHOW_LABEL) as MShow[]).map(k => [k, of(k).length])) as Record<MShow, number>
+  const shownFilters = (Object.keys(MSHOW_LABEL) as MShow[]).filter(k => k === 'all' || counts[k] > 0 || k === show)
+  const list = of(show).sort((a, b) => b.at - a.at)
+  const hidden = show === 'hidden'
   const products = [...new Set(feed.map(m => m.product).filter(Boolean))] as string[]
-  // A page of rows: the feed reads like a list, not a wall. The rest is one click away; Select all takes what's shown.
+  // A page of rows: the feed reads like a list, not a wall. Select all takes what's shown.
   const [page, setPage] = useState(PAGE)
   const shown = list.slice(0, page)
-  const sig = (m: Mention) => [mood(m), s.listening.sentiment[m.id] ? 1 : 0, m.product, m.risk ? 1 : 0, (s.listening.tags[m.id] ?? []).join()].join('|')
-  const runs = runsOf(shown.map(sig))
   const ids = useMemo(() => shown.map(m => m.id), [shown.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, `${sent}-${product}-${risk}-${hidden}`)
+  const sel = useSelection(ids, `${show}-${product}-${tag}-${search?.id}`)
   const run = (op: MentionOp, extra: { tag?: string; sentiment?: Sentiment } = {}, which = [...sel.selected]) => { d({ type: 'listening/mentions', ids: which, op, ...extra }); sel.clear() }
   const exportCSV = () => downloadFile(`fernway-mentions-${new Date(now).toISOString().slice(0, 10)}.csv`, toCSV([
     ['Date', 'Author', 'Network', 'Sentiment', 'Reach', 'Product', 'At risk', 'Tags', 'Text'],
@@ -364,84 +313,91 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
   ]))
   const open = feed.find(m => m.id === openId)
   const unseen = unseenNeeds(s, list)
+  const narrowLabel = product !== 'all' ? product : tag !== 'all' ? tag : 'Product or tag'
+  const sv = search && searchVolume(search, now, searchLive(s, search))
+  const sc = search && moodCount(s, searchMentions(s, search))
 
   return (
-    <div className="stack">
-      <section className="card pad">
-        <div className="faint caption">Sentiment of the last {all.length} mentions</div>
-        <StackBar h={10} format={all.length < 10 ? v => `${v}` : undefined} parts={[
-          { label: 'Positive', value: count('positive'), color: 'var(--ok)' },
-          { label: 'Neutral', value: count('neutral'), color: 'var(--ink-3)' },
-          { label: 'Negative', value: count('negative'), color: 'var(--alert)' },
-        ]} />
-      </section>
-      <div className="row">
-        <Filters label="Sentiment" value={sent} onChange={setSent} items={[{ value: 'all', label: 'All' }, { value: 'positive', label: 'Positive', count: count('positive') }, { value: 'neutral', label: 'Neutral', count: count('neutral') }, { value: 'negative', label: 'Negative', count: count('negative') }]} />
-        {products.length > 0 && <Menu align="start" trigger={<Btn size="sm">{product === 'all' ? 'All products' : product}<ChevronDown size={14} /></Btn>}
-          items={[{ label: 'All products', onSelect: () => setProduct('all') }, ...products.map(p => ({ label: p, hint: product === p ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setProduct(p) }))]} />}
-        <Menu align="start" trigger={<Btn size="sm"><Tag size={14} />{tag === 'all' ? 'All tags' : tag}<ChevronDown size={14} /></Btn>}
-          items={[{ label: 'All tags', onSelect: () => setTag('all') }, ...TAGS.map(t => ({ label: t, onSelect: () => setTag(t) })), 'sep', { label: 'Manage tags…', onSelect: () => setManaging(true) }]} />
-        <span className="spacer" />
-        <Switch checked={risk} onChange={setRisk} label="At risk only" />
-        <Switch checked={hidden} onChange={setHidden} label="Hidden" />
+    <div>
+      <div className="sl-bar">
+        <Filters label="Show" value={show} onChange={v => { setShow(v); setPage(PAGE) }} items={shownFilters.map(k => ({ value: k, label: MSHOW_LABEL[k], count: counts[k] }))} />
+        <div className="sl-menus">
+          <Menu align="end" trigger={<Btn size="sm" variant="ghost">{search?.name ?? 'All searches'}<ChevronDown size={12} /></Btn>} items={[
+            { label: 'All searches', onSelect: () => setParam('search') },
+            ...s.listening.searches.filter(x => !x.paused).map(x => ({ label: x.name, hint: search?.id === x.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setParam('search', x.id) })),
+            'sep', { label: 'Manage searches…', onSelect: () => setParam('searches', 'manage') },
+          ]} />
+          <Menu align="end" trigger={<Btn size="sm" variant="ghost">{narrowLabel}<ChevronDown size={12} /></Btn>} items={[
+            { label: 'Every product and tag', onSelect: () => { setProduct('all'); setTag('all') } },
+            ...(products.length ? [{ heading: 'Product' } as const, ...products.map(p => ({ label: p, hint: product === p ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => { setProduct(p); setTag('all') } }))] : []),
+            { heading: 'Tag' }, ...TAGS.map(t => ({ label: t, hint: tag === t ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => { setTag(t); setProduct('all') } })),
+            'sep', { label: 'Manage tags…', onSelect: () => setManaging(true) },
+          ]} />
+        </div>
       </div>
-      <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
-        { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
-        hidden ? { label: 'Unhide', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
-        { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
-      ]}>
-        <Menu align="center" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Tag<ChevronDown size={12} /></Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
-        <Menu align="center" trigger={<Btn size="sm" variant="ghost">Sentiment<ChevronDown size={12} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: `Mark ${SENT_LABEL[x].toLowerCase()}`, onSelect: () => run('sentiment', { sentiment: x }) }))} />
-      </BulkBar>
-      {!list.length ? <Empty title={hidden ? 'Nothing hidden' : 'No mentions match'} body={hidden ? 'Mentions you hide land here, and you can unhide them.' : 'Try another sentiment or product.'} action={!hidden ? <Btn onClick={() => { setSent('all'); setProduct('all'); setRisk(false) }}>Clear filters</Btn> : undefined} /> : (
-        <section className="card">
-          <div className="card-head">
-            <span className="row tight"><SelectAll sel={sel} label="Select every mention shown" /><h2>{list.length} mention{list.length > 1 ? 's' : ''}{unseen.length > 0 && <span className="faint"> · {unseen.length} new</span>}</h2></span>
-            <span className="row tight">
+      {search && sv && sc && (
+        <p className="sl-scope">
+          {search.keywords}{search.exclude && <> · excluding {search.exclude}</>} · <span className="num">{sv.volume.toLocaleString('en-GB')}</span> mentions in 7 days{sv.collecting ? `, collecting ${Math.round(sv.progress * 100)}%` : ''} · {share(sc.negative, sc.total)} negative{' '}
+          <InfoPop label="Echo’s read">{searchRead(s, search)}</InfoPop>
+        </p>
+      )}
+      {!list.length ? <Empty title={sv?.collecting ? 'Echo is still collecting' : hidden ? 'Nothing hidden' : 'No mentions match'} body={sv?.collecting ? 'Mentions show up here as Echo reads the last 7 days.' : undefined}
+        action={product !== 'all' || tag !== 'all' || show !== 'all' ? <Btn onClick={() => { setShow('all'); setProduct('all'); setTag('all') }}>Clear filters</Btn> : undefined} /> : (
+        <section className="card sl-list" aria-label="Mentions">
+          {sel.count > 0 ? (
+            <BulkBar count={sel.count} noun={sel.count > 1 ? 'mentions selected' : 'mention selected'} onClear={sel.clear} actions={[
+              { label: 'Ask Nova to reply', icon: <MessageSquareReply size={14} />, primary: true, onRun: () => run('nova') },
+              hidden ? { label: 'Unhide', icon: <Eye size={14} />, onRun: () => run('unhide') } : { label: 'Hide', icon: <EyeOff size={14} />, onRun: () => run('hide') },
+              { label: 'Hand to Atlas', icon: <Send size={14} />, onRun: () => run('atlas') },
+            ]}>
+              <Menu align="center" trigger={<Btn size="sm" variant="ghost"><Tag size={14} />Tag<ChevronDown size={12} /></Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => run('tag', { tag: t }) }))} />
+              <Menu align="center" trigger={<Btn size="sm" variant="ghost">Sentiment<ChevronDown size={12} /></Btn>} items={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ label: `Mark ${SENT_LABEL[x].toLowerCase()}`, onSelect: () => run('sentiment', { sentiment: x }) }))} />
+            </BulkBar>
+          ) : (
+            <div className="sl-head">
+              <SelectAll sel={sel} label="Select every mention shown" />
+              <span className="spacer" />
               {unseen.length > 0 && <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/seen', ids: unseen.map(m => m.id) })}><Check size={14} />Mark {unseen.length} as seen</Btn>}
-              <Btn size="sm" onClick={exportCSV}><Download size={14} />Export CSV</Btn>
-            </span>
-          </div>
-          <ul className="ls-mentions">
-            {shown.map((m, i) => {
+              <Btn size="sm" variant="ghost" onClick={exportCSV}><Download size={14} />Export CSV</Btn>
+            </div>
+          )}
+          <ul className="rows">
+            {shown.map(m => {
               const st = s.listening.mentions[m.id]
               const tags = s.listening.tags[m.id] ?? []
               const md = mood(m)
-              // What a run of rows shares (sentiment, product, risk, tags) is said once, above the run (matrix §13).
-              const grp = runs[i]
-              const chips = <>
-                <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
-                {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
-                {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
-              </>
+              const openIt = () => { setOpenId(m.id); d({ type: 'listening/seen', ids: [m.id] }) }
               return (
-                <Fragment key={m.id}>
-                {grp.start && <li className="ls-run"><span aria-hidden /><span className="row tight">{chips}<span className="faint">· {grp.n} mentions</span></span></li>}
-                <li className={`${sel.has(m.id) ? 'ls-picked' : ''} ${seenOf(s, m) ? '' : 'ls-unseen'}`}>
-                  <SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />
-                  <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : (setOpenId(m.id), d({ type: 'listening/seen', ids: [m.id] })))}>
-                    <span className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>
-                      {!grp.inside && chips}</span>
-                    <span className="ls-text">{m.text}</span>
-                    <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
-                  </button>
-                  <div className="row nowrap">
+                <DecisionRow key={m.id}
+                  lead={<SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />}
+                  title={<><button type="button" className={`link-title ${seenOf(s, m) ? '' : 'new'}`} onClick={openIt}>{m.author}</button><span className="sl-quote">“{m.text}”</span></>}
+                  line={<>
+                    <SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={16} />
+                    {show !== md && <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>}
+                    {m.risk && show !== 'risk' && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
+                    <span>Reach {m.reach.toLocaleString('en-GB')}</span><span>{ago(m.at, now)}</span>
+                    {m.product && <span>{m.product}</span>}
+                    {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
                     {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
-                    {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
-                      <Btn size="xs" onClick={() => run('nova', {}, [m.id])} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>
-                    )}
-                    <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Unhide ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
-                  </div>
-                </li>
-                </Fragment>
+                  </>}
+                  acts={<>
+                    {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill>
+                      : <Btn size="sm" onClick={() => run('nova', {}, [m.id])} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>}
+                    <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${m.author}’s mention`}><ChevronDown size={14} /></Btn>} items={[
+                      { label: 'Open', onSelect: openIt },
+                      { label: hidden ? 'Unhide' : 'Hide', onSelect: () => run(hidden ? 'unhide' : 'hide', {}, [m.id]) },
+                      ...(st ? [] : [{ label: 'Hand to Atlas', onSelect: () => run('atlas', {}, [m.id]) }]),
+                    ]} />
+                  </>} />
               )
             })}
           </ul>
-          {list.length > page && <button type="button" className="need-more" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, list.length - page)} more of {list.length - page}<ChevronDown size={14} /></button>}
+          {list.length > page && <button type="button" className="dec-more" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, list.length - page)} more of {list.length - page}<ChevronDown size={14} aria-hidden /></button>}
         </section>
       )}
 
       {managing && <ManageTags onClose={() => setManaging(false)} />}
+      <ManageSearches open={params.get('searches') === 'manage'} onClose={() => setParam('searches')} onPick={id => { const p = new URLSearchParams(params); p.delete('searches'); p.set('search', id); setParams(p, { replace: true }) }} />
       <Sheet open={!!open} onOpenChange={o => !o && setOpenId(null)} title={open ? `${open.author} on ${open.network}` : ''}
         footer={open && <>
           <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Unhide</> : <><EyeOff size={14} />Hide</>}</Btn>
@@ -455,6 +411,7 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
           <div className="stack">
             <div className="row nowrap"><SocialAvatar name={open.author} network={MENTION_NET[open.network]} org={!open.author.startsWith('@')} size={40} /><div><b>{open.author}</b><div className="faint">{open.network} · {ago(open.at, now)}</div></div></div>
             <blockquote className="ls-quote">{open.text}</blockquote>
+            {open.risk && <p className="ls-risk"><TriangleAlert size={14} />Echo flags this one as a reputation risk. A reply within the hour keeps it from spreading.</p>}
             <dl className="ls-facts">
               <div><dt>Reach</dt><dd className="num">{open.reach.toLocaleString('en-GB')} people</dd></div>
               <div><dt>Sentiment</dt><dd><span className={`ls-mood ${mood(open)}`}>{SENT_LABEL[mood(open)]}</span>{s.listening.sentiment[open.id] && <span className="faint"> · you corrected Echo</span>}</dd></div>
@@ -465,7 +422,6 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
             <div className="row tight"><span className="faint">Correct the sentiment:</span>{(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => (
               <button key={x} className="filter" aria-pressed={mood(open) === x} onClick={() => d({ type: 'listening/mentions', ids: [open.id], op: 'sentiment', sentiment: x })}>{SENT_LABEL[x]}</button>
             ))}</div>
-            {open.risk && <p className="ls-risk"><TriangleAlert size={14} />Echo flags this one as a reputation risk. A reply within the hour keeps it from spreading.</p>}
           </div>
         )}
       </Sheet>
@@ -473,91 +429,44 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
   )
 }
 
-/* ---------- Trends ---------- */
-function Trends() {
-  const { s, d } = useStore()
-  const [fit, setFit] = useState<'all' | 'High' | 'Medium' | 'Low'>('all')
-  const list = TRENDS.filter(t => fit === 'all' || t.fit === fit)
-  return (
-    <div className="stack">
-      <Filters label="Fit" value={fit} onChange={setFit} items={[{ value: 'all', label: 'All trends' }, { value: 'High', label: 'High fit' }, { value: 'Medium', label: 'Medium fit' }, { value: 'Low', label: 'Low fit' }]} />
-      <div className="trend-grid">
-        {list.map(t => {
-          const st = s.listening.trends[t.id]
-          return (
-            <article key={t.id} className="card pad trend">
-              <div className="row between">
-                <h3>{t.name}</h3>
-                <Pill tone={t.fit === 'High' ? 'ok' : t.fit === 'Medium' ? 'caution' : undefined}>{t.fit} fit</Pill>
-              </div>
-              <p className="mono faint">{t.networks} · {t.growth}</p>
-              <p className="muted">{t.fitWhy}</p>
-              <InfoPop label={`${t.examples.length} examples`}><ul className="stack gap-2">{t.examples.map(x => <li key={x}>{x}</li>)}</ul></InfoPop>
-              <div className="row">
-                {st === 'handed' ? <Pill tone="signal"><Check size={12} />With Atlas · draft on your Desk</Pill>
-                  : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
-                    <>
-                      {/* Orange only where Echo recommends it: a grid of eight orange buttons says nothing. */}
-                      <Btn size="sm" variant={t.fit === 'High' ? 'primary' : undefined} onClick={() => d({ type: 'listening/trend', id: t.id, hand: true })}><Mark agent="atlas" />Hand to Atlas</Btn>
-                      <Btn size="sm" variant="ghost" onClick={() => d({ type: 'listening/trend', id: t.id, hand: false })}>Dismiss</Btn>
-                    </>
-                  )}
-              </div>
-            </article>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-/* ---------- Searches ---------- */
-function Searches() {
+/* ---------- Searches: a setting of Mentions ---------- */
+function ManageSearches({ open, onClose, onPick }: { open: boolean; onClose: () => void; onPick: (id: string) => void }) {
   const { s, d } = useStore()
   const now = useNow()
   const [edit, setEdit] = useState<Search | null>(null)
   const [removed, setRemoved] = useState<Search | null>(null)
   const blank: Search = { id: '', name: '', keywords: '', exclude: '', volume: 0 }
+  const full = activeSearches(s) >= searchCap(s)
   return (
-    <div className="stack">
-      <div className="row between">
-        <p className="muted"><span className="num">{activeSearches(s)} of {searchCap(s)}</span> search slots in use <InfoPop label="How Echo searches">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</InfoPop></p>
-        <Btn variant="primary" onClick={() => setEdit(blank)} disabled={activeSearches(s) >= searchCap(s)}><Plus size={14} />New search</Btn>
-      </div>
-      <section className="card">
-        <div className="table-wrap">
-          <table className="table">
-            <thead><tr><th>Search</th><th>Keywords</th><th>Excluded</th><th className="r">Mentions, 7 days</th><th>Status</th><th /></tr></thead>
-            <tbody>
-              {s.listening.searches.map(x => (
-                <tr key={x.id} className={x.paused ? 'paused' : ''}>
-                  <td><Link to={`/listening/searches/${x.id}`}><b>{x.name}</b></Link></td>
-                  <td className="muted kw">{x.keywords}</td>
-                  <td className="faint kw">{x.exclude || '–'}</td>
-                  {(() => { const v = searchVolume(x, now, searchLive(s, x)); return <>
-                    <td className="r num">{v.volume.toLocaleString('en-GB')}{v.collecting && <span className="faint"> so far</span>}</td>
-                    <td>{x.paused ? <Pill>Paused</Pill> : v.collecting ? <Pill tone="caution" dot>Collecting · {Math.round(v.progress * 100)}%</Pill> : <Pill tone="ok" dot>Active</Pill>}</td>
-                  </> })()}
-                  <td>
-                    <span className="row nowrap tight end">
-                      <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
-                      <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
-                      <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => { setRemoved(x); d({ type: 'listening/searchDelete', id: x.id }) }}><Trash2 size={12} /></Btn>
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <>
+      <Sheet open={open && !edit} onOpenChange={o => !o && onClose()} title="Searches"
+        footer={<><Link to="/agents/echo?tab=alerts" className="link-btn t-sm">Echo’s alert rules</Link><span className="spacer" /><Btn variant="primary" onClick={() => setEdit(blank)} disabled={full}><Plus size={14} />New search</Btn></>}>
+        <div className="stack">
+          <p className="muted"><span className="num">{activeSearches(s)} of {searchCap(s)}</span> search slots in use <InfoPop label="How Echo searches">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</InfoPop></p>
+          {removed && <UndoBar onUndo={() => { d({ type: 'listening/searchSave', search: removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.name}”. Echo stopped tracking it.</UndoBar>}
+          {s.listening.searches.length ? (
+            <ul className="rows ls-searches">
+              {s.listening.searches.map(x => {
+                const v = searchVolume(x, now, searchLive(s, x))
+                return (
+                  <li key={x.id}>
+                    <div className="grow">
+                      <button type="button" className="link-btn ls-search-name" disabled={x.paused} onClick={() => onPick(x.id)}>{x.name}</button>
+                      <p className="faint t-sm">{x.keywords}{x.exclude && ` · excluding ${x.exclude}`}</p>
+                      <p className="t-sm">{x.paused ? <Pill>Paused</Pill> : v.collecting ? <Pill tone="caution" dot>Collecting · {Math.round(v.progress * 100)}%</Pill> : <>{plural(v.volume, 'mention')} in 7 days</>}</p>
+                    </div>
+                    <Btn size="xs" variant="ghost" icon aria-label={`Edit ${x.name}`} onClick={() => setEdit(x)}><Pencil size={12} /></Btn>
+                    <Btn size="xs" variant="ghost" icon aria-label={x.paused ? `Resume ${x.name}` : `Pause ${x.name}`} onClick={() => d({ type: 'listening/searchToggle', id: x.id })}>{x.paused ? <Play size={12} /> : <Pause size={12} />}</Btn>
+                    <Btn size="xs" variant="ghost" icon aria-label={`Delete ${x.name}`} onClick={() => { setRemoved(x); d({ type: 'listening/searchDelete', id: x.id }) }}><Trash2 size={12} /></Btn>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
         </div>
-        {removed && (
-          <UndoBar className="m-3" onUndo={() => { d({ type: 'listening/searchSave', search: removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.name}”. Echo stopped tracking it.</UndoBar>
-        )}
-        {!s.listening.searches.length && <Empty title="No searches" body="Add one to start tracking a brand, product or topic." />}
-      </section>
-      <p className="faint t-sm">Echo raises spikes from her alert rules. <Link to="/agents/echo?tab=alerts">Edit Echo’s alert rules</Link></p>
+      </Sheet>
       {edit && <SearchForm search={edit} onClose={() => setEdit(null)} />}
-    </div>
+    </>
   )
 }
 
@@ -575,107 +484,6 @@ function SearchForm({ search, onClose }: { search: Search; onClose: () => void }
         <div className="field"><label htmlFor="se">Exclude</label><input id="se" className="input" value={v.exclude} onChange={e => setV({ ...v, exclude: e.target.value })} placeholder="storm warning" /></div>
       </form>
     </Modal>
-  )
-}
-
-/* ---------- One search ---------- */
-function SearchView() {
-  const { sid } = useParams()
-  const { s } = useStore()
-  const now = useNow()
-  const nav = useNavigate()
-  const x = s.listening.searches.find(y => y.id === sid)
-  if (!x) return <Empty title="This search doesn’t exist" body="It may have been deleted." action={<Btn onClick={() => nav('/listening/searches')}>All searches</Btn>} />
-  const v = searchVolume(x, now, searchLive(s, x))
-  const ms = searchMentions(s, x)
-  const c = moodCount(s, ms)
-  const authors = new Set(ms.map(m => m.author)).size
-  const reach = ms.reduce((n, m) => n + m.reach, 0)
-  return (
-    <div className="stack lg">
-      <Btn variant="ghost" size="sm" onClick={() => nav('/listening/searches')} className="self-start"><ArrowLeft size={14} />All searches</Btn>
-      <header>
-        <h1 className="event-title">{x.name}</h1>
-        <p className="muted">{x.keywords}{x.exclude && <span className="faint"> · excluding {x.exclude}</span>}{x.paused && <> · <Pill>Paused</Pill></>}</p>
-      </header>
-      <section className="card pad echo-read">
-        <Mark agent="echo" />
-        <div><div className="section-title mb-1">Echo’s read</div><p>{searchRead(s, x)}</p></div>
-      </section>
-      <dl className="grid-4 comp-stats">
-        <div className="card pad stat"><dd><b className="num">{v.volume.toLocaleString('en-GB')}</b></dd><dt className="label">Mentions, 7 days{v.collecting ? ` · collecting ${Math.round(v.progress * 100)}%` : ''}</dt></div>
-        <div className="card pad stat"><dd><b className="num">{share(c.negative, c.total)}</b></dd><dt className="label">Negative · latest {c.total} filed</dt></div>
-        <div className="card pad stat"><dd><b className="num">{authors}</b></dd><dt className="label">Unique authors · latest {c.total}</dt></div>
-        <div className="card pad stat"><dd><b className="num">{reach >= 1000 ? `${Math.round(reach / 1000)}k` : reach}</b></dd><dt className="label">Reach · latest {c.total}</dt></div>
-      </dl>
-      {ms.length ? <Mentions scope={m => inSearch(x, m)} /> : <Empty title={v.collecting ? 'Echo is still collecting' : 'Nothing caught yet'} body={v.collecting ? 'Mentions show up here as Echo reads the last 7 days.' : 'Echo files every new match here, at most 15 minutes after it’s posted.'} />}
-    </div>
-  )
-}
-
-/* ---------- Creators ---------- */
-const CREATOR_STATUS = { listed: 'Shortlisted', proposed: 'DM on your Desk', contacted: 'Contacted' } as const
-
-function Creators() {
-  const { s, d } = useStore()
-  const [params, setParams] = useSearchParams()
-  const list = creatorsOf(s)
-  const fits = list.filter(c => c.fit && !s.listening.creators[c.handle])
-  const open = list.find(c => c.handle === params.get('c'))
-  const pick = (c?: Creator) => setParams(c ? { c: c.handle } : {})
-  return (
-    <div className="stack">
-      <section className="card pad echo-read">
-        <Mark agent="echo" />
-        <div><div className="section-title mb-1">Echo’s read</div>
-          <p>{fits.length ? `${fits.length} creator${fits.length > 1 ? 's' : ''} worth a collab: ${fits.map(c => c.handle).join(' and ')}.` : 'No new creator worth a collab. Echo tells you when one shows up.'} <InfoPop label="Who counts">Positive about Fernway, not paid by a brand, and reaching {COLLAB_MIN_REACH.toLocaleString('en-GB')} people or more.</InfoPop></p></div>
-      </section>
-      <section className="card">
-        <div className="card-head"><h2>{list.length} creators talk about Fernway</h2><span className="faint">{CREATOR_MIN_REACH.toLocaleString('en-GB')}+ people reached</span></div>
-        <ul className="rows">
-          {list.map(c => {
-            const st = s.listening.creators[c.handle]
-            return (
-              <li key={c.handle} className="ls-creator">
-                <button type="button" className="ls-creator-main" onClick={() => pick(c)}>
-                  <SocialAvatar name={c.handle} network={MENTION_NET[c.network]} size={32} />
-                  <span className="ls-creator-text">
-                    <span className="row tight"><b>{c.handle}</b><span className="faint">{c.name}</span></span>
-                    <span className="faint t-sm">{c.followers.toLocaleString('en-GB')} followers · {c.mentions.length} mention{c.mentions.length > 1 ? 's' : ''} · <span className={`ls-mood ${c.mood}`}>{SENT_LABEL[c.mood]}</span>{c.also.length ? ` · also mentions ${c.also.map(a => a.competitor).join(', ')}` : ''}</span>
-                    <span className="t-sm">{c.fitWhy}</span>
-                  </span>
-                </button>
-                {/* The status or Shortlist always ends the row, so they line up from one creator to the next. */}
-                <div className="row nowrap ls-creator-acts">
-                  {c.fit && st !== 'proposed' && st !== 'contacted' && <Btn size="xs" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'propose' })}><Mark agent="nova" />Propose a collab</Btn>}
-                  {st ? <Pill tone={st === 'contacted' ? 'ok' : 'signal'}>{CREATOR_STATUS[st]}</Pill> : !c.signed && <Btn size="xs" variant="ghost" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </section>
-      <Sheet open={!!open} onOpenChange={o => !o && pick()} title={open ? `${open.handle} · ${open.name}` : ''}
-        footer={open && <>
-          {s.listening.creators[open.handle] === 'listed' && <Btn variant="ghost" onClick={() => d({ type: 'listening/creator', handle: open.handle, op: 'unlist' })}>Remove from shortlist</Btn>}
-          <span className="spacer" />
-          {open.fit && !['proposed', 'contacted'].includes(s.listening.creators[open.handle] ?? '') && <Btn variant="primary" onClick={() => d({ type: 'listening/creator', handle: open.handle, op: 'propose' })}><MessageSquareReply size={14} />Propose a collab</Btn>}
-        </>}>
-        {open && (
-          <div className="stack">
-            <dl className="ls-facts">
-              <div><dt>Audience</dt><dd className="num">{open.followers.toLocaleString('en-GB')} followers on {open.network}</dd></div>
-              <div><dt>Sentiment</dt><dd><span className={`ls-mood ${open.mood}`}>{SENT_LABEL[open.mood]}</span></dd></div>
-              <div><dt>Also mentions</dt><dd>{open.also.length ? open.also.map(a => `${a.competitor} (${a.n})`).join(', ') : 'No competitor'}</dd></div>
-              <div><dt>Echo’s call</dt><dd>{open.fitWhy}</dd></div>
-            </dl>
-            {open.history.length > 0 && <><div className="section-title">History</div><ul className="stack">{open.history.map(h => <li key={h} className="muted">{h}</li>)}</ul></>}
-            <div className="section-title">Their mentions of Fernway</div>
-            {open.mentions.map(m => <blockquote key={m.id} className="ls-quote">{m.text}</blockquote>)}
-          </div>
-        )}
-      </Sheet>
-    </div>
   )
 }
 

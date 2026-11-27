@@ -58,10 +58,10 @@ function creatorAnswer(s: Parameters<typeof creatorsOf>[0], rival?: string) {
 const creators = defineIntent({
   kind: 'creators', owner: 'echo', order: 95,
   parse: t => (/creator|influencer/.test(t) ? { kind: 'creators', rival: t.match(/peakline|norr[øo]|trailkind|basecamp/)?.[0] } : undefined),
-  bar: (i, { s, go }) => ({ text: creatorAnswer(s, i.rival).text, sources: ['Echo’s mention feed · authors reaching 5,000 people or more'], ctas: [{ label: 'Open Creators', primary: true, run: () => go('/listening/creators') }] }),
+  bar: (i, { s, go }) => ({ text: creatorAnswer(s, i.rival).text, sources: ['Echo’s mention feed · authors reaching 5,000 people or more'], ctas: [{ label: 'Open creators', primary: true, run: () => go('/listening?kind=creators') }] }),
   chat: (i, { s }) => {
     const { list, text } = creatorAnswer(s, i.rival)
-    return { replies: [{ from: 'echo', text, card: list.length ? { type: 'list', items: list.slice(0, 5).map(c => ({ title: `${c.handle} · ${c.name}`, agent: 'echo' as const, meta: `${c.followers.toLocaleString('en-GB')} people · ${c.fitWhy}`, link: `/listening/creators?c=${encodeURIComponent(c.handle)}` })) } : undefined }], effects: [] }
+    return { replies: [{ from: 'echo', text, card: list.length ? { type: 'list', items: list.slice(0, 5).map(c => ({ title: `${c.handle} · ${c.name}`, agent: 'echo' as const, meta: `${c.followers.toLocaleString('en-GB')} people · ${c.fitWhy}`, link: `/listening?kind=creators&c=${encodeURIComponent(c.handle)}` })) } : undefined }], effects: [] }
   },
 })
 
@@ -78,12 +78,12 @@ const benchmark = defineIntent({
   },
   bar: (i, { s, go }) => {
     const r = networkRead(s, i.network, i.rival)
-    return { text: r.text, sources: [`Benchmark · ${netLabel(i.network)} · last 30 days`, 'Fernway’s numbers: Iris’s analytics'], ctas: [{ label: `Open the ${netLabel(i.network)} benchmark`, primary: true, run: () => go(`/listening/competitors/benchmark?net=${i.network}`) }] }
+    return { text: r.text, sources: [`Benchmark · ${netLabel(i.network)} · last 30 days`, 'Fernway’s numbers: Iris’s analytics'], ctas: [{ label: `Open the ${netLabel(i.network)} benchmark`, primary: true, run: () => go(`/listening/competitors?net=${i.network}`) }] }
   },
   chat: (i, { s }) => {
     const r = networkRead(s, i.network, i.rival)
     const rows = networkRows(s, i.network)
-    return { replies: [{ from: 'echo', text: r.text, card: { type: 'list', items: rows.map(x => ({ title: `${x.rank}. ${x.name}`, agent: 'echo' as const, meta: `${x.er}% engagement · ${x.perWeek} posts a week · ${(x.followers / 1000).toFixed(0)}k followers`, link: `/listening/competitors/benchmark?net=${i.network}` })) } }], effects: [] }
+    return { replies: [{ from: 'echo', text: r.text, card: { type: 'list', items: rows.map(x => ({ title: `${x.rank}. ${x.name}`, agent: 'echo' as const, meta: `${x.er}% engagement · ${x.perWeek} posts a week · ${(x.followers / 1000).toFixed(0)}k followers`, link: `/listening/competitors?net=${i.network}` })) } }], effects: [] }
   },
 })
 
@@ -101,7 +101,7 @@ const competitor = defineIntent({
         : id ? `${top.title}. ${top.impactWhy} ${top.read}`
         : `${open.length} competitor move${open.length > 1 ? 's' : ''} without an answer: ${open.slice(0, 4).map(e => e.title).join('; ')}.`,
       sources: ['Competitor accounts Echo watches', `Echo’s event feed · ${open.length} open`],
-      ctas: [{ label: top && id ? 'Open the event' : 'Open competitor events', primary: true, run: () => go(top && id ? `/listening/competitors/${top.id}` : '/listening/competitors') }],
+      ctas: [{ label: top && id ? 'Open the event' : 'Open competitor events', primary: true, run: () => go(top && id ? `/listening/competitors/${top.id}` : '/listening?kind=events') }],
     }
   },
   chat: (_i, { s }) => {
@@ -138,9 +138,9 @@ const echo: AgentModule = {
   profileTabs: [{ id: 'alerts', label: 'Alerts', count: s => s.listening.alerts.filter(x => x.on).length, render: () => <Alerts /> }],
   presets: { competitor: { keep: ['h-peakline'], fire: ['ev-trailkind', 'ev-norro', 'ev-basecamp'] } },
   // Moderator › Hard to see: what a tester rarely stumbles on (⇧D).
-  triggers: [{ event: 'ev-spike', to: '/listening/mentions?sentiment=negative' }, { event: 'ev-creator-fit', to: '/listening/creators' }, { event: 'ev-idea-urgent', to: '/publishing/ideas' },
+  triggers: [{ event: 'ev-spike', to: '/listening/mentions?sentiment=negative' }, { event: 'ev-creator-fit', to: '/listening?kind=creators' }, { event: 'ev-idea-urgent', to: '/publishing/ideas' },
     { event: 'ev-norro', to: '/listening/competitors/e-norro-repair', label: 'Norrø event: counter-moves, sales email by level' },
-    { event: 'ev-trailkind', to: '/listening/competitors/benchmark?net=tiktok', label: 'Trailkind reel, then the TikTok benchmark' },
-    { event: 'ev-trend-repair', to: '/listening/trends', label: '“Repair over replace” trend for Atlas' }],
+    { event: 'ev-trailkind', to: '/listening/competitors?net=tiktok', label: 'Trailkind reel, then the TikTok benchmark' },
+    { event: 'ev-trend-repair', to: '/listening?kind=trends', label: '“Repair over replace” trend for Atlas' }],
 }
 export default echo

@@ -226,7 +226,7 @@ function reduceListeningRaw(s: State, a: ListeningAction): State {
       const fresh = !exists && !a.search.id
       const searches = exists ? s.listening.searches.map(x => (x.id === a.search.id ? a.search : x)) : [fresh ? { ...a.search, id: uid('s'), volume: 0, startedAt: now(s) } : a.search, ...s.listening.searches]
       const next = patch(s, { searches })
-      return fresh ? notify(pushLog(next, { agent: 'echo', text: `Started tracking “${a.search.name}”`, status: 'done', reason: 'You created a search', link: '/listening/searches' }), 'listening', `Echo is collecting the last 7 days for “${a.search.name}”. Results in about 10 minutes.`) : next
+      return fresh ? notify(pushLog(next, { agent: 'echo', text: `Started tracking “${a.search.name}”`, status: 'done', reason: 'You created a search', link: '/listening/mentions?searches=manage' }), 'listening', `Echo is collecting the last 7 days for “${a.search.name}”. Results in about 10 minutes.`) : next
     }
     case 'listening/searchToggle': {
       const x = s.listening.searches.find(y => y.id === a.id)
@@ -379,7 +379,7 @@ export function onResolveListening(s: State, h: Handoff, d: Decision): State {
   if (h.ref === CREATOR_EVENT && d.kind === 'option') return d.index === 0 ? proposeCollab(s, CREATOR_FIT, 'You picked it on Echo’s creator card.') : d.index === 1 ? setCreator(s, CREATOR_FIT, 'listed') : s
   if (h.ref?.startsWith('collab:')) {
     const handle = h.ref.slice('collab:'.length)
-    if (d.kind === 'approve') return pushLog(setCreator(s, handle, 'contacted'), { agent: 'nova', text: `Sent a collab DM to ${handle}`, status: 'approved', reason: 'Echo’s creator shortlist', link: '/listening/creators' })
+    if (d.kind === 'approve') return pushLog(setCreator(s, handle, 'contacted'), { agent: 'nova', text: `Sent a collab DM to ${handle}`, status: 'approved', reason: 'Echo’s creator shortlist', link: '/listening?kind=creators' })
     if (d.kind === 'reject') return setCreator(s, handle, 'listed')
   }
   return s
@@ -582,7 +582,7 @@ export function checkAlerts(s: State): State {
       agent: 'echo', kind: 'alert', urgency: 'today', topic: 'Alert', action: 'echo-file', ref: `alert:${a.id}`,
       title: `${sentence.replace(/^“|”/g, '')}: ${value}${/%/.test(a.unit) ? '%' : ''} now`,
       context: top.length ? top.map(m => `${m.author}: “${m.text}”`).join(' · ') : 'Read from the searches’ hourly volume.',
-      why: `Your alert rule: “${sentence}”.${claire}`, confidence: 90, link: a.subject === 'brand' || a.subject === 'competitors' ? '/listening/mentions' : '/listening/searches',
+      why: `Your alert rule: “${sentence}”.${claire}`, confidence: 90, link: a.subject === 'brand' || a.subject === 'competitors' ? '/listening/mentions' : '/listening/mentions',
       options: ms.length ? [{ label: `Nova drafts replies to ${ms.length === 1 ? 'this mention' : `these ${ms.length} mentions`}`, recommended: true }, { label: 'Nothing to do' }] : undefined,
     })
     if (claire) next = pushLog(next, { agent: 'echo', text: `Copied Claire on your alert: ${sentence} (${value})`, status: 'done', reason: 'Alert rule' })
@@ -631,7 +631,7 @@ function proposeCollab(s: State, handle: string, why: string): State {
   const next = pushHandoff(s, {
     agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Creator collab', chain: ['echo', 'nova'], ref: `collab:${handle}`,
     title: `Collab DM to ${handle}`, context: `${c.followers.toLocaleString('en-GB')} people on ${c.network} · ${c.history[0] ?? `${c.mentions.length} mention${c.mentions.length > 1 ? 's' : ''} of Fernway`}`,
-    why: `${why} ${c.fitWhy}`, confidence: 74, link: `/listening/creators?c=${encodeURIComponent(handle)}`,
+    why: `${why} ${c.fitWhy}`, confidence: 74, link: `/listening?kind=creators&c=${encodeURIComponent(handle)}`,
     preview: { type: 'reply', network: MENTION_NET[c.network] ?? 'instagram', author: handle, text: c.mentions[0].text, draft: [`Hi ${first}, it’s the Fernway team. We’ve loved seeing the ${product} on your trips. Would you like to try our winter range and tell your audience what you really think? No script, no obligation. Happy to talk if it sounds fun.`] },
   })
   return setCreator(next, handle, 'proposed')
@@ -644,11 +644,11 @@ export function creatorEvent(s: State, manual: boolean): State {
   if (!c || s.listening.creators[c.handle] || s.handoffs.some(h => h.ref === CREATOR_EVENT)) return s
   const level = actionOf(s, 'echo', 'echo-creators')?.autonomy ?? 'draft'
   const title = `${c.handle} keeps wearing the Storm Jacket: ${Math.round(c.followers / 1000)}k people`
-  if (level === 'suggest') return pushLog(s, { agent: 'echo', text: `Spotted a creator: ${title}`, status: 'done', reason: 'Creators, set to Suggest', link: '/listening/creators' })
-  if (level === 'act') return pushLog(setCreator(s, c.handle, 'listed'), { agent: 'echo', text: `Shortlisted ${c.handle} for a collab`, status: 'done', reason: 'Creators, set to Act', link: '/listening/creators', undoMinutes: 30, creator: c.handle })
+  if (level === 'suggest') return pushLog(s, { agent: 'echo', text: `Spotted a creator: ${title}`, status: 'done', reason: 'Creators, set to Suggest', link: '/listening?kind=creators' })
+  if (level === 'act') return pushLog(setCreator(s, c.handle, 'listed'), { agent: 'echo', text: `Shortlisted ${c.handle} for a collab`, status: 'done', reason: 'Creators, set to Act', link: '/listening?kind=creators', undoMinutes: 30, creator: c.handle })
   return pushHandoff(s, {
     agent: 'echo', kind: 'decision', urgency: 'week', topic: 'Creator', action: 'echo-creators', ref: CREATOR_EVENT,
-    title, context: c.history.join(' · '), why: c.fitWhy, confidence: 72, link: `/listening/creators?c=${encodeURIComponent(c.handle)}`,
+    title, context: c.history.join(' · '), why: c.fitWhy, confidence: 72, link: `/listening?kind=creators&c=${encodeURIComponent(c.handle)}`,
     options: [{ label: 'Nova drafts a collab DM', recommended: true }, { label: 'Shortlist only' }, { label: 'Not a fit' }],
   })
 }
@@ -665,7 +665,7 @@ function testFormat(s: State, n: Network, id: string): State {
   const next = pushHandoff(s, {
     agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Lesson test', action: 'atlas-competitor', chain: ['echo', 'atlas'], ref,
     title: `Test ${name}’s ${format} on ${netLabel(n)}`, context: top ? `Their best on ${netLabel(n)}: “${top.title}”, ${top.views} views. ${top.takeaway}` : `What works for ${name} on ${netLabel(n)}.`,
-    why: 'You asked from Listening › Benchmark. Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 64, link: `/listening/competitors/benchmark?net=${n}`,
+    why: 'You asked from Listening › Competitors. Anything that answers a competitor is locked to Suggest: you publish it.', confidence: 64, link: `/listening/competitors?net=${n}`,
     rules: ['Never name a competitor in a post'],
     preview: { type: 'post', network: n, slot: 'This week', text: [top ? `Our take on “${top.title.toLowerCase()}”, with the Ridge 28L and a real customer. Draft v1.` : `Our version of what works on ${netLabel(n)} right now. Draft v1.`] },
   })
