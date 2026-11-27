@@ -12,7 +12,7 @@ import { dur, suggestedCount } from './slice'
 import { MIN } from '../../app/time'
 import { matches, thenText, whenText, type InboxRule, type RuleOp } from './rules'
 
-const TYPES: Record<ConvType, string> = { comment: 'Comments', dm: 'Messages', mention: 'Mentions', review: 'Reviews', ad: 'Ad comments' }
+const TYPES: Record<ConvType, string> = { comment: 'Comments', dm: 'Messages', mention: 'Mentions', review: 'Reviews' }
 const TARGET_STEPS = [30, 60, 120, 240, 480, 1440]
 const OPS: { op: RuleOp['op']; label: string }[] = [{ op: 'label', label: 'Label' }, { op: 'assign', label: 'Assign' }, { op: 'hide', label: 'Hide' }, { op: 'review', label: 'Mark reviewed' }, { op: 'sentiment', label: 'Set sentiment' }]
 

@@ -72,7 +72,6 @@ export const ESCALATIONS: Escalation[] = [
   { id: 'e-legal', label: 'Lawyers and legal threats', to: 'claire', on: true, agents: ['nova'] },
   { id: 'e-creator', label: 'Creators above 50k followers', to: 'sam', on: true, agents: ['nova', 'echo'] },
   { id: 'e-refund', label: 'Refunds above €150', to: 'sam', on: true, agents: ['nova'] },
-  { id: 'e-budget', label: 'Paid boosts and creator fees', to: 'claire', on: true, agents: ['iris', 'nova'] },
   { id: 'e-statement', label: 'Public statements during a negative spike', to: 'claire', on: true, agents: ['echo', 'atlas'] },
   { id: 'e-competitor', label: 'Any post that names a competitor', to: 'sam', on: true, agents: ['atlas'] },
   { id: 'e-pricing', label: 'Price changes and promo codes', to: 'claire', on: false, agents: ['atlas', 'nova'] },

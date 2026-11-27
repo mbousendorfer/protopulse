@@ -34,7 +34,7 @@ export const RULES: InboxRule[] = [
 export const TEAM_DELAY = 4 * 60_000
 
 const SENT: Record<Sentiment, string> = { positive: 'positive', neutral: 'neutral', negative: 'negative' }
-const TYPE: Record<ConvType, string> = { comment: 'comments', dm: 'messages', mention: 'mentions', review: 'reviews', ad: 'ad comments' }
+const TYPE: Record<ConvType, string> = { comment: 'comments', dm: 'messages', mention: 'mentions', review: 'reviews' }
 
 export const whenText = (r: Pick<InboxRule, 'words' | 'network' | 'type'>) =>
   [`says ${r.words.map(w => `“${w}”`).join(', ')}`, r.type && `in ${TYPE[r.type]}`, r.network && `on ${NETWORK_LABEL[r.network]}`].filter(Boolean).join(' ')

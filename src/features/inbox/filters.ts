@@ -18,7 +18,7 @@ export const postKey = (c: Pick<Conversation, 'post'>) => c.post?.match(/^[^“]
 export type SavedView = { id: string; name: string; view: string; f: Filters }
 
 export const DATES: Record<NonNullable<Filters['date']>, string> = { today: 'Today', '7d': 'Last 7 days', '30d': 'Last 30 days' }
-const TYPES: Record<ConvType, string> = { comment: 'comments', dm: 'messages', mention: 'mentions', review: 'reviews', ad: 'ad comments' }
+const TYPES: Record<ConvType, string> = { comment: 'comments', dm: 'messages', mention: 'mentions', review: 'reviews' }
 
 const dayStart = (t: number) => { const d = new Date(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() }
 const since = (d: NonNullable<Filters['date']>, now: number) => (d === 'today' ? dayStart(now) : now - (d === '7d' ? 7 : 30) * DAY)
@@ -50,7 +50,7 @@ const NETS: [RegExp, Network][] = [[/linkedin/, 'linkedin'], [/tiktok/, 'tiktok'
 /** "show me negative Instagram DMs this week" → filters. Undefined when the sentence names no Inbox items. */
 export function parseFilters(t: string): Filters | undefined {
   if (!/^(?:show|find|list|filter|open|which|what)\b/.test(t)) return
-  const type: ConvType | undefined = /\bad comments?\b/.test(t) ? 'ad' : /\b(dms?|messages?|private)\b/.test(t) ? 'dm' : /\bcomments?\b/.test(t) ? 'comment' : /\bmentions?\b/.test(t) ? 'mention' : /\breviews?\b/.test(t) ? 'review' : undefined
+  const type: ConvType | undefined = /\b(dms?|messages?|private)\b/.test(t) ? 'dm' : /\bcomments?\b/.test(t) ? 'comment' : /\bmentions?\b/.test(t) ? 'mention' : /\breviews?\b/.test(t) ? 'review' : undefined
   if (!type && !/\b(conversations?|inbox|items?)\b/.test(t)) return
   const who = t.match(/assigned to (me|claire|l[eé]o|yanis)/)?.[1]
   const f: Filters = {

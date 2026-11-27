@@ -97,7 +97,7 @@ function Approver() {
   return (
     <div className="card pad onb-autonomy">
       <h2>Who approves what’s sensitive?</h2>
-      <p>Agents send press, legal and budget to the person you invite.</p>
+      <p>Agents send press, legal and safety to the person you invite.</p>
       {invited ? (
         <p className="onb-sent"><Check size={14} aria-hidden className="ok" />Invitation sent to {invited} · Pending · <button className="link-btn" onClick={() => d({ type: 'setup/patch', patch: { validator: undefined } })}>Cancel invitation</button></p>
       ) : (

@@ -8,7 +8,7 @@ import type { AgentModule } from './agent-module'
 const BEFORE = [
   'ev-colour', 'ev-spike', 'ev-video-gr20', 'ev-recycle', 'ev-idea-signal', 'ev-stove', 'ev-linkedin', 'ev-video-captions', 'ev-trailkind',
   'ev-idea-urgent', 'ev-german', 'ev-fill', 'ev-promo-exchange', 'ev-trail-goal', 'ev-google', 'ev-idea-gap', 'ev-demote', 'ev-norro',
-  'ev-rule-emoji', 'ev-x-fail', 'ev-intent', 'ev-trend-repair', 'ev-basecamp', 'ev-idea-weekly', 'ev-collab', 'ev-pillar', 'ev-rule-tiktok',
+  'ev-rule-emoji', 'ev-x-fail', 'ev-intent', 'ev-trend-repair', 'ev-basecamp', 'ev-idea-weekly', 'ev-pillar', 'ev-rule-tiktok',
 ]
 
 /** Wraps one hook of every module that has it in a spy, restored after the test. */

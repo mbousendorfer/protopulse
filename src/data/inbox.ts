@@ -3,7 +3,7 @@ import { T, MIN } from '../app/time'
 
 /** `new`: just in, not handled by anyone yet (Nova's spam suspects waiting on a decision). */
 export type ConvStatus = 'auto' | 'draft' | 'escalated' | 'hidden' | 'you' | 'claire' | 'takeover' | 'new'
-export type ConvType = 'comment' | 'dm' | 'mention' | 'review' | 'ad'
+export type ConvType = 'comment' | 'dm' | 'mention' | 'review'
 export type Sentiment = 'positive' | 'neutral' | 'negative'
 
 export type Attachment = { id: string; kind: 'exchange' | 'refund' | 'code'; label: string; limit: string; removed?: boolean }
@@ -106,7 +106,6 @@ export const CONTACTS: Contact[] = [
     orders: [{ id: '#48301', date: '30 Oct', items: 'Ember Fleece · Ember · S', total: 95, status: 'Delivered' }] },
   { id: 'k-pierre', name: 'Pierre Vasseur', handles: [{ network: 'facebook', handle: 'Pierre Vasseur' }], since: 'May 2024', location: 'Gap, FR', tags: ['Safety'],
     orders: [{ id: '#47655', date: '3 Aug', items: 'Ridge 28L · Moss', total: 140, status: 'Delivered' }] },
-  { id: 'k-theo', name: 'Théo Wild', handles: [{ network: 'instagram', handle: '@theo.wild' }], followers: '120k', location: 'Lisbon, PT', tags: ['Creator'], notes: 'Van life and outdoor. Works with Peakline (2024).', orders: [] },
   { id: 'k-max', name: 'Max Turner', handles: [{ network: 'x', handle: '@maxoutside' }], followers: '1.1k', since: 'November 2025', location: 'Bristol, UK', tags: ['First order'],
     orders: [{ id: '#48333', date: '21 Nov', items: 'Storm Jacket · Ember · L', total: 220, status: 'Processing' }] },
 ]
@@ -181,7 +180,6 @@ const TEAM: Record<string, Partial<Conversation>> = {
   'c-marc': { labels: ['Press'], assignee: 'claire' },
   'c-pierre': { labels: ['Product issue'], notes: [{ id: 'n2', at: T(7, 5), by: 'sam', text: 'Called him yesterday evening, no injury. Product team has the clip photos.' }] },
   'c-lawyer': { assignee: 'claire' },
-  'c-theo': { labels: ['Creator'], assignee: 'claire' },
   'c-tom': { labels: ['Lead'], reviewed: true },
 }
 
@@ -276,16 +274,11 @@ export const CONVERSATIONS: Conversation[] = ([
     draft: ['Raphaël, we’re sorry your trip went this way. We’d like to understand what happened. Our customer team will contact you by email today.'],
     note: 'Legal topic · locked. No order found under this handle.',
   },
-  {
-    id: 'c-theo', contact: 'k-theo', author: '@theo.wild', network: 'instagram', type: 'dm', status: 'escalated', sentiment: 'positive', at: T(20, 30, -1),
-    messages: [m('them', 'Hey Fernway! Big fan of the Ridge. Would love to do 3 reels for your winter campaign, my rate is €1,800. Media kit attached.', T(20, 28, -1))],
-    note: 'Creator above 50k followers · always yours to decide.',
-  },
   // Hidden by Nova
   { id: 'c-spam1', author: '@free_followers_now', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 46), messages: [m('them', 'Boost your account 10k followers DM us!!', T(7, 46))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
   { id: 'c-spam2', author: '@crypto.gains.daily', network: 'instagram', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(7, 44), messages: [m('them', 'I made €4,200 this week with this simple trick 👉 link in bio', T(7, 44))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
   { id: 'c-spam3', author: '@promo_dealz_88', network: 'tiktok', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(6, 2), messages: [m('them', 'cheap bags 90% off at dealz88 shop', T(6, 2))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
-  { id: 'c-spam4', author: '@bestfollows.co', network: 'facebook', type: 'ad', status: 'hidden', sentiment: 'neutral', at: T(4, 30), messages: [m('them', 'Your page could get 5x more reach. Message us for a free audit.', T(4, 30))], note: 'Spam on an ad · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
+  { id: 'c-spam4', author: '@bestfollows.co', network: 'facebook', type: 'comment', status: 'hidden', sentiment: 'neutral', at: T(4, 30), messages: [m('them', 'Your page could get 5x more reach. Message us for a free audit.', T(4, 30))], note: 'Spam · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
   { id: 'c-spam5', author: '@win.iphone.17', network: 'x', type: 'mention', status: 'hidden', sentiment: 'neutral', at: T(2, 12), messages: [m('them', '@fernway congrats you won an iPhone 17 claim here', T(2, 12))], note: 'Bot · hidden by Nova', reviewed: true, reviewedBy: 'nova' },
   // Handled alone
   ...AUTO.map(fromQ),

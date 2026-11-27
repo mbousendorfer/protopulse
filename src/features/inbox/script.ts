@@ -160,11 +160,4 @@ export const SCRIPT: ScriptEvent[] = ([
         draft: ['For 4 days with a tent you’ll want more room than the Ridge 28L. The ', { text: 'Ridge 40L', note: 'Not in the catalog. The largest bag is the Ridge 28L.' }, ' launches in March. Until then, the 28L plus the side straps works if you pack light.'] } },
     auto: { text: 'Answered @maelle.rando with packing advice and the Ridge link', reason: 'Product question, set to Act', link: '/inbox' },
   },
-  {
-    id: 'ev-collab', order: 250, label: 'Nova · creator collab request', always: true,
-    handoff: { agent: 'nova', kind: 'decision', urgency: 'today', topic: 'Creator', action: 'nova-sensitive',
-      title: 'A 120k-follower creator asks for a paid collab', context: '@theo.wild, outdoor and van life. Asks for €1,800 for 3 reels.',
-      why: 'Creators above 50k always go to you.', confidence: 91, link: '/inbox/c-theo', ref: 'c-theo',
-      options: [{ label: 'Ask Claire about the budget', recommended: true }, { label: 'Offer gear instead of a fee' }, { label: 'Decline politely' }] },
-  },
 ] as ScriptEvent[]).map(arrive)
