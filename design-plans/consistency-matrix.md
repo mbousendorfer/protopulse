@@ -16,7 +16,7 @@ exception is written here.
 | Literal px font sizes off the scale | 52 | 9 / 10 / 11 px on `.mark` overrides (no text inside: dead declarations), chart axis labels (10), `.chat-unread` (11), `.hl-plan small` (10), `fontSize: 12/13/14` inline (17), network previews (exempt: they mimic each network) |
 | `pushToast` / `core/toast` call sites | 35 (+ `Toasts` component, `core/toast` action, `.toasts` CSS) | Every confirmation of your own action, plus "new on your Desk" |
 | Undo bar variants | 4 | `pb-undo` (used outside Playbook in 6 places), `ib-undo-strip`, `pub-undo` (with countdown), Desk `done-box` |
-| Inline confirm variants | 2 | Insights boost reuses `pb-undo` with `role=alertdialog`; Chats boost is a plain `row` with "Sure?" |
+| Inline confirm variants | 1 | Inbox delete (`InlineConfirm`, danger); the paid boost confirms are gone (no paid promotion) |
 | Border radius literals | 128 | 12px ×38, 10px ×24, 5/6/7/8/14/18px. Scale is 6 (chips) / 10 / 16 / 20 |
 
 ## 1. Buttons
@@ -134,14 +134,14 @@ sizing.
 **Variants.** Toast (35 call sites, bottom right, 4–6 s, Undo inside for Desk group actions). Undo bars:
 `pb-undo` (Playbook delete, Agents preset / guardrail / escalation, Listening search, Chats delete), `ib-undo-strip`
 (Inbox, green band, no countdown), `pub-undo` (Publishing, blue bulk-bar look, "8 s"), Desk `done-box` (green box).
-Inline confirm: Insights boost (`pb-undo` + `role=alertdialog`), Chats boost (`row` + "Sure?"). Stamps:
+Inline confirm: Inbox delete only (the paid boost confirms are gone). Stamps:
 `detail-stamp` (Desk, rotated mono), `handoff.stamped` (dashed, slides out), "Approved · 09:12" in Inbox rows.
 Done states: `done-box`, `move-done`, `resolution`, `Pill` "Applied / Declined / Not for us".
 
 **Canonical** (decision "no toast, feedback inline where the action happened"; PROMPT §3.3 "Undo · 9 min left"):
 - `UndoBar` — one component: check icon, sentence, `Undo` (secondary xs), time left ("8 s" / "9 min left"), dismiss.
   Neutral `--lift` surface, 10 radius, sits at the top of the list it acted on.
-- `InlineConfirm` — one component for paid spend and permanent deletion: the sentence that says what happens, `Cancel`
+- `InlineConfirm` — one component for permanent deletion: the sentence that says what happens, `Cancel`
   (ghost), the action (primary, or danger for deletion).
 - A decision on a card is stamped on the card (existing `detail-stamp`); one-click dismissals become
   "Dismissed · Undo" (audit "Still open").
