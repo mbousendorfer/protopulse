@@ -26,7 +26,7 @@ export function useClip(id?: string) {
 export function CoverFrame({ source, at, focus, text }: { source: Source; at: number; focus: number; text?: string }) {
   return (
     <>
-      <video className="cover-frame" src={`${mediaUrl(`${source.media}/video.mp4`)}#t=${at}`} preload="metadata" muted playsInline tabIndex={-1} style={{ objectPosition: `${focus * 100}% 50%` }} />
+      <video className="cover-frame" src={`${mediaUrl(`${source.media}/video.mp4`)}#t=${at}`} poster={mediaUrl(`${source.media}/poster.jpg`)} preload="metadata" muted playsInline tabIndex={-1} style={{ objectPosition: `${focus * 100}% 50%` }} />
       {text && <span className="cover-text">{text}</span>}
     </>
   )
@@ -36,7 +36,7 @@ export function CoverFrame({ source, at, focus, text }: { source: Source; at: nu
 export const focusAt = (c: Clip, source: Source, at: number) => c.focus ?? TRANSCRIPT[source.transcript].shots.find(x => at >= x.s && at < x.e)?.focus ?? 0.5
 
 /** The clip's cover, or the source's poster, framed like the clip (9:16 by default), with its length. */
-export function ClipThumb({ clip, source, size = 'md' }: { clip: Clip; source: Source; size?: 'sm' | 'md' | 'lg' }) {
+export function ClipThumb({ clip, source, size = 'md' }: { clip: Clip; source: Source; size?: 'sm' | 'md' | 'lg' | 'fill' }) {
   const [broken, setBroken] = useState(false)
   const focus = clip.focus ?? TRANSCRIPT[source.transcript].shots[0]?.focus ?? 0.5
   return (

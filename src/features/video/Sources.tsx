@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent, type MouseEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Link2, Radio, TriangleAlert, Upload, Youtube } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
@@ -8,22 +8,52 @@ import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
 import { InfoPop } from '../../ui/More'
 import { WEEKLY_QUOTA, sentThisWeek, validUrl } from './slice'
-import { SESSION_BLOBS, ScoreBadge, SourceThumb, clipScore, fmt, playable, videoUrl } from './parts'
+import { ClipThumb, SESSION_BLOBS, ScoreBadge, SourceThumb, clipScore, fmt, playable, videoUrl } from './parts'
 import { ON_SCREEN, PEOPLE, mediaUrl, speakerName } from '../../data/video'
 
 const KIND = { youtube: { icon: Youtube, label: 'YouTube upload' }, live: { icon: Radio, label: 'Recorded live' }, link: { icon: Link2, label: 'Pasted link' }, upload: { icon: Upload, label: 'Uploaded file' } }
 export const lengthOf = (src: Source) => src.shownDuration ?? fmt(TRANSCRIPT[src.transcript].duration)
 
-function Status({ src, now }: { src: Source; now: number }) {
+/**
+ * One source video as a 16:9 card (matrix §15): the poster with its length, the title, the channel and date, then its state
+ * and the one action it needs (Make clips, Retry) or the way to its clips.
+ */
+export function SourceCard({ src, now }: { src: Source; now: number }) {
   const { s, d } = useStore()
-  if (src.status === 'processing') {
-    const el = now - (src.startedAt ?? now)
-    const k = Math.min(PHASES.length - 1, Math.floor(el / PHASE_MS))
-    return <span className="muted t-sm">{PHASES[k]} · {Math.min(99, Math.round((el / (PHASES.length * PHASE_MS)) * 100))}%</span>
-  }
-  if (src.status === 'waiting') return <Btn size="sm" onClick={e => { e.stopPropagation(); d({ type: 'video/start', id: src.id }) }}>Make clips</Btn>
-  const n = s.video.clips.filter(c => c.source === src.id && c.status !== 'dismissed').length
-  return <span className="muted t-sm">{n} clip{n === 1 ? '' : 's'}</span>
+  const nav = useNavigate()
+  const K = KIND[src.kind].icon
+  const stop = (f: () => void) => (e: MouseEvent) => { e.stopPropagation(); f() }
+  const el = Math.max(0, now - (src.startedAt ?? now))
+  const pct = Math.min(99, Math.round((el / (PHASES.length * PHASE_MS)) * 100))
+  const all = s.video.clips.filter(c => c.source === src.id && c.status !== 'dismissed')
+  const ready = all.filter(c => c.status === 'ready').length
+  return (
+    <li className="card hoverable vs-card" onClick={e => { if (!(e.target as Element).closest('a, button, [role="menu"]')) nav(`/video/sources/${src.id}`) }}>
+      <div className="vs-frame">
+        <SourceThumb source={src} />
+        <span className="clip-thumb-len mono">{lengthOf(src)}</span>
+      </div>
+      <div className="vs-body">
+        <Link className="vs-title" to={`/video/sources/${src.id}`}>{src.title}</Link>
+        <p className="vs-meta"><K size={14} aria-label={KIND[src.kind].label} /><span className="ellipsis">{src.channel}</span><span className="nowrap">{dayLabel(src.at, now)}, {hhmm(src.at)}</span></p>
+      </div>
+      <div className="vs-state">
+        {src.status === 'processing' ? <>
+          <span className="vs-making"><span className="t-sm">{PHASES[Math.min(PHASES.length - 1, Math.floor(el / PHASE_MS))]}</span><span className="t-sm num">{pct}%</span></span>
+          <span className="progress" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`${src.title}: ${pct}%`}><span style={{ width: `${pct}%` }} /></span>
+        </> : src.status === 'failed' ? <>
+          <span className="vc-status"><Pill tone="alert">Failed</Pill><InfoPop label="Why?">{src.error}</InfoPop></span>
+          <Btn size="sm" onClick={stop(() => d({ type: 'video/retry', id: src.id }))}>Retry</Btn>
+        </> : src.status === 'waiting' ? <>
+          <span className="t-sm">New video</span>
+          <Btn size="sm" onClick={stop(() => d({ type: 'video/start', id: src.id }))}>Make clips</Btn>
+        </> : <>
+          <span className="t-sm"><b className="num">{ready}</b> {ready === 1 ? 'clip' : 'clips'} ready · {all.length} in all</span>
+          {all.length > 0 && <Link className="link-btn t-sm" to={`/video?source=${src.id}`}>See clips</Link>}
+        </>}
+      </div>
+    </li>
+  )
 }
 
 function AddVideo() {
@@ -74,41 +104,16 @@ export function Watching() {
   )
 }
 
-/** Videos: add one, then every video as a row (matrix §14) that opens its transcript. */
+/** Videos: add one, then every video as a 16:9 card (matrix §15) that opens its transcript. */
 export default function Sources() {
-  const { s, d } = useStore()
-  const nav = useNavigate()
+  const { s } = useStore()
   const now = useNow(1000)
   return (
     <div className="stack lg">
       <Notice scope="video" />
       <AddVideo />
       {!s.video.sources.length ? <Empty title="No videos yet" /> : (
-        <section className="card vq-list" aria-label="Videos">
-          <ul className="dq-rows">
-            {s.video.sources.map(src => {
-              const K = KIND[src.kind].icon
-              return (
-                <li key={src.id} className="dq-row is-source" onClick={e => { if (!(e.target as Element).closest('a, button')) nav(`/video/sources/${src.id}`) }}>
-                  <span className="dq-check" />
-                  <SourceThumb source={src} />
-                  <div className="dq-main">
-                    <p className="dq-title"><Link className="dq-name" to={`/video/sources/${src.id}`}>{src.title}</Link></p>
-                    <p className="dq-line">
-                      {src.status === 'failed' && <><Pill tone="alert">Failed</Pill><InfoPop label="Why?">{src.error}</InfoPop></>}
-                      <span className="row tight nowrap" title={KIND[src.kind].label}><K size={14} aria-hidden />{dayLabel(src.at, now)}, {hhmm(src.at)}</span>
-                      <span className="num">{lengthOf(src)}</span>
-                      <span className="dq-src">{src.channel}</span>
-                    </p>
-                  </div>
-                  <div className="dq-acts">
-                    {src.status === 'failed' ? <Btn size="sm" onClick={() => d({ type: 'video/retry', id: src.id })}>Retry</Btn> : <Status src={src} now={now} />}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+        <ul className="vs-grid" aria-label="Videos">{s.video.sources.map(src => <SourceCard key={src.id} src={src} now={now} />)}</ul>
       )}
     </div>
   )
@@ -161,6 +166,19 @@ export function SourceDetail({ id }: { id: string }) {
             {playable(src)
               ? <video ref={video} className="src-video" src={videoUrl(src)} poster={src.kind === 'upload' ? undefined : mediaUrl(`${src.media}/poster.jpg`)} controls preload="metadata" />
               : <div className="src-video gone"><p>Upload the file again to play it: uploads stay in the browser for one session.</p></div>}
+            {clips.length > 0 && (
+              <section aria-labelledby="src-clips-h" className="stack">
+                <h3 id="src-clips-h" className="section-title flush">Clips from this video</h3>
+                <ul className="src-clips">{[...clips].sort((a, b) => clipScore(b, src).total - clipScore(a, src).total).map(c => (
+                  <li key={c.id}>
+                    <Link to={`/video/clips/${c.id}`} className="src-clip" title={c.title}>
+                      <ClipThumb clip={c} source={src} size="fill" />
+                      <span className="vc-score"><ScoreBadge value={clipScore(c, src).total} /></span>
+                    </Link>
+                  </li>
+                ))}</ul>
+              </section>
+            )}
             {src.sampleTranscript && <p className="muted t-sm">{src.kind === 'link' ? 'This prototype can’t open links: the video, transcript and clips below come from a sample video.' : 'This prototype can’t transcribe your file: the transcript and clips below come from a sample video.'}</p>}
             <form className="card pad stack" onSubmit={find} aria-labelledby="find-h">
               <div className="row nowrap"><Mark agent="juno" /><h3 id="find-h" className="section-title flush">Find clips about…</h3></div>

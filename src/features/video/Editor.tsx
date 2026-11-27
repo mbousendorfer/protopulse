@@ -8,7 +8,7 @@ import { hhmm } from '../../app/time'
 import { actionOf, uid } from '../../app/core'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BROLL, MUSIC, PEOPLE, TRANSCRIPT, speakerName, type Source } from '../../data/video'
-import { campaignFor, canTrial, holdReason, noRelease, unreleased } from './slice'
+import { campaignFor, canTrial, flopOf, holdReason, noRelease, recutOf, unreleased } from './slice'
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
@@ -48,6 +48,10 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
   const canUndo = s.video.editor.clip === clip.id && s.video.editor.past.length > 0
   const canRedo = s.video.editor.clip === clip.id && s.video.editor.future.length > 0
   const open = clip.status === 'ready' || clip.status === 'snoozed'
+  // The card's status and decision, in the head too: Held (and Release signed), Below usual (and Recut).
+  const held = open ? holdReason(s, clip) : undefined
+  const who = held ? unreleased(s, clip)[0] : undefined
+  const flop = flopOf(s, clip) && !recutOf(s, clip) ? flopOf(s, clip) : undefined
   // Which version the frame shows: the clip as framed, or one network's version.
   const [pick, setView] = useState<'all' | Network>('all')
   const view = pick !== 'all' && clip.post.networks.includes(pick) ? pick : 'all'
@@ -87,18 +91,23 @@ function EditorBody({ clip, source }: { clip: Clip; source: Source }) {
           <input className="ed-title-input" defaultValue={clip.title} aria-label="Clip title" onBlur={e => { const v = e.target.value.trim(); if (v && v !== clip.title) edit({ title: v }) }} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
           <span className="muted t-sm ellipsis">From <Link to={`/video/sources/${source.id}`}>{source.title}</Link></span>
         </div>
-        <Pill tone={clip.status === 'sent' || clip.status === 'published' ? 'ok' : undefined}>{STATUS[clip.status]}</Pill>
+        {held ? <span className="vc-status"><Pill tone="caution">Held</Pill><InfoPop label="Why?">{held}. Juno won’t send it until that’s fixed.</InfoPop></span>
+          : flop ? <span className="vc-status"><Pill tone="caution">Below usual</Pill><InfoPop label="Why?">{Math.round(flop.share * 100)}% of your {NETWORK_FIT[flop.net] ?? flop.net} average views. Juno recuts it with the product first.</InfoPop></span>
+          : <Pill tone={clip.status === 'sent' || clip.status === 'published' ? 'ok' : undefined}>{STATUS[clip.status]}</Pill>}
         <ScoreBadge value={score.total} />
+        {clip.stats && <span className="t-sm nowrap"><b className="num">{(clip.stats.views / 1000).toFixed(1)}k</b> views · {clip.stats.er}% engagement</span>}
         <span className="spacer" />
         <span className="row tight nowrap">
           <Btn variant="ghost" icon size="sm" disabled={!canUndo} onClick={() => d({ type: 'video/undo' })} aria-label="Undo" kbd="⌘Z"><Undo2 size={16} /></Btn>
           <Btn variant="ghost" icon size="sm" disabled={!canRedo} onClick={() => d({ type: 'video/redo' })} aria-label="Redo" kbd="⇧⌘Z"><Redo2 size={16} /></Btn>
         </span>
-        {(open || clip.status === 'sent') && (
+        {(open || clip.status === 'sent' || flop) && (
           <span className="ed-acts">
             {open && <ClipNotNow c={clip} />}
-            {open ? <Btn variant="primary" onClick={() => d({ type: 'video/send', ids: [clip.id] })}>Send to Atlas</Btn>
-              : <Btn onClick={() => nav('/publishing/calendar')}>Open the calendar<ArrowUpRight size={14} /></Btn>}
+            {who && <Btn onClick={() => d({ type: 'video/release', person: who, signed: true })}>Release signed</Btn>}
+            {flop && <Btn onClick={() => d({ type: 'video/recut', id: clip.id })}>Recut</Btn>}
+            {open ? <Btn variant="primary" disabled={!!held} onClick={() => d({ type: 'video/send', ids: [clip.id] })}>Send to Atlas</Btn>
+              : clip.status === 'sent' && <Btn onClick={() => nav('/publishing/calendar')}>Open the calendar<ArrowUpRight size={14} /></Btn>}
           </span>
         )}
       </header>
