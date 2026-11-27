@@ -10,11 +10,13 @@ import { GOAL_UNITS, MOMENT_LEAD, PRODUCT_NAMES, readBrief, readGoal, readLaunch
 import { PUBLISH_NETWORKS } from '../../data/publishing'
 import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, strategyNeeds, targetsOf, type StrategyAction } from './slice'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
-import { CountBadge, Notice, Reopen } from '../../ui/Feedback'
+import { Notice, Reopen } from '../../ui/Feedback'
+import { DecisionRow } from '../../ui/Decisions'
+import { gist } from '../../ui/gist'
 import { LineChart } from '../../ui/charts'
-import { MoreInfo } from '../../ui/More'
+import { InfoPop, MoreInfo } from '../../ui/More'
 import './strategy.css'
-import '../listening/needs.css'
+import { Status } from '../listening/list'
 
 const STATUS: Record<CampaignStatus, { label: string; tone?: 'ok' | 'caution' | 'signal' }> = {
   brief: { label: 'Brief' }, review: { label: 'Plan to review', tone: 'caution' }, live: { label: 'Live', tone: 'ok' }, done: { label: 'Done' },
@@ -37,7 +39,7 @@ export default function StrategyPage() {
   const tab = seg === 'pillars' ? 'pillars' : 'campaigns'
   return (
     <div className="page strategy">
-      <PageHead agent="sage" title="Strategy" lede="Sage plans your campaigns and keeps the mix on track.">
+      <PageHead agent="sage" title="Strategy">
         {/* Only on the lists: on the brief it would point to itself, in a campaign it would compete with Approve. */}
         {(seg === '' || seg === 'pillars') && <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>}
       </PageHead>
@@ -54,143 +56,97 @@ export default function StrategyPage() {
   )
 }
 
-/* ---------- Campaign list: decisions first, then what's live, then what's done ---------- */
-type Need = 'plans' | 'moments' | 'changes'
-const NEED_LABEL: Record<Need, [string, string]> = { plans: ['Plan to approve', 'Plans to approve'], moments: ['Moment to decide', 'Moments to decide'], changes: ['Change to apply', 'Changes to apply'] }
-const NEED_ICON: Record<Need, typeof Check> = { plans: ClipboardCheck, moments: CalendarDays, changes: SlidersHorizontal }
-const NEED_WHY: Record<Need, string> = {
-  plans: 'Approving puts every post in Atlas’s calendar',
-  moments: 'Adding one gives Atlas its ideas',
-  changes: 'Nothing changes until you apply',
-}
+/* ---------- Campaigns: one standard list (matrix §14), a filter per state ---------- */
+type Show = 'needs' | 'live' | 'done' | 'later'
+const SHOW_LABEL: Record<Show, string> = { needs: 'Needs you', live: 'Live', done: 'Done', later: 'Coming up' }
 
 function Campaigns() {
   const { s } = useStore()
   const now = useNow()
+  const [params, setParams] = useSearchParams()
   const needs = strategyNeeds(s, now)
-  const [only, setOnly] = useState<Need | 'all'>('all')
-  const [doneOpen, setDoneOpen] = useState(false)
-  const count: Record<Need, number> = { plans: needs.plans.length, moments: needs.moments.length, changes: needs.adjustments.length + needs.proposals.length }
-  const groups = (Object.keys(count) as Need[]).filter(g => count[g])
-  const total = groups.reduce((n, g) => n + count[g], 0)
   const live = s.strategy.campaigns.filter(c => c.status === 'live' || c.status === 'brief')
   const done = s.strategy.campaigns.filter(c => c.status === 'done')
   const later = s.strategy.moments.filter(m => !m.status && m.start - MOMENT_LEAD > now)
-  const rows: Record<Need, ReactNode[]> = {
-    plans: needs.plans.map(c => <PlanRow key={c.id} c={c} />),
-    moments: needs.moments.map(m => <MomentRow key={m.id} m={m} />),
-    changes: [
-      // Sage writes “reason. move.”: the move is the row's title, the reason its line.
-      ...needs.adjustments.map(({ c, a }) => { const [move, reason] = moveFirst(a.text); return <ChangeRow key={a.id} text={move} why={`${c.name}${reason ? ` · ${reason}` : ''}`}
-        apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} /> }),
-      ...needs.proposals.map(p => <ChangeRow key={p.id} text={p.text} why={p.why}
-        apply={{ type: 'strategy/proposal', id: p.id, accept: true }} decline={{ type: 'strategy/proposal', id: p.id, accept: false }} />),
-    ],
-  }
+  const counts: Record<Show, number> = { needs: needs.plans.length + needs.moments.length + needs.adjustments.length + needs.proposals.length, live: live.length, done: done.length, later: later.length }
+  const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'needs' || counts[k] > 0)
+  const pick = (params.get('show') as Show | null) ?? 'needs'
+  const show = shown.includes(pick) ? pick : 'needs'
+  const rows: ReactNode[] = show === 'needs' ? [
+    ...needs.plans.map(c => <PlanRow key={c.id} c={c} />),
+    ...needs.moments.map(m => <MomentRow key={m.id} m={m} />),
+    // Sage writes “reason. move.”: the move is the row's title, the reason its line.
+    ...needs.adjustments.map(({ c, a }) => { const [move, reason] = moveFirst(a.text); return <ChangeRow key={a.id} text={move} on={c.name} why={reason}
+      apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} /> }),
+    ...needs.proposals.map(p => <ChangeRow key={p.id} text={p.text} on="Pillars and cadence" why={p.why}
+      apply={{ type: 'strategy/proposal', id: p.id, accept: true }} decline={{ type: 'strategy/proposal', id: p.id, accept: false }} />),
+  ] : show === 'later' ? later.map(m => <MomentRow key={m.id} m={m} early />)
+    : (show === 'live' ? live : done).map(c => <CampaignRow key={c.id} c={c} now={now} />)
   return (
-    <div className="stack lg">
-      <Notice scope="strategy" />
-      {total ? (
-        <div className="stack">
-          <Filters label="What needs you" value={groups.includes(only as Need) ? only : 'all'} onChange={setOnly}
-            items={[{ value: 'all', label: 'All', count: total }, ...groups.map(g => ({ value: g, label: NEED_LABEL[g][1], count: count[g] }))]} />
-          <section className="card needs" aria-label="Needs you">
-            {groups.filter(g => only === 'all' || only === g).map(g => {
-              const I = NEED_ICON[g]
-              return (
-                <section key={g} className="need-group" aria-label={NEED_LABEL[g][1]}>
-                  <header className="need-head">
-                    <span className="need-icon" aria-hidden><I size={14} /></span>
-                    <h2>{NEED_LABEL[g][count[g] > 1 ? 1 : 0]}</h2>
-                    <CountBadge n={count[g]} />
-                    <span className="faint need-why">{NEED_WHY[g]}</span>
-                  </header>
-                  <ul>{rows[g]}</ul>
-                </section>
-              )
-            })}
-          </section>
-        </div>
-      ) : (
-        <section className="card need-empty">
-          <p><b>Nothing needs you here.</b> Sage is watching {live.length ? `${live.map(c => c.name).join(' and ')} against ${live.length > 1 ? 'their trajectories' : 'its trajectory'}` : 'your pillars and cadence'}, and the dates ahead.</p>
-        </section>
-      )}
-      {later.length > 0 && <Later list={later} />}
-
-      <section className="stack" aria-label="Live">
-        <h2 className="section-title flush">Live <span className="faint num">{live.length}</span></h2>
-        {live.length ? <div className="campaigns">{live.map(c => <CampaignCard key={c.id} c={c} />)}</div>
-          : <p className="muted">No campaign running. <Link to="/strategy/new">Brief Sage</Link> and approve the plan to launch one.</p>}
-      </section>
-
-      {done.length > 0 && (
-        <section className="stack" aria-label="Done">
-          <button type="button" className="disclose done-toggle" aria-expanded={doneOpen} aria-controls="done-campaigns" onClick={() => setDoneOpen(o => !o)}>
-            <ChevronRight size={14} aria-hidden />Done <span className="faint num">{done.length}</span>
-          </button>
-          {doneOpen && <div id="done-campaigns" className="campaigns">{done.map(c => <CampaignCard key={c.id} c={c} />)}</div>}
-        </section>
-      )}
+    <div>
+      <Notice scope="strategy" className="mb-3" />
+      <div className="sl-bar">
+        <Filters label="Show" value={show} onChange={v => setParams(v === 'needs' ? {} : { show: v }, { replace: true })}
+          items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
+      </div>
+      {rows.length
+        ? <section className="card sl-list" aria-label={SHOW_LABEL[show]}><ul className="rows">{rows}</ul></section>
+        : <Empty title="Nothing needs you here" body={`Sage watches ${live.length ? live.map(c => c.name).join(' and ') : 'your pillars and cadence'}, and the dates ahead.`} />}
     </div>
   )
 }
 
-function CampaignCard({ c }: { c: Campaign }) {
+/** A campaign: dates and progress on one line, its trajectory only when it's off. */
+function CampaignRow({ c, now }: { c: Campaign; now: number }) {
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
+  const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
+  const traj = c.status === 'live' && expected > 0 ? Math.round((c.goal.current / expected) * 100) : 100
   return (
-    <Link to={`/strategy/campaigns/${c.id}`} className="card campaign-row">
-      <div className="row between">
-        <h3>{c.name}</h3>
-        <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill>
-      </div>
-      <div className="campaign-meta">
-        <span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}</span>
-        <span className="faint">{c.posts.length} posts · €{c.budget} boost budget</span>
-      </div>
-      <div className="goal-line">
-        <span>Progress: <b className="num">{fmtGoal(c, c.goal.current)} of {fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')}</span>
-        <span className="goal-bar" aria-hidden><i style={{ width: `${Math.min(100, pct)}%` }} /></span>
-        <span className="num faint">{pct}%</span>
-      </div>
-    </Link>
+    <DecisionRow lead={<span className="sl-lead-icon" aria-hidden><CalendarDays size={14} /></span>}
+      title={<Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link>}
+      line={<>
+        {c.status === 'brief' && <Pill>Brief</Pill>}
+        {(traj < 85 || traj > 120) && <Status label={`${traj}% of trajectory`} tone="caution" why="Sage proposes a change when a live campaign leaves 85–120% of its planned trajectory." />}
+        <span>{fmtRange(c.start, c.end)}</span>
+        <span className="sl-gist"><b className="num">{fmtGoal(c, c.goal.current)} of {fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')} · {pct}%</span>
+      </>}
+      acts={c.status === 'done' ? (c.reportId ? <Link to={`/insights/reports/${c.reportId}`} className="btn sm ghost">Recap</Link> : null)
+        : c.end > now ? <Link to="/publishing/calendar" className="btn sm ghost">Calendar</Link> : null} />
   )
 }
 
-/** A plan to approve: Approve on the spot (or why it can't launch yet), or open it to change it. */
+/** A plan to approve: Approve on the spot, or why it can't launch yet. */
 function PlanRow({ c }: { c: Campaign }) {
   const { s, d } = useStore()
   const block = launchBlock(s, c)
   return (
-    <li className="need-row">
-      <div className="need-main">
-        <p className="need-title"><Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link>{c.version > 1 && <span className="need-quote">Version {c.version}</span>}</p>
-        {block
-          ? <p className="need-line need-wrap"><Lock size={12} aria-hidden /> {block}</p>
-          : <p className="need-line">Goal {fmtGoal(c, c.goal.target)} {c.goal.label.replace(' (€)', '')} · {c.posts.length} posts · {fmtRange(c.start, c.end)} · €{c.budget.toLocaleString('en-GB')} boost budget</p>}
-      </div>
-      <div className="need-acts">
+    <DecisionRow lead={<span className="sl-lead-icon" aria-hidden><ClipboardCheck size={14} /></span>}
+      title={<><Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link>{c.version > 1 && <span className="sl-quote">Version {c.version}</span>}</>}
+      line={<>
+        {block && <Status label={<><Lock size={12} aria-hidden />Can’t launch yet</>} tone="caution" why={block} />}
+        <span className="sl-gist">Goal {fmtGoal(c, c.goal.target)} {c.goal.label.replace(' (€)', '')} · {c.posts.length} posts · {fmtRange(c.start, c.end)}</span>
+      </>}
+      acts={<>
         <Btn size="sm" disabled={!!block} onClick={() => d({ type: 'strategy/approve', id: c.id })}><Check size={14} />Approve</Btn>
         <Link to={`/strategy/campaigns/${c.id}`} className="btn sm ghost">Open plan</Link>
-      </div>
-    </li>
+      </>} />
   )
 }
 
-function MomentRow({ m }: { m: Moment }) {
+function MomentRow({ m, early }: { m: Moment; early?: boolean }) {
   const { d } = useStore()
   return (
-    <li className="need-row">
-      <div className="need-main">
-        <p className="need-title"><b>{m.name}</b><span className="mono need-quote">{fmtRange(m.start, m.end)}</span></p>
-        <p className="need-line need-reason"><span className="ellipsis">{m.why}</span>
-          <MoreInfo label="Why?" title={`Why Sage raised ${m.name}`}><MomentWhy m={m} /></MoreInfo></p>
-      </div>
-      <div className="need-acts">
+    <DecisionRow lead={<span className="sl-lead-icon" aria-hidden><CalendarPlus size={14} /></span>}
+      title={<>{m.name}<span className="sl-quote">{fmtRange(m.start, m.end)}</span></>}
+      line={<>
+        {early && <span>Sage raises it {fmtDate(m.start - MOMENT_LEAD)}</span>}
+        <span className="sl-gist">{gist(m.why)}</span>
+        <MoreInfo label="Why?" title={`Why Sage raised ${m.name}`}><MomentWhy m={m} /></MoreInfo>
+      </>}
+      acts={early ? <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add it now</Btn> : <>
         <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}><CalendarPlus size={14} />Add to the calendar</Btn>
         <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
-      </div>
-    </li>
+      </>} />
   )
 }
 
@@ -206,34 +162,16 @@ function MomentWhy({ m }: { m: Moment }) {
   )
 }
 
-function ChangeRow({ text, why, apply, decline }: { text: string; why: string; apply: StrategyAction; decline: StrategyAction }) {
+function ChangeRow({ text, on, why, apply, decline }: { text: string; on: string; why: string; apply: StrategyAction; decline: StrategyAction }) {
   const { d } = useStore()
   return (
-    <li className="need-row">
-      <div className="need-main">
-        <p className="need-title need-wrap">{text}</p>
-        <p className="need-line">{why}</p>
-      </div>
-      <div className="need-acts">
+    <DecisionRow lead={<span className="sl-lead-icon" aria-hidden><SlidersHorizontal size={14} /></span>}
+      title={text}
+      line={<><span>{on}</span>{why && <span className="sl-gist">{gist(why)}</span>}{why && gist(why) !== why && <InfoPop label="Why?">{why}</InfoPop>}</>}
+      acts={<>
         <Btn size="sm" onClick={() => d(apply)}>Apply</Btn>
         <Btn size="sm" variant="ghost" onClick={() => d(decline)}>Decline</Btn>
-      </div>
-    </li>
-  )
-}
-
-/** Dates Sage hasn't raised yet: not a decision yet, but Sam can add one early. */
-function Later({ list }: { list: Moment[] }) {
-  const { d } = useStore()
-  return (
-    <ul className="later" aria-label="Coming up">
-      {list.map(m => (
-        <li key={m.id}>
-          <span className="muted">Coming up: <b>{m.name}</b>, {fmtRange(m.start, m.end)} <span className="faint">· Sage raises it {fmtDate(m.start - MOMENT_LEAD)}</span></span>
-          <Btn size="xs" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add it now</Btn>
-        </li>
-      ))}
-    </ul>
+      </>} />
   )
 }
 
@@ -706,22 +644,15 @@ function Pillars() {
   return (
     <div className="stack lg">
       <Notice scope="strategy" />
-      {s.strategy.proposals.length > 0 && <section className="card" aria-label="Sage’s proposals">
-        <div className="card-head"><h2 className="row tight"><Mark agent="sage" />Sage’s proposals</h2></div>
+      {s.strategy.proposals.length > 0 && <section className="card sl-list" aria-label="Sage’s proposals">
         <ul className="rows">
           {[...s.strategy.proposals].sort((a, b) => Number(b.status === 'proposed') - Number(a.status === 'proposed')).map(p => (
-            <li key={p.id} className="proposal">
-              <div>
-                <b>{p.text}</b>
-                <p className="muted">{p.why}</p>
-              </div>
-              {p.status === 'proposed' ? (
-                <div className="row nowrap">
-                  <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
-                  <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
-                </div>
-              ) : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />}
-            </li>
+            <DecisionRow key={p.id} lead={<Mark agent="sage" />} title={p.text}
+              line={<><span className="sl-gist">{gist(p.why)}</span>{gist(p.why) !== p.why && <InfoPop label="Why?">{p.why}</InfoPop>}</>}
+              acts={p.status === 'proposed' ? <>
+                <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
+              </> : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />} />
           ))}
         </ul>
       </section>}
