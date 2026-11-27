@@ -4,7 +4,7 @@ import NeedsYou, { IMPACT_TONE } from './Needs'
 import { CompetitorCards, MoodBar } from './Overview'
 import { LineChart } from '../../ui/charts'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Download, Eye, EyeOff, Frown, Meh, MessageSquareReply, Smile, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, MoreHorizontal, Download, Eye, EyeOff, Frown, Meh, MessageSquareReply, Smile, Pause, Pencil, Play, Plus, Send, Settings2, Star, Tag, Trash2, TriangleAlert } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { Network } from '../../app/types'
 import { ago, dayLabel } from '../../app/time'
@@ -15,7 +15,8 @@ import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
 import { eventState, listeningNeedsCount, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf, sovTrend, competitorMood } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
-import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Tabs } from '../../ui'
+import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Seg, Sheet, Tabs } from '../../ui'
+import { Ask, ObjectBody, Props } from '../../ui/ObjectPanel'
 import { Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -434,33 +435,49 @@ function Mentions() {
 
       {managing && <ManageTags onClose={() => setManaging(false)} />}
       <ManageSearches open={params.get('searches') === 'manage'} onClose={() => setParam('searches')} onPick={id => { const p = new URLSearchParams(params); p.delete('searches'); p.set('search', id); setParams(p, { replace: true }) }} />
-      <Sheet open={!!open} onOpenChange={o => !o && setOpenId(null)} title={open ? `${open.author} on ${open.network}` : ''}
-        footer={open && <>
-          <Btn variant="ghost" onClick={() => { run(s.listening.mentions[open.id] === 'hidden' ? 'unhide' : 'hide', {}, [open.id]); setOpenId(null) }}>{s.listening.mentions[open.id] === 'hidden' ? <><Eye size={14} />Unhide</> : <><EyeOff size={14} />Hide</>}</Btn>
-          <span className="spacer" />
-          {s.handoffs.some(h => h.ref === `mention-post:${open.id}`) || s.listening.mentions[open.id] === 'handed'
-            ? <Btn disabled><Check size={14} />With Atlas</Btn>
-            : <Btn onClick={() => run('atlas', {}, [open.id])}><Send size={14} />Hand to Atlas</Btn>}
-          <Btn variant="primary" disabled={s.listening.mentions[open.id] === 'replied'} onClick={() => run('nova', {}, [open.id])}><MessageSquareReply size={14} />{s.listening.mentions[open.id] === 'replied' ? 'Reply on your Desk' : 'Ask Nova to reply'}</Btn>
-        </>}>
-        {open && (
-          <div className="stack">
-            <div className="row nowrap"><SocialAvatar name={open.author} network={MENTION_NET[open.network]} org={!open.author.startsWith('@')} size={40} /><div><b>{open.author}</b><div className="faint">{open.network} · {ago(open.at, now)}</div></div></div>
-            <blockquote className="ls-quote">{open.text}</blockquote>
-            {open.risk && <p className="ls-risk"><TriangleAlert size={14} />Echo flags this one as a reputation risk. A reply within the hour keeps it from spreading.</p>}
-            <dl className="ls-facts">
-              <div><dt>Reach</dt><dd className="num">{open.reach.toLocaleString('en-GB')} people</dd></div>
-              <div><dt>Sentiment</dt><dd><span className={`ls-mood ${mood(open)}`}>{SENT_LABEL[mood(open)]}</span>{s.listening.sentiment[open.id] && <span className="faint"> · you corrected Echo</span>}</dd></div>
-              {open.product && <div><dt>Product</dt><dd>{open.product}</dd></div>}
-              <div><dt>Tags</dt><dd className="row tight">{(s.listening.tags[open.id] ?? []).map(t => <span key={t} className="chip ls-tag">{t}</span>)}
-                <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Tag size={12} />Add tag</Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => d({ type: 'listening/mentions', ids: [open.id], op: 'tag', tag: t }) }))} /></dd></div>
-            </dl>
-            <div className="row tight"><span className="faint">Correct the sentiment:</span>{(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => (
-              <button key={x} className="filter" aria-pressed={mood(open) === x} onClick={() => d({ type: 'listening/mentions', ids: [open.id], op: 'sentiment', sentiment: x })}>{SENT_LABEL[x]}</button>
-            ))}</div>
-          </div>
-        )}
-      </Sheet>
+      {open && (() => {
+        const state = s.listening.mentions[open.id]
+        const withAtlas = s.handoffs.some(h => h.ref === `mention-post:${open.id}`) || state === 'handed'
+        const at = list.findIndex(m => m.id === open.id)
+        const toAtlas = () => run('atlas', {}, [open.id])
+        const tags = s.listening.tags[open.id] ?? []
+        const addTag = <Menu align="start" trigger={<Btn size="xs" variant="ghost"><Tag size={12} />Add tag</Btn>} items={TAGS.map(t => ({ label: t, onSelect: () => d({ type: 'listening/mentions', ids: [open.id], op: 'tag', tag: t }) }))} />
+        return (
+          <Sheet open onOpenChange={o => !o && setOpenId(null)}
+            head={<SocialAvatar name={open.author} network={MENTION_NET[open.network]} org={!open.author.startsWith('@')} size={40} />}
+            title={open.author} meta={[open.network, ago(open.at, now)]}
+            status={state === 'hidden' ? <Pill>Hidden</Pill> : state === 'replied' ? <Pill tone="ok">Nova replies</Pill> : withAtlas ? <Pill>With Atlas</Pill> : open.risk ? <Pill tone="alert">Reputation risk</Pill> : undefined}
+            nav={at >= 0 ? { noun: 'mention', prev: at > 0 ? () => setOpenId(list[at - 1].id) : undefined, next: at < list.length - 1 ? () => setOpenId(list[at + 1].id) : undefined } : undefined}
+            tools={<Menu align="end" trigger={<Btn variant="ghost" icon size="sm" aria-label="More actions"><MoreHorizontal size={16} /></Btn>} items={[
+              ...(!withAtlas ? [{ label: 'Hand to Atlas', icon: <Send size={14} />, onSelect: toAtlas }] : []),
+              state === 'hidden' ? { label: 'Unhide', icon: <Eye size={14} />, onSelect: () => run('unhide', {}, [open.id]) } : { label: 'Hide', icon: <EyeOff size={14} />, onSelect: () => { run('hide', {}, [open.id]); setOpenId(null) } },
+            ]} />}>
+            <div className="obj-panel">
+              {!state && !withAtlas && (
+                <Ask agents={['echo']} title={`Reply to ${open.author}?`} actions={<>
+                  <Btn variant="primary" onClick={() => run('nova', {}, [open.id])}><MessageSquareReply size={14} />Ask Nova to reply</Btn>
+                  <Btn onClick={toAtlas}><Send size={14} />Hand to Atlas</Btn>
+                </>}>
+                  <p>{open.risk ? 'Echo flags this one as a reputation risk. A reply within the hour keeps it from spreading.' : `A ${SENT_LABEL[mood(open)].toLowerCase()} mention reaching ${open.reach.toLocaleString('en-GB')} people.`}</p>
+                </Ask>
+              )}
+              <ObjectBody
+                main={<blockquote className="ls-quote">{open.text}</blockquote>}
+                aside={<Props rows={[
+                  { label: 'Reach', value: <span className="num">{open.reach.toLocaleString('en-GB')} people</span> },
+                  { label: 'Sentiment', value: <>
+                    <Seg size="sm" name={`mood-${open.id}`} label="Sentiment" value={mood(open)} onChange={x => d({ type: 'listening/mentions', ids: [open.id], op: 'sentiment', sentiment: x })}
+                      options={(['positive', 'neutral', 'negative'] as Sentiment[]).map(x => ({ value: x, label: SENT_LABEL[x] }))} />
+                    {s.listening.sentiment[open.id] && <span className="muted t-sm">You corrected Echo</span>}
+                  </> },
+                  { label: 'Product', value: open.product },
+                  { label: 'Tags', value: tags.length ? <>{tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}{addTag}</> : undefined, empty: addTag },
+                ]} />}
+              />
+            </div>
+          </Sheet>
+        )
+      })()}
     </div>
   )
 }

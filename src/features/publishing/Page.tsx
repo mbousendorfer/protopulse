@@ -1,14 +1,15 @@
 import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Lightbulb, ListOrdered, Pause, PenLine, Play, Plus, Sparkles, StickyNote, TriangleAlert, Upload, UserRound, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Lightbulb, ListOrdered, Pause, PenLine, Play, Plus, Sparkles, SquarePen, StickyNote, TriangleAlert, Upload, UserRound, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { BEST_SLOT, PUBLISH_NETWORKS, type Media, type Post, type PostStatus } from '../../data/publishing'
-import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Pop, Seg, Sheet, Tabs } from '../../ui'
+import { Btn, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Pop, Seg, Sheet, Tabs, Tip } from '../../ui'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { SocialAvatar } from '../../ui/SocialAvatar'
+import { Ask, ObjectBody, Props } from '../../ui/ObjectPanel'
 import { PostPreview, PostsBulk, useOpenPost } from './Bulk'
 import Photo from '../../ui/Photo'
 import Composer from './Composer'
@@ -450,25 +451,42 @@ function MediaLibrary() {
           </li>
         ))}
       </ul>
-      <Sheet open={!!open} onOpenChange={o => !o && setOpen(null)} title={open?.title ?? ''}
-        footer={open && <><span className="spacer" /><Btn onClick={() => setOpen(null)}>Close</Btn><Btn variant="primary" onClick={() => { nav(`/publishing/new?media=${open.name}`); setOpen(null) }}><Plus size={14} />Use in a new post</Btn></>}>
-        {open && (
-          <div className="stack">
-            <span className="media-big"><Photo name={open.name} alt={open.title} /></span>
-            <dl className="media-dl">
-              <div><dt>Rights</dt><dd>{open.rights}</dd></div>
-              <div><dt>Used in posts</dt><dd className="num">{useCount(open)}</dd></div>
-              <div><dt>Added</dt><dd>{open.added}</dd></div>
-              <div><dt>Tags</dt><dd className="pub-labels">
-                {shownOpen!.tags.map(t => <span key={t} className="chip">{t}<Btn size="xs" variant="ghost" icon aria-label={`Remove the tag ${t}`} onClick={() => d({ type: 'publishing/mediaTags', id: open.id, tags: shownOpen!.tags.filter(x => x !== t) })}><X size={12} /></Btn></span>)}
-                <form onSubmit={e => { e.preventDefault(); if (newTag.trim()) d({ type: 'publishing/mediaTags', id: open.id, tags: [...shownOpen!.tags, newTag] }); setNewTag('') }}>
-                  <input className="input" aria-label="Add a tag" placeholder="Add a tag" value={newTag} onChange={e => setNewTag(e.target.value)} />
-                </form>
-              </dd></div>
-            </dl>
-          </div>
-        )}
-      </Sheet>
+      {open && shownOpen && (() => {
+        const ends = ending.find(x => x.media.id === open.id)
+        const at = list.findIndex(m => m.id === open.id)
+        const addTag = (
+          <form onSubmit={e => { e.preventDefault(); if (newTag.trim()) d({ type: 'publishing/mediaTags', id: open.id, tags: [...shownOpen.tags, newTag] }); setNewTag('') }}>
+            <input className="input" aria-label="Add a tag" placeholder="Add a tag" value={newTag} onChange={e => setNewTag(e.target.value)} />
+          </form>
+        )
+        return (
+          <Sheet open onOpenChange={o => !o && setOpen(null)}
+            head={<span className="obj-thumb"><Photo name={open.name} alt="" /></span>}
+            title={open.title} meta={[`Added ${open.added}`, `Used ${useCount(open)} time${useCount(open) === 1 ? '' : 's'}`]}
+            status={ends ? <Pill tone="caution">Licence ends {endsOf(open)}</Pill> : undefined}
+            nav={at >= 0 ? { noun: 'photo', prev: at > 0 ? () => setOpen(list[at - 1]) : undefined, next: at < list.length - 1 ? () => setOpen(list[at + 1]) : undefined } : undefined}
+            tools={<Tip label="Use in a new post"><Btn variant="ghost" icon size="sm" aria-label="Use in a new post" onClick={() => { nav(`/publishing/new?media=${open.name}`); setOpen(null) }}><SquarePen size={16} /></Btn></Tip>}>
+            <div className="obj-panel">
+              {ends && (
+                <Ask agents={['atlas']} title={`Its licence ends ${endsOf(open)}`} actions={ends.swap && (
+                  <Btn variant="primary" onClick={() => d({ type: 'publishing/swapMedia', from: open.name, to: ends.swap!.name })}>Use “{ends.swap.title}” instead</Btn>
+                )}>
+                  <p>{ends.posts.length} scheduled post{ends.posts.length === 1 ? '' : 's'} still use{ends.posts.length === 1 ? 's' : ''} it after that date.</p>
+                </Ask>
+              )}
+              <ObjectBody
+                main={<span className="media-big"><Photo name={open.name} alt={open.title} /></span>}
+                aside={<Props rows={[
+                  { label: 'Rights', value: open.rights },
+                  { label: 'Used in posts', value: <span className="num">{useCount(open)}</span> },
+                  { label: 'Added', value: open.added },
+                  { label: 'Tags', value: shownOpen.tags.length ? <>{shownOpen.tags.map(t => <span key={t} className="chip">{t}<Btn size="xs" variant="ghost" icon aria-label={`Remove the tag ${t}`} onClick={() => d({ type: 'publishing/mediaTags', id: open.id, tags: shownOpen.tags.filter(x => x !== t) })}><X size={12} /></Btn></span>)}{addTag}</> : undefined, empty: addTag },
+                ]} />}
+              />
+            </div>
+          </Sheet>
+        )
+      })()}
     </div>
   )
 }

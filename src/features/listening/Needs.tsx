@@ -2,14 +2,15 @@
 // creators, trends) is a menu. Creators and trends Echo doesn't push are « Watching »; what was decided is « Done ».
 import { useMemo, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { Check, ChevronDown, Flame, MessageSquareReply, Sparkles } from 'lucide-react'
+import { Check, ChevronDown, Flame, MessageSquareReply, MoreHorizontal, Sparkles } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import type { State } from '../../app/state'
-import type { Handoff } from '../../app/types'
+import type { Handoff, Network } from '../../app/types'
 import { ago } from '../../app/time'
 import { TRENDS, type CompEvent, type Move, type Trend } from '../../data/listening'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Btn, Empty, Filters, Mark, Menu, Pill, Sheet } from '../../ui'
+import { Ask, ObjectBody, Props, Timeline } from '../../ui/ObjectPanel'
 import { DecisionRow } from '../../ui/Decisions'
 import { Reopen, UndoBar } from '../../ui/Feedback'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
@@ -294,31 +295,46 @@ function TrendRow({ t, onUndo }: { t: Trend; onUndo: (u: Undo) => void }) {
   )
 }
 
-/** A creator's panel: audience, sentiment, history, their mentions. Opened by `?c=` (Desk cards link here). */
+/** A creator's panel (matrix §16): audience, sentiment, history, their mentions. Opened by `?c=` (Desk cards link here). */
 function CreatorSheet({ c, onClose }: { c?: Creator; onClose: () => void }) {
   const { s, d } = useStore()
   const st = c && s.listening.creators[c.handle]
+  if (!c) return null
+  const net = (MENTION_NET[c.network] ?? c.network) as Network
+  const decide = c.fit && !c.signed && st !== 'proposed' && st !== 'contacted'
   return (
-    <Sheet open={!!c} onOpenChange={o => !o && onClose()} title={c ? `${c.handle} · ${c.name}` : ''}
-      footer={c && <>
-        {st === 'listed' && <Btn variant="ghost" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'unlist' })}>Remove from shortlist</Btn>}
-        <span className="spacer" />
-        {!st && !c.signed && <Btn onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
-        {c.fit && st !== 'proposed' && st !== 'contacted' && <Btn variant="primary" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'propose' })}><MessageSquareReply size={14} />Propose a collab</Btn>}
-      </>}>
-      {c && (
-        <div className="stack">
-          <dl className="ls-facts">
-            <div><dt>Audience</dt><dd className="num">{c.followers.toLocaleString('en-GB')} followers on {c.network}</dd></div>
-            <div><dt>Sentiment</dt><dd><span className={`ls-mood ${c.mood}`}>{c.mood[0].toUpperCase() + c.mood.slice(1)}</span></dd></div>
-            <div><dt>Also mentions</dt><dd>{c.also.length ? c.also.map(a => `${a.competitor} (${a.n})`).join(', ') : 'No competitor'}</dd></div>
-            <div><dt>Echo’s call <InfoPop label="Who counts">Positive about Fernway, not paid by a brand, and reaching {COLLAB_MIN_REACH.toLocaleString('en-GB')} people or more.</InfoPop></dt><dd>{c.fitWhy}</dd></div>
-          </dl>
-          {c.history.length > 0 && <><div className="section-title">History</div><ul className="stack">{c.history.map(h => <li key={h} className="muted">{h}</li>)}</ul></>}
-          <div className="section-title">Their mentions of Fernway</div>
-          {c.mentions.map(m => <blockquote key={m.id} className="ls-quote">{m.text}</blockquote>)}
-        </div>
-      )}
+    <Sheet open onOpenChange={o => !o && onClose()}
+      head={<SocialAvatar name={c.handle} network={net} size={40} />}
+      title={c.handle} meta={[c.name, c.network, `${c.followers.toLocaleString('en-GB')} followers`]}
+      status={c.signed ? <Pill tone="caution">Signed with {c.signed}</Pill> : st === 'proposed' || st === 'contacted' ? <Pill tone="ok">Collab proposed</Pill> : st === 'listed' ? <Pill>Shortlisted</Pill> : undefined}
+      tools={st === 'listed' && <Menu align="end" trigger={<Btn variant="ghost" icon size="sm" aria-label="More actions"><MoreHorizontal size={16} /></Btn>} items={[
+        { label: 'Remove from shortlist', onSelect: () => d({ type: 'listening/creator', handle: c.handle, op: 'unlist' }) },
+      ]} />}>
+      <div className="obj-panel">
+        {decide && (
+          <Ask agents={['echo']} title={`Work with ${c.handle}?`} actions={<>
+            <Btn variant="primary" onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'propose' })}><MessageSquareReply size={14} />Propose a collab</Btn>
+            {!st && <Btn onClick={() => d({ type: 'listening/creator', handle: c.handle, op: 'list' })}>Shortlist</Btn>}
+          </>}>
+            <p>{gist(c.fitWhy)} <InfoPop label="Who counts">Positive about Fernway, not paid by a brand, and reaching {COLLAB_MIN_REACH.toLocaleString('en-GB')} people or more.</InfoPop></p>
+          </Ask>
+        )}
+        <ObjectBody
+          main={<>
+            <h3 className="obj-sec-h">Their mentions of Fernway</h3>
+            {c.mentions.map(m => <blockquote key={m.id} className="ls-quote">{m.text}</blockquote>)}
+          </>}
+          aside={<>
+            <Props rows={[
+              { label: 'Audience', value: <span className="num">{c.followers.toLocaleString('en-GB')} followers on {c.network}</span> },
+              { label: 'Sentiment', value: <span className={`ls-mood ${c.mood}`}>{c.mood[0].toUpperCase() + c.mood.slice(1)}</span> },
+              { label: 'Also mentions', value: c.also.length ? c.also.map(a => `${a.competitor} (${a.n})`).join(', ') : undefined },
+              !decide && { label: 'Echo’s call', value: c.fitWhy },
+            ]} />
+            <Timeline lines={c.history.map(text => ({ text }))} empty="Echo has no history on this creator yet." />
+          </>}
+        />
+      </div>
     </Sheet>
   )
 }

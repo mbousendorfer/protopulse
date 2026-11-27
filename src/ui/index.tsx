@@ -3,7 +3,7 @@ import * as DM from '@radix-ui/react-dropdown-menu'
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Tooltip from '@radix-ui/react-tooltip'
 import * as Popover from '@radix-ui/react-popover'
-import { BookOpen, CalendarDays, ChartLine, CircleHelp, Flame, Image as ImageIcon, Megaphone, MessageCircle, Radar, ShieldCheck, Sparkles, Star, Target, TrendingUp, TriangleAlert, X } from 'lucide-react'
+import { BookOpen, CalendarDays, ChartLine, ChevronDown, ChevronUp, CircleHelp, Flame, Image as ImageIcon, Megaphone, MessageCircle, Radar, ShieldCheck, Sparkles, Star, Target, TrendingUp, TriangleAlert, X } from 'lucide-react'
 import { AgentAvatar } from './Avatar'
 import { Glyph, ROUND } from './SocialAvatar'
 import { EmptyScene, type EmptyKind } from './Illustrations'
@@ -184,18 +184,43 @@ export function Pop({ trigger, children, align = 'end', open, onOpenChange }: { 
   )
 }
 
-export function Sheet({ open, onOpenChange, title, children, footer, wide, head }: {
+/**
+ * A side sheet. Object sheets (matrix §16) also pass `meta` (a " · " line under the title), `status` (a Pill),
+ * `tools` (the object's standing actions, before ✕) and `nav` (previous / next object, ‹ › and J / K).
+ */
+export function Sheet({ open, onOpenChange, title, children, footer, wide, head, meta, status, tools, nav }: {
   open: boolean; onOpenChange: (o: boolean) => void; title: ReactNode; children: ReactNode; footer?: ReactNode; wide?: boolean; head?: ReactNode
+  meta?: ReactNode[]; status?: ReactNode; tools?: ReactNode; nav?: { prev?: () => void; next?: () => void; noun?: string }
 }) {
+  const shown = meta?.filter(Boolean) ?? []
+  const keys = (e: React.KeyboardEvent) => {
+    if (!nav || e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) return
+    if (e.key === 'j' && nav.next) { e.preventDefault(); nav.next() }
+    if (e.key === 'k' && nav.prev) { e.preventDefault(); nav.prev() }
+  }
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="overlay" />
-        <Dialog.Content className={`sheet ${wide ? 'wide' : ''}`} aria-describedby={undefined}>
-          <div className="sheet-head">
+        <Dialog.Content className={`sheet ${wide ? 'wide' : ''}`} aria-describedby={undefined} onKeyDown={keys}>
+          <div className={`sheet-head ${shown.length ? 'obj' : ''}`}>
             {head}
-            <Dialog.Title asChild><h2>{title}</h2></Dialog.Title>
-            <Dialog.Close asChild><Btn variant="ghost" icon size="sm" aria-label="Close"><X size={16} /></Btn></Dialog.Close>
+            <div className="sheet-title">
+              <div className="sheet-title-row">
+                <Dialog.Title asChild><h2>{title}</h2></Dialog.Title>
+                {status}
+              </div>
+              {shown.length > 0 && <p className="sheet-meta">{shown.map((m, i) => <span key={i}>{m}</span>)}</p>}
+            </div>
+            <div className="sheet-tools">
+              {nav && <>
+                <Tip label={<>Previous {nav.noun ?? 'item'} <Kbd>K</Kbd></>}><Btn variant="ghost" icon size="sm" aria-label={`Previous ${nav.noun ?? 'item'}`} disabled={!nav.prev} onClick={nav.prev}><ChevronUp size={16} /></Btn></Tip>
+                <Tip label={<>Next {nav.noun ?? 'item'} <Kbd>J</Kbd></>}><Btn variant="ghost" icon size="sm" aria-label={`Next ${nav.noun ?? 'item'}`} disabled={!nav.next} onClick={nav.next}><ChevronDown size={16} /></Btn></Tip>
+                <span className="sheet-tools-sep" aria-hidden />
+              </>}
+              {tools}
+              <Dialog.Close asChild><Btn variant="ghost" icon size="sm" aria-label="Close"><X size={16} /></Btn></Dialog.Close>
+            </div>
           </div>
           <div className="sheet-body">{children}</div>
           {footer && <div className="sheet-foot">{footer}</div>}

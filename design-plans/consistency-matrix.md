@@ -284,6 +284,36 @@ presence and a hierarchy.
 
 **Exemplars:** to come from the object-shape pass (Publishing › Ideas, Insights / Strategy, Listening / Agents).
 
+## 16. Object panel (Matt, 27/11: « the hierarchy is wrong, it isn't scalable or consistent, the details are simplistic »)
+
+**Rule.** Every sheet that shows **one object** (post, mention, creator, media, Insights post, and any new one) is built from
+the same pieces in `src/ui/ObjectPanel.tsx` plus the `Sheet` props `meta` / `status` / `tools` / `nav`. Form and
+settings sheets (Searches, Rules, Labels…) are not object panels and keep §9's footer.
+
+**Canonical**
+- **Header = identity + standing actions.** Lead (avatar with network badge, network icon or thumbnail), the object's
+  own name (« Fernway · Facebook post », « r/ultralight », « Bivouac above Chamonix »), a meta line joined with « · »,
+  the status `Pill` (said once, here), then ‹ › (J / K) when it was opened from a list, the main standing action as an
+  icon button with a `Tip` (Edit, Use in a new post), `⋯` for the rest (Reschedule, Duplicate, Hide, Delete…), ✕.
+  No footer.
+- **Ask = only what waits on Sam.** `Ask`: the agent(s), the question, one reason (`gist()`, « Why? » as `InfoPop`, §13),
+  the control (a real field, options), at most one orange primary that names its result (« Add code and schedule »,
+  « Ask Nova to reply »). Nothing waits → no Ask (a scheduled or published post, a mention already answered).
+- **Body = the object | its aside.** `ObjectBody`: the object as it looks (network preview, quote, photo) on the left,
+  360 px; on narrow sheets one column with a hairline before the aside.
+- **Details = label | value rows** (`Props`): label `t-sm` ink-2 in a 120 px column, value ink. Each type has a core set
+  that is always shown; an empty core value reads « None » next to its add control, so two posts always have the same
+  shape. Optional fields (Queue, Link, First comment) show only when set. Never icon-only lines.
+- **Results** (`Section` + `Metrics`): each number named, with what it's compared with. Published objects only.
+- **Activity** (`Timeline`): one feed, oldest first: agents' actions, history, comments. Actor + action, relative time
+  with the exact date in the `title`; their own words as a quote under the name. A comment box ends it where the model
+  has comments (posts: `publishing/comment`). No mono timestamps, no side bar.
+- **Live preview.** A field that fills a slot of the object shows its effect in the preview as you type (`[code]` →
+  TRAIL15, highlighted; `SLOT` + `fill` in `Previews.tsx`).
+
+**Exemplar:** the post panel (`PostPreview`, `publishing/Bulk.tsx`). Also on it: Listening mention and creator, Media,
+Insights › Explore post. Captures: `previews/object-panel-{before,after}-needs-info.jpg`.
+
 ## 11. Vocabulary
 
 | Verb | Used for | Synonyms to remove |

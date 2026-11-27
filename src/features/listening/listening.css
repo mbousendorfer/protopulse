@@ -53,10 +53,6 @@
 .ls-mood.neutral { color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
 .ls-tag { background: var(--a-echo-wash); color: var(--a-echo-ink); }
 .ls-quote { margin: 0; padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--sunk); font-size: var(--t-lg); line-height: 1.5; }
-.ls-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin: 0; }
-.ls-facts dt { font-size: var(--t-sm); color: var(--ink-3); }
-.ls-facts dd { margin: 2px 0 0; }
-.ls-risk { display: flex; gap: 8px; align-items: center; padding: 10px 12px; border-radius: var(--r-ctl); background: var(--alert-tint); color: var(--alert-strong); font-size: var(--t-sm); }
 
 /* Manage competitors */
 .ls-watch { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto auto; gap: var(--s3); align-items: center; padding: var(--s3) var(--s4); }

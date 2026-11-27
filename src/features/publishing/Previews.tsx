@@ -8,11 +8,21 @@ import { Empty } from '../../ui'
 import Photo from '../../ui/Photo'
 import { Ico } from './previews/icons'
 
-/** Highlights Playbook hits (banned words) in a caption. */
-export function Marked({ text, words }: { text: string; words: string[] }) {
-  if (!words.length) return <>{text}</>
-  const re = new RegExp(`(${words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'gi')
-  return <>{text.split(re).map((part, i) => (i % 2 ? <span key={i} className="pub-hit" title="Not allowed by the Playbook">{part}</span> : <span key={i}>{part}</span>))}</>
+/** A slot the post still needs ("[code]"): shown as missing until someone fills it. */
+export const SLOT = /\[[a-z][a-z ]*\]/gi
+const esc = (w: string) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/** Highlights Playbook hits (banned words), slots still missing ("[code]") and values just filled in for them. */
+export function Marked({ text, words, fill = [] }: { text: string; words: string[]; fill?: string[] }) {
+  const parts = [...words.map(esc), ...fill.filter(Boolean).map(esc), SLOT.source]
+  const re = new RegExp(`(${parts.join('|')})`, 'gi')
+  const lower = (x: string) => x.toLowerCase()
+  return <>{text.split(re).map((part, i) => {
+    if (!(i % 2)) return <span key={i}>{part}</span>
+    if (fill.some(f => lower(f) === lower(part))) return <span key={i} className="pv-fill">{part}</span>
+    if (/^\[.*\]$/.test(part)) return <span key={i} className="pv-fill missing" title="Missing: Atlas needs this before it can go out">{part}</span>
+    return <span key={i} className="pub-hit" title="Not allowed by the Playbook">{part}</span>
+  })}</>
 }
 
 /** Logical width of a phone screen. Previews render at this size and shrink to fit narrower containers. */
@@ -21,8 +31,8 @@ const PHONE = 375
 const TAG = /([#@][\p{L}\p{N}_]+(?:\.[\p{L}\p{N}_]+)*)/u
 
 /** Caption with hashtags and @mentions coloured the network's way, Playbook hits still marked. */
-function Rich({ text, words }: { text: string; words: string[] }) {
-  return <>{text.split(TAG).map((part, i) => (i % 2 ? <span key={i} className="pv-tag"><Marked text={part} words={words} /></span> : <Marked key={i} text={part} words={words} />))}</>
+function Rich({ text, words, fill }: { text: string; words: string[]; fill?: string[] }) {
+  return <>{text.split(TAG).map((part, i) => (i % 2 ? <span key={i} className="pv-tag"><Marked text={part} words={words} fill={fill} /></span> : <Marked key={i} text={part} words={words} fill={fill} />))}</>
 }
 
 /** Where a network cuts a caption behind its "more", or -1 when it shows it all. Same walk as Agorapulse's previews
@@ -57,7 +67,7 @@ export function cutLines(text: string, lines: number, perLine: number): number {
 function Caption({ v, cut, more, tight, flat }: { v: View; cut: number; more: string; tight?: boolean; flat?: boolean }) {
   const shown = cut < 0 ? v.text : v.text.slice(0, cut).trimEnd()
   // TikTok folds line breaks into spaces while the caption is collapsed.
-  return <><Rich text={flat && cut >= 0 ? shown.replace(/\s*\n+\s*/g, ' ') : shown} words={v.words} />{cut >= 0 && <>…{!tight && ' '}<span className="pv-more">{more}</span></>}</>
+  return <><Rich text={flat && cut >= 0 ? shown.replace(/\s*\n+\s*/g, ' ') : shown} words={v.words} fill={v.fill} />{cut >= 0 && <>…{!tight && ' '}<span className="pv-more">{more}</span></>}</>
 }
 
 /** 12.4K, 210K, 1.2M: the short count most networks print. */
@@ -88,7 +98,7 @@ function stamp(at: number | string | undefined, published: boolean, now: number,
   }
 }
 
-type View = { who: string; box?: React.CSSProperties; text: string; words: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
+type View = { who: string; box?: React.CSSProperties; text: string; words: string[]; fill: string[]; media?: string; live: boolean; reach: number; n: (share: number) => number; when: (s: Clock) => string; slides: number; reel: boolean }
 
 const Brand = ({ size = 28, square }: { size?: number; square?: boolean }) => (
   <span className={`pv-brand ${square ? 'sq' : ''}`} style={{ width: size, height: size }} aria-hidden>
@@ -229,7 +239,7 @@ function Shorts(v: View) {
       </div>
       <div className="yt-meta">
         <p className="yt-who"><Brand size={32} /><b>@fernway</b><span className="yt-sub">Subscribe</span></p>
-        <p className="yt-title"><Rich text={v.text} words={v.words} /></p>
+        <p className="yt-title"><Rich text={v.text} words={v.words} fill={v.fill} /></p>
         <p className="yt-audio"><Ico n="ttMelody" size={12} />Fernway · Original audio</p>
       </div>
       <div className="yt-progress"><i /></div>
@@ -270,6 +280,8 @@ function useFit(on: boolean) {
 
 type Props = {
   network: Network; text: string; media?: string; words: string[]
+  /** Values just typed into the post's missing slots: highlighted so Sam sees where they land. */
+  fill?: string[]
   /** Published results: counters are derived from them, so they always agree with the reach. */
   stats?: Post['stats']; status?: PostStatus
   /** Publish time, or a slot label already worded ("Thu 27, 18:00"). */
@@ -287,7 +299,7 @@ type Props = {
 }
 
 /** The post as it will look in each network's own app, in the mode that network is mostly used in. */
-export function NetworkPreview({ network, text, media, words, stats, status, at, slides, format: chosen, firstComment, who, aspect }: Props) {
+export function NetworkPreview({ network, text, media, words, fill = [], stats, status, at, slides, format: chosen, firstComment, who, aspect }: Props) {
   const now = useNow(60_000)
   const [ref, zoom] = useFit(network !== 'trustpilot')
   if (network === 'trustpilot') return <Empty title="No preview for Trustpilot" body="Trustpilot only shows customer reviews and your replies. Brands can’t publish posts there." />
@@ -302,7 +314,7 @@ export function NetworkPreview({ network, text, media, words, stats, status, at,
   const carousel = kind === 'carousel' ? Math.min(10, Math.max(2, +(caption.match(/\b(\d{1,2})\b/)?.[1] ?? 5))) : 1
   const handle = (who?.handle ?? '@fernway').replace(/^@/, '')
   const v: View = {
-    who: handle, box: aspect ? { aspectRatio: aspect.replace(':', ' / '), height: 'auto' } : undefined, text: caption, words, media, live, reach: stats?.reach ?? 0,
+    who: handle, box: aspect ? { aspectRatio: aspect.replace(':', ' / '), height: 'auto' } : undefined, text: caption, words, fill, media, live, reach: stats?.reach ?? 0,
     n: share => Math.round(engaged * share),
     when: style => stamp(at, published, now, style),
     slides: slides ?? carousel, reel: kind === 'reel',

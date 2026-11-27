@@ -129,10 +129,6 @@
 .media-ends { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); }
 .media-ends svg { flex: none; color: var(--caution); }
 .media-big { display: block; aspect-ratio: 4 / 5; max-height: 420px; border-radius: var(--r-card); overflow: hidden; }
-.media-dl { display: flex; flex-direction: column; gap: var(--s2); margin: 0; }
-.media-dl div { display: grid; grid-template-columns: 120px 1fr; gap: var(--s3); }
-.media-dl dt { color: var(--ink-3); }
-.media-dl dd { margin: 0; }
 
 /* ---------- Composer: who gets it, what it says, what it shows, when it goes out. The preview sits beside it. ---------- */
 .cmp { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
@@ -234,6 +230,9 @@
 .cmp-status .link-btn { margin-left: 2px; }
 .cmp-tabs { margin: calc(var(--s4) * -1) calc(var(--s4) * -1) var(--s4); padding: 0 var(--s4); }
 .pub-hit { text-decoration: underline wavy var(--alert); text-underline-offset: 3px; }
+/* A value Sam just typed into a missing slot, and the slot while it is still empty. */
+.pv-fill { background: var(--ok-wash); border-radius: 3px; padding: 0 2px; box-decoration-break: clone; }
+.pv-fill.missing { background: transparent; text-decoration: underline wavy var(--caution); text-underline-offset: 3px; }
 
 /* ---------- Network previews: each network's own app at phone size (375 px), shrunk to fit. Inside is the network, not ADS. ---------- */
 .pv-fit { width: 100%; min-width: 0; }
@@ -571,52 +570,10 @@
   .idea-stage { padding: var(--s2); }
 }
 
-/* ---------- Post detail: the state band (what to do), the post, its facts and its activity ---------- */
-.pd { display: flex; flex-direction: column; gap: var(--s6); }
-.pd-state { background: var(--lift); border-radius: var(--r-card); padding: var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
-.pd-state-h { display: flex; align-items: center; gap: var(--s2) var(--s3); flex-wrap: wrap; }
-.pd-state-h h3 { font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
-.pd-say { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); line-height: 1.55; max-width: 72ch; }
-.pd-say > .mark, .pd-chain { margin-top: 1px; }
-.pd-chain { display: inline-flex; flex: none; }
-.pd-chain .mark + .mark { margin-left: -7px; }
-.pd-chain .mark svg { border-radius: 50%; box-shadow: 0 0 0 2px var(--lift); }
+/* ---------- Post detail: bits of the post panel that aren't the shared object panel (base.css, matrix §16) ---------- */
 .pd-rules { display: inline-flex; align-items: flex-start; gap: 6px; }
 .pd-rules > svg { flex: none; margin-top: 2px; }
-.pd-metrics { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s8); margin: 0; }
-.pd-metrics dt { font-size: var(--t-sm); color: var(--ink-2); }
-.pd-metrics dd { margin: 2px 0 0; }
-.pd-metrics b { font-size: var(--t-xl); font-weight: 600; }
-.pd-acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2) var(--s4); }
-.pd-acts > :last-child { margin-left: auto; }
-.pd-answer { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
-.pd-answer label { font-size: var(--t-sm); font-weight: 600; }
-.pd-answer .input { width: 200px; background: var(--panel); }
-.pd-grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: var(--s6); align-items: start; }
-.pd-post { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
-.pd-note { display: flex; gap: 6px; align-items: flex-start; font-size: var(--t-sm); color: var(--ink-2); }
-.pd-note svg { flex: none; margin-top: 2px; color: var(--caution); }
-.pd-side { display: flex; flex-direction: column; gap: var(--s6); min-width: 0; }
-.pd-facts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
-/* Icons sit in a 22 px slot (the agent mark's size) so every line's text starts at the same x. */
-.pd-facts li { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: center; gap: var(--s2); min-width: 0; }
-.pd-facts li > :first-child { justify-self: center; }
-.pd-facts li > svg { flex: none; color: var(--ink-2); }
 .pd-link { min-width: 0; overflow-wrap: anywhere; }
-.pd-activity { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s3); font-size: var(--t-sm); }
-.pd-activity li { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--s2); align-items: start; }
-.pd-activity li > span:nth-child(2) { padding-top: 3px; color: var(--ink); }
-.pd-activity time { padding-top: 3px; font-size: var(--t-xs); color: var(--ink-2); white-space: nowrap; }
-.pd-dot { width: 24px; height: 24px; border-radius: 50%; background: var(--sunk); color: var(--ink-2); display: grid; place-items: center; }
-@media (max-width: 820px) {
-  .pd-grid { grid-template-columns: minmax(0, 1fr); }
-  .pd-post { max-width: 400px; }
-}
-@media (max-width: 640px) {
-  .pd-state { padding: var(--s4); }
-  .pd-activity li { grid-template-columns: 24px minmax(0, 1fr); }
-  .pd-activity time { grid-column: 2; padding-top: 0; }
-}
 .media-meta .nowrap { white-space: nowrap; }
 .cal-cell.today > .pub-cell-day:hover { color: var(--panel); }
 

@@ -57,10 +57,6 @@
 .in-post-open { background: none; border: 0; padding: 0; color: var(--ink); font: inherit; text-align: left; display: block; }
 .in-post-open:hover { text-decoration: underline; text-underline-offset: 3px; }
 .in-post-open:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
-.in-post-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s3); margin: 0; }
-.in-post-stats div { display: flex; flex-direction: column; gap: 2px; padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
-.in-post-stats dt { color: var(--ink-2); font-size: var(--t-sm); }
-.in-post-stats dd { margin: 0; font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
 /* Report Studio: ask Iris for a report, then change it section by section. */
 .in-studio-ask .input { min-width: 0; }
 .in-sec-head { align-items: baseline; }

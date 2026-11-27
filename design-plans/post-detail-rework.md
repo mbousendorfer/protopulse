@@ -1,5 +1,12 @@
 # Post detail: rework
 
+> **27/11 — superseded in part by the object panel (matrix §16).** The band became the `Ask` and only shows when the post
+> waits on Sam (scheduled and published posts have none). The status pill moved to the header, with ‹ › / J K,
+> Edit and `⋯` (Reschedule, Duplicate, Delete). Details are label | value rows with a fixed core set (Publishes, Profile,
+> Format, Pillar, Campaign, Written by, Approval, Labels) instead of icon lines. Results moved to the aside. Activity
+> uses relative times and ends in a comment box. The preview fills the promo code in as you type. Captures:
+> `previews/object-panel-{before,after}-needs-info.jpg`. The rest of this page is the history of the first rework.
+
 The sheet that opens on `?post=<id>` from the calendar, the queues and the plan (`PostPreview` in
 `src/features/publishing/Bulk.tsx`, styles `.pd-*` in `publishing.css`). Benchmark: `post-detail-benchmark.md`.
 

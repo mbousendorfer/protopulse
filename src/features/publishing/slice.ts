@@ -80,6 +80,7 @@ export type PublishingAction =
   | { type: 'publishing/pauseAll' }
   | { type: 'publishing/resumeAll' }
   | { type: 'publishing/firstComment'; id: string; text: string }
+  | { type: 'publishing/comment'; id: string; text: string }
   | { type: 'publishing/queueSlot'; queue: string; index: number; weekday?: number; time?: string }
   | { type: 'publishing/fillQueue'; queue?: string; days?: number; from?: number }
   | { type: 'publishing/recycle'; id: string }
@@ -261,6 +262,12 @@ export function reducePublishing(s: State, a: PublishingAction): State {
       if (!p) return s
       const next = patchPost(s, p.id, note({ ...p, firstComment: a.text }, now(s), `First comment ${p.firstComment ? 'changed' : 'added'}`))
       return pushLog(next, { agent: 'atlas', text: `First comment on the ${NET[p.network] ?? p.network} post for ${day(p.at)}: “${a.text}”`, status: 'done', reason: 'You asked Atlas', link: `/publishing/calendar?post=${p.id}` })
+    }
+    case 'publishing/comment': {
+      // A note on the post for the team and the agents: it stays in the post's Activity.
+      const p = s.publishing.posts.find(x => x.id === a.id)
+      if (!p || !a.text.trim()) return s
+      return patchPost(s, p.id, { ...p, comments: [...(p.comments ?? []), { from: 'you', text: a.text.trim(), at: now(s) }] })
     }
     case 'publishing/queueSlot': {
       const queues = s.publishing.queues.map(q => (q.id !== a.queue ? q : { ...q, slots: q.slots.map((sl, i) => (i === a.index ? { weekday: a.weekday ?? sl.weekday, time: a.time ?? sl.time } : sl)) }))

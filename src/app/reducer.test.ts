@@ -230,6 +230,12 @@ describe('Act does the action', () => {
     expect(s.listening.events['e-peak-price']?.move).toMatch(/Counter-post/)
   })
 
+  it('a comment on a post lands in its Activity', () => {
+    const s = reducer(s0(), { type: 'publishing/comment', id: 'p-sale', text: '  Ask Claire which code  ' })
+    expect(s.publishing.posts.find(p => p.id === 'p-sale')!.comments?.at(-1)).toMatchObject({ from: 'you', text: 'Ask Claire which code' })
+    expect(reducer(s0(), { type: 'publishing/comment', id: 'p-sale', text: ' ' }).publishing.posts.find(p => p.id === 'p-sale')!.comments).toBeUndefined()
+  })
+
   it('a choice the agent never recommended, or missing information, stays with Sam', () => {
     // Atlas never invents a promo code: the question stays on the Desk while the plan goes out.
     let s = reducer(s0(), { type: 'core/autonomy', agent: 'atlas', action: 'atlas-plan', level: 'act' })

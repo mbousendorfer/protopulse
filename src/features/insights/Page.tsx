@@ -14,6 +14,7 @@ import {
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
 import { DecisionRow } from '../../ui/Decisions'
+import { Metrics, ObjectBody, Props, Section } from '../../ui/ObjectPanel'
 import { actionOf } from '../../app/core'
 import { nextRun } from './reports'
 import type { Schedule } from './slice'
@@ -519,7 +520,7 @@ function Explore() {
           </div>
         ) : <Empty title="No posts in this period" body="Try a longer period or another network." />}
       </section>
-      <PostSheet p={open} onClose={() => setOpen(null)} now={now} />
+      <PostSheet p={open} rows={rows} onPick={setOpen} onClose={() => setOpen(null)} now={now} />
     </div>
   )
 }
@@ -539,28 +540,37 @@ function PostTr({ p, now, top, onOpen }: { p: PostRow; now: number; top: number;
   )
 }
 
-/** One post's numbers, against its network's average: what Iris would say about it. */
-function PostSheet({ p, onClose, now }: { p: PostRow | null; onClose: () => void; now: number }) {
-  const avg = p ? NET_SHARE[p.network].er : 0
-  const x = p ? p.er / avg : 1
+/** One post's numbers, against its network's average: what Iris would say about it (an object panel, matrix §16). */
+function PostSheet({ p, rows, onPick, onClose, now }: { p: PostRow | null; rows: PostRow[]; onPick: (p: PostRow) => void; onClose: () => void; now: number }) {
+  if (!p) return null
+  const avg = NET_SHARE[p.network].er
+  const x = p.er / avg
+  const at = rows.findIndex(r => r.id === p.id)
   return (
-    <Sheet open={!!p} onOpenChange={o => !o && onClose()} title={p ? p.title : ''}>
-      {p && (
-        <div className="stack">
-          <div className="row tight"><Net n={p.network} /><span className="faint">{dayLabel(p.date, now)} {hhmm(p.date)} · {p.pillar} · by {p.author}</span></div>
-          <dl className="in-post-stats">
-            <div><dt>Reach</dt><dd className="num">{p.reach.toLocaleString('en-GB')}</dd></div>
-            <div><dt>Engagement rate</dt><dd className="num">{p.er.toFixed(1)}%</dd></div>
-            <div><dt>Link clicks</dt><dd className="num">{p.clicks.toLocaleString('en-GB')}</dd></div>
-            <div><dt>{NETWORK_LABEL[p.network]} average engagement</dt><dd className="num">{avg.toFixed(1)}%</dd></div>
-          </dl>
-          <div className="anomaly-cause"><Mark agent="iris" /><p>
-            {x >= 1.5 ? `${x.toFixed(1)}× the ${NETWORK_LABEL[p.network]} average. Worth recycling: Atlas can bring it back in a few weeks.`
+    <Sheet open onOpenChange={o => !o && onClose()} head={<Net n={p.network} size={20} />} title={p.title}
+      meta={[`${dayLabel(p.date, now)} ${hhmm(p.date)}`, NETWORK_LABEL[p.network], `${p.pillar} pillar`]}
+      status={<Pill tone="ok">Published</Pill>}
+      nav={at >= 0 ? { noun: 'post', prev: at > 0 ? () => onPick(rows[at - 1]) : undefined, next: at < rows.length - 1 ? () => onPick(rows[at + 1]) : undefined } : undefined}>
+      <div className="obj-panel">
+        <ObjectBody
+          main={<Section title="Results">
+            <Metrics items={[
+              { label: 'Reach', value: p.reach.toLocaleString('en-GB') },
+              { label: 'Engagement rate', value: `${p.er.toFixed(1)}%`, note: `${NETWORK_LABEL[p.network]} average: ${avg.toFixed(1)}%` },
+              { label: 'Link clicks', value: p.clicks.toLocaleString('en-GB') },
+            ]} />
+            <p className="obj-note"><Mark agent="iris" /><span><b>Iris:</b> {x >= 1.5 ? `${x.toFixed(1)}× the ${NETWORK_LABEL[p.network]} average. Worth recycling: Atlas can bring it back in a few weeks.`
               : x <= 0.7 ? `${Math.round((1 - x) * 100)}% under the ${NETWORK_LABEL[p.network]} average.${p.network === 'tiktok' ? ' Like the other TikToks since Thursday, the hook is long.' : ''}`
-              : `Close to the ${NETWORK_LABEL[p.network]} average.`}
-          </p></div>
-        </div>
-      )}
+              : `Close to the ${NETWORK_LABEL[p.network]} average.`}</span></p>
+          </Section>}
+          aside={<Props rows={[
+            { label: 'Published', value: `${dayLabel(p.date, now)} ${hhmm(p.date)}` },
+            { label: 'Network', value: <><Net n={p.network} />{NETWORK_LABEL[p.network]}</> },
+            { label: 'Pillar', value: p.pillar },
+            { label: 'Written by', value: p.author === 'Atlas' ? <><Mark agent="atlas" />Atlas</> : 'You' },
+          ]} />}
+        />
+      </div>
     </Sheet>
   )
 }
