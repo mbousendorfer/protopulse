@@ -3,7 +3,7 @@ import type { Network } from '../../app/types'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpDown, Check, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, RotateCcw, Send, Smile, Timer, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { downloadFile, toCSV } from './alerts'
+import { downloadFile, gist, toCSV } from './alerts'
 import { useNow, useStore } from '../../app/store'
 import { ago, dayLabel, hhmm, DAY } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
@@ -13,6 +13,7 @@ import {
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
 import { CountBadge, InlineConfirm } from '../../ui/Feedback'
+import { MoreInfo } from '../../ui/More'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { targetsOf } from '../strategy/slice'
@@ -39,7 +40,7 @@ export default function InsightsPage() {
 
   return (
     <div className="page insights">
-      <PageHead agent="iris" title="Insights" lede="Iris writes the story first. Dig into the numbers underneath whenever you want." />
+      <PageHead agent="iris" title="Insights" lede="Iris writes the story; the numbers sit underneath." />
       <Tabs value={tab} onChange={v => nav(v === 'reports' ? '/insights' : `/insights/${v}`)} items={[
         { value: 'reports', label: 'Reports', count: reportList(s).filter(r => r.draft).length || undefined },
         { value: 'explore', label: 'Explore' },
@@ -85,7 +86,7 @@ function Reports() {
       <section className="card">
         <div className="card-head"><h2>Written by Iris <span className="faint num">{reportList(s).length}</span></h2></div>
         <ul className="rows report-list">
-          {reportList(s).map(r => {
+          {reportList(s).map((r, i) => {
             const shared = s.insights.shared[r.id]
             return (
               <li key={r.id}>
@@ -94,7 +95,8 @@ function Reports() {
                   <div className="report-main">
                     <h3>{r.title}</h3>
                     <span className="faint report-kind">{reportMeta(r)}</span>
-                    <p className="muted">{r.summary}</p>
+                    {/* The gist of the newest report and of a draft; the others keep theirs as the report's lede, one click away. */}
+                    {(i === 0 || r.draft) && <p className="muted">{r.summary}</p>}
                   </div>
                   <div className="report-meta">
                     <span className="mono faint">{ago(r.writtenAt, now)}</span>
@@ -134,22 +136,21 @@ function IrisNeeds() {
           {count('anomalies', anomalies.length, `${anomalies.length} anomal${anomalies.length === 1 ? 'y' : 'ies'} to decide`)}
           {anomalies.length > 0 && cards.length > 0 && <span aria-hidden>·</span>}
           {count('cards', cards.length, `${cards.length} to approve`)}
-          <span className="dq-sum-note">I check every network every hour.</span>
         </> : <span>Nothing needs you here. I check every network every hour and write your brief at 07:00.</span>}
       </p>
       {on('anomalies') && anomalies.length > 0 && (
         <section className="dq" aria-labelledby="iq-anomalies">
           <header className="dq-head">
             <h3 id="iq-anomalies">Anomalies to decide</h3><CountBadge n={anomalies.length} />
-            <span className="dq-hint">Outside the normal range. Pick what happens; the history is in Anomalies.</span>
+            <span className="dq-hint">Outside the normal range</span>
           </header>
           <ul className="dq-rows">{anomalies.map(a => (
             <li key={a.id} className="dq-row in-dq-anomaly">
               <span className="dq-check"><Net n={a.network} /></span>
               <div className="dq-main">
-                <p className="dq-title"><span className="dq-name">{a.title}</span><span className="dq-hook">{a.metric} <b className="num">{a.value}</b> <span className={`delta ${a.down ? 'down' : 'up'}`}>{a.delta}</span></span></p>
-                <p className="dq-line in-dq-cause"><span>Likely cause: {a.cause}</span></p>
-                <p className="dq-line"><span>{a.confidence}% confident</span><span>Detected {ago(a.detectedAt, now)}</span></p>
+                {/* The title names the metric and its change; the value and the curve are in « Why? » and in the sparkline. */}
+                <p className="dq-title"><span className="dq-name">{a.title}</span></p>
+                <p className="dq-line in-dq-cause"><span className="ellipsis">Likely cause: {gist(a.cause)}</span><span>{a.confidence}% confident</span><MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></p>
                 <div className="in-dq-decide"><AnomalyActions a={a} /></div>
               </div>
               <div className="dq-acts in-dq-spark"><Spark data={a.series} w={120} h={32} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} /></div>
@@ -161,15 +162,14 @@ function IrisNeeds() {
         <section className="dq" aria-labelledby="iq-cards">
           <header className="dq-head">
             <h3 id="iq-cards">To approve</h3><CountBadge n={cards.length} />
-            <span className="dq-hint">Iris prepared these. Nothing goes out until you say so.</span>
+            <span className="dq-hint">Nothing goes out until you approve</span>
           </header>
           <ul className="dq-rows">{cards.map(h => (
             <li key={h.id} className="dq-row in-dq-card">
               <span className="dq-check report-icon" aria-hidden><FileText size={16} /></span>
               <div className="dq-main">
                 <p className="dq-title">{h.link ? <Link to={h.link} className="dq-name">{h.title}</Link> : <span className="dq-name">{h.title}</span>}</p>
-                <p className="dq-line"><span className="dq-src">{h.context}</span></p>
-                <p className="dq-line"><span className="dq-src">{h.why}</span></p>
+                <p className="dq-line"><span className="dq-src ellipsis">{h.context}</span>{h.why && <MoreInfo label="Why?" title={`Why Iris asks: ${h.title}`}><p>{h.why}</p><Confidence v={h.confidence} /></MoreInfo>}</p>
               </div>
               <div className="dq-acts"><CardDecision h={h} onDecide={decision => d({ type: 'core/resolve', id: h.id, decision })} /></div>
             </li>
@@ -193,14 +193,14 @@ function CardDecision({ h, onDecide }: { h: Handoff; onDecide: (d: { kind: 'appr
 function WeekKpis() {
   return (
     <section className="stack in-week" aria-labelledby="iq-week">
-      <div className="row"><h2 id="iq-week" className="section-title">Last 7 days</h2><span className="spacer" /><Link to="/insights/explore" className="link-btn t-sm">Explore the numbers</Link></div>
-      <KpiTiles kpis={rangeKpis({ days: 7, offset: 0 }, 'all').slice(0, 4)} label="7 days" />
+      <div className="row"><h2 id="iq-week" className="section-title">Last 7 days <span className="faint">· against the 7 before</span></h2><span className="spacer" /><Link to="/insights/explore" className="link-btn t-sm">Explore the numbers</Link></div>
+      <KpiTiles kpis={rangeKpis({ days: 7, offset: 0 }, 'all').slice(0, 4)} />
     </section>
   )
 }
 
 /** KPI tiles: the number, its trend, and the previous period, always named. */
-function KpiTiles({ kpis, label }: { kpis: ReturnType<typeof rangeKpis>; label: string }) {
+function KpiTiles({ kpis, label }: { kpis: ReturnType<typeof rangeKpis>; /** The period, when no heading around the tiles names it. */ label?: string }) {
   return (
     <dl className="kpi-grid">
       {kpis.map(k => {
@@ -211,7 +211,7 @@ function KpiTiles({ kpis, label }: { kpis: ReturnType<typeof rangeKpis>; label: 
           <div key={k.key} className="kpi">
             <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
             <dd><b className="num">{fmtKpi(k, k.value)}</b><span className={`delta ${good ? 'up' : 'down'}`}>{txt}</span></dd>
-            <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)} the previous {label}</span>
+            <span className="faint kpi-prev">vs {fmtKpi(k, k.prev)}{label ? ` the previous ${label}` : ''}</span>
           </div>
         )
       })}
@@ -542,6 +542,19 @@ function Anomalies() {
         </article>
       ))}
       <p className="faint in-rules-link">Iris raises anomalies from her alert rules. <Link to="/agents/iris?tab=alerts">Edit Iris’s alert rules</Link></p>
+    </div>
+  )
+}
+
+/** Behind « Why? » on an anomaly row: the full cause, how sure Iris is, when and by which rule it was raised. */
+function AnomalyWhy({ a, now }: { a: Anomaly; now: number }) {
+  return (
+    <div className="stack">
+      <div className="row tight"><Net n={a.network} /><span>{a.metric} <b className="num">{a.value}</b> <span className={`delta ${a.down ? 'down' : 'up'}`}>{a.delta}</span></span></div>
+      <Spark data={a.series} w={320} h={56} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} />
+      <div className="anomaly-cause"><Mark agent="iris" /><p><span className="faint">Likely cause:</span> {a.cause}</p></div>
+      <Confidence v={a.confidence} />
+      <p className="faint">Detected {ago(a.detectedAt, now)}{a.rule ? <> by your alert rule “{a.rule}”. <Link to="/agents/iris?tab=alerts">Edit</Link></> : '.'} The history is in <Link to="/insights/anomalies">Anomalies</Link>.</p>
     </div>
   )
 }

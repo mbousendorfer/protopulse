@@ -137,7 +137,7 @@ export default function Desk() {
         : <>{<Brief onPick={pick} />}{s.phase === 'day1' && <Checklist />}</>}
       <div className="shift-wrap">
         <button className="lane-toggle" aria-expanded={shift} onClick={() => setShift(o => !o)}>
-          {shift ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Shift board <span className="faint">· what your agents did in the last 24 h</span>
+          {shift ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Shift board <span className="faint">· last 24 h</span>
         </button>
         {shift && <ShiftBoard />}
       </div>
@@ -319,7 +319,7 @@ export function AllClear({ action }: { action?: ReactNode }) {
         <div><dt>Your time</dt><dd className="num">{mins ? `${mins} min ` : ''}{secs} s</dd></div>
         <div><dt>Handled by your agents</dt><dd className="num">{alone}</dd></div>
       </dl>
-      {left > 0 && <p className="faint">{left} item{left > 1 ? 's' : ''} still worth a look in the list, whenever you have a minute.</p>}
+      {left > 0 && <p className="faint">{left} still worth a look in the list.</p>}
       {action}
     </div>
   )

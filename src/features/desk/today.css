@@ -88,8 +88,6 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
 .hl-go { display: inline-flex; align-items: center; gap: 4px; font-size: var(--t-sm); font-weight: 600; color: var(--action-ink); }
 .hl-metric { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s3); }
 .hl-metric b { font-size: var(--t-2xl); font-weight: 700; letter-spacing: -0.02em; }
-.hl-comp { display: flex; gap: var(--s3); align-items: flex-start; }
-.hl-comp .faint { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (max-width: 1240px) { .agent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 1100px) {
   /* Three highlights side by side would be 200 px wide: they scroll sideways instead of stacking 600 px. */
@@ -189,3 +187,5 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
 
 /* On a phone the toggle keeps its name; the explanation would wrap under it. */
 @media (max-width: 700px) { .shift-wrap .lane-toggle .faint { display: none; } }
+/* The Live feed is a glance: two lines per action, the full line in Activity (and on hover). */
+.desk-bottom .feed p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

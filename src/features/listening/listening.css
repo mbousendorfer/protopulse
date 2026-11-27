@@ -107,3 +107,7 @@
 .chip + .chip.ls-tag::before { content: none; }
 /* Mentions carry five bulk actions: the bar wraps rather than hiding Cancel off its edge. */
 .listening .bulk-bar { flex-wrap: wrap; }
+
+/* A run of mentions that share their sentiment, product, risk and tags: said once above the run. */
+.ls-mentions > li.ls-run { padding: 8px var(--s4); background: var(--sunk); border-bottom: 1px solid var(--line); font-size: var(--t-sm); align-items: center; }
+.ls-mentions > li.ls-run + li { border-top: 0; }

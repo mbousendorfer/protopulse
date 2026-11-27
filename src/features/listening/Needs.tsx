@@ -9,7 +9,10 @@ import { Btn, Filters, Mark, Menu, Pill } from '../../ui'
 import { CountBadge, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { MENTION_NET } from './slice'
-import { competitorName, listeningNeeds, sentimentOf, watchedCount } from './model'
+import { competitorName, competitorOf, listeningNeeds, sentimentOf, watchedCount } from './model'
+import { NETWORK_LABEL } from '../../data/agents'
+import { gist } from '../insights/alerts'
+import { InfoPop, MoreInfo } from '../../ui/More'
 import './needs.css'
 
 export const IMPACT_TONE = { High: 'alert', Medium: 'caution', Low: undefined } as const
@@ -70,12 +73,12 @@ function NeedGroup({ g, needs, onUndo }: { g: Group; needs: ReturnType<typeof li
     : g === 'creators' ? needs.creators.map(c => <CreatorRow key={c.handle} c={c} onUndo={onUndo} />)
     : needs.trends.map(t => <TrendRow key={t.id} t={t} onUndo={onUndo} />)
   // The reason the rows share is said once, here.
-  const why: Record<Group, string> = {
-    urgent: 'Echo stopped here: her guardrail says these need you now.',
-    events: 'Echo picked a move for each. Anything public stays yours to publish.',
-    mentions: 'Negative, at risk or a question, and nobody answered yet.',
-    creators: 'Positive about Fernway, unpaid, 10k people or more. Nova drafts the DM; you send it.',
-    trends: 'High fit with Fernway. Atlas drafts a post; it waits on your Desk.',
+  const why: Record<Group, ReactNode> = {
+    urgent: 'Echo’s spike guardrail stopped here',
+    events: 'Anything public stays yours to publish',
+    mentions: 'Nobody has answered yet. At risk ones need a reply within the hour',
+    creators: <>Nova drafts the DM; you send it <InfoPop label="Who counts">Positive about Fernway, not paid by a brand, and reaching 10,000 people or more.</InfoPop></>,
+    trends: 'Atlas drafts a post for your Desk',
   }
   const primary = g === 'mentions' && n > 1
     ? <Btn size="sm" variant="primary" onClick={() => d({ type: 'listening/mentions', ids: needs.mentions.map(m => m.id), op: 'nova' })}><MessageSquareReply size={14} />Ask Nova to reply to all {n}</Btn>
@@ -112,8 +115,9 @@ export function EventNeedRow({ e, onUndo }: { e: CompEvent; onUndo: (u: Undo) =>
       <SocialAvatar name={name} network={e.proof.network} org size={32} />
       <div className="need-main">
         <p className="need-title"><Link to={`/listening/competitors/${e.id}`}>{e.title}</Link></p>
-        <p className="need-line"><Pill tone={IMPACT_TONE[e.impact]}>{e.impact} impact</Pill><span>{e.impactWhy}</span></p>
-        <p className="need-meta">{name} · {e.type} · {ago(e.at, now)}</p>
+        <p className="need-line need-reason"><Pill tone={IMPACT_TONE[e.impact]}>{e.impact} impact</Pill><span className="ellipsis">{gist(e.impactWhy)}</span>
+          <MoreInfo label="Why?" title={`Why Echo raised ${name}’s ${e.type.toLowerCase()}`}><EventWhy e={e} /></MoreInfo></p>
+        <p className="need-meta">{e.type} · {ago(e.at, now)}</p>
       </div>
       <div className="need-acts">
         {rec >= 0 && (
@@ -129,13 +133,36 @@ export function EventNeedRow({ e, onUndo }: { e: CompEvent; onUndo: (u: Undo) =>
   )
 }
 
+/** Behind « Why? » on a competitor move: the proof, the impact in full, and Echo's read, before picking a counter-move. */
+export function EventWhy({ e }: { e: CompEvent }) {
+  const { s } = useStore()
+  const c = competitorOf(s, e.competitor)
+  const handle = c?.handle ?? competitorName(s, e.competitor)
+  return (
+    <div className="stack">
+      <p><b>{e.title}</b></p>
+      <section className="stack gap-2">
+        <div className="faint row tight"><SocialAvatar name={handle} network={e.proof.network} org size={24} />Proof · {NETWORK_LABEL[e.proof.network]} · {handle}</div>
+        <blockquote className="ls-quote">{e.proof.text}</blockquote>
+        <span className="mono faint">{e.proof.metric}</span>
+      </section>
+      <section className="stack gap-2">
+        <div className="section-title flush">Estimated impact <Pill tone={IMPACT_TONE[e.impact]}>{e.impact}</Pill></div>
+        <p>{e.impactWhy}</p>
+      </section>
+      <section className="echo-read need-read"><Mark agent="echo" /><div><div className="section-title flush">Echo’s read</div><p>{e.read}</p></div></section>
+      <Link to={`/listening/competitors/${e.id}`} className="btn sm self-start">Open the event</Link>
+    </div>
+  )
+}
+
 function UrgentRow({ h }: { h: ReturnType<typeof listeningNeeds>['urgent'][number] }) {
   const { d } = useStore()
   return (
     <li className="need-row need-urgent">
       <div className="need-main">
         <p className="need-title"><Link to={h.link ?? '/listening/mentions'}>{h.title}</Link></p>
-        <p className="need-line"><span>{h.why}</span></p>
+        <p className="need-line need-reason"><span className="ellipsis">{gist(h.why)}</span>{gist(h.why) !== h.why && <MoreInfo label="Why?" title="Why Echo stopped here"><p>{h.why}</p>{h.context && <p className="muted">{h.context}</p>}</MoreInfo>}</p>
         {h.options?.length ? (
           <ol className="need-options">
             {h.options.map((o, i) => (
@@ -154,17 +181,17 @@ function MentionRow({ m, onUndo }: { m: ReturnType<typeof listeningNeeds>['menti
   const { s, d } = useStore()
   const now = useNow()
   const mood = sentimentOf(s, m)
-  const why = m.risk ? 'At risk: a reply within the hour keeps it from spreading' : mood === 'negative' ? 'Negative' : 'A question'
+  const why = m.risk ? 'At risk' : mood === 'negative' ? 'Negative' : 'A question'
   const seen = () => { d({ type: 'listening/seen', ids: [m.id] }); onUndo({ text: `Marked ${m.author}’s mention as seen. It stays in Mentions.`, run: () => d({ type: 'listening/unseen', ids: [m.id] }) }) }
   return (
     <li className="need-row">
       <SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={32} />
       <div className="need-main">
         <p className="need-title"><b>{m.author}</b><span className="need-quote">“{m.text}”</span></p>
-        <p className="need-line"><span>{why} · {m.network} · reach {m.reach.toLocaleString('en-GB')}{m.product ? ` · ${m.product}` : ''} · {ago(m.at, now)}</span></p>
+        <p className="need-line"><span>{why} · reach {m.reach.toLocaleString('en-GB')} · {ago(m.at, now)}</span></p>
       </div>
       <div className="need-acts">
-        <Btn size="sm" onClick={() => d({ type: 'listening/mentions', ids: [m.id], op: 'nova' })}><Mark agent="nova" />Ask Nova to reply</Btn>
+        <Btn size="sm" onClick={() => d({ type: 'listening/mentions', ids: [m.id], op: 'nova' })} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>
         <Btn size="sm" variant="ghost" onClick={seen}>Mark seen</Btn>
       </div>
     </li>
