@@ -1,11 +1,16 @@
 // Insights › ROI: what social brings to the website, from GA4 (mocked), per network, campaign and post.
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Net, Seg } from '../../ui'
 import { HBars } from '../../ui/charts'
 import { InfoPop } from '../../ui/More'
 import { postsByRevenue, roiByNetwork, roiCampaigns, roiTotals } from './roi'
+
+/** A number in a table with a small bar behind it, so a column reads as a chart. */
+export function DataBar({ value, max, children }: { value: number; max: number; children: ReactNode }) {
+  return <span className="in-databar"><span className="track" aria-hidden><i style={{ width: `${Math.max(2, (value / max) * 100)}%` }} /></span><span className="num">{children}</span></span>
+}
 
 const eur = (v: number) => `€${Math.round(v).toLocaleString('en-GB')}`
 const int = (v: number) => Math.round(v).toLocaleString('en-GB')
@@ -32,7 +37,7 @@ export default function Roi() {
         <div className="table-wrap">
           <table className="table">
             <thead><tr><th>Network</th><th className="r">Link clicks</th><th className="r">Sessions</th><th className="r">Orders</th><th className="r">Revenue</th></tr></thead>
-            <tbody>{rows.map(r => <tr key={r.network}><td><span className="row tight nowrap"><Net n={r.network} />{NETWORK_LABEL[r.network]}</span></td><td className="r">{int(r.clicks)}</td><td className="r">{int(r.sessions)}</td><td className="r">{int(r.conversions)}</td><td className="r">{eur(r.revenue)}</td></tr>)}</tbody>
+            <tbody>{rows.map(r => <tr key={r.network}><td><span className="row tight nowrap"><Net n={r.network} />{NETWORK_LABEL[r.network]}</span></td><td className="r">{int(r.clicks)}</td><td className="r">{int(r.sessions)}</td><td className="r">{int(r.conversions)}</td><td className="r"><DataBar value={r.revenue} max={rows[0]?.revenue || 1}>{eur(r.revenue)}</DataBar></td></tr>)}</tbody>
           </table>
         </div>
       </section>
@@ -41,7 +46,7 @@ export default function Roi() {
           <div className="section-title">By campaign <span className="faint">· UTM campaign, since launch</span></div>
           <div className="table-wrap"><table className="table">
             <thead><tr><th>Campaign</th><th className="r">Sessions</th><th className="r">Goal reached</th><th className="r">Revenue</th></tr></thead>
-            <tbody>{camps.map(c => <tr key={c.id}><td>{c.name}</td><td className="r">{int(c.sessions)}</td><td className="r">{int(c.conversions)} {c.goal}</td><td className="r">{eur(c.revenue)}</td></tr>)}</tbody>
+            <tbody>{camps.map(c => <tr key={c.id}><td>{c.name}</td><td className="r">{int(c.sessions)}</td><td className="r">{int(c.conversions)} {c.goal}</td><td className="r"><DataBar value={c.revenue} max={camps[0]?.revenue || 1}>{eur(c.revenue)}</DataBar></td></tr>)}</tbody>
           </table></div>
         </section>
         <section className="card pad roi-sold">

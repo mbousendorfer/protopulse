@@ -6,7 +6,7 @@ import { useNow, useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
 import { AGE_BANDS, NETWORKS_SOCIAL, type NetFilter } from '../../data/insights'
 import { Btn, Filters, Mark } from '../../ui'
-import { HBars, LineChart } from '../../ui/charts'
+import { HBars, LineChart, StackBar } from '../../ui/charts'
 import { audienceOf, audienceTips, followerSeries } from './audience'
 import { kpi } from './metrics'
 
@@ -52,7 +52,8 @@ export default function AudienceTab() {
         <section className="card pad stack">
           <div className="section-title">Age</div>
           <HBars items={AGE_BANDS.map((b, i) => ({ label: b, value: a.age[i] }))} format={v => `${v}%`} highlight={a.peak} color="var(--a-iris)" />
-          <p className="muted">Women {a.gender.women}% · men {a.gender.men}% · other or not said {a.gender.other}%</p>
+          <div className="section-title flush">Gender</div>
+          <StackBar parts={[{ label: 'Women', value: a.gender.women, color: 'var(--a-iris)' }, { label: 'Men', value: a.gender.men, color: 'color-mix(in srgb, var(--a-iris) 45%, transparent)' }, { label: 'Other or not said', value: a.gender.other, color: 'var(--line-strong)' }]} />
         </section>
         <section className="card pad stack">
           <div className="section-title">Countries</div>
