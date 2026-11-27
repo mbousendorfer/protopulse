@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, CalendarDays, CalendarPlus, Check, ChevronDown, ChevronRight, ClipboardCheck, Lock, Minus, Pencil, Plus, SlidersHorizontal, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, CalendarPlus, Check, ChevronDown, ChevronRight, ClipboardCheck, Lock, Minus, Pencil, Plus, SlidersHorizontal, Sparkles, Trash2 } from 'lucide-react'
 import type { AgentId, Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { uid } from '../../app/core'
@@ -8,8 +8,8 @@ import { DAY } from '../../app/time'
 import { AGENTS, NETWORK_LABEL } from '../../data/agents'
 import { GOAL_UNITS, MOMENT_LEAD, PRODUCT_NAMES, readBrief, readGoal, readLaunch, type BriefGap, type BriefInput, type Campaign, type CampaignStatus, type GoalUnit, type Moment, type Pillar } from '../../data/strategy'
 import { PUBLISH_NETWORKS } from '../../data/publishing'
-import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, strategyNeeds, targetsOf, type StrategyAction } from './slice'
-import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
+import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf, pillarCheck, pillarStatus, strategyNeeds, targetsOf, type StrategyAction } from './slice'
+import { Btn, Empty, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { Notice, Reopen } from '../../ui/Feedback'
 import { DecisionRow } from '../../ui/Decisions'
 import { gist } from '../../ui/gist'
@@ -17,6 +17,7 @@ import { LineChart } from '../../ui/charts'
 import { InfoPop, MoreInfo } from '../../ui/More'
 import './strategy.css'
 import { Status } from '../listening/list'
+import '../insights/insights.css'
 
 const STATUS: Record<CampaignStatus, { label: string; tone?: 'ok' | 'caution' | 'signal' }> = {
   brief: { label: 'Brief' }, review: { label: 'Plan to review', tone: 'caution' }, live: { label: 'Live', tone: 'ok' }, done: { label: 'Done' },
@@ -56,23 +57,86 @@ export default function StrategyPage() {
   )
 }
 
-/* ---------- Campaigns: one standard list (matrix §14), a filter per state ---------- */
-type Show = 'needs' | 'live' | 'done' | 'later'
-const SHOW_LABEL: Record<Show, string> = { needs: 'Needs you', live: 'Live', done: 'Done', later: 'Coming up' }
+/* ---------- Campaigns landing: the overview, what needs you, then the campaigns as cards (matrix §15) ---------- */
+const trajectoryOf = (c: Campaign) => {
+  const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
+  return c.status === 'live' && expected > 0 ? Math.round((c.goal.current / expected) * 100) : undefined
+}
+const offTrack = (traj?: number) => traj !== undefined && (traj < 85 || traj > 120)
+const unitOf = (c: Campaign) => c.goal.label.replace(' (€)', '')
+const netsOf = (c: Campaign) => [...new Set(c.posts.map(p => p.network))]
+const dayOf = (c: Campaign, now: number) => Math.min(Math.ceil((c.end - c.start) / DAY), Math.max(1, Math.ceil((now - c.start) / DAY)))
+
+/** Progress toward the goal, with a tick where the plan expects it to be today. */
+function GoalBar({ c }: { c: Campaign }) {
+  const pct = Math.min(100, (c.goal.current / c.goal.target) * 100)
+  const expected = c.status === 'live' ? c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] : undefined
+  return (
+    <span className="goal-bar" role="img" aria-label={`${Math.round(pct)}% of goal`}>
+      <i style={{ width: `${pct}%` }} className={offTrack(trajectoryOf(c)) ? 'off' : ''} />
+      {expected !== undefined && <span className="target" style={{ left: `${Math.min(100, (expected / c.goal.target) * 100)}%` }} />}
+    </span>
+  )
+}
+
+/** One pillar: its share of posts against its target (the tick). */
+function PillarBar({ name, actual, target }: { name: string; actual: number; target: number }) {
+  return (
+    <div className="pbar" role="img" aria-label={`${name}: ${actual}% of posts, target ${target}%`}>
+      <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(actual - target) > 5 ? 'off' : ''} />
+      <span className="target" style={{ left: `${Math.min(100, target * 2)}%` }} />
+    </div>
+  )
+}
+
+/** Strategy in one look: the live campaign against its goal, the pillar mix against its targets, Sage's read. */
+function SageOverview({ now }: { now: number }) {
+  const { s } = useStore()
+  const live = s.strategy.campaigns.filter(c => c.status === 'live').sort((a, b) => a.start - b.start)[0]
+  const pillars = pillarStatus(s, now)
+  const behind = pillars[0]
+  const onTarget = pillars.filter(p => Math.abs(p.gap) <= 5).length
+  const traj = live && trajectoryOf(live)
+  const read = [
+    live && `${live.name} is ${traj === undefined ? 'live' : traj < 85 ? 'behind plan' : traj > 120 ? 'ahead of plan' : 'on plan'}`,
+    behind && behind.gap < -5 ? `${behind.name} is ${-behind.gap} pt under target` : 'every pillar is near its target',
+  ].filter(Boolean).join(', and ')
+  const days = live ? Math.ceil((live.end - live.start) / DAY) : 0
+  const left = live ? days - dayOf(live, now) : 0
+  return (
+    <section className="card ov" aria-label="Overview">
+      <p className="ov-read"><Mark agent="sage" /><span>{read[0].toUpperCase() + read.slice(1)}.</span></p>
+      <div className="ov-body">
+        <dl className="ov-kpis">
+          {live && <>
+            <div className="ov-kpi"><dt>{live.name}</dt><dd><b className="num">{fmtGoal(live, live.goal.current)}</b><span className="t-sm">of {fmtGoal(live, live.goal.target)} {unitOf(live)}</span></dd></div>
+            <div className="ov-kpi"><dt>Trajectory</dt><dd><b className="num">{traj ?? 100}%</b>{offTrack(traj) && <Pill tone="caution">{traj! > 120 ? 'Ahead' : 'Behind'}</Pill>}</dd></div>
+            <div className="ov-kpi"><dt>Days left</dt><dd><b className="num">{left}</b><span className="t-sm">of {days}</span></dd></div>
+          </>}
+          <div className="ov-kpi"><dt>Pillars on target</dt><dd><b className="num">{onTarget}</b><span className="t-sm">of {pillars.length}</span></dd></div>
+        </dl>
+        <Link to="/strategy/pillars" className="ov-chart st-mix" aria-label="Pillar mix against targets, last 30 days">
+          <span className="t-sm">Pillar mix against target, 30 days</span>
+          {s.strategy.pillars.map(p => { const row = pillars.find(x => x.name === p.name)!; return (
+            <span key={p.id} className="st-mix-row"><span className="ellipsis">{p.name}</span><PillarBar name={p.name} actual={row.actual} target={p.target} /><b className="num">{row.actual}%</b></span>
+          ) })}
+        </Link>
+      </div>
+    </section>
+  )
+}
 
 function Campaigns() {
   const { s } = useStore()
   const now = useNow()
-  const [params, setParams] = useSearchParams()
+  const [more, setMore] = useState(false)
   const needs = strategyNeeds(s, now)
-  const live = s.strategy.campaigns.filter(c => c.status === 'live' || c.status === 'brief')
-  const done = s.strategy.campaigns.filter(c => c.status === 'done')
+  // Live first and large, then plans waiting, then what's done.
+  const rank: Record<CampaignStatus, number> = { live: 0, brief: 1, review: 2, done: 3 }
+  // Among live ones, the one running longest first (it's the one set large); the others newest first.
+  const campaigns = [...s.strategy.campaigns].sort((a, b) => rank[a.status] - rank[b.status] || (a.status === 'live' ? a.start - b.start : b.start - a.start))
   const later = s.strategy.moments.filter(m => !m.status && m.start - MOMENT_LEAD > now)
-  const counts: Record<Show, number> = { needs: needs.plans.length + needs.moments.length + needs.adjustments.length + needs.proposals.length, live: live.length, done: done.length, later: later.length }
-  const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'needs' || counts[k] > 0)
-  const pick = (params.get('show') as Show | null) ?? 'needs'
-  const show = shown.includes(pick) ? pick : 'needs'
-  const rows: ReactNode[] = show === 'needs' ? [
+  const rows: ReactNode[] = [
     ...needs.plans.map(c => <PlanRow key={c.id} c={c} />),
     ...needs.moments.map(m => <MomentRow key={m.id} m={m} />),
     // Sage writes “reason. move.”: the move is the row's title, the reason its line.
@@ -80,38 +144,76 @@ function Campaigns() {
       apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} /> }),
     ...needs.proposals.map(p => <ChangeRow key={p.id} text={p.text} on="Pillars and cadence" why={p.why}
       apply={{ type: 'strategy/proposal', id: p.id, accept: true }} decline={{ type: 'strategy/proposal', id: p.id, accept: false }} />),
-  ] : show === 'later' ? later.map(m => <MomentRow key={m.id} m={m} early />)
-    : (show === 'live' ? live : done).map(c => <CampaignRow key={c.id} c={c} now={now} />)
+  ]
+  // A short queue: the first few, the rest one click away.
+  const SHORT = 4
   return (
-    <div>
-      <Notice scope="strategy" className="mb-3" />
-      <div className="sl-bar">
-        <Filters label="Show" value={show} onChange={v => setParams(v === 'needs' ? {} : { show: v }, { replace: true })}
-          items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
-      </div>
-      {rows.length
-        ? <section className="card sl-list" aria-label={SHOW_LABEL[show]}><ul className="rows">{rows}</ul></section>
-        : <Empty title="Nothing needs you here" body={`Sage watches ${live.length ? live.map(c => c.name).join(' and ') : 'your pillars and cadence'}, and the dates ahead.`} />}
+    <div className="stack lg">
+      <Notice scope="strategy" />
+      <SageOverview now={now} />
+
+      <section className="stack" aria-labelledby="st-needs">
+        <h2 id="st-needs" className="section-title flush">Needs you <span className="faint num">{rows.length}</span></h2>
+        {rows.length ? (
+          <section className="card sl-list" aria-label="Needs you">
+            <ul className="rows">{more ? rows : rows.slice(0, SHORT)}</ul>
+            {rows.length > SHORT && <div className="sl-foot"><button type="button" className="link-btn t-sm" aria-expanded={more} onClick={() => setMore(o => !o)}>{more ? 'Show fewer' : `Show ${rows.length - SHORT} more`}</button></div>}
+          </section>
+        ) : <p className="muted">Nothing needs you here. Sage watches your campaigns, your pillars and the dates ahead.</p>}
+      </section>
+
+      <section className="stack" aria-labelledby="st-campaigns">
+        <h2 id="st-campaigns" className="section-title flush">Campaigns <span className="faint num">{campaigns.length}</span></h2>
+        {campaigns.length
+          ? <ul className="campaigns">{campaigns.map((c, i) => <li key={c.id} className={i === 0 && c.status === 'live' ? 'wide' : ''}><CampaignCard c={c} now={now} large={i === 0 && c.status === 'live'} /></li>)}</ul>
+          : <p className="muted">No campaign yet. <Link to="/strategy/new">Brief Sage</Link> to plan one.</p>}
+      </section>
+
+      {later.length > 0 && (
+        <section className="stack" aria-labelledby="st-later">
+          <h2 id="st-later" className="section-title flush">Coming up <span className="faint num">{later.length}</span></h2>
+          <section className="card sl-list"><ul className="rows">{later.map(m => <MomentRow key={m.id} m={m} early />)}</ul></section>
+        </section>
+      )}
     </div>
   )
 }
 
-/** A campaign: dates and progress on one line, its trajectory only when it's off. */
-function CampaignRow({ c, now }: { c: Campaign; now: number }) {
+/** A campaign: status, networks, the goal and its bar, then dates and posts. The live one is large, with its curve. */
+function CampaignCard({ c, now, large }: { c: Campaign; now: number; large?: boolean }) {
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
-  const expected = c.planned[Math.min(c.planned.length - 1, c.actual.length - 1)] ?? 0
-  const traj = c.status === 'live' && expected > 0 ? Math.round((c.goal.current / expected) * 100) : 100
+  const traj = trajectoryOf(c)
+  const live = c.status === 'live'
+  const days = Math.ceil((c.end - c.start) / DAY)
   return (
-    <DecisionRow lead={<span className="sl-lead-icon" aria-hidden><CalendarDays size={14} /></span>}
-      title={<Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link>}
-      line={<>
-        {c.status === 'brief' && <Pill>Brief</Pill>}
-        {(traj < 85 || traj > 120) && <Status label={`${traj}% of trajectory`} tone="caution" why="Sage proposes a change when a live campaign leaves 85–120% of its planned trajectory." />}
-        <span>{fmtRange(c.start, c.end)}</span>
-        <span className="sl-gist"><b className="num">{fmtGoal(c, c.goal.current)} of {fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')} · {pct}%</span>
-      </>}
-      acts={c.status === 'done' ? (c.reportId ? <Link to={`/insights/reports/${c.reportId}`} className="btn sm ghost">Recap</Link> : null)
-        : c.end > now ? <Link to="/publishing/calendar" className="btn sm ghost">Calendar</Link> : null} />
+    <Link to={`/strategy/campaigns/${c.id}`} className={`card campaign-card ${large ? 'live' : ''}`}>
+      <div className="campaign-main">
+        <div className="row tight">
+          <Pill tone={STATUS[c.status].tone} dot={live}>{STATUS[c.status].label}</Pill>
+          {offTrack(traj) && <Pill tone="caution">{traj}% of trajectory</Pill>}
+          <span className="spacer" />
+          <span className="row tight nowrap campaign-nets">{netsOf(c).map(n => <Net key={n} n={n} size={16} />)}</span>
+        </div>
+        <h3>{c.name}</h3>
+        {/* A plan has a goal, not progress yet. */}
+        {c.status === 'review' || c.status === 'brief'
+          ? <div className="campaign-goal"><span><span className="t-sm">Goal</span> <b className="num">{fmtGoal(c, c.goal.target)}</b> <span className="t-sm">{unitOf(c)}</span></span></div>
+          : <>
+            <div className="campaign-goal">
+              <span><b className="num">{fmtGoal(c, c.goal.current)}</b> <span className="t-sm">of {fmtGoal(c, c.goal.target)} {unitOf(c)}</span></span>
+              <span className="num t-sm">{pct}%</span>
+            </div>
+            <GoalBar c={c} />
+          </>}
+        <span className="t-sm campaign-meta">{fmtRange(c.start, c.end)}{live ? (now < c.start ? ` · starts ${fmtDate(c.start)}` : ` · day ${dayOf(c, now)} of ${days}`) : ''} · {c.posts.length} posts</span>
+      </div>
+      {large && c.planned.length > 1 && (
+        <div className="campaign-curve">
+          <LineChart label={`${c.name}: planned and actual ${unitOf(c)}`} labels={c.planned.map((_, i) => `Day ${i}`)} h={150}
+            series={[{ name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }, { name: 'Actual', data: c.actual, color: 'var(--a-sage)' }]} />
+        </div>
+      )}
+    </Link>
   )
 }
 
@@ -425,6 +527,7 @@ function CampaignView() {
                   <Pill tone={c.goal.current >= expected ? 'ok' : 'caution'}>{Math.round((c.goal.current / expected) * 100)}% of trajectory</Pill>
                 )}
               </div>
+              <GoalBar c={c} />
               <LineChart label="Plan versus actual" labels={c.planned.map((_, i) => `Day ${i}`)} h={180}
                 series={[{ name: 'Planned', data: c.planned, dashed: true, tone: 'faint' }, { name: 'Actual', data: c.actual, color: 'var(--a-sage)' }]} />
             </section>
@@ -638,18 +741,6 @@ function Pillars() {
   return (
     <div className="stack lg">
       <Notice scope="strategy" />
-      {s.strategy.proposals.length > 0 && <section className="card sl-list" aria-label="Sage’s proposals">
-        <ul className="rows">
-          {[...s.strategy.proposals].sort((a, b) => Number(b.status === 'proposed') - Number(a.status === 'proposed')).map(p => (
-            <DecisionRow key={p.id} lead={<Mark agent="sage" />} title={p.text}
-              line={<><span className="sl-gist">{gist(p.why)}</span>{gist(p.why) !== p.why && <InfoPop label="Why?">{p.why}</InfoPop>}</>}
-              acts={p.status === 'proposed' ? <>
-                <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
-                <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
-              </> : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />} />
-          ))}
-        </ul>
-      </section>}
       <div className="grid-2 pillars-grid">
         <section className={`card pad ${edit ? 'span-all' : ''}`}>
           <div className="row between">
@@ -673,10 +764,7 @@ function Pillars() {
                     <span className="num">{actual}% <span className="faint">of posts · target {p.target}%</span></span>
                   </div>
                   <p className="faint">{p.desc}</p>
-                  <div className="pbar" role="img" aria-label={`${p.name}: ${actual}% of posts, target ${p.target}%`}>
-                    <i style={{ width: `${Math.min(100, actual * 2)}%` }} className={Math.abs(off) > 5 ? 'off' : ''} />
-                    <span className="target" style={{ left: `${p.target * 2}%` }} />
-                  </div>
+                  <PillarBar name={p.name} actual={actual} target={p.target} />
                   {Math.abs(off) > 5 && <span className="off-target">{Math.abs(off)} pt {off > 0 ? 'over' : 'under'} target</span>}
                 </div>
               )
@@ -708,6 +796,20 @@ function Pillars() {
           </table>
         </section>
       </div>
+      {s.strategy.proposals.length > 0 && <section className="stack" aria-labelledby="st-props">
+        <h2 id="st-props" className="section-title flush"><Mark agent="sage" />Sage’s proposals</h2>
+        <section className="card sl-list">
+        <ul className="rows">
+          {[...s.strategy.proposals].sort((a, b) => Number(b.status === 'proposed') - Number(a.status === 'proposed')).map(p => (
+            <DecisionRow key={p.id} lead={<Mark agent="sage" />} title={p.text}
+              line={<><span className="sl-gist">{gist(p.why)}</span>{gist(p.why) !== p.why && <InfoPop label="Why?">{p.why}</InfoPop>}</>}
+              acts={p.status === 'proposed' ? <>
+                <Btn size="sm" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: true })}>Apply</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/proposal', id: p.id, accept: false })}>Decline</Btn>
+              </> : p.status === 'accepted' ? <Pill tone="ok">Applied</Pill> : <Reopen label="Declined" onUndo={() => d({ type: 'strategy/reopen', id: p.id })} />} />
+          ))}
+        </ul>
+      </section></section>}
     </div>
   )
 }

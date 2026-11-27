@@ -51,11 +51,29 @@ export default function PlanReview() {
       action={<Btn variant="primary" onClick={() => d({ type: 'publishing/planReset' })}><RefreshCw size={14} />Ask Atlas for a new plan</Btn>} />
   )
 
+  // The decision on the set (PROMPT §3.6) sits at the top, next to the week it decides.
+  const decide = asking ? (
+    thinking ? <Thinking label="Atlas is reworking the plan" /> : (
+      <form className="plan-ask" onSubmit={e => { e.preventDefault(); request() }}>
+        <label htmlFor="plan-note" className="sr-only">What should Atlas change?</label>
+        <input id="plan-note" className="input" autoFocus placeholder="Shorter TikTok hooks, and swap the recycled posts I unchecked" value={note} onChange={e => setNote(e.target.value)} />
+        <Btn type="submit" variant="primary" disabled={!note.trim()}>Send to Atlas</Btn>
+        <Btn variant="ghost" onClick={() => setAsking(false)}>Cancel</Btn>
+      </form>
+    )
+  ) : (
+    <div className="plan-decide">
+      <Btn variant="ghost" className="danger" onClick={() => setConfirmReject(true)}>Reject</Btn>
+      <Btn onClick={() => setAsking(true)}>Request changes</Btn>
+      <Btn variant="primary" disabled={!included.length} onClick={() => d({ type: 'publishing/planApprove' })}>Approve plan ({included.length} of {plan.items.length})</Btn>
+    </div>
+  )
+
   return (
     <div className="plan">
       <section className="card pad-lg plan-head">
-        <div className="row between items-start">
-          <div>
+        <div className="plan-top">
+          <div className="grow">
             <div className="row tight t-sm muted"><Mark agent="atlas" /><span>Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
             <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks · <MoreInfo label="Pillars and mix" title="Next week’s plan, by pillar and mix">
@@ -67,18 +85,38 @@ export default function PlanReview() {
               </div>
             </MoreInfo></p>
           </div>
+          {!asking && decide}
         </div>
-        <div className="plan-stats">
-          <div>
-            <div className="section-title">Cadence <span className="faint">· included vs Sage’s target</span></div>
-            <ul className="cadence">
-              {nets.map(n => {
-                const c = count(n, included), t = CADENCE[n] ?? 0
-                return <li key={n} className={c < t ? 'under' : ''}><Net n={n} /><span>{NETWORK_LABEL[n]}</span><b className="num">{c} of {t}</b>{c >= t ? <Check size={13} /> : <AlertTriangle size={13} />}</li>
-              })}
-            </ul>
-          </div>
-        </div>
+        {asking && decide}
+
+        {/* The week at a glance: seven days, each post a chip with its network and time. */}
+        <ol className="plan-week" aria-label="The week at a glance">
+          {Array.from({ length: 7 }, (_, day) => {
+            const items = plan.items.filter(i => i.day === day).sort((a, b) => a.time.localeCompare(b.time))
+            const date = new Date(PLAN_MONDAY + day * DAY)
+            return (
+              <li key={day}>
+                <p className="plan-week-day"><b>{date.toLocaleDateString('en-GB', { weekday: 'short' })}</b> {date.getDate()}</p>
+                <ul>
+                  {items.map(i => (
+                    <li key={i.id} className={`plan-chip ${i.included ? '' : 'out'}`} title={`${NETWORK_LABEL[i.network]} · ${i.time}${i.included ? '' : ' · left out'}`}>
+                      <span className="plan-chip-pic">{i.media ? <Photo name={i.media} /> : <Net n={i.network} size={16} />}</span>
+                      <span className="plan-chip-meta">{i.media && <Net n={i.network} size={12} />}<span className="mono">{i.time}</span></span>
+                    </li>
+                  ))}
+                  {!items.length && <li className="plan-chip-none faint">No post</li>}
+                </ul>
+              </li>
+            )
+          })}
+        </ol>
+
+        <ul className="plan-cadence" aria-label="Cadence, included vs Sage’s target">
+          {nets.map(n => {
+            const c = count(n, included), t = CADENCE[n] ?? 0
+            return <li key={n} className={c < t ? 'under' : ''}><Net n={n} size={16} /><span><b className="num">{c} of {t}</b> {NETWORK_LABEL[n]}</span>{c >= t ? <Check size={13} aria-label="On target" /> : <AlertTriangle size={13} aria-label="Below target" />}</li>
+          })}
+        </ul>
         {warnings.length > 0 && (
           <div className="plan-warn" role="status">
             <b>What changes if you approve now</b>
@@ -125,27 +163,6 @@ export default function PlanReview() {
           )
         })}
       </section>
-
-      <div className="plan-foot card">
-        {asking ? (
-          thinking ? <Thinking label="Atlas is reworking the plan" /> : (
-            <form className="row nowrap grow" onSubmit={e => { e.preventDefault(); request() }}>
-              <label htmlFor="plan-note" className="sr-only">What should Atlas change?</label>
-              <input id="plan-note" className="input" autoFocus placeholder="Shorter TikTok hooks, and swap the recycled posts I unchecked" value={note} onChange={e => setNote(e.target.value)} />
-              <Btn type="submit" variant="primary" disabled={!note.trim()}>Send to Atlas</Btn>
-              <Btn variant="ghost" onClick={() => setAsking(false)}>Cancel</Btn>
-            </form>
-          )
-        ) : (
-          <>
-            <span className="muted">{included.length} of {plan.items.length} posts selected</span>
-            <span className="spacer" />
-            <Btn variant="ghost" className="danger" onClick={() => setConfirmReject(true)}>Reject</Btn>
-            <Btn onClick={() => setAsking(true)}>Request changes</Btn>
-            <Btn variant="primary" disabled={!included.length} onClick={() => d({ type: 'publishing/planApprove' })}>Approve plan ({included.length} of {plan.items.length})</Btn>
-          </>
-        )}
-      </div>
 
       <Modal open={confirmReject} onOpenChange={setConfirmReject} title="Reject the whole plan?"
         footer={<><span className="spacer" /><Btn variant="ghost" onClick={() => setConfirmReject(false)}>Cancel</Btn><Btn variant="danger" onClick={() => { d({ type: 'publishing/planReject' }); setConfirmReject(false) }}>Reject the plan</Btn></>}>

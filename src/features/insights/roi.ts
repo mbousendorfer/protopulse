@@ -15,9 +15,9 @@ const funnel = (network: Network, clicks: number): RoiRow => {
   return { network, clicks: Math.round(clicks), sessions, conversions, revenue: Math.round(conversions * g.aov / 10) * 10 }
 }
 
-/** Per network over the last `days` days: link clicks (Explore's) → sessions → conversions → revenue. Highest revenue first. */
-export function roiByNetwork(days: number, nets: Network[] = NETWORKS_SOCIAL): RoiRow[] {
-  return nets.filter(n => n in GA4).map(n => funnel(n, rangeKpis({ days, offset: 0 }, n).find(k => k.key === 'clicks')!.value)).sort((a, b) => b.revenue - a.revenue)
+/** Per network over the last `days` days (or the `days` before, with `prev`): link clicks (Explore's) → sessions → conversions → revenue. Highest revenue first. */
+export function roiByNetwork(days: number, nets: Network[] = NETWORKS_SOCIAL, prev = false): RoiRow[] {
+  return nets.filter(n => n in GA4).map(n => { const k = rangeKpis({ days, offset: 0 }, n).find(k => k.key === 'clicks')!; return funnel(n, prev ? k.prev : k.value) }).sort((a, b) => b.revenue - a.revenue)
 }
 
 export function roiTotals(rows: RoiRow[]) {

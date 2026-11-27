@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import type { Network } from '../../app/types'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpDown, CalendarClock, Check, ChevronDown, Clock, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, Pause, Play, RotateCcw, Send, Smile, Timer, Trash2, Users } from 'lucide-react'
+import { ArrowLeft, ArrowUpDown, CalendarClock, Check, ChevronDown, Download, Eye, FileText, Heart, MessageCircle, MousePointerClick, Pause, Play, RotateCcw, Send, Smile, Timer, Trash2, Users } from 'lucide-react'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from './alerts'
 import { gist } from '../../ui/gist'
@@ -26,7 +26,9 @@ import { insightsNeeds } from './needs'
 import type { Anomaly } from '../../data/insights'
 import type { Handoff } from '../../app/types'
 import { reportList } from './reports'
-import Roi from './RoiTab'
+import { roiByNetwork, roiTotals } from './roi'
+import type { State } from '../../app/state'
+import Roi, { DataBar } from './RoiTab'
 import { benchmarkRows } from './benchmark'
 import AudienceTab from './AudienceTab'
 import { ReportOut, SaveTemplate, SectionTools, StudioAsk, StudioEdit } from './StudioPanels'
@@ -71,79 +73,186 @@ export function CitedText({ parts }: { parts: Cited[] }) {
   ))}</>
 }
 
-/* ---------- Reports: Ask Iris, then one standard list (matrix §14) ---------- */
+/* ---------- Insights landing: the week, what Iris needs, then the reports (matrix §15) ---------- */
 const KIND_LABEL: Record<Report['kind'], string> = { brief: 'Brief', weekly: 'Weekly report', campaign: 'Campaign recap', custom: 'Asked by you' }
 /** The title says what's in it; the type sits in the meta. Out of context (journal, file name) it gets its type back. */
 const reportMeta = (r: Report) => (r.kind === 'weekly' ? KIND_LABEL.weekly : `${KIND_LABEL[r.kind]} · ${r.period}`)
 const fullTitle = (r: Report) => (r.kind === 'brief' ? r.title : `${KIND_LABEL[r.kind]} · ${r.title}`)
-
-type Show = 'needs' | 'reports' | 'scheduled' | 'closed'
-const SHOW_LABEL: Record<Show, string> = { needs: 'Needs you', reports: 'Reports', scheduled: 'Scheduled', closed: 'Closed anomalies' }
 const EVERY: Record<Schedule['every'], string> = { week: 'Every Monday', month: 'On the 1st of each month' }
+const eur = (v: number) => `€${Math.round(v).toLocaleString('en-GB')}`
+
+/** Change against the previous period, worded per format, and whether it's good news. */
+function kpiDelta(k: Kpi) {
+  const diff = k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100
+  const txt = k.fmt === 'pct' ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pt` : k.fmt === 'min' ? `${diff > 0 ? '+' : '−'}${Math.abs(diff)} min` : `${diff > 0 ? '+' : '−'}${Math.abs(Math.round(diff))}%`
+  return { diff, txt, good: k.lowerBetter ? diff < 0 : diff > 0 }
+}
+
+/** The week in one look: four named numbers with their change, four weeks of reach, and Iris's read in one sentence. */
+function IrisOverview() {
+  const { s } = useStore()
+  const week = rangeKpis({ days: 7, offset: 0 }, 'all')
+  const pick = (key: string) => week.find(k => k.key === key)!
+  const sales = roiTotals(roiByNetwork(7)).revenue, salesBefore = roiTotals(roiByNetwork(7, undefined, true)).revenue
+  const tiles: Kpi[] = [pick('reach'), pick('er'), pick('clicks'), { key: 'sales', label: 'Sales from social', value: sales, prev: salesBefore, fmt: 'int' }]
+  // Iris names the biggest mover among the counts (a rate's points don't compare with a count's percent).
+  const best = tiles.filter(k => k.fmt !== 'pct').reduce((a, b) => (kpiDelta(b).diff > kpiDelta(a).diff ? b : a))
+  const weekly = reportList(s).find(r => r.kind === 'weekly')
+  return (
+    <section className="card ov" aria-label="This week">
+      <p className="ov-read"><Mark agent="iris" /><span>{best.label}: the week’s biggest move, {kpiDelta(best).txt} on the week before.</span>
+        {weekly && <Link to={`/insights/reports/${weekly.id}`} className="link-btn t-sm">Weekly report</Link>}</p>
+      <div className="ov-body">
+        <dl className="ov-kpis">
+          {tiles.map(k => {
+            const dl = kpiDelta(k)
+            return <div key={k.key} className="ov-kpi"><dt>{k.label}</dt><dd><b className="num">{k.key === 'sales' ? eur(k.value) : fmtKpi(k, k.value)}</b><span className={`delta ${dl.good ? 'up' : 'down'}`}>{dl.txt}</span></dd></div>
+          })}
+        </dl>
+        <figure className="ov-chart">
+          <figcaption className="t-sm">Daily reach, last 4 weeks</figcaption>
+          <Spark data={reachSeries({ days: 28, offset: 0 })} w={360} h={56} color="var(--a-iris)" label="Daily reach, last 4 weeks" />
+        </figure>
+      </div>
+    </section>
+  )
+}
+
+/** A drop is more urgent than a spike; then Iris's confidence. */
+const urgency = (a: Anomaly) => (a.down ? 1000 : 0) + a.confidence
 
 function Reports() {
   const { s, d } = useStore()
   const now = useNow()
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const { anomalies, cards } = insightsNeeds(s)
   const reports = reportList(s)
   const closed = anomalyList(s).filter(a => !a.open)
+  const showClosed = params.get('show') === 'closed' && closed.length > 0
+  const [lead, ...rest] = [...anomalies].sort((a, b) => urgency(b) - urgency(a))
+  // Closed anomalies are the volume case: select them to reopen several at once.
+  const ids = useMemo(() => closed.map(a => a.id), [closed.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(ids, 'closed')
   const lvl = actionOf(s, 'iris', 'iris-report')?.autonomy
-  const counts: Record<Show, number> = { needs: anomalies.length + cards.length, reports: reports.length, scheduled: s.insights.schedules.length, closed: closed.length }
-  const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'needs' || counts[k] > 0)
-  const pick = (params.get('show') as Show | null) ?? 'needs'
-  const show = shown.includes(pick) ? pick : 'needs'
-  // Anomalies are the volume case: select them to handle, snooze or reopen several at once.
-  const pickable = show === 'needs' ? anomalies : show === 'closed' ? closed : []
-  const ids = useMemo(() => pickable.map(a => a.id), [pickable.map(a => a.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, show)
-  const bulk = (op: 'handle' | 'snooze' | 'reopen') => { d({ type: 'insights/anomalies', ids: [...sel.selected], op }); sel.clear() }
-  const check = (a: Anomaly) => <SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />
   const does = (sc: Schedule) => (sc.to === 'sam' ? 'Iris writes it for you' : lvl === 'act' ? 'Iris sends it to Claire' : lvl === 'draft' ? 'Waits for you, then goes to Claire' : 'Iris writes it, you send it')
-
-  const rows: ReactNode[] = show === 'needs' ? [
-    ...anomalies.map(a => <AnomalyRow key={a.id} a={a} now={now} check={check(a)} />),
-    
+  const queue: ReactNode[] = [
+    ...rest.map(a => <AnomalyRow key={a.id} a={a} now={now} />),
     ...cards.map(h => <DecisionRow key={h.id} lead={<span className="sl-lead-icon" aria-hidden><FileText size={14} /></span>}
       title={h.link ? <Link to={h.link}>{h.title}</Link> : h.title}
       line={<><span className="sl-gist">{h.context}</span>{h.why && <MoreInfo label="Why?" title={`Why Iris asks: ${h.title}`}><p>{h.why}</p><Confidence v={h.confidence} /></MoreInfo>}</>}
       acts={<CardDecision h={h} onDecide={decision => d({ type: 'core/resolve', id: h.id, decision })} />} />),
-  ] : show === 'reports' ? reports.map(r => {
-    const shared = s.insights.shared[r.id]
-    return <DecisionRow key={r.id} lead={<span className="sl-lead-icon" aria-hidden><FileText size={14} /></span>}
-      title={<Link to={`/insights/reports/${r.id}`}>{r.title}</Link>}
-      line={<>{r.draft ? <Pill tone="caution">Waits for you</Pill> : shared && <Pill tone="ok"><Check size={12} />Shared with Claire</Pill>}<span className="sl-gist">{reportMeta(r)}</span><span>{ago(r.writtenAt, now)}</span></>}
-      acts={null} />
-  }) : show === 'scheduled' ? s.insights.schedules.map(sc => <DecisionRow key={sc.id} lead={<span className="sl-lead-icon" aria-hidden><CalendarClock size={14} /></span>}
-      title={sc.name}
-      line={<>{sc.paused && <Pill>Paused</Pill>}<span>{EVERY[sc.every]} at 08:00 to {sc.to === 'claire' ? 'Claire' : 'you'}</span>{!sc.paused && <span className="sl-gist">Next {dayLabel(nextRun(sc, now), now)} · {does(sc)}</span>}</>}
-      acts={<>
-        <Btn size="sm" onClick={() => d({ type: 'insights/schedulePause', id: sc.id })}>{sc.paused ? <><Play size={14} />Resume</> : <><Pause size={14} />Pause</>}</Btn>
-        <Btn size="sm" variant="ghost" icon aria-label={`Delete schedule ${sc.name}`} onClick={() => d({ type: 'insights/scheduleDelete', id: sc.id })}><Trash2 size={14} /></Btn>
-      </>} />)
-    : closed.map(a => <DecisionRow key={a.id} lead={check(a)} title={<><Net n={a.network} size={14} /> {a.title}</>}
-      line={<><span className="sl-gist">{a.resolution}</span><span>{ago(a.detectedAt, now)}</span></>}
-      acts={<Btn size="sm" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn>} />)
+  ]
 
   return (
     <div className="reports">
-      <StudioAsk />
-      <div className="sl-bar">
-        <Filters label="Show" value={show} onChange={v => { setParams(v === 'needs' ? {} : { show: v }, { replace: true }); sel.clear() }}
-          items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
-        <div className="sl-menus"><Link to="/agents/iris?tab=alerts" className="btn sm ghost">Alert rules</Link></div>
-      </div>
-      {rows.length ? (
-        <section className="card sl-list" aria-label={SHOW_LABEL[show]}>
-          {sel.count > 0
-            ? <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={show === 'closed'
-                ? [{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => bulk('reopen') }]
-                : [{ label: 'Mark handled', icon: <Check size={14} />, primary: true, onRun: () => bulk('handle') }, { label: 'Snooze a week', icon: <Clock size={14} />, onRun: () => bulk('snooze') }]} />
-            : pickable.length > 1 && <div className="sl-head"><SelectAll sel={sel} label="Select every anomaly shown" /></div>}
-          <ul className="rows">{rows}</ul>
-        </section>
-      ) : <Empty title="Nothing needs you here" body="Iris checks every network every hour and writes your brief at 07:00." />}
+      <IrisOverview />
+
+      <section className="stack" aria-labelledby="in-needs">
+        <div className="row in-sec">
+          <h2 id="in-needs" className="section-title flush">{showClosed ? 'Closed anomalies' : 'Needs you'} <span className="faint num">{showClosed ? closed.length : anomalies.length + cards.length}</span></h2>
+          <span className="spacer" />
+          {showClosed ? <Link to="/insights" className="link-btn t-sm">Needs you</Link> : closed.length > 0 && <Link to="/insights?show=closed" className="link-btn t-sm">Closed anomalies</Link>}
+          <Link to="/agents/iris?tab=alerts" className="link-btn t-sm">Alert rules</Link>
+        </div>
+        {showClosed ? (
+          <section className="card sl-list" aria-label="Closed anomalies">
+            {sel.count > 0
+              ? <BulkBar count={sel.count} noun={sel.count > 1 ? 'anomalies selected' : 'anomaly selected'} onClear={sel.clear} actions={[{ label: 'Reopen', icon: <RotateCcw size={14} />, primary: true, onRun: () => { d({ type: 'insights/anomalies', ids: [...sel.selected], op: 'reopen' }); sel.clear() } }]} />
+              : closed.length > 1 && <div className="sl-head"><SelectAll sel={sel} label="Select every closed anomaly" /></div>}
+            <ul className="rows">{closed.map(a => <DecisionRow key={a.id}
+              lead={<SelectBox checked={sel.has(a.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(a.id, shift)} label={`Select: ${a.title}`} />}
+              title={<><Net n={a.network} size={14} /> {a.title}</>}
+              line={<><span className="sl-gist">{a.resolution}</span><span>{ago(a.detectedAt, now)}</span></>}
+              acts={<Btn size="sm" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn>} />)}</ul>
+          </section>
+        ) : lead || queue.length ? (
+          <div className={`in-needs ${lead && queue.length ? 'split' : ''}`}>
+            {lead && <AnomalyFeature a={lead} now={now} />}
+            {queue.length > 0 && <section className="card sl-list" aria-label="More to decide"><ul className="rows">{queue}</ul></section>}
+          </div>
+        ) : <p className="muted">Nothing needs you here. Iris checks every network every hour.</p>}
+      </section>
+
+      <section className="stack" aria-labelledby="in-reports">
+        <h2 id="in-reports" className="section-title flush">Reports <span className="faint num">{reports.length}</span></h2>
+        <StudioAsk />
+        {/* The report waiting for Sam first, then what's scheduled, then the rest, newest first. */}
+        <ul className="in-report-grid">
+          {reports.filter(r => r.draft).map(r => <li key={r.id} className="wide"><ReportCard r={r} now={now} /></li>)}
+          {s.insights.schedules.map(sc => (
+            <li key={sc.id} className="card in-report in-sched">
+              <div className="row tight"><span className="kpi-icon" aria-hidden><CalendarClock size={14} /></span><span className="spacer" />{sc.paused ? <Pill>Paused</Pill> : <Pill tone="signal">Scheduled</Pill>}</div>
+              <h3>{sc.name}</h3>
+              <span className="t-sm">{EVERY[sc.every]} at 08:00 to {sc.to === 'claire' ? 'Claire' : 'you'}{!sc.paused && <> · next {dayLabel(nextRun(sc, now), now)}</>}</span>
+              {!sc.paused && <span className="faint t-sm">{does(sc)}</span>}
+              <div className="row tight in-sched-acts">
+                <Btn size="sm" onClick={() => d({ type: 'insights/schedulePause', id: sc.id })}>{sc.paused ? <><Play size={14} />Resume</> : <><Pause size={14} />Pause</>}</Btn>
+                <Btn size="sm" variant="ghost" icon aria-label={`Delete schedule ${sc.name}`} onClick={() => d({ type: 'insights/scheduleDelete', id: sc.id })}><Trash2 size={14} /></Btn>
+              </div>
+            </li>
+          ))}
+          {reports.filter(r => !r.draft).map(r => <li key={r.id}><ReportCard r={r} now={now} /></li>)}
+        </ul>
+      </section>
     </div>
+  )
+}
+
+/** What a report's card draws: its own chart when it has one (TikTok, a campaign), else reach over its period. */
+function reportTrend(s: State, r: Report, now: number): { label: string; data: number[] } {
+  const chart = r.sections.find(x => x.chart)?.chart
+  if (chart === 'tiktok') return { label: 'TikTok views per video', data: TIKTOK_VIEWS }
+  const c = s.strategy.campaigns.find(x => x.reportId === r.id || x.id === r.recipe?.campaign)
+  if (c?.actual.length && (chart === 'campaign' || r.kind === 'campaign')) return { label: c.goal.label.replace(' (€)', ''), data: c.actual }
+  const days = r.recipe?.days ?? 7
+  const offset = Math.min(90 - days, Math.max(0, Math.floor((now - r.writtenAt) / DAY)))
+  return { label: 'Daily reach', data: reachSeries({ days, offset }) }
+}
+
+/** A report: what it charts, its period, and a status only when it differs (waits for you, sent to Claire). */
+function ReportCard({ r, now }: { r: Report; now: number }) {
+  const { s } = useStore()
+  const shared = s.insights.shared[r.id]
+  const trend = reportTrend(s, r, now)
+  return (
+    <Link to={`/insights/reports/${r.id}`} className={`card in-report ${r.draft ? 'draft' : ''}`}>
+      <div className="row tight">
+        <span className="t-sm">{KIND_LABEL[r.kind]}</span><span className="spacer" />
+        {r.draft ? <Pill tone="caution">To approve</Pill> : shared ? <Pill tone="ok"><Check size={12} />Sent to Claire</Pill> : null}
+      </div>
+      <h3>{r.title}</h3>
+      <Spark data={trend.data} w={480} h={r.draft ? 64 : 44} color="var(--a-iris)" label={`${trend.label}, ${r.period}`} />
+      <span className="faint t-sm ellipsis">{trend.label} · {r.period}</span>
+    </Link>
+  )
+}
+
+/** The anomaly to decide first, set apart: its number named, its curve, Iris's reason and her options. */
+function AnomalyFeature({ a, now }: { a: Anomaly; now: number }) {
+  const { s, d } = useStore()
+  const nav = useNavigate()
+  const act = (x: string) => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })
+  const desk = a.handoff && s.handoffs.some(h => h.id === a.handoff)
+  return (
+    <article className="card in-feature" aria-label={a.title}>
+      <div className="row tight"><Net n={a.network} /><span className="faint t-sm">{ago(a.detectedAt, now)}</span></div>
+      <h3>{a.title}</h3>
+      <div className="in-feature-fig">
+        <dl className="in-feature-num"><dt className="t-sm">{a.metric}</dt><dd><b className="num">{a.value}</b><span className={`delta ${a.down ? 'down' : 'up'}`}>{a.delta}</span></dd></dl>
+        <Spark data={a.series} w={420} h={64} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} />
+      </div>
+      <p className="in-feature-why"><Mark agent="iris" /><span>{gist(a.cause)} <span className="faint">{a.confidence}% confident</span>{' '}
+        <MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></span></p>
+      <div className="row tight">
+        {a.actions[0] && <Btn variant="primary" size="sm" onClick={() => act(a.actions[0])}>{a.actions[0]}</Btn>}
+        {a.actions.slice(1).map(x => <Btn key={x} size="sm" onClick={() => act(x)}>{x}</Btn>)}
+        <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${a.title}`}><ChevronDown size={14} /></Btn>} items={[
+          ...(desk ? [{ label: 'Review on Desk', onSelect: () => nav(`/?card=${a.handoff}`) }, 'sep' as const] : []),
+          { label: 'Mark handled', onSelect: () => d({ type: 'insights/anomalies', ids: [a.id], op: 'handle' }) },
+          { label: 'Snooze a week', onSelect: () => d({ type: 'insights/anomalies', ids: [a.id], op: 'snooze' }) },
+        ]} />
+      </div>
+    </article>
   )
 }
 
@@ -168,9 +277,7 @@ function KpiTiles({ kpis, label }: { kpis: ReturnType<typeof rangeKpis>; /** The
   return (
     <dl className="kpi-grid">
       {kpis.map(k => {
-        const diff = k.fmt === 'pct' || k.fmt === 'min' ? k.value - k.prev : ((k.value - k.prev) / k.prev) * 100
-        const good = k.lowerBetter ? diff < 0 : diff > 0
-        const txt = k.fmt === 'pct' ? `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pt` : k.fmt === 'min' ? `${diff > 0 ? '+' : '−'}${Math.abs(diff)} min` : `${diff > 0 ? '+' : '−'}${Math.abs(Math.round(diff))}%`
+        const { txt, good } = kpiDelta(k)
         return (
           <div key={k.key} className="kpi">
             <dt><span className="kpi-icon" aria-hidden>{kpiIcon(k.label)}</span>{k.label}</dt>
@@ -336,6 +443,9 @@ function Explore() {
     .sort((a, b) => (sort.desc ? -1 : 1) * (typeof a[sort.key] === 'string' ? String(a[sort.key]).localeCompare(String(b[sort.key])) : (a[sort.key] as number) - (b[sort.key] as number))), [net, fromT, toT, sort])
   const best = bestTime(net)
   const ig = bestTime('instagram')
+  const allReach = rangeKpis(range, 'all').find(k => k.key === 'reach')!.value
+  const byNet = NETWORKS_SOCIAL.map(n => ({ label: NETWORK_LABEL[n], value: Math.round((allReach * NET_SHARE[n].share) / 1000) })).sort((a, b) => b.value - a.value)
+  const topReach = Math.max(1, ...rows.map(p => p.reach))
 
   const th = (key: SortKey, label: string) => (
     <th className={['date', 'network', 'pillar', 'author'].includes(key) ? '' : 'r'} aria-sort={sort.key === key ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
@@ -362,11 +472,17 @@ function Explore() {
 
       <KpiTiles kpis={kpis} label={label} />
 
-      <section className="card pad">
-        <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
-        <LineChart label="Daily reach" labels={labels} h={220} format={v => `${Math.round(v)}k`}
-          series={[{ name: choice === 'custom' ? 'This range' : `Last ${label}`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${label}`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
-      </section>
+      <div className="in-reach">
+        <section className="card pad">
+          <div className="section-title">Daily reach <span className="faint">· {net === 'all' ? 'all networks' : NETWORK_LABEL[net]}, thousands</span></div>
+          <LineChart label="Daily reach" labels={labels} h={220} format={v => `${Math.round(v)}k`}
+            series={[{ name: choice === 'custom' ? 'This range' : `Last ${label}`, data: cur, color: 'var(--a-iris)' }, ...(prev.length ? [{ name: `Previous ${label}`, data: prev, dashed: true, tone: 'faint' as const }] : [])]} />
+        </section>
+        <section className="card pad">
+          <div className="section-title">Reach by network <span className="faint">· {label}</span></div>
+          <HBars items={byNet} format={v => `${v}k`} highlight={net === 'all' ? undefined : NETWORK_LABEL[net]} color="var(--a-iris)" />
+        </section>
+      </div>
 
       <div className="grid-2">
         <section className="card pad">
@@ -398,7 +514,7 @@ function Explore() {
           <div className="table-wrap">
             <table className="table in-posts">
               <thead><tr><th>Post</th>{th('network', 'Network')}{th('date', 'Date')}{th('pillar', 'Pillar')}{th('author', 'Author')}{th('reach', 'Reach')}{th('er', 'Engagement')}{th('clicks', 'Clicks')}</tr></thead>
-              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} onOpen={() => setOpen(p)} />)}</tbody>
+              <tbody>{rows.map(p => <PostTr key={p.id} p={p} now={now} top={topReach} onOpen={() => setOpen(p)} />)}</tbody>
             </table>
           </div>
         ) : <Empty title="No posts in this period" body="Try a longer period or another network." />}
@@ -408,7 +524,7 @@ function Explore() {
   )
 }
 
-function PostTr({ p, now, onOpen }: { p: PostRow; now: number; onOpen: () => void }) {
+function PostTr({ p, now, top, onOpen }: { p: PostRow; now: number; top: number; onOpen: () => void }) {
   return (
     <tr onClick={onOpen}>
       <td><button type="button" className="in-post-open ellipsis mw-320" onClick={e => { e.stopPropagation(); onOpen() }}>{p.title}</button></td>
@@ -416,7 +532,7 @@ function PostTr({ p, now, onOpen }: { p: PostRow; now: number; onOpen: () => voi
       <td className="mono faint">{dayLabel(p.date, now)}</td>
       <td className="muted">{p.pillar}</td>
       <td className="muted">{p.author}</td>
-      <td className="r">{p.reach.toLocaleString('en-GB')}</td>
+      <td className="r"><DataBar value={p.reach} max={top}>{p.reach.toLocaleString('en-GB')}</DataBar></td>
       <td className="r">{p.er.toFixed(1)}%</td>
       <td className="r">{p.clicks.toLocaleString('en-GB')}</td>
     </tr>
@@ -463,13 +579,13 @@ function AnomalyWhy({ a, now }: { a: Anomaly; now: number }) {
 }
 
 /** An open anomaly: Iris's first action on the row, the others in the menu. */
-function AnomalyRow({ a, now, check }: { a: Anomaly; now: number; check: ReactNode }) {
+function AnomalyRow({ a, now }: { a: Anomaly; now: number }) {
   const { s, d } = useStore()
   const nav = useNavigate()
   const act = (x: string) => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })
   const desk = a.handoff && s.handoffs.some(h => h.id === a.handoff)
   return (
-    <DecisionRow lead={check} title={<><Net n={a.network} size={14} /> {a.title}</>}
+    <DecisionRow lead={<span className="in-row-spark"><Spark data={a.series} w={32} h={20} fill={false} tone={a.down ? 'alert' : 'ink'} color="var(--a-iris)" label={a.metric} /></span>} title={<><Net n={a.network} size={14} /> {a.title}</>}
       line={<><span className="sl-gist">{gist(a.cause)}</span><span>{a.confidence}% confident</span>
         <MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></>}
       acts={<>
