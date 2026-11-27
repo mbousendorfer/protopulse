@@ -28,7 +28,7 @@ export default function ManageCompetitors() {
       <section className="card">
         <div className="card-head">
           <h2>Competitors Echo watches <span className="faint num">{s.listening.watch.filter(w => w.tracking).length} of {s.listening.watch.length}</span></h2>
-          <span className="row tight faint"><Mark agent="echo" />Echo checks their accounts every hour and raises launches, price changes, campaigns and viral posts.</span>
+          <span className="row tight faint"><Mark agent="echo" />Echo checks them every hour</span>
         </div>
         <ul className="rows">
           {s.listening.watch.map(w => {
