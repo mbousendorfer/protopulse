@@ -1,14 +1,12 @@
 // Report Studio, the agentic way: ask Iris for a report, then change it section by section.
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CalendarClock, Check, Link2, Pause, Play, Plus, Printer, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, CalendarClock, Check, ChevronDown, Link2, Plus, Printer, Sparkles, Trash2 } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
-import { actionOf, uid } from '../../app/core'
-import { dayLabel } from '../../app/time'
+import { uid } from '../../app/core'
 import type { Schedule } from './slice'
-import { nextRun } from './reports'
 import type { Recipe, Report, ReportSection, SectionKind } from '../../data/insights'
-import { Btn, Mark, Menu } from '../../ui'
+import { Btn, Menu } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
 import { DEFAULT_SECTIONS, SECTION_LABEL, enrich, parseEdits, parseRecipe } from './studio'
 
@@ -25,26 +23,18 @@ export function StudioAsk() {
     setText('')
     nav(`/insights/reports/${id}`)
   }
+  const tpl = s.insights.templates
   return (
-    <section className="card pad stack in-studio">
-      <form className="row nowrap in-studio-ask" onSubmit={e => { e.preventDefault(); if (text.trim()) write(text) }}>
-        <Mark agent="iris" />
-        <label htmlFor="studio-ask" className="sr-only">Ask Iris for a report</label>
-        <input id="studio-ask" className="input grow" placeholder="A monthly report for Claire on Instagram and TikTok" value={text} onChange={e => setText(e.target.value)} />
-        <Btn type="submit" variant="primary" disabled={!text.trim()}><Sparkles size={14} />Ask Iris</Btn>
-      </form>
-      {s.insights.templates.length > 0 && (
-        <div className="row tight in-templates">
-          <span className="faint">Your templates</span>
-          {s.insights.templates.map(t => (
-            <span key={t.id} className="row tight in-template">
-              <Btn size="sm" onClick={() => write(t.name, t.recipe)}>{t.name}</Btn>
-              <Btn size="xs" variant="ghost" icon aria-label={`Delete template ${t.name}`} onClick={() => d({ type: 'insights/templateDelete', id: t.id })}><Trash2 size={12} /></Btn>
-            </span>
-          ))}
-        </div>
-      )}
-    </section>
+    <form className="row nowrap in-studio-ask" onSubmit={e => { e.preventDefault(); if (text.trim()) write(text) }}>
+      <label htmlFor="studio-ask" className="sr-only">Ask Iris for a report</label>
+      <input id="studio-ask" className="input grow" placeholder="Ask Iris for a report: a monthly one for Claire on Instagram and TikTok" value={text} onChange={e => setText(e.target.value)} />
+      {tpl.length > 0 && <Menu align="end" trigger={<Btn type="button" variant="ghost">Templates<ChevronDown size={12} /></Btn>} items={[
+        ...tpl.map(x => ({ label: x.name, onSelect: () => write(x.name, x.recipe) })),
+        'sep', { heading: 'Remove a template' },
+        ...tpl.map(x => ({ label: `Remove “${x.name}”`, icon: <Trash2 size={14} />, onSelect: () => d({ type: 'insights/templateDelete', id: x.id }) })),
+      ]} />}
+      <Btn type="submit" variant="primary" disabled={!text.trim()}><Sparkles size={14} />Ask Iris</Btn>
+    </form>
   )
 }
 
@@ -107,33 +97,6 @@ export function SaveTemplate({ r }: { r: Report }) {
 
 const EVERY: Record<Schedule['every'], string> = { week: 'every Monday', month: 'on the 1st of each month' }
 
-/** Reports tab: what Iris writes on a schedule, when, and what she does with it. */
-export function Schedules() {
-  const { s, d } = useStore()
-  const now = useNow(60_000)
-  const lvl = actionOf(s, 'iris', 'iris-report')?.autonomy
-  if (!s.insights.schedules.length) return null
-  const does = (sc: Schedule) => (sc.to === 'sam' ? 'Iris writes it for you' : lvl === 'act' ? 'Iris sends it to Claire' : lvl === 'draft' ? 'It waits for you on the Desk, then goes to Claire' : 'Iris writes it, you send it')
-  return (
-    <section className="card">
-      <div className="card-head"><h2>Scheduled</h2></div>
-      <ul className="in-schedules">
-        {s.insights.schedules.map(sc => (
-          <li key={sc.id} className={sc.paused ? 'off' : ''}>
-            <div className="grow">
-              <b>{sc.name}</b>
-              <span className="muted"> · {EVERY[sc.every]} at 08:00 → {sc.to === 'claire' ? 'Claire' : 'you'}</span>
-              <p className="faint">{sc.paused ? 'Paused' : `Next: ${dayLabel(nextRun(sc, now), now)} · ${does(sc)}`}</p>
-            </div>
-            <Btn size="sm" onClick={() => d({ type: 'insights/schedulePause', id: sc.id })}>{sc.paused ? <><Play size={14} />Resume</> : <><Pause size={14} />Pause</>}</Btn>
-            <Btn size="sm" variant="ghost" icon aria-label={`Delete schedule ${sc.name}`} onClick={() => d({ type: 'insights/scheduleDelete', id: sc.id })}><Trash2 size={14} /></Btn>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
 /** Report side panel: schedule it, print it to PDF, copy a read-only link. */
 export function ReportOut({ r }: { r: Report }) {
   const { s, d } = useStore()
@@ -144,7 +107,7 @@ export function ReportOut({ r }: { r: Report }) {
   return (
     <div className="stack gap-2">
       {r.recipe && (scheduled.length
-        ? <p className="muted">Scheduled {scheduled.map(x => `${EVERY[x.every]} for ${x.to === 'claire' ? 'Claire' : 'you'}`).join(' and ')}. Manage it in Insights › Reports.</p>
+        ? <p className="muted">Scheduled {scheduled.map(x => `${EVERY[x.every]} for ${x.to === 'claire' ? 'Claire' : 'you'}`).join(' and ')}. Manage it in Insights › Reports › Scheduled.</p>
         : <Menu align="start" trigger={<Btn className="self-start"><CalendarClock size={14} />Schedule</Btn>} items={[
           { label: 'Every Monday, to Claire', onSelect: () => plan('week', 'claire') },
           { label: 'Every month, to Claire', onSelect: () => plan('month', 'claire') },
