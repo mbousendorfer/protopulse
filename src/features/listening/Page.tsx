@@ -376,7 +376,6 @@ function Mentions() {
                     {show !== md && <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>}
                     {m.risk && show !== 'risk' && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
                     <span>Reach {m.reach.toLocaleString('en-GB')}</span><span>{ago(m.at, now)}</span>
-                    {m.product && <span>{m.product}</span>}
                     {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
                     {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
                   </>}

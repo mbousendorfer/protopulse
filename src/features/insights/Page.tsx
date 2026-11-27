@@ -122,8 +122,8 @@ function Reports() {
         <Btn size="sm" onClick={() => d({ type: 'insights/schedulePause', id: sc.id })}>{sc.paused ? <><Play size={14} />Resume</> : <><Pause size={14} />Pause</>}</Btn>
         <Btn size="sm" variant="ghost" icon aria-label={`Delete schedule ${sc.name}`} onClick={() => d({ type: 'insights/scheduleDelete', id: sc.id })}><Trash2 size={14} /></Btn>
       </>} />)
-    : closed.map(a => <DecisionRow key={a.id} lead={check(a)} title={a.title}
-      line={<><Net n={a.network} size={14} /><span className="sl-gist">{a.resolution}</span><span>{ago(a.detectedAt, now)}</span></>}
+    : closed.map(a => <DecisionRow key={a.id} lead={check(a)} title={<><Net n={a.network} size={14} /> {a.title}</>}
+      line={<><span className="sl-gist">{a.resolution}</span><span>{ago(a.detectedAt, now)}</span></>}
       acts={<Btn size="sm" variant="ghost" onClick={() => d({ type: 'insights/reopen', id: a.id })}>Reopen</Btn>} />)
 
   return (
@@ -472,8 +472,8 @@ function AnomalyRow({ a, now, check }: { a: Anomaly; now: number; check: ReactNo
   const act = (x: string) => (/€/.test(x) ? setConfirm(x) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x }))
   const desk = a.handoff && s.handoffs.some(h => h.id === a.handoff)
   return (
-    <DecisionRow lead={check} title={a.title}
-      line={<><Net n={a.network} size={14} /><span className="sl-gist">{gist(a.cause)}</span><span>{a.confidence}% confident</span>
+    <DecisionRow lead={check} title={<><Net n={a.network} size={14} /> {a.title}</>}
+      line={<><span className="sl-gist">{gist(a.cause)}</span><span>{a.confidence}% confident</span>
         <MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></>}
       // Paid spend never goes out on one click.
       detail={confirm && (
