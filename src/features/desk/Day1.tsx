@@ -35,7 +35,7 @@ export function Welcome({ onPick }: { onPick: (key: string) => void }) {
         <div>
           <h1 id="welcome-title" className="hello">Welcome aboard{s.setup.first ? `, ${s.setup.first}` : ''}.</h1>
           <p className="story">{connected
-            ? <>Your team started at {hhmm(started)}. Atlas wrote your first drafts{s.setup.pending.some(p => p.id === 'iris') ? ' and your history is importing' : ' and your history is in'}. <b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you.</>
+            ? <><b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you. Your team started at {hhmm(started)}.</>
             : <>Atlas wrote 3 first drafts from your Playbook. Connect a profile to schedule them: Nova and Echo start once one is connected.</>}</p>
           <p className="day1-promise"><Sunrise size={16} aria-hidden />Your first morning brief arrives tomorrow at {hhmm(firstBriefAt(started))}.</p>
         </div>
@@ -79,7 +79,8 @@ function Item({ i }: { i: CheckItem }) {
       <span className="check-mark" aria-hidden>{i.done ? <Check size={12} /> : i.at ? <Clock size={12} /> : null}</span>
       <div className="grow">
         <b>{i.label}</b><span className="sr-only">{i.done ? ' (done)' : ''}</span>
-        <p className="muted">{i.detail}</p>
+        {/* A done step only needs its name; an open one says what it takes and what it unlocks. */}
+        {!i.done && <p className="muted">{i.detail}</p>}
         {i.unlocks && !i.done && <p className="check-unlocks">{i.unlocks}</p>}
       </div>
       {i.action && !i.done && <Btn size="sm" onClick={run}>{i.action.label}</Btn>}
