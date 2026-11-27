@@ -61,7 +61,7 @@ export function RulesSheet({ open, onOpenChange, labels }: { open: boolean; onOp
           : <Btn size="sm" className="self-start" onClick={() => setEditing('new')}><Plus size={14} />Add a rule</Btn>}
         <section className="stack" aria-label="Response targets">
           <h3>Response targets</h3>
-          <p className="muted">How long a customer may wait on you or Claire. Nova warns you 15 minutes before a target is missed.</p>
+          <p className="muted">Nova warns you 15 minutes before a target is missed.</p>
           <div className="ib-targets">
             {(Object.keys(TYPES) as ConvType[]).map(t => (
               <div key={t} className="ib-target-row">

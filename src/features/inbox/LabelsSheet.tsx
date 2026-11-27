@@ -19,7 +19,7 @@ export function LabelsSheet({ open, onOpenChange }: { open: boolean; onOpenChang
   return (
     <Sheet open={open} onOpenChange={o => { onOpenChange(o); if (!o) setEditing(null) }} title="Labels">
       <div className="stack">
-        <p className="muted">Nova’s rules label conversations as they arrive. Renaming a label renames it everywhere, rules included.</p>
+        <p className="muted">Renaming a label renames it everywhere, rules included.</p>
         {shown && <UndoBar onUndo={() => d({ type: 'core/undo', id: shown.id })} until={shown.undoUntil}>{shown.text}</UndoBar>}
         <ul className="ib-rules" aria-label="Labels">
           {s.inbox.labels.map(l => {

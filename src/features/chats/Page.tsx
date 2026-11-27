@@ -25,7 +25,7 @@ export default function ChatsPage() {
 
   return (
     <div className="page chats-page">
-      <PageHead title="Chats" lede="Ask, brief, decide. Nothing goes out without your OK.">
+      <PageHead title="Chats">
         <Btn variant="primary" onClick={start}><MessageSquarePlus size={14} />New chat</Btn>
       </PageHead>
       <div className="chats-grid">
