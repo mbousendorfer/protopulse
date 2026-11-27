@@ -1,31 +1,39 @@
-/* Team: one line per agent, columns aligned so trust and autonomy compare at a glance. */
-.team-card { overflow: hidden; container-type: inline-size; }
-.team-cols, .team-row { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(0, 1.6fr) minmax(0, 1.5fr) minmax(0, 1.5fr) 32px; column-gap: var(--s4); align-items: center; padding: 0 var(--s4); }
-.team-cols { padding-top: var(--s2); padding-bottom: var(--s2); font-size: var(--t-sm); color: var(--ink-2); border-bottom: 1px solid var(--line); }
-.team-row { padding-top: 12px; padding-bottom: 12px; }
-.team-list > .team-row + .team-row { border-top: 1px solid var(--line); }
-.team-row:hover { background: var(--row-hover); }
-.team-who { display: flex; align-items: center; gap: var(--s3); min-width: 0; }
-.team-who > div, .team-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; color: var(--ink); }
-.agent-link { color: var(--ink); font-weight: 600; }
-.agent-link:hover { color: var(--action-ink); }
+
+/* Team: one card per agent (matrix §15), in the agent's colour. The name is the card's link; the menu sits above it. */
+.team-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s4); }
+.agent-card { position: relative; display: flex; flex-direction: column; gap: var(--s3); padding: var(--s5); transition: border-color var(--fast) var(--ease); }
+.agent-card:hover { border-color: var(--signal); }
+.agent-card-head { display: flex; align-items: center; gap: var(--s3); }
+.agent-card-head .grow { display: flex; flex-direction: column; min-width: 0; }
+.agent-card-head .btn { position: relative; z-index: 1; align-self: flex-start; }
+.agent-link { color: var(--ink); font-weight: 600; font-size: var(--t-lg); }
+.agent-link::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.agent-link:hover { color: var(--ink); text-decoration: none; }
+.agent-link:focus-visible { outline: none; }
+.agent-card:has(.agent-link:focus-visible) { box-shadow: var(--focus); }
 .team-sub { font-size: var(--t-sm); color: var(--ink-2); }
-.team-k { display: none; }
-.team-paused { display: inline-flex; align-items: center; gap: 6px; color: var(--caution-strong); font-weight: 500; }
-@container (max-width: 820px) {
-  .team-cols { display: none; }
-  .team-row { grid-template-columns: repeat(3, minmax(0, 1fr)) 32px; row-gap: var(--s3); align-items: start; }
-  .team-who { grid-column: 1 / 4; }
-  .team-row > button { grid-column: 4; grid-row: 1; }
-  .team-k { display: block; font-size: var(--t-sm); color: var(--ink-2); }
-}
-@container (max-width: 520px) {
-  .team-row { grid-template-columns: minmax(0, 1fr) 32px; }
-  .team-who { grid-column: 1; }
-  .team-row > button { grid-column: 2; }
-  .team-cell { grid-column: 1 / -1; }
-  /* Phone: what, how free, how trusted. Shift and weekly volume stay on the profile. */
-  .team-cell:nth-child(2) .team-sub, .team-cell:nth-child(3) .team-sub { display: none; }
+.agent-card-state { display: flex; flex-wrap: wrap; gap: 6px; }
+.agent-now { color: var(--ink); font-weight: 500; }
+.agent-card.paused .agent-now { color: var(--ink-2); font-weight: 400; }
+.agent-facts { margin: auto 0 0; padding-top: var(--s3); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); }
+.agent-facts dt { font-size: var(--t-sm); color: var(--ink-2); }
+.agent-facts dd { margin: 2px 0 0; color: var(--ink); font-size: var(--t-sm); }
+.agent-facts dd b { font-size: var(--t-lg); font-weight: 600; margin-right: 2px; }
+
+/* The autonomy request set apart: the ask, its proof in view, the three answers. */
+.req-feature { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s4); border-color: color-mix(in srgb, var(--tone) 45%, var(--line)); }
+.req-head { display: flex; align-items: center; gap: var(--s3); }
+.req-head h2 { font-size: var(--t-xl); font-weight: 600; letter-spacing: -0.01em; }
+.req-head p { color: var(--ink); margin-top: 2px; }
+.req-proof { list-style: none; margin: 0; padding: var(--s3) var(--s4); border-radius: var(--r-ctl); background: var(--tone-wash); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2) var(--s5); }
+.req-proof li { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); font-size: var(--t-sm); }
+.req-proof svg { color: var(--tone-ink); flex: none; margin-top: 3px; }
+.req-acts { display: flex; flex-wrap: wrap; gap: var(--s2); }
+@media (max-width: 720px) {
+  .req-feature, .agent-card { padding: var(--s4); }
+  .req-head { align-items: flex-start; }
+  .req-head h2 { font-size: var(--t-lg); }
+  .req-proof { grid-template-columns: minmax(0, 1fr); }
 }
 
 .dec-proof { margin-top: var(--s2); padding-left: var(--s4); list-style: disc; font-size: var(--t-sm); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
@@ -81,8 +89,28 @@
 .guard { display: flex; align-items: center; gap: var(--s3); padding: 12px var(--s4); }
 .guard .muted { flex: 1; }
 .guard b { font-weight: 500; }
-.record-kpis { margin: 0; }
-.record-kpis dd { margin: 0; }
-.record-kpis .stat { flex-direction: column; }
+/* Track record: one stacked chart, its totals as the key. */
+.record-chart .vbar i.part { min-height: 3px; border-radius: 2px; margin-bottom: 1px; }
+.record-key { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s6); margin: var(--s5) 0 0; padding-top: var(--s4); border-top: 1px solid var(--line); }
+.record-key dt { display: flex; align-items: center; gap: 6px; font-size: var(--t-sm); color: var(--ink-2); }
+.record-key dt i { width: 8px; height: 8px; border-radius: 2px; }
+.record-key dd { margin: 2px 0 0; font-size: var(--t-xl); font-weight: 600; color: var(--ink); }
+
+/* How it works: guardrails, escalation and Playbook side by side, each with its icon tile. */
+.how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--s4); align-items: start; }
+.how-head { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s4); border-bottom: 1px solid var(--line); }
+.how-head .grow { min-width: 0; }
+.how-head h2 { font-size: var(--t-md); font-weight: 600; }
+.how-head p { font-size: var(--t-sm); color: var(--ink-2); margin-top: 2px; }
+.how-grid .guard { flex-wrap: wrap; gap: 4px var(--s3); }
+.how-grid .guard form { flex-wrap: wrap; width: 100%; }
+.how-grid .guard .input { flex: 1 1 140px; width: auto; }
+.how-grid .card-body form.row { flex-wrap: wrap; }
+.how-grid .card-body .input { flex: 1 1 160px; width: auto; }
+.how-play { display: flex; gap: var(--s6); margin: 0; padding: var(--s4) var(--s4) 0; }
+.how-play > div { display: flex; flex-direction: column-reverse; }
+.how-play dd { margin: 0; font-size: var(--t-2xl); font-weight: 600; color: var(--ink); line-height: 1.1; }
+.how-play dt { font-size: var(--t-sm); color: var(--ink-2); }
 
 .struck { text-decoration: line-through; }
+.record-chart .vbar span { white-space: nowrap; }

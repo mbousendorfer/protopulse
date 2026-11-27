@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { initialState } from '../../app/state'
 import { groupOf, reducer } from '../../app/reducer'
 import { AGENTS } from '../../data/agents'
-import { agentsNeedsCount, autonomyRequests, departmentNeeds, ruleProposals, trustOf } from './needs'
+import { agentsNeedsCount, autonomyRequests, departmentNeeds, ruleProposals, spread, trustOf } from './needs'
 
 test('the Agents block counts what is decided there, and a decision taken there leaves it', () => {
   let s = initialState()
@@ -33,4 +33,13 @@ test('trust reads in words, and an agent with no history says so', () => {
   const nova = AGENTS.find(a => a.id === 'nova')!
   expect(trustOf(nova).head).toMatch(/^\d+% approved unchanged$/)
   expect(trustOf({ ...nova, record: { ...nova.record, handled: 0 } }).head).toBe('No track record yet')
+})
+
+test('a 30-day total spreads over the days without losing or inventing any', () => {
+  for (const a of AGENTS) {
+    const raised = spread(a.record.escalated, a.record.series)
+    expect(raised.reduce((x, y) => x + y, 0)).toBe(a.record.escalated)
+    expect(raised).toHaveLength(a.record.series.length)
+  }
+  expect(spread(3, [0, 0, 0])).toEqual([1, 1, 1])
 })

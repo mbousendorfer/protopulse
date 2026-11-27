@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { Link, Navigate, Outlet, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronDown, MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronDown, Flag, MoreHorizontal, Pause, Pencil, Play, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import type { Agent, AgentId, Autonomy } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago, DAY } from '../../app/time'
@@ -11,7 +11,7 @@ import { profileTab, proposalsFor, rulesFor } from './rules'
 import { CountBadge, Notice, UndoBar } from '../../ui/Feedback'
 import { Bars } from '../../ui/charts'
 import { Requests } from './AgentDecisions'
-import { autonomyRequests, ruleProposals, trustOf } from './needs'
+import { autonomyRequests, pausedLabel, ruleProposals, spread, trustOf } from './needs'
 import './agents.css'
 import { registry } from '../../app/agents-registry'
 import { AgentScene } from '../../ui/Illustrations'
@@ -48,48 +48,46 @@ export function Team() {
   return (
     <div className="stack lg">
       <Requests />
-      <section className="card team-card" aria-label="Your team">
-        {/* One line per agent, columns aligned: who, what now, how free, how trusted. */}
-        <div className="team-cols" aria-hidden><span>Agent</span><span>Now</span><span>Autonomy</span><span>Track record · 30 days</span></div>
-        <ul className="team-list">
-          {s.agents.map(a => <TeamRow key={a.id} a={a} />)}
-        </ul>
-      </section>
+      {/* One card per agent (matrix §15): who, on shift or not, what now, how free, how trusted. */}
+      <ul className="team-grid" aria-label="Your team">
+        {s.agents.map(a => <AgentCard key={a.id} a={a} asks={autonomyRequests(s.handoffs, a.id).length} />)}
+      </ul>
     </div>
   )
 }
 
-function TeamRow({ a }: { a: Agent }) {
+const tone = (id: AgentId) => ({ ['--tone' as string]: `var(--a-${id})`, ['--tone-wash' as string]: `var(--a-${id}-wash)`, ['--tone-ink' as string]: `var(--a-${id}-ink)` })
+
+function AgentCard({ a, asks }: { a: Agent; asks: number }) {
   const nav = useNavigate()
   const preset = presetOf(a)
   const load = weeklyLoad(a.actions, x => x.autonomy)
   const trust = trustOf(a)
   const pause = usePauseItems(a)
+  const on = a.status === 'on'
   return (
-    <li className="team-row">
-      <div className="team-who">
-        <Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />
-        <div><Link to={`/agents/${a.id}`} className="agent-link">{a.name}</Link><span className="team-sub">{a.dept}</span></div>
+    <li className={`card agent-card ${on ? '' : 'paused'}`} style={tone(a.id)}>
+      <div className="agent-card-head">
+        <Mark agent={a.id} size="lg" state={on ? 'on' : 'paused'} />
+        <div className="grow">
+          <Link to={`/agents/${a.id}`} className="agent-link">{a.name}</Link>
+          <span className="team-sub">{a.dept}</span>
+        </div>
+        <Menu align="end" trigger={<Btn size="sm" variant="ghost" icon aria-label={`${a.name}: more`}><MoreHorizontal size={16} /></Btn>} items={[
+          { label: 'See track record', onSelect: () => nav(`/agents/${a.id}?tab=record`) },
+          'sep',
+          ...pause,
+        ]} />
       </div>
-      <div className="team-cell">
-        <span className="team-k">Now</span>
-        {a.status === 'on' ? <span>{a.now}</span> : <span className="team-paused"><Pause size={14} aria-hidden />Paused{a.pausedUntil ? ` until ${a.pausedUntil}` : ''}</span>}
+      <div className="agent-card-state">
+        {on ? <Pill tone="ok" dot>On shift</Pill> : <Pill tone="caution" dot>{pausedLabel(a)}</Pill>}
+        {asks > 0 && <Pill tone="caution">Asks for more autonomy</Pill>}
       </div>
-      <div className="team-cell" title={PRESET_SAYS[preset]}>
-        <span className="team-k">Autonomy</span>
-        <span>{preset === 'custom' ? 'Custom' : PRESET_LABEL[preset]}</span>
-        <span className="team-sub">{load.act.toLocaleString('en-GB')} of {(load.act + load.draft + load.suggest).toLocaleString('en-GB')} {a.unit} a week on its own</span>
-      </div>
-      <div className="team-cell">
-        <span className="team-k">Track record · 30 days</span>
-        <span>{trust.head}</span>
-        <span className="team-sub">{trust.sub}</span>
-      </div>
-      <Menu align="end" trigger={<Btn size="sm" variant="ghost" icon aria-label={`${a.name}: more`}><MoreHorizontal size={16} /></Btn>} items={[
-        { label: 'See track record', onSelect: () => nav(`/agents/${a.id}?tab=record`) },
-        'sep',
-        ...pause,
-      ]} />
+      <p className="agent-now">{on ? a.now : 'Nothing new starts until you resume.'}</p>
+      <dl className="agent-facts">
+        <div title={PRESET_SAYS[preset]}><dt>Autonomy</dt><dd><b className="num">{load.act.toLocaleString("en-GB")}</b> of {(load.act + load.draft + load.suggest).toLocaleString("en-GB")} {a.unit} a week alone</dd></div>
+        <div><dt>Reliability · 30 days</dt><dd>{a.record.handled ? <><b className="num">{a.record.approvedUnchanged}%</b> approved unchanged</> : trust.head}</dd></div>
+      </dl>
     </li>
   )
 }
@@ -134,7 +132,7 @@ export function AgentProfile() {
       <div className="profile-scene"><AgentScene agent={a.id} /></div>
       <div className="grow">
       <PageHead title={a.name} lede={<>{a.dept} · {a.role}</>}>
-        {a.status === 'on' ? <Pill tone="ok" dot>On shift · {a.shift}</Pill> : <Pill tone="caution" dot>Paused{a.pausedUntil ? ` until ${a.pausedUntil}` : ''}</Pill>}
+        {a.status === 'on' ? <Pill tone="ok" dot>On shift · {a.shift}</Pill> : <Pill tone="caution" dot>{pausedLabel(a)}</Pill>}
         {a.status === 'on' ? <PauseMenu a={a} /> : <Btn variant="primary" onClick={() => d({ type: 'core/agentStatus', agent: a.id, status: 'on' })}><Play size={14} />Resume</Btn>}
       </PageHead>
       </div>
@@ -180,18 +178,33 @@ function HowItWorks({ agent: a }: { agent: Agent }) {
         <Notice scope="agents" className="mt-3" />
         <AutonomyList key={a.id} agent={a} onChange={(x, level) => d({ type: 'core/autonomy', agent: a.id, action: x.id, level })} />
       </section>
-      <Guardrails agent={a} />
-      <Escalation agent={a} />
-      <section className="card">
-        <div className="card-head">
-          <h2>Playbook</h2>
-          <Link to={`/agents/rules?agent=${a.id}`} className="btn sm ghost">See in Shared rules</Link>
-        </div>
-        <p className="card-body">
-          Follows {mine.rules.length} rule{mine.rules.length === 1 ? '' : 's'} and cites {mine.facts.length} fact{mine.facts.length === 1 ? '' : 's'}, with the brand voice and words.
-          {proposals > 0 && <> <Link to={`/agents/rules?agent=${a.id}`}>{proposals} proposed rule{proposals > 1 ? 's' : ''} need{proposals > 1 ? '' : 's'} you</Link>.</>}
-        </p>
-      </section>
+      {/* The limits around that autonomy, side by side: what it never crosses, what it always hands over, what it follows. */}
+      <div className="how-grid" style={tone(a.id)}>
+        <Guardrails agent={a} />
+        <Escalation agent={a} />
+        <section className="card">
+          <HowHead icon={<BookOpen size={16} />} title="Playbook" sub="The brand voice, words, rules and facts it applies." />
+          <dl className="how-play">
+            <div><dt>rule{mine.rules.length === 1 ? "" : "s"}</dt><dd className="num">{mine.rules.length}</dd></div>
+            <div><dt>fact{mine.facts.length === 1 ? "" : "s"}</dt><dd className="num">{mine.facts.length}</dd></div>
+          </dl>
+          <div className="card-body row">
+            <Link to={`/agents/rules?agent=${a.id}`} className="btn sm">See in Shared rules</Link>
+            {proposals > 0 && <Link to={`/agents/rules?agent=${a.id}`} className="t-sm">{proposals} proposed rule{proposals > 1 ? 's' : ''} need{proposals > 1 ? '' : 's'} you</Link>}
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+/** A section of How it works: an icon tile in the agent's colour, the title, one line on what it is. */
+function HowHead({ icon, title, sub, children }: { icon: ReactNode; title: string; sub: string; children?: ReactNode }) {
+  return (
+    <div className="how-head">
+      <span className="topic-icon arow-icon" aria-hidden>{icon}</span>
+      <div className="grow"><h2>{title}</h2><p>{sub}</p></div>
+      {children}
     </div>
   )
 }
@@ -225,7 +238,7 @@ function Guardrails({ agent }: { agent: Agent }) {
   const [removed, setRemoved] = useState<{ label: string; value: string } | null>(null)
   return (
     <section className="card">
-      <div className="card-head"><h2>Guardrails</h2><span className="faint">Limits {agent.name} never crosses, whatever its autonomy.</span></div>
+      <HowHead icon={<ShieldCheck size={16} />} title="Guardrails" sub={`Limits ${agent.name} never crosses, whatever its autonomy.`} />
       <ul className="rows">
         {agent.guardrails.map(g => (
           <li key={g.id} className="guard">
@@ -268,10 +281,9 @@ function Escalation({ agent }: { agent: Agent }) {
   const rules = s.playbook.escalate.filter(e => e.agents.includes(agent.id))
   return (
     <section className="card">
-      <div className="card-head">
-        <div><h2>Escalation</h2><span className="faint">What {agent.name} always hands to a person, whatever its autonomy.</span></div>
-        <Link to={`/agents/escalation?agent=${agent.id}`} className="btn sm ghost">Edit in Escalation</Link>
-      </div>
+      <HowHead icon={<Flag size={16} />} title="Escalation" sub={`What ${agent.name} always hands to a person.`}>
+        <Link to={`/agents/escalation?agent=${agent.id}`} className="btn sm ghost" aria-label={`Edit ${agent.name}’s escalation in Agents › Escalation`}>Edit</Link>
+      </HowHead>
       <ul className="rows">
         {rules.map(e => (
           <li key={e.id} className="guard">
@@ -285,6 +297,8 @@ function Escalation({ agent }: { agent: Agent }) {
   )
 }
 
+const RAISED = 'color-mix(in srgb, var(--ink-3) 55%, transparent)'
+
 /** How far the agent is trusted: the numbers, the last 30 days, what it did lately, how its autonomy changed. */
 function Record({ agent }: { agent: Agent }) {
   const { s } = useStore()
@@ -293,21 +307,28 @@ function Record({ agent }: { agent: Agent }) {
   const n = agent.record.series.length
   const days = agent.record.series.map((_, i) => ((n - 1 - i) % 5 === 0 ? (i === n - 1 ? 'Today' : new Date(now - (n - 1 - i) * DAY).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })) : ''))
   const items = s.log.filter(l => l.agent === agent.id).slice(0, 20)
+  const r = agent.record
+  const raised = spread(r.escalated, r.series), undone = spread(r.undone, r.series)
+  const KEY = [
+    { name: 'Handled alone', n: r.handled.toLocaleString('en-GB'), color: `var(--a-${agent.id})` },
+    { name: 'Raised to you', n: r.escalated, color: RAISED },
+    { name: 'Undone by you', n: r.undone, color: 'var(--caution)' },
+  ]
   return (
     <div className="stack lg">
-      <dl className="grid-4 record-kpis">
-        <div className="card pad stat"><dd><b className="num">{agent.record.handled.toLocaleString('en-GB')}</b></dd><dt className="label">Handled alone · 30 days</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.escalated}</b></dd><dt className="label">Raised to you</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.handled ? `${agent.record.approvedUnchanged}%` : '–'}</b></dd><dt className="label">Approved unchanged</dt></div>
-        <div className="card pad stat"><dd><b className="num">{agent.record.undone}</b></dd><dt className="label">Undone by you</dt></div>
-      </dl>
-      <section className="card pad">
-        <div className="section-title">Actions handled alone per day <span className="faint">· last 30 days</span></div>
-        <Bars data={agent.record.series} labels={days} label={`${agent.name} actions per day`} h={140} color={`var(--a-${agent.id})`} />
+      {/* One chart, the totals as its key (no row of KPI tiles): what it did alone, what it raised, what you undid. */}
+      <section className="card pad record-chart">
+        <div className="section-title">Day by day <span className="faint">· last 30 days</span></div>
+        <Bars data={r.series} labels={days} label={`${agent.name}: actions handled alone, raised to you and undone, per day`} h={160} color={`var(--a-${agent.id})`}
+          stack={[{ name: 'Raised to you', data: raised, color: RAISED }, { name: 'Undone by you', data: undone, color: 'var(--caution)' }]} />
+        <dl className="record-key">
+          {KEY.map(k => <div key={k.name}><dt><i style={{ background: k.color }} />{k.name}</dt><dd className="num">{k.n}</dd></div>)}
+          <div><dt>Approved unchanged</dt><dd className="num">{r.handled ? `${r.approvedUnchanged}%` : '–'}</dd></div>
+        </dl>
       </section>
       <section className="card">
         <div className="card-head">
-          <div><h2>Last 20 actions</h2><p className="ov-now">{agent.status === 'on' ? `Now: ${agent.now}` : `Paused${agent.pausedUntil ? ` until ${agent.pausedUntil}` : ''}. Nothing new starts until you resume.`}</p></div>
+          <div><h2>Last 20 actions</h2><p className="ov-now">{agent.status === 'on' ? `Now: ${agent.now}` : `${pausedLabel(agent)}. Nothing new starts until you resume.`}</p></div>
           <Link to={`/agents/activity?agent=${agent.id}`} className="btn sm ghost">Full journal</Link>
         </div>
         <ul className="rows hist">
