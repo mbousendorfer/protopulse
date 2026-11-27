@@ -3,6 +3,10 @@
 Objectif constant : chaque changement mergé dans main ressort ultra qualitatif, delightful, compréhensible au premier
 regard, simple en surface et profond quand on creuse, parfaitement cohérent avec le reste du produit.
 
+## 0. Pause
+- `$(git rev-parse --git-common-dir)/ui-refactor-active` existe → la loop UI refactor tourne : ne fais rien,
+  `ScheduleWakeup` 1800 s, fin du tick.
+
 ## 1. Détecter ce qui est nouveau
 - `git fetch origin main --quiet`.
 - STATE=`$(git rev-parse --git-common-dir)/ui-loop-last-reviewed`. S'il n'existe pas : base = `origin/main~1`
