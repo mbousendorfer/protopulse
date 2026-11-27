@@ -25,7 +25,6 @@ export function downloadFile(name: string, content: string, type = 'text/csv') {
 }
 
 /** The first sentence of an agent's reason: what stays on the row; the rest goes behind « Why? » (PROMPT §10). */
-export const gist = (text: string) => text.split(/(?<=[.!?])\s+(?=[A-Z“@0-9])/)[0]
 
 /** Rows → CSV, quoting every cell. */
 export const toCSV = (rows: (string | number)[][]) => rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')

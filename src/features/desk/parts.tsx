@@ -12,7 +12,7 @@ import Photo from '../../ui/Photo'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { registry } from '../../app/agents-registry'
 import { MoreInfo } from '../../ui/More'
-import { gist } from '../inbox/gist'
+import { gist } from '../../ui/gist'
 
 export const KIND_LABEL: Record<Kind, string> = { approval: 'Approval', decision: 'Decision', info: 'Missing info', alert: 'Alert', promotion: 'Autonomy request', news: 'Good news' }
 export const URGENCY_LABEL = { urgent: 'Urgent', today: 'Today', week: 'This week' } as const

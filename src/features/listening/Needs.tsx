@@ -11,7 +11,7 @@ import { SocialAvatar } from '../../ui/SocialAvatar'
 import { MENTION_NET } from './slice'
 import { competitorName, competitorOf, listeningNeeds, sentimentOf, watchedCount } from './model'
 import { NETWORK_LABEL } from '../../data/agents'
-import { gist } from '../insights/alerts'
+import { gist } from '../../ui/gist'
 import { InfoPop, MoreInfo } from '../../ui/More'
 import './needs.css'
 
