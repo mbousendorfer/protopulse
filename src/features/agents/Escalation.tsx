@@ -17,7 +17,6 @@ const CONDITIONS: { id: string; label: string; n?: string; agents: AgentId[] }[]
   { id: 'refund', label: 'Refunds above €N', n: '150', agents: ['nova'] },
   { id: 'spike', label: 'More than N negative mentions in an hour', n: '20', agents: ['echo'] },
   { id: 'competitor', label: 'Anything that names a competitor', agents: ['atlas', 'echo'] },
-  { id: 'budget', label: 'Spending above €N', n: '100', agents: ['iris', 'sage'] },
   { id: 'drop', label: 'A metric dropping more than N% in a week', n: '30', agents: ['iris'] },
 ]
 type Cond = (typeof CONDITIONS)[number]

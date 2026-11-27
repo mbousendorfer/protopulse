@@ -173,7 +173,7 @@ const attachmentNote = (c: Conversation) => (c.attachments ?? []).filter(a => !a
 /* ---------- Public line, then a DM ---------- */
 
 /** Public messages Nova can follow up in private. */
-export const PUBLIC: ConvType[] = ['comment', 'mention', 'ad']
+export const PUBLIC: ConvType[] = ['comment', 'mention']
 /** The DM conversation that continues a public one. */
 export const dmId = (id: string) => `${id}-dm`
 const dmBase = (c: Conversation, t: number): Conversation => ({
@@ -456,10 +456,9 @@ const ESC_WORDS: Record<string, RegExp> = {
   'e-injury': /injur|\bhurt|\bfell\b|\bfall(?:en|ing)?\b|bleed|hospital|\bknee|ankle|wrist|\bburn|recall|unsafe|dangerous/i,
   'e-press': /journalist|reporter|article|editor\b|magazine|newspaper|podcast|writing a (?:piece|story)|for a story/i,
   'e-legal': /lawyer|legal|attorney|\bsue\b|suing|court|lawsuit|consumer protection/i,
-  'e-budget': /\bmy rate\b|\bfee\b|paid (?:collab|partnership)|sponsor|media kit/i,
   'e-pricing': /\bprice|discount|promo code|coupon/i,
 }
-const TOPIC: Record<string, string> = { 'e-injury': 'Safety', 'e-press': 'Press', 'e-legal': 'Legal', 'e-creator': 'Creator', 'e-refund': 'Refund', 'e-budget': 'Creator', 'e-pricing': 'Pricing' }
+const TOPIC: Record<string, string> = { 'e-injury': 'Safety', 'e-press': 'Press', 'e-legal': 'Legal', 'e-creator': 'Creator', 'e-refund': 'Refund', 'e-pricing': 'Pricing' }
 const labelWords = (label: string) => {
   const w = label.toLowerCase().match(/[a-zà-ÿ]{5,}/g) ?? []
   return w.length ? new RegExp(w.map(x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'i') : /$^/
@@ -725,7 +724,7 @@ function reduceSaved(s: State, a: SavedAction): State {
 
 /* ---------- Response time ---------- */
 
-export const TARGETS: Record<ConvType, number> = { dm: 60, comment: 240, mention: 240, ad: 240, review: 1440 }
+export const TARGETS: Record<ConvType, number> = { dm: 60, comment: 240, mention: 240, review: 1440 }
 
 /** Waiting on the team: Sam, Claire or a draft to send. */
 export const waitingOn = (c: Conversation) => NEEDS_YOU.includes(c.status) || c.status === 'claire'

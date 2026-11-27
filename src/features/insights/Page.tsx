@@ -13,7 +13,6 @@ import {
   type Cited, type Kpi, type NetFilter, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
-import { InlineConfirm } from '../../ui/Feedback'
 import { DecisionRow } from '../../ui/Decisions'
 import { actionOf } from '../../app/core'
 import { nextRun } from './reports'
@@ -22,7 +21,7 @@ import '../listening/list.css'
 import { MoreInfo } from '../../ui/More'
 import { HBars, Heatmap, LineChart, Spark } from '../../ui/charts'
 import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
-import { anomalyList, boostBudget } from './slice'
+import { anomalyList } from './slice'
 import { insightsNeeds } from './needs'
 import type { Anomaly } from '../../data/insights'
 import type { Handoff } from '../../app/types'
@@ -463,24 +462,16 @@ function AnomalyWhy({ a, now }: { a: Anomaly; now: number }) {
   )
 }
 
-/** An open anomaly: Iris's first action on the row, the others in the menu, a paid boost behind an inline confirmation. */
+/** An open anomaly: Iris's first action on the row, the others in the menu. */
 function AnomalyRow({ a, now, check }: { a: Anomaly; now: number; check: ReactNode }) {
   const { s, d } = useStore()
   const nav = useNavigate()
-  const [confirm, setConfirm] = useState<string | null>(null)
-  const budget = boostBudget(s)
-  const act = (x: string) => (/€/.test(x) ? setConfirm(x) : d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x }))
+  const act = (x: string) => d({ type: 'insights/anomaly', id: a.id, title: a.title, action: x })
   const desk = a.handoff && s.handoffs.some(h => h.id === a.handoff)
   return (
     <DecisionRow lead={check} title={<><Net n={a.network} size={14} /> {a.title}</>}
       line={<><span className="sl-gist">{gist(a.cause)}</span><span>{a.confidence}% confident</span>
         <MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></>}
-      // Paid spend never goes out on one click.
-      detail={confirm && (
-        <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirm(null)} onConfirm={() => { d({ type: 'insights/anomaly', id: a.id, title: a.title, action: confirm }); setConfirm(null) }}>
-          {confirm}? This is paid ad spend, billed to Fernway’s ad account. {budget.cap !== undefined && <>€{budget.left.toLocaleString('en-GB')} of the €{budget.cap.toLocaleString('en-GB')} monthly cap is left.</>}
-        </InlineConfirm>
-      )}
       acts={<>
         {a.actions[0] && <Btn size="sm" onClick={() => act(a.actions[0])}>{a.actions[0]}</Btn>}
         <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${a.title}`}><ChevronDown size={14} /></Btn>} items={[

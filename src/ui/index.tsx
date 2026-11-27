@@ -54,7 +54,7 @@ export function TopicIcon({ agent, kind, topic, size = 30 }: { agent: AgentId | 
   const I = /promotion|autonomy/.test(t) ? ShieldCheck : /rule|playbook/.test(t) ? BookOpen : /news/.test(t) ? TrendingUp
     : /complaint|refund|reply|question|intent|order|status/.test(t) ? MessageCircle : /review/.test(t) ? Star
     : /press|safety|creator/.test(t) ? Megaphone : /plan|cadence|slot|pillar/.test(t) ? CalendarDays
-    : /trend/.test(t) ? Flame : /competitor/.test(t) ? Radar : /anomaly|spike|boost|report/.test(t) ? ChartLine
+    : /trend/.test(t) ? Flame : /competitor/.test(t) ? Radar : /anomaly|spike|report/.test(t) ? ChartLine
     : /campaign/.test(t) ? Target : /visual|post|recycle|counter|hook|draft/.test(t) ? ImageIcon
     : /failed/.test(t) ? TriangleAlert : /info|missing/.test(t) ? CircleHelp : Sparkles
   return (

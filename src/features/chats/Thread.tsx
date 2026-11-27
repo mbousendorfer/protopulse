@@ -6,7 +6,6 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { AGENTS, agentName } from '../../data/agents'
 import { Btn, Mark, Net, Thinking, TopicIcon } from '../../ui'
-import { InlineConfirm } from '../../ui/Feedback'
 import { Spark, Bars } from '../../ui/charts'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import type { Card, Chat, ChatMsg, ChatsAction } from './slice'
@@ -107,7 +106,6 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
   const { d } = useStore()
   const nav = useNavigate()
   const [edit, setEdit] = useState<string | null>(null)
-  const [confirmBoost, setConfirmBoost] = useState(false)
   const act = (action: ActKind, text?: string) => d({ type: 'chats/act', id: chat.id, msg: m.id, action, text })
 
   switch (card.type) {
@@ -179,17 +177,6 @@ function CardView({ chat, m, card, agent }: { chat: Chat; m: ChatMsg; card: Card
           </li>
         ))}
       </ul>
-    )
-    case 'boost': return (
-      <div className="ccard">
-        <p className="ctext">Boost “{card.post}…” with <b>€{card.amount}</b> for 3 days</p>
-        {card.status === 'boosted' ? <span className="pill ok"><Check size={12} />Boost set up</span> : card.status === 'declined' ? <span className="pill">No boost</span> : (
-          confirmBoost ? (
-          // Paid spend never goes out on one click.
-          <InlineConfirm confirm="Confirm boost" onCancel={() => setConfirmBoost(false)} onConfirm={() => { act('boost'); setConfirmBoost(false) }}>€{card.amount} of paid ad spend over 3 days, billed to Fernway’s ad account.</InlineConfirm>
-        ) : <div className="row"><Btn size="sm" variant="primary" onClick={() => setConfirmBoost(true)}>Boost €{card.amount}</Btn><Btn size="sm" variant="ghost" onClick={() => act('decline')}>Not this one</Btn></div>
-        )}
-      </div>
     )
     case 'done': return <span className="pill ok"><Check size={12} />{card.text}</span>
   }

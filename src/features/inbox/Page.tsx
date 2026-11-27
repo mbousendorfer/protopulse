@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, ListFilter, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Megaphone, Meh, MessageSquare,
+  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, ListFilter, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Meh, MessageSquare,
   Ban, Heart, ListChecks, MessageSquareText, OctagonAlert, Trash2, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
@@ -59,9 +59,9 @@ const STATUS: Record<ConvStatus, { label: string; tone?: 'alert' | 'caution' | '
   auto: { label: 'Auto-replied', tone: 'ok' }, draft: { label: 'Draft ready', tone: 'caution' }, escalated: { label: 'Escalated', tone: 'alert' },
   hidden: { label: 'Hidden' }, new: { label: 'New' }, you: { label: 'You replied' }, claire: { label: 'Waiting on Claire', tone: 'signal' }, takeover: { label: 'You took over' },
 }
-const TYPE_LABEL: Record<ConvType, string> = { comment: 'Comment', dm: 'Message', mention: 'Mention', review: 'Review', ad: 'Ad comment' }
+const TYPE_LABEL: Record<ConvType, string> = { comment: 'Comment', dm: 'Message', mention: 'Mention', review: 'Review' }
 const SENT: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
-const TYPE_ICON: Record<ConvType, typeof Mail> = { comment: MessageSquare, dm: Mail, mention: AtSign, review: Star, ad: Megaphone }
+const TYPE_ICON: Record<ConvType, typeof Mail> = { comment: MessageSquare, dm: Mail, mention: AtSign, review: Star }
 const SENT_ICON: Record<Sentiment, typeof Smile> = { positive: Smile, neutral: Meh, negative: Frown }
 
 /** What it is: a public comment, a private message, a review… */

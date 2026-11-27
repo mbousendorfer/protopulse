@@ -19,7 +19,7 @@ export const initialStrategy = (): StrategyState => ({
 })
 
 export type StrategyAction =
-  | { type: 'strategy/create'; id: string; brief: string; budget?: number; input?: Omit<BriefInput, 'text'> }
+  | { type: 'strategy/create'; id: string; brief: string; input?: Omit<BriefInput, 'text'> }
   | { type: 'strategy/approve'; id: string }
   | { type: 'strategy/changes'; id: string; feedback: string }
   | { type: 'strategy/discard'; id: string }
@@ -118,7 +118,7 @@ function addPlan(s: State, c: Campaign, opts: { brief: string; source?: string; 
     agent: 'sage', kind: suggest ? 'news' : 'approval', urgency: 'week', topic: 'Campaign plan', action: 'sage-plan', chain: opts.from ? [opts.from, 'sage'] : undefined, ref: c.id,
     title: `Campaign plan ready: ${c.name}`, context: `${c.posts.length} posts in 3 phases, goal ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}. Brief: “${opts.brief}”`,
     why: suggest ? 'Campaign plans are set to Suggest: you launch them from Strategy.' : launchBlock(next, c) ?? 'Campaign plans are set to Draft.', confidence: 72, link: `/strategy/campaigns/${c.id}`,
-    preview: { type: 'plan', title: c.name, lines: [`Goal: ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, `${c.posts.length} posts · boost budget €${c.budget}`, `Starts ${dayLabel(c.start, now(s))}`] },
+    preview: { type: 'plan', title: c.name, lines: [`Goal: ${c.goal.target.toLocaleString('en-GB')} ${c.goal.label}`, `${c.posts.length} posts`, `Starts ${dayLabel(c.start, now(s))}`] },
     ...(suggest ? { cta: { label: 'Review the plan', to: `/strategy/campaigns/${c.id}` } } : {}),
   })
 }
@@ -280,7 +280,7 @@ function sentPosts(s: State, c: Campaign): { network: Network }[] {
   return [...c.posts.filter(p => p.published && !ids.has(p.postId ?? p.id)), ...atlas]
 }
 
-/** Sage's recap, written from the state: the goal, where it worked, what you changed, what it cost; and the lesson as a proposal. */
+/** Sage's recap, written from the state: the goal, where it worked, what you changed; and the lesson as a proposal. */
 export function recapOf(s: State, c: Campaign): { recap: string[]; lesson?: Proposal } {
   const pct = Math.round((c.goal.current / c.goal.target) * 100)
   const sent = sentPosts(s, c)
@@ -288,13 +288,10 @@ export function recapOf(s: State, c: Campaign): { recap: string[]; lesson?: Prop
   const nets = [...new Set(sent.map(p => p.network))].sort((a, b) => by(b) - by(a))
   const applied = c.adjustments.filter(a => a.status === 'accepted')
   const movedTo = applied.flatMap(a => a.moves ?? []).map(m => m.network).filter((n): n is Network => !!n).at(-1)
-  const per = c.goal.current ? c.budget / c.goal.current : 0
-  const one = unit(c).replace(/s$/, '').replace(/^revenue from social$/, '€ of revenue')
   const recap = [
     `${fmtN(c, c.goal.current)} ${unit(c)}, ${pct}% of the ${fmtN(c, c.goal.target)} goal.`,
     nets[0] ? `${sent.length} post${sent.length === 1 ? '' : 's'} went out; ${NETWORK_LABEL[nets[0]]} carried the most (${by(nets[0])}).` : 'No campaign post went out.',
     applied.length ? `You applied ${applied.length} adjustment${applied.length > 1 ? 's' : ''}: ${applied.map(a => a.text.split('. ').slice(-1)[0].replace(/\.$/, '')).join('; ')}.` : 'No adjustment during the campaign.',
-    per ? `€${c.budget.toLocaleString('en-GB')} of boosts, €${per.toFixed(2)} per ${one}.` : `€${c.budget.toLocaleString('en-GB')} of boost budget.`,
   ]
   const net = movedTo ?? nets[0]
   const weekly = net ? targetsOf(s).cadence[net] ?? 0 : 7
@@ -335,7 +332,7 @@ export function reduceStrategy(s: State, a: StrategyAction): State {
 function reduceStrategyRaw(s: State, a: StrategyAction): State {
   switch (a.type) {
     case 'strategy/create':
-      return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { budget: a.budget, cadence: targetsOf(s).cadence }), { brief: a.brief })
+      return addPlan(s, generatePlan(a.id, { ...a.input, text: a.brief }, now(s), { cadence: targetsOf(s).cadence }), { brief: a.brief })
     case 'strategy/approve':
       return approveCampaign(s, a.id)
     case 'strategy/changes': {

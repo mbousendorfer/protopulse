@@ -60,11 +60,11 @@ describe('core reducer', () => {
   })
 
   it('Claire answers when due', () => {
-    let s = reducer(s0(), { type: 'core/askClaire', id: 'h-boost' })
-    const h = s.handoffs.find(x => x.id === 'h-boost')!
+    let s = reducer(s0(), { type: 'core/askClaire', id: 'h-report' })
+    const h = s.handoffs.find(x => x.id === 'h-report')!
     expect(h.lane).toBe('claire')
     s = reducer({ ...s, clock: { base: h.claire!.dueAt + 1000, realAt: Date.now() } }, { type: 'core/heartbeat' })
-    const after = s.handoffs.find(x => x.id === 'h-boost')
+    const after = s.handoffs.find(x => x.id === 'h-report')
     expect(after?.claire?.reply ?? 'resolved').toBeTruthy()
     expect(after?.lane).not.toBe('claire')
   })
@@ -163,8 +163,8 @@ describe('depth pass', () => {
     expect(s.handoffs.filter(h => ['h-strap', 'h-review'].includes(h.id)).every(h => h.lane === 'snoozed')).toBe(true)
     s = reducer(s, { type: 'core/undo', id: s.log[0].id })
     expect(s.handoffs.filter(h => ['h-strap', 'h-review'].includes(h.id)).every(h => !h.lane)).toBe(true)
-    s = reducer(s, { type: 'core/bulk', ids: ['h-boost', 'h-creator'], claire: true, summary: 'Sent 2 to Claire', agent: 'iris' })
-    expect(s.handoffs.filter(h => ['h-boost', 'h-creator'].includes(h.id)).every(h => h.lane === 'claire')).toBe(true)
+    s = reducer(s, { type: 'core/bulk', ids: ['h-report', 'h-tiktok'], claire: true, summary: 'Sent 2 to Claire', agent: 'iris' })
+    expect(s.handoffs.filter(h => ['h-report', 'h-tiktok'].includes(h.id)).every(h => h.lane === 'claire')).toBe(true)
   })
 
   it('escalation rules can be added and removed, and guardrails too', () => {

@@ -29,7 +29,6 @@ export type Campaign = {
   posts: CPost[]
   tasks: CTask[]
   risks: string[]
-  budget: number
   planned: number[]
   actual: number[]
   adjustments: Adjustment[]
@@ -86,7 +85,6 @@ export const CAMPAIGNS: Campaign[] = [
       { id: 't6', label: 'Announcement and team picks', agent: 'atlas', status: 'done' },
     ],
     risks: ['Rain forecast for Thursday in the Alps: keep indoor “plan your trail” prompts ready', 'X brings few sign-ups: keep it to one post a day'],
-    budget: 400,
     planned: [0, 45, 120, 165, 205, 240, 270, 290, 300],
     actual: [0, 61, 154],
     adjustments: [
@@ -122,12 +120,11 @@ export const CAMPAIGNS: Campaign[] = [
       { id: 'r4', label: 'Campaign recap', agent: 'iris', status: 'done' },
     ],
     risks: [],
-    budget: 500,
     planned: [0, 120, 260, 400, 530, 650, 740, 800],
     actual: [0, 190, 410, 640, 820, 960, 1090, 1180],
     adjustments: [{ id: 'adj-rf', text: 'X brought 11 requests: drop it from repair campaigns.', status: 'accepted' }],
     recap: [
-      'Repair requests reached 1,180, 148% of the goal, for €500 of boosts (€0.42 per request).',
+      'Repair requests reached 1,180, 148% of the goal.',
       'Before/after reels on Instagram drove 46% of requests. The LinkedIn post by the workshop lead got 5.8% engagement.',
       'X brought 11 requests. Sage dropped X from repair campaigns.',
     ],
@@ -143,7 +140,7 @@ export const CAMPAIGNS: Campaign[] = [
     audience: 'Followers and their partners and parents, people who saved Fernway posts in the last 6 months',
     phases: [
       { name: 'Teasing', start: T(0, 0, 13), end: T(23, 59, 14), summary: 'Gift guide preview, “what our team gives”' },
-      { name: 'Launch', start: T(0, 0, 15), end: T(23, 59, 23), summary: 'Guide by budget, gift wrapping, last order date' },
+      { name: 'Launch', start: T(0, 0, 15), end: T(23, 59, 23), summary: 'Guide by price, gift wrapping, last order date' },
       { name: 'Follow-up', start: T(0, 0, 24), end: T(23, 59, 26), summary: 'Gift cards for late shoppers' },
     ],
     posts: [
@@ -162,7 +159,6 @@ export const CAMPAIGNS: Campaign[] = [
       { id: 'g4', label: 'Daily revenue vs trajectory', agent: 'iris', status: 'todo' },
     ],
     risks: ['Peakline’s discounts make the “no discount” message harder', 'Carrier delays after 17 December'],
-    budget: 900,
     planned: [0, 3, 8, 14, 20, 27, 33, 38, 40],
     actual: [],
     adjustments: [],
@@ -289,7 +285,7 @@ export type GoalUnit = 'pre-orders' | 'orders' | 'sign-ups' | 'requests' | 'new 
 export const GOAL_UNITS: GoalUnit[] = ['pre-orders', 'orders', 'sign-ups', 'requests', 'new followers', 'revenue from social (€)']
 
 /** A brief as Sage reads it: the sentence, plus whatever the optional fields or Sage's questions settled. */
-export type BriefInput = { text: string; product?: string; launch?: number; goal?: { target: number; unit: GoalUnit }; budget?: number; audience?: string; networks?: Network[] }
+export type BriefInput = { text: string; product?: string; launch?: number; goal?: { target: number; unit: GoalUnit }; audience?: string; networks?: Network[] }
 export type BriefGap = 'goal' | 'launch'
 
 /** The number that says it worked, if the text gives one: “300 pre-orders”, “2k orders”, “€40,000”. */
@@ -371,7 +367,7 @@ function titleOf(k: Kind, p: Product, season: (typeof SEASONS)[number], launch: 
     case 'use': return p.use
     case 'faq': return `${p.name}: everything you asked`
     case 'guide': return season.gift ? `Gift guide: ${p.name} and what goes with it` : `${p.name}: which one is yours`
-    case 'guide2': return season.gift ? 'Gifts under €50, €100, €150' : 'Bundles for the season, by budget'
+    case 'guide2': return season.gift ? 'Gifts under €50, €100, €150' : 'Bundles for the season, by price'
     case 'lastcall': return season.gift ? 'Last order date for delivery before Christmas' : `Last week to get it before the ${season.place}`
     case 'challenge': return n === 1 ? `Day 1: ${season.prompt}` : `Day ${n}: your ${season.place}, shared with #FernwayChallenge`
     case 'ugc': return `Your first photos from the ${season.place}`
@@ -388,7 +384,7 @@ const usable = (input: BriefInput, cadence?: Partial<Record<Network, number>>): 
   return fromCadence.length ? fromCadence : ['instagram', 'tiktok', 'facebook', 'linkedin', 'youtube']
 }
 
-export function generatePlan(id: string, brief: string | BriefInput, now: number, opts: { budget?: number; source?: string; cadence?: Partial<Record<Network, number>> } = {}): Campaign {
+export function generatePlan(id: string, brief: string | BriefInput, now: number, opts: { source?: string; cadence?: Partial<Record<Network, number>> } = {}): Campaign {
   const { input, missing } = readBrief(typeof brief === 'string' ? brief : brief.text, now, typeof brief === 'string' ? {} : brief)
   const text = input.text
   const prod = PRODUCTS.find(p => p.name === input.product) ?? (input.product ? undefined : PRODUCTS.find(p => p.re.test(text))) ?? BRAND
@@ -422,7 +418,6 @@ export function generatePlan(id: string, brief: string | BriefInput, now: number
     'revenue from social (€)': season.gift ? `Order by ${short(at(tpl.phases[3] - 4))} for delivery before Christmas` : 'Delivered in 48 hours, repaired for life',
     'sign-ups': 'Join the challenge: any trail counts', requests: 'Send us your bag: we fix it for free', 'new followers': 'Follow for the trail stories',
   }
-  const budget = input.budget ?? opts.budget ?? (target >= 1000 ? 1200 : 600)
   const name = `${prod.name} ${/launch/i.test(text) ? 'launch' : season.gift && unit === 'revenue from social (€)' ? 'gift guide' : tpl.name}`
   return {
     id, name, status: 'review', brief: text, createdAt: now, base: now, source: opts.source, assumptions: assumptions.length ? assumptions : undefined,
@@ -431,7 +426,7 @@ export function generatePlan(id: string, brief: string | BriefInput, now: number
     messages: [...prod.msg, cta[unit]], audience: input.audience || prod.audience,
     phases: [
       { name: 'Teasing', start: at(tpl.phases[0]), end: at(tpl.phases[1]) - 60_000, summary: kinds.has('preorder') ? 'Teaser, behind the scenes, pre-orders open' : 'Teaser and the why' },
-      { name: 'Launch', start: at(tpl.phases[1]), end: at(tpl.phases[2]) - 60_000, summary: kinds.has('challenge') ? 'Daily prompts, community reposts' : kinds.has('guide') ? 'Guide by budget, proof, last order date' : 'Reveal, proof, answers to every question' },
+      { name: 'Launch', start: at(tpl.phases[1]), end: at(tpl.phases[2]) - 60_000, summary: kinds.has('challenge') ? 'Daily prompts, community reposts' : kinds.has('guide') ? 'Guide by price, proof, last order date' : 'Reveal, proof, answers to every question' },
       { name: 'Follow-up', start: at(tpl.phases[2]), end: at(tpl.phases[3]) + DAY - 60_000, summary: kinds.has('recap') ? 'Best entries, the recap film' : 'Customer photos, numbers' },
     ],
     posts,
@@ -448,9 +443,7 @@ export function generatePlan(id: string, brief: string | BriefInput, now: number
       ...(unit === 'pre-orders' || unit === 'orders' ? ['Stock: confirm launch-day quantities with ops before the teaser'] : []),
       ...(season.gift ? ['Carrier delays after 17 December: say the last order date early'] : []),
       ...(kinds.has('challenge') && season.months.includes(0) ? ['Snow or rain on challenge days: keep indoor prompts ready'] : []),
-      ...(target > 500 && unit !== 'revenue from social (€)' ? [`${target.toLocaleString('en-GB')} ${unit} is 2× your last launch: the boost budget matters`] : []),
     ],
-    budget,
     planned: Array.from({ length: 9 }, (_, i) => Math.round(target * Math.pow(i / 8, tpl.curve))),
     actual: [],
     adjustments: [],
@@ -462,10 +455,10 @@ const NET_NAME = NETWORK_LABEL
 const NET_RE: [RegExp, Network][] = [[/instagram|insta\b|\big\b/, 'instagram'], [/tiktok|tik tok/, 'tiktok'], [/linkedin/, 'linkedin'], [/facebook|\bfb\b/, 'facebook'], [/youtube|\byt\b/, 'youtube'], [/\bx\b|twitter/, 'x']]
 const netIn = (t: string) => NET_RE.find(([re]) => re.test(t))?.[1]
 
-/** Sage's v2: each request in the note (“more TikTok, cut the budget, start a week later”) is applied, and listed in the diff. */
+/** Sage's v2: each request in the note (“more TikTok, no price, start a week later”) is applied, and listed in the diff. */
 export function revisePlan(c: Campaign, feedback: string): Campaign {
   const diff: Change[] = []
-  let { posts, budget, messages, goal, planned, phases, start, end, risks } = structuredClone(c)
+  let { posts, messages, goal, planned, phases, start, end, risks } = structuredClone(c)
   const clauses = feedback.toLowerCase().split(/,|;|\.\s|\band\b|\balso\b|\bthen\b/).map(x => x.trim()).filter(Boolean)
   for (const f of clauses) {
     const net = netIn(f)
@@ -476,10 +469,6 @@ export function revisePlan(c: Campaign, feedback: string): Campaign {
       phases = phases.map(p => ({ ...p, start: p.start + n * DAY, end: p.end + n * DAY }))
       start += n * DAY; end += n * DAY
       diff.push({ kind: 'changed', text: `Dates moved ${Math.abs(n) % 7 ? `${Math.abs(n)} day${Math.abs(n) > 1 ? 's' : ''}` : `${Math.abs(n) / 7} week${Math.abs(n) > 7 ? 's' : ''}`} ${n > 0 ? 'later' : 'earlier'}: ${short(start)} – ${short(end)}` })
-    } else if (/budget|cheaper|cost|spend|€/.test(f)) {
-      const set = f.match(/€\s*(\d[\d,]*)|(\d[\d,]*)\s*€/)
-      const nb = set ? +(set[1] ?? set[2]).replace(/,/g, '') : Math.round((budget * (/more|raise|increase|double/.test(f) ? 1.3 : 0.7)) / 50) * 50
-      if (nb !== budget) { diff.push({ kind: 'changed', text: `Boost budget €${budget} → €${nb}` }); budget = nb }
     } else if (/goal|target/.test(f) && /\d/.test(f)) {
       const g = readGoal(f)
       if (g && g.target !== goal.target) {
@@ -527,5 +516,5 @@ export function revisePlan(c: Campaign, feedback: string): Campaign {
     risks = [...risks, `Your note: “${feedback.slice(0, 120)}”`]
     diff.push({ kind: 'added', text: `Your note, as a rule Atlas follows when writing: “${feedback.slice(0, 80)}”` })
   }
-  return { ...c, posts, budget, messages, goal, planned, phases, start, end, risks, version: c.version + 1, diff }
+  return { ...c, posts, messages, goal, planned, phases, start, end, risks, version: c.version + 1, diff }
 }

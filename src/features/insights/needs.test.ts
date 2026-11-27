@@ -6,7 +6,7 @@ import { videoNeeds } from '../video/slice'
 
 test('the Insights block counts open anomalies once (their Desk cards are the same decision), and empties as Sam decides', () => {
   let s = initialState()
-  // Three open anomalies; the boost card is the Storm Jacket anomaly, not a fourth thing.
+  // Three open anomalies; a Desk card about an anomaly is the same decision, not a fourth thing.
   expect(insightsNeeds(s)).toMatchObject({ count: 3, cards: [] })
   for (const id of ['an-tiktok', 'an-storm', 'an-clicks']) s = reducer(s, { type: 'insights/anomaly', id, title: id, action: 'Snooze a week' })
   expect(insightsNeeds(s).count).toBe(0)

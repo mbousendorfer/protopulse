@@ -32,7 +32,6 @@ export type ScriptEvent = {
 /** Claire's scripted replies, chosen by topic. */
 export const CLAIRE: Record<string, { verdict: 'approve' | 'changes' | 'decline'; text: string }[]> = {
   Press: [{ verdict: 'approve', text: 'Thanks, I’ll call Marc myself. Send the holding reply now.' }],
-  Boost: [{ verdict: 'changes', text: 'OK for €150, not more. Exclude existing customers from the audience.' }],
   Creator: [{ verdict: 'decline', text: 'Not this quarter. Offer gear and a shoutout instead.' }],
   'Weekly report': [{ verdict: 'approve', text: 'Clear, thanks. Can we talk about the TikTok dip on Thursday?' }],
   'Negative spike': [{ verdict: 'changes', text: 'Statement is fine, but remove the warranty mention until product confirms.' }],

@@ -25,19 +25,9 @@ export function roiTotals(rows: RoiRow[]) {
   return { ...t, perClick: t.clicks ? t.revenue / t.clicks : 0 }
 }
 
-/** Sage's campaigns with their GA4 results and their boost spend (this month's from Iris's boosts): revenue per boost euro. */
+/** Sage's campaigns with their GA4 results. */
 export function roiCampaigns(s: State) {
-  return s.strategy.campaigns.filter(c => GA4_CAMPAIGNS[c.id]).map(c => {
-    const g = GA4_CAMPAIGNS[c.id]
-    const spend = g.spend + s.insights.boosts.filter(b => b.post.toLowerCase().includes(c.name.toLowerCase())).reduce((t, b) => t + b.budget, 0)
-    return { id: c.id, name: c.name, ...g, spend, perEuro: spend ? g.revenue / spend : undefined }
-  }).sort((a, b) => b.revenue - a.revenue)
-}
-
-/** The campaign that returns most per boost euro, as a fact Sage can plan with. */
-export function bestReturn(s: State) {
-  const best = roiCampaigns(s).filter(c => c.perEuro).sort((a, b) => b.perEuro! - a.perEuro!)[0]
-  return best && { ...best, fact: `${best.name} returns €${best.perEuro!.toFixed(1)} per boost euro (€${best.revenue.toLocaleString('en-GB')} for €${best.spend} of boosts)` }
+  return s.strategy.campaigns.filter(c => GA4_CAMPAIGNS[c.id]).map(c => ({ id: c.id, name: c.name, ...GA4_CAMPAIGNS[c.id] })).sort((a, b) => b.revenue - a.revenue)
 }
 
 /** Posts by the revenue their link clicks brought, over the last `days` days. */
