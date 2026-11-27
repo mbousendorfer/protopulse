@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Check, RefreshCw } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { useTheme, type Theme } from '../../app/theme'
 import { ago, MIN } from '../../app/time'
-import { agentName } from '../../data/agents'
 import { Btn, Net, PageHead, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { ShopifyMark } from '../onboarding/parts'
 import { pageOf } from '../onboarding/model'
@@ -34,7 +32,7 @@ const NOTIFS = [
   { id: 'competitor', label: 'Competitor events', on: false },
 ]
 
-type Tab = 'accounts' | 'notifications' | 'appearance' | 'profile' | 'approver'
+type Tab = 'accounts' | 'notifications' | 'profile'
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>('accounts')
@@ -42,15 +40,12 @@ export default function SettingsPage() {
     <div className="page narrow">
       <PageHead title="Settings" />
       <Tabs value={tab} onChange={setTab} items={[
-        { value: 'accounts', label: 'Connected accounts' }, { value: 'notifications', label: 'Notifications' }, { value: 'appearance', label: 'Appearance' },
-        { value: 'profile', label: 'Profile' }, { value: 'approver', label: 'Approver' },
+        { value: 'accounts', label: 'Connected accounts' }, { value: 'notifications', label: 'Notifications' }, { value: 'profile', label: 'Profile' },
       ]} />
       {/* Tabs stay mounted (hidden) so a reconnect, a switch or an unsaved edit survives switching tabs. */}
       <div hidden={tab !== 'accounts'}><Accounts /></div>
       <div hidden={tab !== 'notifications'}><Notifications /></div>
-      <div hidden={tab !== 'appearance'}><Appearance /></div>
-      <div hidden={tab !== 'profile'}><Profile /></div>
-      <div hidden={tab !== 'approver'}><Approver /></div>
+      <div hidden={tab !== 'profile'}><div className="stack lg"><Profile /><Appearance /></div></div>
     </div>
   )
 }
@@ -144,28 +139,5 @@ function Profile() {
       </div>
       <div className="row"><Btn type="submit" variant="primary">Save</Btn>{saved && <span className="faint" role="status"><Check size={14} aria-hidden /> Saved</span>}</div>
     </form>
-  )
-}
-
-/** A read-only summary: escalation is edited in Agents › Escalation. */
-function Approver() {
-  const { s } = useStore()
-  const on = s.playbook.escalate.filter(e => e.on)
-  const claire = on.filter(e => e.to === 'claire')
-  const toYou = on.length - claire.length
-  const off = s.playbook.escalate.length - on.length
-  return (
-    <section className="card">
-      <div className="card-head">
-        <div className="row nowrap"><span className="mark claire">CD</span><div><h2>Claire Dubois</h2><span className="faint t-xs">Head of Brand · approves what you send her</span></div></div>
-        <Link to="/agents/escalation" className="btn sm ghost">Edit in Escalation</Link>
-      </div>
-      <p className="card-body muted pb-0">Topics that go to Claire instead of you.</p>
-      <ul className="rows">
-        {claire.map(e => <li key={e.id} className="set-row"><span>{e.label}</span><span className="faint">Watched by {e.agents.map(agentName).join(' and ')}</span></li>)}
-        {!claire.length && <li className="set-row faint">Nothing goes to Claire yet.</li>}
-      </ul>
-      <p className="card-body faint">{toYou} other topic{toYou === 1 ? '' : 's'} come{toYou === 1 ? 's' : ''} to you{off ? `, ${off} ${off === 1 ? 'is' : 'are'} off` : ''}.</p>
-    </section>
   )
 }

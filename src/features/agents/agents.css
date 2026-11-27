@@ -28,15 +28,9 @@
   .team-cell:nth-child(2) .team-sub, .team-cell:nth-child(3) .team-sub { display: none; }
 }
 
-/* Profile › Overview */
-.ov { display: flex; flex-direction: column; gap: 4px; }
-.ov h2 { font-size: var(--t-md); font-weight: 600; margin-bottom: 4px; }
-.ov-big { font-size: var(--t-lg); font-weight: 600; color: var(--ink); }
-.ov-undos { margin-top: var(--s2); font-size: var(--t-sm); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
-.ov-link { align-self: flex-start; margin-top: var(--s2); font-size: var(--t-sm); }
 .dec-proof { margin-top: var(--s2); padding-left: var(--s4); list-style: disc; font-size: var(--t-sm); color: var(--ink); display: flex; flex-direction: column; gap: 2px; }
+/* Profile */
 .ov-now { margin-top: 2px; font-size: var(--t-sm); color: var(--ink); }
-@media (max-width: 900px) { .ov-cards { grid-template-columns: minmax(0, 1fr); } }
 .h2 { font-size: var(--t-lg); font-weight: 600; margin-bottom: 4px; }
 
 /* Autonomy: one line per action, grouped by risk. The chosen level takes the agent's colour (--tone). */

@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, CalendarX, Check, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, FileText, ImageOff, Lightbulb, Pause, PenLine, Play, Plus, Sparkles, StickyNote, TriangleAlert, Upload, UserRound, X } from 'lucide-react'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ArrowDown, ArrowUp, CalendarX, ChevronDown, ChevronLeft, ChevronRight, CircleAlert, Lightbulb, ListOrdered, Pause, PenLine, Play, Plus, Sparkles, StickyNote, TriangleAlert, Upload, UserRound, X } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { DAY, T, hhmm } from '../../app/time'
@@ -18,39 +18,43 @@ import Queues from './QueuesTab'
 import { isOpen, recommendNetwork } from './ideasModel'
 import { targetsOf, themesOf } from '../strategy/slice'
 import { uid } from '../../app/core'
-import { libraryOf, pickVisual, readImage, visualCardOf, waitingForVisual } from './visuals'
+import { libraryOf, readImage } from './visuals'
 import { NO_LABEL, STATUS_LABEL, activeCount, knownLabels, passes, type CalFilters, type Facet } from './labels'
 import { QUIET_WORDS, isQuiet, notesOn } from './notes'
 import { expiring, search } from './media'
 import { ACCOUNTS, accountById, accountLabel } from './accounts'
 import { CountBadge } from '../../ui/Feedback'
+import { atlasNeeds } from './Needs'
 import { WINDOW_TOPIC } from './window'
 import './publishing.css'
 
-type Tab = 'ideas' | 'calendar' | 'plan' | 'drafts' | 'queues' | 'media'
+type Tab = 'ideas' | 'calendar' | 'media'
 const STATUS: Record<PostStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
   scheduled: { label: 'Scheduled' }, published: { label: 'Published', tone: 'ok' }, draft: { label: 'Draft' }, needs: { label: 'Needs you', tone: 'caution' }, failed: { label: 'Failed', tone: 'alert' }, paused: { label: 'Paused', tone: 'caution' }, unapproved: { label: 'To approve' },
 }
 const MONDAY_THIS_WEEK = T(0, 0, -1)
 const k = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : `${n}`)
 
+/**
+ * Publishing: Ideas (the landing list: Needs you, Ideas, Drafts), Calendar, Media. Next week's plan opens from its
+ * Needs-you row (`/publishing/plan`); the queues are a sheet over the calendar (`/publishing/queues`).
+ */
 export default function PublishingPage() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const loc = useLocation()
   const rest = (useParams()['*'] ?? '').split('/')
-  // /publishing lands on Ideas; the composer (new, post/:id) opens over the calendar.
-  const tab: Tab = !rest[0] ? 'ideas' : rest[0] === 'ideas' || rest[0] === 'plan' || rest[0] === 'drafts' || rest[0] === 'queues' || rest[0] === 'media' ? rest[0] : 'calendar'
+  // /publishing lands on Ideas and the plan reads under it; the composer (new, post/:id) and the queues open over the calendar.
+  const tab: Tab = !rest[0] || rest[0] === 'ideas' || rest[0] === 'plan' ? 'ideas' : rest[0] === 'media' ? 'media' : 'calendar'
   const editId = rest[0] === 'post' ? rest[1] : undefined
   const creating = rest[0] === 'new'
   const query = new URLSearchParams(loc.search)
   const editPost = s.publishing.posts.find(p => p.id === editId)
-  const back = `/publishing/${tab}`
-  const planPending = s.publishing.plan.status === 'proposed'
-  const drafts = s.publishing.posts.filter(p => p.status === 'draft').length
-  // The badge means "needs you": ideas ready to review, not every idea.
-  const readyIdeas = s.publishing.ideas.filter(i => isOpen(i) && i.status === 'ready').length
-  const failed = s.publishing.posts.filter(p => p.status === 'failed').length
+  const back = rest[0] === 'plan' ? '/publishing/plan' : `/publishing/${tab}`
+  // The landing tab counts what the rail counts: Atlas's cards in Needs you.
+  const needs = atlasNeeds(s.handoffs).length
+  // Drafts was a tab: it is a filter of the landing list now.
+  if (rest[0] === 'drafts') return <Navigate to="/publishing?show=drafts" replace />
 
   return (
     <div className="page pub-page">
@@ -61,20 +65,17 @@ export default function PublishingPage() {
         <Btn variant="primary" onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'ideas' ? '/publishing' : `/publishing/${t}`)} items={[
-        { value: 'ideas', label: <>Ideas{readyIdeas > 0 && <CountBadge n={readyIdeas} needs label={`${readyIdeas} ready to review`} />}</> },
-        { value: 'calendar', label: <>Calendar{failed > 0 && <CountBadge n={failed} needs label={`${failed} failed post${failed > 1 ? 's' : ''}`} />}</> },
-        { value: 'plan', label: <>Plan review{planPending && <span className="dot pub-tab-dot" aria-label="waiting for you" />}</> },
-        { value: 'drafts', label: 'Drafts', count: drafts },
-        { value: 'queues', label: 'Queues' },
-        { value: 'media', label: 'Media', count: libraryOf(s).length },
+        { value: 'ideas', label: <>Ideas{needs > 0 && <CountBadge n={needs} needs label={`${needs} need you`} />}</> },
+        { value: 'calendar', label: 'Calendar' },
+        { value: 'media', label: 'Media' },
       ]} />
-      {tab === 'ideas' && <Ideas id={rest[1]} />}
+      {tab === 'ideas' && (rest[0] === 'plan'
+        ? <div className="stack"><Link to="/publishing" className="link-btn row tight self-start"><ChevronLeft size={14} />Back to Ideas</Link><PlanReview /></div>
+        : <Ideas id={rest[1]} />)}
       {tab === 'calendar' && <Calendar />}
-      {tab === 'plan' && <PlanReview />}
-      {tab === 'drafts' && <Drafts />}
-      {tab === 'queues' && <Queues />}
       {tab === 'media' && <MediaLibrary />}
       <PostPreview />
+      <Sheet open={rest[0] === 'queues'} onOpenChange={o => !o && nav('/publishing/calendar')} title="Queues"><Queues /></Sheet>
 
       {(creating || editId) && (
         editId && !editPost ? (
@@ -89,15 +90,7 @@ export default function PublishingPage() {
 }
 
 /* ---------- Calendar ---------- */
-/** What waits for Sam in the calendar. Only these statuses are named on a card; the rest is the post itself. */
-type Focus = 'needs' | 'failed' | 'paused' | 'draft' | 'idea'
-const ATTN: { key: Focus; one: string; many: string; Icon: typeof Pause; tone?: 'alert' | 'caution' }[] = [
-  { key: 'needs', one: 'needs you', many: 'need you', Icon: CircleAlert, tone: 'caution' },
-  { key: 'failed', one: 'failed', many: 'failed', Icon: TriangleAlert, tone: 'alert' },
-  { key: 'paused', one: 'paused', many: 'paused', Icon: Pause, tone: 'caution' },
-  { key: 'draft', one: 'draft to schedule', many: 'drafts to schedule', Icon: PenLine },
-  { key: 'idea', one: 'idea from Atlas', many: 'ideas from Atlas', Icon: Lightbulb },
-]
+/** Only these statuses are named on a card (they ask something of Sam); the rest is the post itself. */
 const STATUS_ICON: Partial<Record<PostStatus, typeof Pause>> = { needs: CircleAlert, failed: TriangleAlert, paused: Pause, draft: PenLine, unapproved: UserRound }
 const NAMED: PostStatus[] = ['needs', 'failed', 'paused', 'draft', 'unapproved']
 const dayLong = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -111,8 +104,8 @@ function Calendar() {
   const [anchor, setAnchor] = useState(MONDAY_THIS_WEEK)
   const [network, setNetwork] = useState<Network | 'all'>('all')
   const [filters, setFilters] = useState<CalFilters>({})
-  const [focus, setFocus] = useState<Focus | null>(null)
   const [over, setOver] = useState<number | null>(null)
+  const nav = useNavigate()
   const base = s.publishing.posts.filter(p => (network === 'all' || p.network === network) && passes(p, filters)).sort((a, b) => a.at - b.at)
   const todayStart = new Date(new Date(now).setHours(0, 0, 0, 0)).getTime()
 
@@ -129,25 +122,12 @@ function Calendar() {
   const recommend = (day: number): Network | null => (view !== 'week' || isQuiet(s.publishing.notes ?? [], day) ? null : recommendNetwork(s.publishing.posts, day, now, targetsOf(s)))
   const gapIdea = (day: number) => s.publishing.ideas.find(i => isOpen(i) && i.origin === 'gap' && i.key.startsWith(`gap-${Math.round((day - T(0, 0, 0)) / DAY)}-`))
 
-  // The summary counts what's in the period shown; each count narrows the calendar to it.
-  const inRange = base.filter(p => p.at >= start && p.at < start + days * DAY)
-  const count: Record<Focus, number> = {
-    needs: inRange.filter(p => p.status === 'needs').length, failed: inRange.filter(p => p.status === 'failed').length,
-    paused: inRange.filter(p => p.status === 'paused').length, draft: inRange.filter(p => p.status === 'draft').length,
-    idea: view === 'week' ? cells.filter(gapIdea).length : 0,
-  }
-  const f = focus && count[focus] ? focus : null
-  const posts = f === 'idea' ? [] : f ? base.filter(p => p.status === f) : base
-  const inDay = (t: number) => posts.filter(p => p.at >= t && p.at < t + DAY)
-  // One alert pausing several posts: its reason is said once, here, not on every card.
-  const paused = inRange.filter(p => p.status === 'paused')
-  const pauseNotes = [...new Set(paused.map(p => p.note ?? ''))]
-  const sharedPause = paused.length > 1 && pauseNotes.length === 1 && pauseNotes[0] ? pauseNotes[0].replace(/^Paused:\s*/, '') : undefined
-
-  const visible = posts.filter(p => p.at >= start && p.at < start + days * DAY)
+  // What needs Sam is on the landing (Needs you); here, a status filter is in Filters › Status.
+  const f = activeCount(filters) > 0
+  const inDay = (t: number) => base.filter(p => p.at >= t && p.at < t + DAY)
+  const visible = base.filter(p => p.at >= start && p.at < start + days * DAY)
   const ids = useMemo(() => visible.map(p => p.id), [visible.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, `${view}-${start}-${network}-${JSON.stringify(filters)}-${f}`)
-  const period = view === 'month' ? 'this month' : 'this week'
+  const sel = useSelection(ids, `${view}-${start}-${network}-${JSON.stringify(filters)}`)
 
   const drop = (e: DragEvent, day: number) => {
     e.preventDefault(); setOver(null)
@@ -176,31 +156,9 @@ function Calendar() {
             items={[{ label: 'All networks', onSelect: () => setNetwork('all') }, ...PUBLISH_NETWORKS.map(n => ({ label: NETWORK_LABEL[n], icon: <Net n={n} />, onSelect: () => setNetwork(n) }))]} />
           <CalendarFilters value={filters} onChange={setFilters} />
           <Seg name="calview" label="Calendar view" size="sm" value={view} onChange={setView} options={[{ value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'list', label: 'List' }]} />
+          <Btn size="sm" variant="ghost" onClick={() => nav('/publishing/queues')}><ListOrdered size={14} />Queues</Btn>
         </div>
       </div>
-
-      {/* What needs Sam in this period, named; each count narrows the calendar to it. */}
-      <div className="cal-attn">
-        {ATTN.some(a => count[a.key]) ? (
-          <div className="filters" role="group" aria-label={`What needs you ${period}`}>
-            {ATTN.filter(a => count[a.key]).map(a => (
-              <button key={a.key} className={`filter cal-attn-btn ${a.tone ?? ''}`} aria-pressed={f === a.key} onClick={() => setFocus(f === a.key ? null : a.key)}>
-                <a.Icon size={14} aria-hidden /><span className="num">{count[a.key]}</span>{count[a.key] > 1 ? a.many : a.one}
-              </button>
-            ))}
-          </div>
-        ) : <p className="cal-attn-none"><Check size={14} aria-hidden />Nothing needs you {period}. Atlas publishes the rest on its own.</p>}
-        {f && <button className="link-btn t-sm" onClick={() => setFocus(null)}>Show every post</button>}
-        <span className="spacer" />
-        {view === 'week' && visible.length > 0 && <span className="row tight pub-selall"><SelectAll sel={sel} label={`Select the ${visible.length} posts shown`} />Select all {visible.length}</span>}
-      </div>
-      {sharedPause && (!f || f === 'paused') && (
-        <div className="cal-shared" role="note">
-          <Pause size={14} aria-hidden />
-          <p><b>{paused.length} posts paused by Atlas</b> during {sharedPause.replace(/\.$/, '')}. They go out on their own once it’s over.</p>
-          <Btn size="xs" onClick={() => d({ type: 'publishing/resume', ids: paused.map(p => p.id) })}><Play size={12} />Resume all {paused.length}</Btn>
-        </div>
-      )}
 
       <PostsBulk sel={sel} posts={visible} />
       {view === 'week' ? (
@@ -208,7 +166,7 @@ function Calendar() {
           {cells.map(day => {
             const items = inDay(day)
             const rec = !f ? recommend(day) : null
-            const idea = !f || f === 'idea' ? gapIdea(day) : undefined
+            const idea = !f ? gapIdea(day) : undefined
             const past = day + DAY <= now
             const today = day === todayStart
             const next = today ? items.findIndex(p => p.at > now) : -1
@@ -223,7 +181,7 @@ function Calendar() {
                 {items.map((p, i) => (
                   <Fragment key={p.id}>
                     {i === next && nowLine}
-                    <PostChip p={p} shared={sharedPause} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={sh => sel.toggle(p.id, sh)} />
+                    <PostChip p={p} onOpen={() => open(p.id)} checked={sel.has(p.id)} anySelected={sel.count > 0} onToggle={sh => sel.toggle(p.id, sh)} />
                   </Fragment>
                 ))}
                 {today && items.length > 0 && next === -1 && nowLine}
@@ -273,7 +231,7 @@ function Calendar() {
             )
           })}
         </div>
-      ) : <PostTable posts={visible} sel={sel} onOpen={open} now={now} shared={sharedPause} filtered={!!f} />}
+      ) : <PostTable posts={visible} sel={sel} onOpen={open} now={now} filtered={f} />}
     </div>
   )
 }
@@ -357,27 +315,25 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
     </Pop>
   )
 }
-
 /** A reason cut to its first clause: « X refused it: the short link… » → « X refused it ». */
 /** The head of a post's note, before its first colon or full stop (« X refused it »). */
 const noteHead = (t: string) => t.split(/[:.](?:\s|$)/)[0]
 
 /** The one line under a post's words: why it needs a look, how it did, or what Atlas changed. Never all three. */
-function postLine(p: Post, shared?: string): { text: string; kind: 'reason' | 'stats' | 'atlas' } | undefined {
-  // A pause the calendar already explains once isn't repeated on the card.
+function postLine(p: Post): { text: string; kind: 'reason' | 'stats' | 'atlas' } | undefined {
   // The gist only (« X refused it », « Missing visual »): the whole reason is in the post's panel, one click away.
-  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: noteHead(p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note), kind: 'reason' }
+  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || p.status === 'paused')) return { text: noteHead(p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note), kind: 'reason' }
   if (p.stats) return { text: `${k(p.stats.reach)} reach · ${p.stats.er}% engagement`, kind: 'stats' }
   const moved = p.note?.match(/^Moved from (\S+) to \S+ by Atlas/)
   if (moved) return { text: `Moved by Atlas from ${moved[1]}`, kind: 'atlas' }
 }
 
 /** A post in the week: when and where, the words, then one line only if there's something to know. */
-function PostChip({ p, shared, onOpen, checked, anySelected, onToggle }: { p: Post; shared?: string; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
+function PostChip({ p, onOpen, checked, anySelected, onToggle }: { p: Post; onOpen: () => void; checked: boolean; anySelected: boolean; onToggle: (shift: boolean) => void }) {
   const { s } = useStore()
   const going = s.handoffs.find(h => h.topic === WINDOW_TOPIC && h.ref === p.id)
   const draggable = p.status !== 'published'
-  const line = postLine(p, shared)
+  const line = postLine(p)
   const named = NAMED.includes(p.status)
   return (
     <article className={`cal-post ${p.status} ${checked ? 'pub-picked' : ''}`} draggable={draggable} title={draggable ? 'Drag it to another day to move it' : undefined}
@@ -399,7 +355,7 @@ function PostChip({ p, shared, onOpen, checked, anySelected, onToggle }: { p: Po
 
 /* ---------- List ---------- */
 type SortKey = 'at' | 'network' | 'status' | 'pillar' | 'author'
-function PostTable({ posts, sel, onOpen, now, shared, filtered }: { posts: Post[]; sel: ReturnType<typeof useSelection>; onOpen: (id: string) => void; now: number; shared?: string; filtered: boolean }) {
+function PostTable({ posts, sel, onOpen, now, filtered }: { posts: Post[]; sel: ReturnType<typeof useSelection>; onOpen: (id: string) => void; now: number; filtered: boolean }) {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'at', dir: 1 })
   const rows = [...posts].sort((a, b) => (a[sort.key] > b[sort.key] ? 1 : a[sort.key] < b[sort.key] ? -1 : 0) * sort.dir)
   // Sorted by time, the list reads like an agenda: one heading per day.
@@ -411,14 +367,14 @@ function PostTable({ posts, sel, onOpen, now, shared, filtered }: { posts: Post[
       <button onClick={() => setSort(x => ({ key, dir: x.key === key ? (-x.dir as 1 | -1) : 1 }))}>{label}{sort.key === key && (sort.dir === 1 ? <ArrowUp size={12} /> : <ArrowDown size={12} />)}</button>
     </th>
   )
-  if (!posts.length) return <Empty title={filtered ? 'Nothing left here this week' : 'No posts this week'} body={filtered ? 'Show every post, or move to another week.' : 'Move to another week, or ask Atlas to fill the recommended slots.'} />
+  if (!posts.length) return <Empty title={filtered ? 'Nothing left here this week' : 'No posts this week'} body={filtered ? 'Clear the filters, or move to another week.' : 'Move to another week, or ask Atlas to fill the recommended slots.'} />
   return (
     <div className="card pub-table-wrap">
       <table className="table pub-table">
         <thead><tr><th className="w-40"><SelectAll sel={sel} label="Select every post in the list" /></th>{head('at', 'When')}{head('network', 'Network', 'pub-col-net')}<th>Post</th>{head('status', 'Status')}{head('pillar', 'Pillar', 'pub-col-pillar')}{head('author', 'Author', 'pub-col-author')}</tr></thead>
         <tbody>
           {rows.map((p, i) => {
-            const line = postLine(p, shared)
+            const line = postLine(p)
             const newDay = byDay && (i === 0 || dayOf(rows[i - 1].at) !== dayOf(p.at))
             return (
               <Fragment key={p.id}>
@@ -445,139 +401,44 @@ function PostTable({ posts, sel, onOpen, now, shared, filtered }: { posts: Post[
 }
 
 
-/* ---------- Drafts ---------- */
-function Drafts() {
-  const { s } = useStore()
-  const nav = useNavigate()
-  const [who, setWho] = useState<'all' | 'atlas' | 'you'>('all')
-  const posts = s.publishing.posts.filter(p => p.status === 'draft' && (who === 'all' || p.author === who)).sort((a, b) => a.at - b.at)
-  const open = useOpenPost()
-  const ids = useMemo(() => posts.map(p => p.id), [posts.map(p => p.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
-  const sel = useSelection(ids, who)
-  // Only posts waiting for an approval: the Desk's other Atlas cards (licences, good news) aren't drafts.
-  const onDesk = s.handoffs.filter(h => h.agent === 'atlas' && h.kind === 'approval' && h.preview?.type === 'post' && (who === 'all' || who === 'atlas'))
-  return (
-    <div className="stack">
-      <Filters label="Author" value={who} onChange={setWho} items={[{ value: 'all', label: 'Everyone' }, { value: 'atlas', label: 'Atlas' }, { value: 'you', label: 'You' }]} />
-      {onDesk.length > 0 && (
-        <section className="card">
-          <div className="card-head"><h2>Waiting for your approval <span className="faint num">{onDesk.length}</span></h2></div>
-          <ul className="rows">{onDesk.map(h => h.preview?.type === 'post' && (
-            <li key={h.id} className="draft-row">
-              <span className="draft-thumb">{h.preview.media ? <Photo name={h.preview.media} /> : <FileText size={16} />}</span>
-              <div className="grow"><div className="row tight t-sm muted"><Net n={h.preview.network} /><span>{h.preview.slot}</span>{h.lane === 'claire' && <Pill tone="signal">With Claire</Pill>}</div><p className="ellipsis">{h.title}</p></div>
-              <Link to={`/?card=${h.id}`} className="btn sm">Review on Desk</Link>
-            </li>
-          ))}</ul>
-        </section>
-      )}
-      {!posts.length ? <Empty icon={<FileText size={18} />} title="No drafts" body="Drafts you save and posts Atlas prepares without a slot show up here." action={<Btn onClick={() => nav('/publishing/new')}><Plus size={14} />New post</Btn>} /> : (
-        <div>
-        <PostsBulk sel={sel} posts={posts} />
-        <section className="card">
-          <div className="card-head"><span className="row tight"><SelectAll sel={sel} label="Select every draft" /><h2>Drafts</h2><span className="faint num">{posts.length}</span></span></div>
-          <ul className="rows">{posts.map(p => (
-            <li key={p.id} className={`draft-row ${sel.has(p.id) ? 'pub-picked' : ''}`}>
-              <SelectBox checked={sel.has(p.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(p.id, shift)} label={`Select: ${p.text}`} />
-              <button className="pub-draft-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(p.id, e.shiftKey) : open(p.id))}>
-                <span className="draft-thumb">{p.media ? <Photo name={p.media} /> : <FileText size={16} />}</span>
-                <span className="grow pub-draft-main">
-                  <span className="row tight t-sm muted"><Net n={p.network} /><span>{new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}, {hhmm(p.at)}</span><span>· {p.pillar}</span><span>· {p.author === 'atlas' ? 'by Atlas' : 'by you'}</span></span>
-                  <span className="ellipsis pub-draft-text">{p.text}</span>
-                  {p.note && <span className="faint t-xs">{p.note}</span>}
-                </span>
-              </button>
-              <Btn size="sm" onClick={() => nav(`/publishing/post/${p.id}`)}>Edit</Btn>
-            </li>
-          ))}</ul>
-        </section>
-        </div>
-      )}
-    </div>
-  )
-}
-
 /* ---------- Media ---------- */
 function MediaLibrary() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const now = useNow(60000)
-  const openPost = useOpenPost()
+  // « Upload it in Media » from a post waiting for a visual: the upload goes to that post.
+  const forPost = new URLSearchParams(useLocation().search).get('for') ?? undefined
   const [tag, setTag] = useState('All')
   const [open, setOpen] = useState<Media | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const [newTag, setNewTag] = useState('')
   const file = useRef<HTMLInputElement>(null)
-  const forPost = useRef<string | undefined>(undefined)
   const library = libraryOf(s)
   const tags = useMemo(() => ['All', ...Array.from(new Set(library.flatMap(m => m.tags)))], [library])
   const list = search(library.filter(m => tag === 'All' || m.tags.includes(tag)), q)
   const ending = expiring(s, now)
   const shownOpen = open && (library.find(m => m.id === open.id) ?? open)
-  const waiting = waitingForVisual(s)
   const endsOf = (m: Media) => { const e = ending.find(x => x.media.id === m.id); return e && new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) }
   const useCount = (m: Media) => m.used + s.publishing.posts.filter(p => p.media === m.name && p.status !== 'published').length
-  const upload = (post?: string) => { forPost.current = post; setError(null); file.current?.click() }
+  const upload = () => { setError(null); file.current?.click() }
   const picked = async (f?: File) => {
     if (!f) return
     try {
       const name = await readImage(f)
       const title = f.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim() || 'Your upload'
-      d({ type: 'publishing/upload', post: forPost.current, media: { id: uid('md'), name, title, tags: ['Upload'], rights: 'Fernway · uploaded by you', used: 0, added: new Date(now).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } })
+      d({ type: 'publishing/upload', post: forPost, media: { id: uid('md'), name, title, tags: ['Upload'], rights: 'Fernway · uploaded by you', used: 0, added: new Date(now).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) } })
     } catch { setError(`“${f.name}” isn’t an image Atlas can read. Try a JPG or a PNG.`) }
   }
 
   return (
     <div className="stack">
       <input ref={file} type="file" accept="image/*" hidden onChange={e => { picked(e.target.files?.[0]); e.target.value = '' }} />
-      {(waiting.length > 0 || ending.length > 0) && (
-        <section className="card media-needs" aria-labelledby="media-needs-h">
-          <div className="card-head"><h2 id="media-needs-h">Atlas needs you on {waiting.length + ending.length === 1 ? 'one visual' : `${waiting.length + ending.length} visuals`}</h2></div>
-          <ul className="rows">
-            {waiting.map(p => {
-              const card = visualCardOf(s, p)
-              const m = card && pickVisual(p, library, now)
-              const when = new Date(p.at).toLocaleDateString('en-GB', { weekday: 'long' })
-              return (
-                <li key={p.id} className="media-missing">
-                  <ImageOff size={16} aria-hidden />
-                  <div className="grow">
-                    {/* The title opens the post: its words were here, and stay one click away. */}
-                    <button className="media-missing-title" onClick={() => openPost(p.id)}>A visual for {when}’s {NETWORK_LABEL[p.network]} post</button>
-                    {/* Atlas's pick is the button's label; the line only speaks when there's no pick. */}
-                    {!m && <p className="muted t-sm">No photo in Media fits, and Atlas never uses stock photos.</p>}
-                  </div>
-                  <span className="media-missing-acts">
-                    {card && m && <Btn size="sm" onClick={() => d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? `Use ${m.title}` } })}>Use “{m.title}”</Btn>}
-                    <Btn size="sm" onClick={() => upload(p.id)}><Upload size={14} />Upload one</Btn>
-                    {card && <Btn size="sm" variant="ghost" onClick={() => d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 2, option: card.options?.[2]?.label ?? 'Move the post to next week' } })}>Move the post</Btn>}
-                  </span>
-                </li>
-              )
-            })}
-            {ending.map(e => {
-              const card = s.handoffs.find(h => h.topic === 'Licence' && h.ref === e.media.name)
-              return (
-                <li key={e.media.id} className="media-missing">
-                  <CalendarX size={16} aria-hidden />
-                  <div className="grow">
-                    {/* The title opens the photo's sheet, where its rights are. The swap is the button's label. */}
-                    <button className="media-missing-title" onClick={() => setOpen(e.media)}>The licence for “{e.media.title}” ends on {new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</button>
-                    <p className="muted t-sm">Used by {e.posts.map(p => `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${NETWORK_LABEL[p.network]}`).join(', ')}.</p>
-                  </div>
-                  {e.swap && <span className="media-missing-acts"><Btn size="sm" onClick={() => (card ? d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? 'Swap' } }) : d({ type: 'publishing/swapMedia', from: e.media.name, to: e.swap!.name }))}>Swap for “{e.swap.title}”</Btn></span>}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
       <div className="media-bar">
         <input className="input media-search" type="search" aria-label="Search media" placeholder="Search media" value={q} onChange={e => setQ(e.target.value)} />
         <div className="grow"><Filters label="Filter media" value={tag} onChange={setTag} items={tags.map(t => ({ value: t, label: t }))} /></div>
         {error && <span className="cmp-error" role="alert">{error}</span>}
-        <Btn onClick={() => upload()}><Upload size={14} />Upload</Btn>
+        <Btn variant={forPost ? 'primary' : undefined} onClick={upload}><Upload size={14} />{forPost ? 'Upload the post’s visual' : 'Upload'}</Btn>
       </div>
       <ul className="media-grid">
         {list.map(m => (

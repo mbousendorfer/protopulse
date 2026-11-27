@@ -30,6 +30,11 @@ function PlaybookRedirect() {
   return <Navigate to={playbookTarget(useLocation().search)} replace />
 }
 
+/** Activity is a tab of Agents now: old links keep their filters. */
+function ActivityRedirect() {
+  return <Navigate to={`/agents/activity${useLocation().search}`} replace />
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StoreProvider>
@@ -51,9 +56,10 @@ createRoot(document.getElementById('root')!).render(
                 <Route index element={<Team />} />
                 <Route path="rules" element={<SharedRules />} />
                 <Route path="escalation" element={<Escalation />} />
+                <Route path="activity" element={<Activity />} />
               </Route>
               <Route path="agents/:id" element={<AgentProfile />} />
-              <Route path="activity" element={<Activity />} />
+              <Route path="activity" element={<ActivityRedirect />} />
               <Route path="playbook" element={<PlaybookRedirect />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="onboarding/*" element={<OnboardingPage />} />
