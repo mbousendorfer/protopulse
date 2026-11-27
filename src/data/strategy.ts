@@ -140,7 +140,7 @@ export const CAMPAIGNS: Campaign[] = [
     audience: 'Followers and their partners and parents, people who saved Fernway posts in the last 6 months',
     phases: [
       { name: 'Teasing', start: T(0, 0, 13), end: T(23, 59, 14), summary: 'Gift guide preview, “what our team gives”' },
-      { name: 'Launch', start: T(0, 0, 15), end: T(23, 59, 23), summary: 'Guide by budget, gift wrapping, last order date' },
+      { name: 'Launch', start: T(0, 0, 15), end: T(23, 59, 23), summary: 'Guide by price, gift wrapping, last order date' },
       { name: 'Follow-up', start: T(0, 0, 24), end: T(23, 59, 26), summary: 'Gift cards for late shoppers' },
     ],
     posts: [
@@ -367,7 +367,7 @@ function titleOf(k: Kind, p: Product, season: (typeof SEASONS)[number], launch: 
     case 'use': return p.use
     case 'faq': return `${p.name}: everything you asked`
     case 'guide': return season.gift ? `Gift guide: ${p.name} and what goes with it` : `${p.name}: which one is yours`
-    case 'guide2': return season.gift ? 'Gifts under €50, €100, €150' : 'Bundles for the season, by budget'
+    case 'guide2': return season.gift ? 'Gifts under €50, €100, €150' : 'Bundles for the season, by price'
     case 'lastcall': return season.gift ? 'Last order date for delivery before Christmas' : `Last week to get it before the ${season.place}`
     case 'challenge': return n === 1 ? `Day 1: ${season.prompt}` : `Day ${n}: your ${season.place}, shared with #FernwayChallenge`
     case 'ugc': return `Your first photos from the ${season.place}`
@@ -426,7 +426,7 @@ export function generatePlan(id: string, brief: string | BriefInput, now: number
     messages: [...prod.msg, cta[unit]], audience: input.audience || prod.audience,
     phases: [
       { name: 'Teasing', start: at(tpl.phases[0]), end: at(tpl.phases[1]) - 60_000, summary: kinds.has('preorder') ? 'Teaser, behind the scenes, pre-orders open' : 'Teaser and the why' },
-      { name: 'Launch', start: at(tpl.phases[1]), end: at(tpl.phases[2]) - 60_000, summary: kinds.has('challenge') ? 'Daily prompts, community reposts' : kinds.has('guide') ? 'Guide by budget, proof, last order date' : 'Reveal, proof, answers to every question' },
+      { name: 'Launch', start: at(tpl.phases[1]), end: at(tpl.phases[2]) - 60_000, summary: kinds.has('challenge') ? 'Daily prompts, community reposts' : kinds.has('guide') ? 'Guide by price, proof, last order date' : 'Reveal, proof, answers to every question' },
       { name: 'Follow-up', start: at(tpl.phases[2]), end: at(tpl.phases[3]) + DAY - 60_000, summary: kinds.has('recap') ? 'Best entries, the recap film' : 'Customer photos, numbers' },
     ],
     posts,
