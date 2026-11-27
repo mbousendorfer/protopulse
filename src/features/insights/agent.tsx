@@ -15,7 +15,7 @@ import type { Network } from '../../app/types'
 import type { Recipe } from '../../data/insights'
 import { anomaliesDue, tickAnomalies } from './engine'
 import { reportsDue, schedulesDue, tickReports, tickSchedules } from './reports'
-import { bestReturn, roiByNetwork, roiTotals } from './roi'
+import { roiByNetwork, roiTotals } from './roi'
 import { audienceOf, audienceTips } from './audience'
 
 const int = (v: number) => Math.round(v).toLocaleString('en-GB')
@@ -222,14 +222,14 @@ const audience = defineIntent({
 /** “Which network brings sales?”: the ROI tab's numbers. */
 const roi = defineIntent({
   kind: 'roi', owner: 'iris', order: 115,
-  parse: t => (/\broi\b|revenue|\bsales\b|conversions?\b|ga4|google analytics|brings? (in )?(money|sales|orders)|website (traffic|visits|sessions)/.test(t) && !/\bboost/.test(t) ? { kind: 'roi' } : undefined),
-  bar: (_i, { s, d, go }) => {
-    const rows = roiByNetwork(30), t = roiTotals(rows), b = bestReturn(s)
+  parse: t => (/\broi\b|revenue|\bsales\b|conversions?\b|ga4|google analytics|brings? (in )?(money|sales|orders)|website (traffic|visits|sessions)/.test(t) ? { kind: 'roi' } : undefined),
+  bar: (_i, { go }) => {
+    const rows = roiByNetwork(30), t = roiTotals(rows)
     return {
-      text: `Over 30 days, social brought ${fmt.int(t.sessions)} sessions, ${fmt.int(t.conversions)} orders and €${fmt.int(t.revenue)} to fernway.co. ${NETWORK_LABEL[rows[0].network]} brings the most (€${fmt.int(rows[0].revenue)}), ${NETWORK_LABEL[rows[1].network]} next (€${fmt.int(rows[1].revenue)}).${b ? ` ${b.fact}.` : ''}`,
+      text: `Over 30 days, social brought ${fmt.int(t.sessions)} sessions, ${fmt.int(t.conversions)} orders and €${fmt.int(t.revenue)} to fernway.co. ${NETWORK_LABEL[rows[0].network]} brings the most (€${fmt.int(rows[0].revenue)}), ${NETWORK_LABEL[rows[1].network]} next (€${fmt.int(rows[1].revenue)}).`,
       visual: <HBars items={rows.map(r => ({ label: NETWORK_LABEL[r.network], value: r.revenue }))} format={v => `€${Math.round(v).toLocaleString('en-GB')}`} />,
       sources: ['Google Analytics 4 · UTM source = social · 30 days'],
-      ctas: [{ label: 'Open ROI', run: () => go('/insights/roi') }, ...(b && !s.playbook.rules.some(r => r.text === b.fact) ? [{ label: 'Tell Sage', run: () => d({ type: 'insights/tellSage', via: 'You asked in the command bar' }) }] : [])],
+      ctas: [{ label: 'Open ROI', run: () => go('/insights/roi') }],
     }
   },
   chat: () => {

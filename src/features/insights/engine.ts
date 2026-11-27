@@ -62,8 +62,7 @@ export function raise(s: State, x: Signal, r?: Alert): State {
   const h: Omit<Handoff, 'at'> = {
     id: `h-${id}`, agent: 'iris', kind: 'alert', urgency: r?.to === 'claire' ? 'today' : 'week', topic: 'Anomaly', action: 'iris-anomaly', ref: id,
     title: an.title, context: an.cause, why, confidence: an.confidence, link: '/insights',
-    // Paid spend is never Iris's call: a boost is offered, never recommended.
-    options: an.actions.map((label, i) => ({ label, recommended: i === 0 && !/€/.test(label) })),
+    options: an.actions.map((label, i) => ({ label, recommended: i === 0 })),
     preview: { type: 'metric', label: `${an.metric}, ${x.network === 'x' ? 'X' : x.network[0].toUpperCase() + x.network.slice(1)}`, value: an.value, delta: an.delta, down: an.down, series: an.series },
   }
   let next = pushHandoff(patchInsights(s, { raised: [{ ...an, handoff: h.id }, ...s.insights.raised] }), h)

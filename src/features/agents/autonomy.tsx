@@ -1,7 +1,7 @@
 import { useState, type CSSProperties } from 'react'
 import {
   Banknote, CalendarDays, ChartLine, ChevronDown, Clock, FileText, Flame, FolderInput, Gauge, LayoutGrid, Lock, Mail, Megaphone,
-  MessageCircle, MessageCircleWarning, Radar, Recycle, Repeat, Rocket, ShieldX, Sparkles, Star, Tag, Users, type LucideIcon,
+  MessageCircle, MessageCircleWarning, Radar, Recycle, Repeat, ShieldX, Sparkles, Star, Tag, Users, type LucideIcon,
 } from 'lucide-react'
 import type { Agent, AgentAction, Autonomy, Risk } from '../../app/types'
 import { useNow } from '../../app/store'
@@ -47,7 +47,7 @@ const ICONS: [RegExp, LucideIcon][] = [
   [/complaint/i, MessageCircleWarning], [/spam/i, ShieldX], [/exchange|replacement/i, Repeat], [/refund/i, Banknote],
   [/discount/i, Tag], [/review/i, Star], [/press|legal/i, Megaphone], [/competitor/i, Radar], [/plan/i, CalendarDays],
   [/slot/i, Clock], [/recycle/i, Recycle], [/trend/i, Flame], [/brief|report/i, FileText], [/anomal|spike/i, ChartLine],
-  [/boost/i, Rocket], [/file mentions/i, FolderInput], [/sales/i, Mail], [/cadence/i, Gauge], [/reallocate/i, Users],
+  [/file mentions/i, FolderInput], [/sales/i, Mail], [/cadence/i, Gauge], [/reallocate/i, Users],
   [/pillar/i, LayoutGrid], [/question|answer/i, MessageCircle],
 ]
 const iconFor = (label: string) => ICONS.find(([re]) => re.test(label))?.[1] ?? Sparkles

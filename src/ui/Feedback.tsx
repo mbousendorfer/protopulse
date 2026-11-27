@@ -41,7 +41,7 @@ export function Notice({ scope, className }: { scope: NoticeScope; className?: s
   )
 }
 
-/** Says what can't be taken back (paid spend, permanent deletion) before it happens. */
+/** Says what can't be taken back (a permanent deletion) before it happens. */
 export function InlineConfirm({ children, confirm, onConfirm, onCancel, danger }: { children: ReactNode; confirm: string; onConfirm: () => void; onCancel: () => void; danger?: boolean }) {
   return (
     <div className="inline-confirm" role="alertdialog" aria-label={confirm}>

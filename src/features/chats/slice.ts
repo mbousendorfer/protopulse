@@ -4,7 +4,6 @@ import { addRule, now, pushLog, pushHandoff, uid } from '../../app/core'
 import { T } from '../../app/time'
 import { respond, routeText } from './respond'
 import { TIKTOK_VIEWS } from '../../data/insights'
-import { recordBoost } from '../insights/slice'
 
 /** Rich, serialisable cards an agent can put in a conversation. */
 export type Card =
@@ -14,7 +13,6 @@ export type Card =
   | { type: 'rule'; text: string; agent: AgentId; status: 'proposed' | 'added' | 'dismissed' }
   | { type: 'brief'; text: string; status: 'proposed' | 'started' }
   | { type: 'list'; items: { title: string; agent: AgentId; meta?: string; link?: string }[] }
-  | { type: 'boost'; post: string; amount: number; status: 'proposed' | 'boosted' | 'declined' }
   | { type: 'done'; text: string }
 
 export type ChatMsg = { id: string; from: 'you' | AgentId; at: number; text: string; card?: Card }
@@ -48,7 +46,7 @@ export const initialChats = (): ChatsState => ({ list: structuredClone(SEED) })
 export type ChatsAction =
   | { type: 'chats/new'; id: string; context?: Chat['context'] }
   | { type: 'chats/send'; id: string; text: string }
-  | { type: 'chats/act'; id: string; msg: string; action: 'schedule' | 'discard' | 'shorter' | 'send' | 'addRule' | 'dismissRule' | 'startBrief' | 'boost' | 'decline'; text?: string }
+  | { type: 'chats/act'; id: string; msg: string; action: 'schedule' | 'discard' | 'shorter' | 'send' | 'addRule' | 'dismissRule' | 'startBrief'; text?: string }
   | { type: 'chats/read'; id: string }
   | { type: 'chats/delete'; id: string }
   | { type: 'chats/restore'; chat: Chat; index: number }
@@ -96,7 +94,7 @@ export function reduceChats(s: State, a: ChatsAction, resolve: Resolve): State {
           let next = pushHandoff(s, { id: hid, agent: 'atlas', kind: 'approval', urgency: 'today', topic: 'Draft from a chat', title: `Post from your chat: “${card.text.slice(0, 48)}…”`, context: chat.title, why: 'You asked for it in a conversation.', confidence: 90, preview: { type: 'post', network: card.network, slot: card.slot, text: [a.text ?? card.text] } })
           next = resolve(next, hid, { kind: 'approve' })
           next = setCard(next, a.id, a.msg, { status: 'scheduled', text: a.text ?? card.text })
-          return setChat(next, a.id, c => ({ ...c, followUps: [...c.followUps, { dueAt: t + 75_000, msg: { from: 'iris', text: `Early read on the post Atlas scheduled for ${card.slot}: similar posts got 2.1× the average saves in their first hour. Want to put €100 behind it when it goes live?`, card: { type: 'boost', post: card.text.slice(0, 60), amount: 100, status: 'proposed' } } }] }))
+          return setChat(next, a.id, c => ({ ...c, followUps: [...c.followUps, { dueAt: t + 75_000, msg: { from: 'iris', text: `Early read on the post Atlas scheduled for ${card.slot}: similar posts got 2.1× the average saves in their first hour. I’ll tell you how it does once it’s live.` } }] }))
         }
       }
       if (card.type === 'reply' && a.action === 'send') {
@@ -111,14 +109,6 @@ export function reduceChats(s: State, a: ChatsAction, resolve: Resolve): State {
         return setCard(next, a.id, a.msg, { status: 'added' })
       }
       if (card.type === 'brief' && a.action === 'startBrief') return setCard(s, a.id, a.msg, { status: 'started' })
-      if (card.type === 'boost') {
-        if (a.action === 'decline') return setCard(s, a.id, a.msg, { status: 'declined' })
-        // Every boost goes through Iris: her monthly cap applies, and undoing the journal line gives the money back.
-        const r = recordBoost(s, { post: card.post, budget: card.amount, days: 3 })
-        if (r.refused) return setCard(pushLog(s, { agent: 'iris', text: `Boost on “${card.post}” not set up`, status: 'rejected', reason: r.refused, link: '/agents/iris?tab=guardrails' }), a.id, a.msg, { status: 'declined' })
-        const next = pushLog(r.s, { agent: 'iris', text: `Boost of €${card.amount} on “${card.post}” set up for when it goes live`, status: 'approved', reason: 'From a chat', undoMinutes: 30, boost: r.id })
-        return setCard(next, a.id, a.msg, { status: 'boosted' })
-      }
       return s
     }
     case 'chats/read':

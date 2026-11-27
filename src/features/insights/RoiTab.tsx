@@ -1,22 +1,20 @@
 // Insights › ROI: what social brings to the website, from GA4 (mocked), per network, campaign and post.
 import { useState } from 'react'
-import { BookPlus, Check } from 'lucide-react'
 import { useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
-import { Btn, Mark, Net, Seg } from '../../ui'
+import { Net, Seg } from '../../ui'
 import { HBars } from '../../ui/charts'
 import { InfoPop } from '../../ui/More'
-import { bestReturn, postsByRevenue, roiByNetwork, roiCampaigns, roiTotals } from './roi'
+import { postsByRevenue, roiByNetwork, roiCampaigns, roiTotals } from './roi'
 
 const eur = (v: number) => `€${Math.round(v).toLocaleString('en-GB')}`
 const int = (v: number) => Math.round(v).toLocaleString('en-GB')
 
 export default function Roi() {
-  const { s, d } = useStore()
+  const { s } = useStore()
   const [days, setDays] = useState<'7' | '30' | '90'>('30')
   const rows = roiByNetwork(+days), t = roiTotals(rows)
-  const camps = roiCampaigns(s), best = bestReturn(s)
-  const told = best && s.playbook.rules.some(r => r.text === best.fact)
+  const camps = roiCampaigns(s)
   const posts = postsByRevenue(+days).slice(0, 5)
   return (
     <div className="stack lg">
@@ -42,16 +40,9 @@ export default function Roi() {
         <section className="card pad stack">
           <div className="section-title">By campaign <span className="faint">· UTM campaign, since launch</span></div>
           <div className="table-wrap"><table className="table">
-            <thead><tr><th>Campaign</th><th className="r">Sessions</th><th className="r">Goal reached</th><th className="r">Revenue</th><th className="r">Per boost euro</th></tr></thead>
-            <tbody>{camps.map(c => <tr key={c.id}><td>{c.name}</td><td className="r">{int(c.sessions)}</td><td className="r">{int(c.conversions)} {c.goal}</td><td className="r">{eur(c.revenue)}</td><td className="r">{c.perEuro ? `€${c.perEuro.toFixed(1)}` : 'No boost'}</td></tr>)}</tbody>
+            <thead><tr><th>Campaign</th><th className="r">Sessions</th><th className="r">Goal reached</th><th className="r">Revenue</th></tr></thead>
+            <tbody>{camps.map(c => <tr key={c.id}><td>{c.name}</td><td className="r">{int(c.sessions)}</td><td className="r">{int(c.conversions)} {c.goal}</td><td className="r">{eur(c.revenue)}</td></tr>)}</tbody>
           </table></div>
-          {best && (
-            <div className="anomaly-cause"><Mark agent="iris" /><div className="stack gap-2">
-              <p>{best.fact}. Sage can plan the next boosts with it.</p>
-              {told ? <span className="row tight muted"><Check size={14} className="ok" />Sage has it as a Playbook fact.</span>
-                : <Btn size="sm" className="self-start" onClick={() => d({ type: 'insights/tellSage', via: 'You asked from Insights › ROI' })}><BookPlus size={14} />Tell Sage</Btn>}
-            </div></div>
-          )}
         </section>
         <section className="card pad roi-sold">
           <div className="section-title">Posts that sold <span className="faint">· revenue from their link clicks</span></div>

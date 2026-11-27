@@ -92,7 +92,7 @@ export const REPORTS: Report[] = [
     id: 'repair-friday', kind: 'campaign', title: 'Repair Friday', period: '24 – 31 Oct 2025', writtenAt: T(9, 30, -24),
     summary: 'Goal beaten by 48%. Repair requests 1,180 of 800. LinkedIn and Instagram reels did most of the work; X added little.',
     sections: [
-      { heading: 'Result', paras: [['Repair requests reached ', c('1,180', 'fernway.co/repair · 24 – 31 Oct'), ', ', c('148% of goal', 'Repair Friday · goal 800 requests'), '. Cost per request: ', c('€0.42', 'Boost spend €500 / 1,180 requests'), '.']] },
+      { heading: 'Result', paras: [['Repair requests reached ', c('1,180', 'fernway.co/repair · 24 – 31 Oct'), ', ', c('148% of goal', 'Repair Friday · goal 800 requests'), '.']] },
       { heading: 'What worked', paras: [['Before/after repair reels on Instagram drove ', c('46% of requests', 'UTM source · instagram · 24 – 31 Oct'), '. The LinkedIn post by the workshop lead got ', c('5.8% engagement', 'LinkedIn · 28 Oct'), '.']] },
       { heading: 'What didn’t', paras: [['X brought ', c('11 requests', 'UTM source · x · 24 – 31 Oct'), '. Sage proposes dropping X from future repair campaigns.']] },
     ],
@@ -236,7 +236,7 @@ export const ANOMALIES: Anomaly[] = [
     actions: ['Ask Atlas to test 3-second hooks this week', 'Snooze a week'], open: true, handoff: 'h-tiktok' },
   { id: 'an-storm', key: 'er:instagram', title: 'Storm Jacket carousel at 3× the usual engagement', network: 'instagram', metric: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4], detectedAt: T(7, 6),
     cause: 'Saves drive it: 214 saves, mostly from people who never bought from Fernway. The rain test format works for cold-weather intent.', confidence: 74,
-    actions: ['Boost €150 for 5 days', 'Ask Atlas for a follow-up carousel', 'No action'], open: true, handoff: 'h-boost' },
+    actions: ['Ask Atlas for a follow-up carousel', 'No action'], open: true },
   { id: 'an-clicks', key: 'clicks:linkedin', title: 'LinkedIn link clicks +210% this week', network: 'linkedin', metric: 'Link clicks', value: '1,140', delta: '+210%', series: [210, 240, 190, 260, 230, 250, 1140], detectedAt: T(9, 10, -3),
     cause: 'The repair programme post was shared by the Green Gear newsletter (38k readers). 71% of clicks went to the repair form.', confidence: 81,
     actions: ['Ask Atlas for a follow-up post', 'Tell Sage: repair content works on LinkedIn', 'No action'], open: true },
@@ -310,10 +310,10 @@ export const GA4: Record<Exclude<Network, 'google' | 'trustpilot'>, { land: numb
   facebook: { land: 0.85, cr: 0.032, aov: 88 }, youtube: { land: 0.8, cr: 0.014, aov: 95 }, x: { land: 0.7, cr: 0.006, aov: 80 },
 }
 
-/** Campaign results in GA4 (UTM campaign = Sage's campaign id). `spend`: boost spend before this month (this month's is in Iris's boosts). */
-export const GA4_CAMPAIGNS: Record<string, { sessions: number; conversions: number; revenue: number; goal: string; spend: number }> = {
-  'trail-week': { sessions: 1840, conversions: 61, revenue: 5600, goal: 'orders', spend: 0 },
-  'repair-friday': { sessions: 2410, conversions: 1180, revenue: 4900, goal: 'repair requests', spend: 500 },
+/** Campaign results in GA4 (UTM campaign = Sage's campaign id). */
+export const GA4_CAMPAIGNS: Record<string, { sessions: number; conversions: number; revenue: number; goal: string }> = {
+  'trail-week': { sessions: 1840, conversions: 61, revenue: 5600, goal: 'orders' },
+  'repair-friday': { sessions: 2410, conversions: 1180, revenue: 4900, goal: 'repair requests' },
 }
 
 export const AGE_BANDS = ['13–17', '18–24', '25–34', '35–44', '45+']

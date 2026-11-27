@@ -90,15 +90,6 @@ export const HANDOFFS: Handoff[] = [
     preview: { type: 'post', network: 'tiktok', slot: 'Today, 18:30', media: 'pack', text: ['Packing the Ridge 28L for 3 days on the ', { text: 'Tour du Mont Blanc', note: 'Echo’s trend examples use 2-day trips. 3 days may look overpacked.' }, '. Everything you see fits. Yes, even the stove 🏕️'] },
   },
   {
-    id: 'h-boost', agent: 'iris', kind: 'decision', urgency: 'today', topic: 'Boost', action: 'iris-boost',
-    title: 'Boost the Storm Jacket carousel?',
-    context: 'Engagement rate 6.4% after 20 hours, 3× the account average. 214 saves.',
-    why: 'Boosts are locked to Suggest. Budget left this month: €920.',
-    confidence: 74, at: T(7, 6), link: '/insights/explore',
-    options: [{ label: 'Boost €150 for 5 days', recommended: true }, { label: 'Boost €300 for 7 days' }, { label: 'Don’t boost' }],
-    preview: { type: 'metric', label: 'Engagement rate', value: '6.4%', delta: '3.1× average', series: [1.8, 2.1, 2, 2.3, 1.9, 2.2, 4.8, 6.1, 6.4] },
-  },
-  {
     id: 'h-review', agent: 'nova', kind: 'approval', urgency: 'week', topic: 'Review', action: 'nova-reviews', ref: 'c-thomas',
     sources: [{ label: 'Order #48213 delivered 6 days late', from: 'Shopify · carrier tracking' }, { label: 'Refund shipping up to €15 without asking', from: 'Nova’s limits' }],
     title: '2-star Trustpilot review about a late delivery',
