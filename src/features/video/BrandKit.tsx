@@ -1,5 +1,5 @@
 import { useStore } from '../../app/store'
-import { MUSIC, TEMPLATES, type BrandKit as Kit } from '../../data/video'
+import { MUSIC, TEMPLATES, mediaUrl, type BrandKit as Kit } from '../../data/video'
 import { Seg, Switch } from '../../ui'
 import { LANG_LABEL, SWATCH, type Captions, type Lang, type Swatch } from './model'
 import { CaptionText } from './parts'
@@ -36,6 +36,24 @@ export function SwatchPicker({ value, onChange, name }: { value: Swatch; onChang
         </label>
       ))}
     </div>
+  )
+}
+
+const PREVIEW_LINE = { s: 0, e: 2, words: [{ text: 'It', s: 0, e: 0.2, key: false }, { text: 'tore', s: 0.2, e: 0.5, key: true }, { text: 'after', s: 0.5, e: 0.8, key: false }, { text: '3', s: 0.8, e: 1, key: true }, { text: 'years', s: 1, e: 1.4, key: false }] }
+
+/** A clip as the kit makes it: a still of a real video with the caption style, the logo and the progress bar. */
+export function KitPreview() {
+  const { s } = useStore()
+  const kit = s.video.kit
+  const src = s.video.sources.find(x => x.status === 'ready' && x.kind !== 'upload')
+  const words = { ...PREVIEW_LINE, words: PREVIEW_LINE.words.slice(0, Math.max(kit.captions.perLine, 2)) }
+  return (
+    <span className="kit-preview" role="img" aria-label="A clip with your brand kit">
+      {src && <img src={mediaUrl(`${src.media}/poster.jpg`)} alt="" />}
+      <CaptionText c={kit.captions} line={words} active={1} />
+      {kit.brand.logo && <svg className="frame-logo" viewBox="0 0 90 20" aria-hidden><text x="0" y="15" fontSize="15" fontWeight="700" fill="currentColor">fernway</text></svg>}
+      {kit.brand.progress && <span className="frame-progress" style={{ width: '38%' }} />}
+    </span>
   )
 }
 
