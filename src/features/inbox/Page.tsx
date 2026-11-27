@@ -24,7 +24,7 @@ import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
 import { MoreInfo } from '../../ui/More'
-import { gist } from './gist'
+import { gist } from '../../ui/gist'
 
 type View = 'needs' | 'review' | 'leo' | 'yanis' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 /** Views that are one person's work. */

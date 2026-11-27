@@ -359,13 +359,14 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
 }
 
 /** A reason cut to its first clause: « X refused it: the short link… » → « X refused it ». */
-const gist = (t: string) => t.split(/[:.](?:\s|$)/)[0]
+/** The head of a post's note, before its first colon or full stop (« X refused it »). */
+const noteHead = (t: string) => t.split(/[:.](?:\s|$)/)[0]
 
 /** The one line under a post's words: why it needs a look, how it did, or what Atlas changed. Never all three. */
 function postLine(p: Post, shared?: string): { text: string; kind: 'reason' | 'stats' | 'atlas' } | undefined {
   // A pause the calendar already explains once isn't repeated on the card.
   // The gist only (« X refused it », « Missing visual »): the whole reason is in the post's panel, one click away.
-  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: gist(p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note), kind: 'reason' }
+  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: noteHead(p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note), kind: 'reason' }
   if (p.stats) return { text: `${k(p.stats.reach)} reach · ${p.stats.er}% engagement`, kind: 'stats' }
   const moved = p.note?.match(/^Moved from (\S+) to \S+ by Atlas/)
   if (moved) return { text: `Moved by Atlas from ${moved[1]}`, kind: 'atlas' }

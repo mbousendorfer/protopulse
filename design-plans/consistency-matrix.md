@@ -190,6 +190,9 @@ anything else on the page.
 - A group is one kind of gesture (« Ready to send », « Plans to review », « Clips to review »). One primary action per
   group (« Send all 4 »), not per row; each row keeps its quick decision as secondary / ghost buttons plus the reason
   in one line (agent, why, proof). Opening a row is never required to decide.
+- Exception, written: a group whose rows are each a different decision (Insights anomalies to decide, Agents autonomy
+  requests, Listening competitor moves) has no group primary; each row keeps its own quick decision. A group-wide
+  « Allow all » or « Apply all » would decide unlike things at once.
 - Same reason shared by several rows (one Echo alert pausing 3 posts) is said once at group level, not on every row.
 - Empty: one line « Nothing needs you here » + what the agent is watching; no illustration on department pages (the
   All clear illustration stays on the Desk).
@@ -211,6 +214,10 @@ user needs it to understand the screen or take the decision in front of them.
   The trigger is a link at the end of the visible line: « Why? » for an agent's reason, « More info » for anything else.
   The panel's title names the object (« Why Nova escalated »).
 - A reason shared by several rows is said once at group level (§12), not hidden on each row.
+- Inside a panel (a `Sheet` already open: post panel, idea panel, clip editor), « Why? » opens an `InfoPop`, never a
+  second sheet on top of the first.
+- The one-line reason is cut with `gist()` (`src/ui/gist.ts`: first sentence, at most 14 words, then « … »). « Why? »
+  only shows when the panel adds something to that line.
 - Never moves down a level: an alert, a block (« Held », « Failed »), anything irreversible (« can't be undone »),
   anything a decision needs, a named metric next to its number.
 

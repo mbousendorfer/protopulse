@@ -6,4 +6,5 @@ test('a row keeps the first sentence, or the first words', () => {
   expect(gist('Refunded €9.90 shipping. Done.')).toBe('Refunded €9.90 shipping.')
   expect(gist('one two three four five, six', 4)).toBe('one two three four…')
   expect(gist('Short')).toBe('Short')
+  expect(gist('Use a tag, e.g. #TrailWeek, on every post. Then rest.')).toBe('Use a tag, e.g. #TrailWeek, on every post.')
 })
