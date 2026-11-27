@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  ArrowUpDown, AtSign, Check, CheckCheck, ChevronDown, ListFilter, EyeOff, Eye, Frown, Hand, Inbox as InboxIcon, Mail, Meh, MessageSquare,
-  Ban, Heart, ListChecks, MessageSquareText, OctagonAlert, Trash2, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, Smile, StickyNote, Star, Tag, Undo2, UserRound, X,
+  ArrowUpDown, Check, CheckCheck, ChevronDown, ListFilter, EyeOff, Eye, Hand, Inbox as InboxIcon, Mail, MessageSquare, MoreHorizontal, Pencil,
+  Ban, Heart, ListChecks, MessageSquareText, OctagonAlert, Trash2, Paperclip, Plus, Search, Sparkles, Send, ShoppingBag, StickyNote, Tag, Undo2, UserRound, X,
 } from 'lucide-react'
 import type { Network } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
-import { ago, hhmm, left } from '../../app/time'
+import { ago, DAY, hhmm, left } from '../../app/time'
 import { NETWORK_LABEL } from '../../data/agents'
 import { CONTACTS, ROSTER, TEAMMATES, withTeam, type Assignee, type ConvStatus, type ConvType, type Conversation, type Sentiment } from '../../data/inbox'
 import { Btn, Empty, Filters as StateFilters, FlagText, Mark, Menu, Net, PageHead, Pill, Pop, Switch, Tabs, type MenuItem } from '../../ui'
 import { CountBadge, InlineConfirm, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
-import { canModerate, deleteWarning, dmId, dur, fanOf, PUBLIC, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
+import { canModerate, deleteWarning, dmId, fanOf, PUBLIC, needsYou, type ModOp, virtualConvs, waitOf, waitSince, waitingOn, type BulkOp } from './slice'
 import { RulesSheet } from './RulesSheet'
 import { translate } from './translate'
 import { ACCOUNTS, accountById, accountLabel } from '../publishing/accounts'
@@ -25,6 +25,7 @@ import { thenText, whenText } from './rules'
 import './inbox.css'
 import { InfoPop, MoreInfo } from '../../ui/More'
 import { gist } from '../../ui/gist'
+import { cap, FeaturedConv, flagsOf, InboxOverview, Kind, lastAnswer, lastText, leadOf, Mood, NEED_RANK, needOf, plainDraft, reasonOf, ReplyLine, SENT, Trigger, TYPE_LABEL, WaitTag, WhyEscalated, type Need } from './parts'
 
 type View = 'needs' | 'team' | 'review' | 'leo' | 'yanis' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 /** Views that are one person's work. */
@@ -51,6 +52,14 @@ const VIEWS: { id: View; label: string; match: (c: Conversation, now: number) =>
   { id: 'negative', label: 'Negative today', match: (c, now) => c.sentiment === 'negative' && c.at >= DAY_START(now), saved: true },
 ]
 
+/** Needs you, grouped by the gesture each conversation asks for. */
+const GROUPS: { label: string; needs: Need[]; send?: boolean }[] = [
+  { label: 'Your call', needs: ['call', 'yours'] },
+  { label: 'To check', needs: ['check'] },
+  { label: 'Ready to send', needs: ['ready'], send: true },
+]
+const dayLabel = (t: number, now: number) => DAY_START(t) === DAY_START(now) ? 'Today' : DAY_START(t) === DAY_START(now - DAY) ? 'Yesterday' : new Date(t).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
+
 type Sort = 'newest' | 'oldest' | 'urgent' | 'intent' | 'waiting'
 const SORTS: { id: Sort; label: string }[] = [{ id: 'waiting', label: 'Waiting longest' }, { id: 'newest', label: 'Newest first' }, { id: 'oldest', label: 'Oldest first' }, { id: 'urgent', label: 'Most urgent' }, { id: 'intent', label: 'Buying intent' }]
 const URGENCY: Record<ConvStatus, number> = { escalated: 0, draft: 1, claire: 2, takeover: 3, new: 4, you: 5, auto: 6, hidden: 7 }
@@ -58,21 +67,6 @@ const URGENCY: Record<ConvStatus, number> = { escalated: 0, draft: 1, claire: 2,
 const STATUS: Record<ConvStatus, { label: string; tone?: 'alert' | 'caution' | 'ok' | 'signal' }> = {
   auto: { label: 'Auto-replied', tone: 'ok' }, draft: { label: 'Draft ready', tone: 'caution' }, escalated: { label: 'Escalated', tone: 'alert' },
   hidden: { label: 'Hidden' }, new: { label: 'New' }, you: { label: 'You replied' }, claire: { label: 'Waiting on Claire', tone: 'signal' }, takeover: { label: 'You took over' },
-}
-const TYPE_LABEL: Record<ConvType, string> = { comment: 'Comment', dm: 'Message', mention: 'Mention', review: 'Review' }
-const SENT: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
-const TYPE_ICON: Record<ConvType, typeof Mail> = { comment: MessageSquare, dm: Mail, mention: AtSign, review: Star }
-const SENT_ICON: Record<Sentiment, typeof Smile> = { positive: Smile, neutral: Meh, negative: Frown }
-
-/** What it is: a public comment, a private message, a review… */
-export function TypeTag({ t }: { t: ConvType }) {
-  const I = TYPE_ICON[t]
-  return <span className={`ib-tag ib-type-${t}`}><I size={12} aria-hidden />{TYPE_LABEL[t]}</span>
-}
-/** How it feels, in colour and in words. */
-export function SentimentTag({ s }: { s: Sentiment }) {
-  const I = SENT_ICON[s]
-  return <span className={`ib-tag ib-sent-${s}`}><I size={12} aria-hidden />{SENT[s]}</span>
 }
 function AssigneeFace({ who, size = 24 }: { who?: Assignee; size?: 16 | 24 }) {
   if (!who) return null
@@ -87,7 +81,6 @@ function statusOf(c: Conversation) {
   if (c.status === 'auto' && c.queued) return { ...STATUS.auto, label: `Replies at ${hhmm(c.queued.at)}` }
   return STATUS[c.status]
 }
-const lastText = (c: Conversation) => c.messages.filter(m => m.from === 'them').slice(-1)[0]?.text ?? ''
 
 export default function InboxPage() {
   const { s, d } = useStore()
@@ -229,8 +222,11 @@ export default function InboxPage() {
   const states = STATES.filter(x => x === 'needs' || count(x) > 0)
   const pickState = (x: View) => { setView(x); setLabel(null); setPost(undefined); setSavedId(null) }
   const postTitle = (k: string) => k.replace(/^[^“]*“|”$/g, '')
-  // Ready to send: Nova's drafts with nothing to check, for the list head's primary.
-  const ready = view === 'needs' ? list.filter(c => needOf(c) === 'ready') : []
+  // Needs you, landing: the conversation to answer first is set apart (matrix §15); the rest is grouped by gesture.
+  const landing = view === 'needs' && !label && !post
+  const lead = landing && !current && !sel.count ? leadOf(s, list, now) : undefined
+  const queue = lead ? list.filter(c => c.id !== lead.id) : list
+  const open = (c: Conversation) => (edit?: boolean) => nav(`/inbox/${c.id}`, { state: edit ? { edit: true } : undefined })
   // Everything that isn't a state: one menu (matrix §14 second criterion).
   const viewItems: MenuItem[] = [
     { heading: 'Team' },
@@ -255,6 +251,7 @@ export default function InboxPage() {
         <Btn variant="ghost" onClick={() => setSaved(true)}><MessageSquareText size={14} />Saved replies</Btn>
         <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
       </PageHead>
+      {landing && !current && <InboxOverview all={all} lead={leadOf(s, list, now)} />}
       <RulesSheet open={rulesOpen} onOpenChange={setRules} labels={labels} />
       <SavedSheet open={savedOpen} onOpenChange={setSaved} seed={savedSeed} />
       <LabelsSheet open={labelsOpen} onOpenChange={o => nav({ search: o ? '?labels=1' : '' })} />
@@ -263,6 +260,7 @@ export default function InboxPage() {
         <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label="Team, saved views, posts and labels"><span className="ellipsis">{viewName ?? 'Views'}</span><ChevronDown size={12} /></Btn>} items={viewItems} />
       </div>
       {dropped && <UndoBar className="mb-2" onUndo={() => { d({ type: 'inbox/viewRestore', ...dropped }); setDropped(null) }} onDismiss={() => setDropped(null)}>Deleted “{dropped.view.name}”</UndoBar>}
+      {lead && <FeaturedConv c={lead} onOpen={open(lead)} />}
       <div className={`ib-layout ${current ? 'has-current' : ''}`}>
         <section className="ib-list card" aria-label="Conversations">
           {sel.count > 0 ? (
@@ -302,7 +300,6 @@ export default function InboxPage() {
               <Menu align="end" trigger={<Btn size="sm" variant="ghost" aria-label={`Sort: ${SORTS.find(x => x.id === sort)!.label}`}><ArrowUpDown size={14} /><span className="ib-sort-label">{SORTS.find(x => x.id === sort)!.label}</span></Btn>}
                 items={SORTS.map(x => ({ label: x.label, hint: sort === x.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setSort(x.id) }))} />
               {view === 'review' && list.length > 0 && <Btn size="sm" onClick={() => d({ type: 'inbox/bulk', ids, op: 'reviewed', value: true })}><CheckCheck size={14} />Review all {list.length}</Btn>}
-              {ready.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: ready.map(c => c.id), op: 'approve' })}><Send size={14} />Send {ready.length} ready</Btn>}
             </div>
           )}
           {/* What narrows the list, said once, each one removable; then keep it as a view. */}
@@ -341,28 +338,55 @@ export default function InboxPage() {
             view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you here" body="Nova is watching your inboxes." />
               : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="New conversations land here until someone looks at them." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
-          ) : (view === 'needs' || view === 'team') && !label ? (
+          ) : landing ? (
+            // Grouped by gesture, a short header each; Ready to send carries the group's one primary.
+            GROUPS.map(g => {
+              const rows = queue.filter(c => g.needs.includes(needOf(c)))
+              if (!rows.length) return null
+              return (
+                <section key={g.label} className="ib-group" aria-label={g.label}>
+                  <h3 className="ib-group-head">{g.label}<span className="num">{rows.length}</span>
+                    {g.send && rows.length > 1 && <Btn size="sm" variant="primary" onClick={() => d({ type: 'inbox/bulk', ids: rows.map(c => c.id), op: 'approve' })}><Send size={14} />Send all {rows.length}</Btn>}
+                  </h3>
+                  <ul className="ib-needs">{rows.map(c => <NeedRow key={c.id} c={c} need={needOf(c)} sel={sel} current={c.id === id} onOpen={open(c)} />)}</ul>
+                </section>
+              )
+            })
+          ) : view === 'team' && !label ? (
             <ul className="ib-needs">
-              {list.map(c => <NeedRow key={c.id} c={c} need={needOf(c)} sel={sel} current={c.id === id} onOpen={edit => nav(`/inbox/${c.id}`, { state: edit ? { edit: true } : undefined })} />)}
+              {list.map(c => <NeedRow key={c.id} c={c} need={needOf(c)} sel={sel} current={c.id === id} onOpen={open(c)} />)}
             </ul>
           ) : (
             <ul className="ib-rows">
-              {list.map(c => (
-                <li key={c.id} className={`ib-row ${c.id === id ? 'current' : ''} ${c.unread ? 'ib-unread' : ''} ${sel.has(c.id) ? 'picked' : ''} ${c.reviewed ? 'ib-reviewed' : ''}`}
-                  onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : nav(`/inbox/${c.id}`)}>
-                  <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
-                  <SocialAvatar name={c.author} network={c.network} size={32} />
-                  <div className="ib-who">
-                    <Link to={`/inbox/${c.id}`} className="ellipsis" onClick={e => e.stopPropagation()}>{c.author}</Link>
-                    <p className="ellipsis">{lastText(c)}</p>
-                  </div>
-                  <div className="ib-cell-tags">{c.account && c.account !== c.network && <span className="ib-tag">{accountById(c.account).name}</span>}<TypeTag t={c.type} /><SentimentTag s={c.sentiment} />{(c.intent ?? 0) >= 0.6 && <span className="ib-tag ib-intent"><ShoppingBag size={12} aria-hidden />Wants to buy</span>}</div>
-                  <div className="ib-cell-status"><Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
-                  <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
-                  <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
-                  <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
-                </li>
-              ))}
+              {list.map((c, i) => {
+                const answer = lastAnswer(c)
+                // Sorted by date, the list is cut by day: a conversation from yesterday is under « Yesterday ».
+                const day = (sort === 'newest' || sort === 'oldest') && (i === 0 || DAY_START(list[i - 1].at) !== DAY_START(c.at)) ? dayLabel(c.at, now) : null
+                return (
+                  <Fragment key={c.id}>
+                    {day && <li className="ib-day"><h3>{day}</h3></li>}
+                    <li className={`ib-row ${c.id === id ? 'current' : ''} ${c.unread ? 'ib-unread' : ''} ${sel.has(c.id) ? 'picked' : ''} ${c.reviewed ? 'ib-reviewed' : ''}`}
+                      onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : nav(`/inbox/${c.id}`)}>
+                      <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
+                      <SocialAvatar name={c.author} network={c.network} size={40} />
+                      <div className="ib-who">
+                        <p className="ib-meta-line">
+                          <Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link>
+                          <Kind t={c.type} /><Mood s={c.sentiment} />
+                          {c.account && c.account !== c.network && <span>{accountById(c.account).name}</span>}
+                          {(c.intent ?? 0) >= 0.6 && <span className="ib-kind"><ShoppingBag size={14} aria-hidden />Wants to buy</span>}
+                        </p>
+                        <p className="ib-need-quote">{lastText(c)}</p>
+                        {answer && <ReplyLine by={answer.from === 'nova' ? 'nova' : ROSTER[answer.by ?? 'sam'].name}>{gist(answer.text, 16)}</ReplyLine>}
+                      </div>
+                      <div className="ib-cell-status"><Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill><WaitTag c={c} />{c.reviewed && <span className="ib-check" title={`Reviewed by ${c.reviewedBy === 'nova' ? 'Nova' : c.reviewedBy === 'claire' ? 'Claire' : 'you'}`}><CheckCheck size={14} aria-label="Reviewed" /></span>}</div>
+                      <div className="ib-cell-labels">{(c.labels ?? []).map(l => <span key={l} className="ib-label">{l}</span>)}</div>
+                      <div className="ib-cell-who"><AssigneeFace who={c.assignee} /></div>
+                      <span className="mono faint ib-cell-time">{hhmm(c.at)}</span>
+                    </li>
+                  </Fragment>
+                )
+              })}
             </ul>
           )}
 
@@ -374,62 +398,58 @@ export default function InboxPage() {
   )
 }
 
-/** What a conversation needs: send what Nova is sure of, check the passage she doubts, decide what she never answers. */
-type Need = 'ready' | 'check' | 'call' | 'yours' | 'claire' | 'team'
-const flagsOf = (c: Conversation) => (c.draft ?? []).filter((x): x is Exclude<typeof x, string> => typeof x !== 'string')
-const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
-const needOf = (c: Conversation): Need => c.assignee && TEAMMATES.includes(c.assignee) && c.status !== 'claire' ? 'team' : c.status === 'claire' ? 'claire' : c.status === 'takeover' ? 'yours' : c.status === 'escalated' ? 'call' : flagsOf(c).length ? 'check' : 'ready'
-const NEED_RANK: Record<Need, number> = { call: 0, yours: 1, check: 2, ready: 3, claire: 4, team: 5 }
-
 /**
- * One row of Needs you or With the team (matrix §14): who and what they asked, one line of what Nova answers, a status
- * only when the row isn't plain « ready to send », then the quick decision.
+ * One conversation of Needs you or With the team: who wrote, on which network, what and in what mood; what Nova would
+ * send, on her wash; the wait against its target; one visible decision, the rest in a menu.
  */
 function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Need; sel: ReturnType<typeof useSelection>; current: boolean; onOpen: (edit?: boolean) => void }) {
   const { s, d } = useStore()
   const stop = (fn: () => void) => (e: React.MouseEvent) => { e.stopPropagation(); fn() }
   const flags = flagsOf(c)
-  const draft = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
+  const draft = plainDraft(c)
   // A single send goes through the group action so it gets the same 10-second Undo strip as Send all.
   const send = () => d({ type: 'inbox/bulk', ids: [c.id], op: 'approve' })
+  const takeOver = () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() }
   const extras = (c.attachments ?? []).filter(a => !a.removed).map(a => a.label.split(':')[0]).join(' · ')
-  // The row says the gist: who, what they asked, what Nova answers. The full texts are one click away, in the conversation.
-  const first = c.messages.find(m => m.from === 'them')?.text ?? lastText(c)
-  const why = (c.note ?? '').split(' · ').slice(1).join(' · ')
+  const said = lastText(c)
+  const more: MenuItem[] = [
+    ...(c.draft?.length ? [{ label: 'Edit Nova’s reply', icon: <Pencil size={14} />, onSelect: () => onOpen(true) }] : []),
+    ...(need !== 'yours' ? [{ label: 'Take over', icon: <Hand size={14} />, onSelect: takeOver }] : []),
+    { label: 'Ask Claire', icon: <UserRound size={14} />, onSelect: () => d({ type: 'inbox/claire', id: c.id }) },
+    { label: 'Hide', icon: <EyeOff size={14} />, onSelect: () => d({ type: 'inbox/hide', id: c.id, hidden: true }) },
+  ]
   return (
-    <li className={`ib-need ${current ? 'current' : ''} ${sel.has(c.id) ? 'picked' : ''}`} onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : onOpen()}>
+    <li className={`ib-need ${current ? 'current' : ''} ${sel.has(c.id) ? 'picked' : ''} ${c.unread ? 'ib-unread' : ''}`} onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : onOpen()}>
       <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
-      <SocialAvatar name={c.author} network={c.network} size={32} />
+      <SocialAvatar name={c.author} network={c.network} size={40} />
       <div className="ib-need-main">
-        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{gist(first)}”{translate(first) && <span className="faint"> · {translate(first)!.lang}</span>}</span></p>
-        <p className="ib-need-line">
-          {need === 'ready' && <><span className="ib-need-by">Nova</span>{gist(draft)}{extras && <span className="faint"> · with {extras}</span>}</>}
-          {/* The passage Nova doubts is what "Send as is" decides; the rest of the draft is what she is sure of. */}
-          {need === 'check' && <><Pill tone="caution">Check a passage</Pill><span className="ib-need-by">“{flags[0].text}”</span>{gist(flags[0].note)}</>}
-          {need === 'call' && <>
-            <Pill tone="alert">Your call</Pill>
-            <InfoPop label="Why?">{c.trigger ? <WhyEscalated c={c} fan={fanOf(s, c)} /> : cap(why || 'A topic Nova never answers herself')}</InfoPop>
-            {c.draft ? <>Holding reply: {gist(draft, 10)}</> : null}
-          </>}
-          {need === 'yours' && <Pill tone="signal">You’re replying</Pill>}
-          {need === 'claire' && <><Pill tone="signal">Waiting on Claire</Pill><ClaireLine c={c} /></>}
-          {need === 'team' && <><Pill>With {ROSTER[c.assignee!].short}</Pill>{c.draft?.length ? 'Sends Nova’s draft' : ROSTER[c.assignee!].role.split(' · ')[0]}</>}
+        <p className="ib-meta-line ib-need-head">
+          <Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link>
+          <Kind t={c.type} /><Mood s={c.sentiment} />
+          {need === 'call' && <span className="ib-need-status"><Pill tone="alert">Your call</Pill>{reasonOf(c)}<InfoPop label="Why?">{c.trigger ? <WhyEscalated c={c} fan={fanOf(s, c)} /> : cap(c.note ?? 'A topic Nova never answers herself')}</InfoPop></span>}
+          {need === 'check' && <span className="ib-need-status"><Pill tone="caution">Check a passage</Pill></span>}
+          {need === 'yours' && <span className="ib-need-status"><Pill tone="signal">You’re replying</Pill></span>}
+          {need === 'claire' && <span className="ib-need-status"><Pill tone="signal">Waiting on Claire</Pill></span>}
+          {need === 'team' && <span className="ib-need-status"><Pill>With {ROSTER[c.assignee!].short}</Pill></span>}
         </p>
+        <p className="ib-need-quote">{said}{translate(said) && <span className="faint"> · {translate(said)!.lang}</span>}</p>
+        {need === 'ready' && <ReplyLine>{gist(draft, 18)}{extras && <span className="faint"> · with {extras}</span>}</ReplyLine>}
+        {/* The passage Nova doubts is what "Send as is" decides; the rest of the draft is what she is sure of. */}
+        {need === 'check' && <ReplyLine><mark className="ib-flag">{flags[0].text}</mark> {gist(flags[0].note)}</ReplyLine>}
+        {need === 'call' && c.draft?.length ? <ReplyLine><b>Holding reply</b> {gist(draft, 14)}</ReplyLine> : null}
+        {need === 'claire' && <ReplyLine by="Claire Dubois"><ClaireLine c={c} /></ReplyLine>}
+        {need === 'team' && <ReplyLine by={ROSTER[c.assignee!].name}>{c.draft?.length ? 'Sends Nova’s draft' : ROSTER[c.assignee!].role.split(' · ')[0]}</ReplyLine>}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
         <WaitTag c={c} fallback />
-        {need === 'ready' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn></>}
-        {need === 'check' && <><Btn size="sm" variant="ghost" onClick={stop(() => onOpen(true))}>Edit</Btn><Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn></>}
-        {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
-        {(need === 'claire' || need === 'team') && <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>}
-        {need === 'call' && <>
-          <Menu align="end" trigger={<Btn size="sm" variant="ghost" onClick={e => e.stopPropagation()}>More<ChevronDown size={12} /></Btn>} items={[
-            { label: 'Take over', icon: <Hand size={14} />, onSelect: () => { d({ type: 'inbox/takeover', id: c.id }); onOpen() } },
-            { label: 'Ask Claire', icon: <UserRound size={14} />, onSelect: () => d({ type: 'inbox/claire', id: c.id }) },
-          ]} />
-          {c.draft ? <Btn size="sm" onClick={stop(send)}><Send size={14} />Send holding reply</Btn>
-            : <Btn size="sm" onClick={stop(() => { d({ type: 'inbox/takeover', id: c.id }); onOpen() })}><Hand size={14} />Take over</Btn>}
-        </>}
+        <div className="ib-need-btns">
+          {need === 'ready' && <Btn size="sm" onClick={stop(send)}><Send size={14} />Send</Btn>}
+          {need === 'check' && <Btn size="sm" onClick={stop(send)}><Send size={14} />Send as is</Btn>}
+          {need === 'call' && (c.draft?.length ? <Btn size="sm" onClick={stop(send)}><Send size={14} />Send holding reply</Btn> : <Btn size="sm" onClick={stop(takeOver)}><Hand size={14} />Take over</Btn>)}
+          {need === 'yours' && <Btn size="sm" onClick={stop(() => onOpen())}><MessageSquare size={14} />Reply</Btn>}
+          {(need === 'claire' || need === 'team') ? <Btn size="sm" variant="ghost" onClick={stop(() => onOpen())}>Open</Btn>
+            : <Menu align="end" trigger={<Btn size="sm" variant="ghost" icon className="ib-more" aria-label={`More actions on ${c.author}’s conversation`}><MoreHorizontal size={16} /></Btn>} items={more} />}
+        </div>
       </div>
     </li>
   )
@@ -442,15 +462,6 @@ function ClaireLine({ c }: { c: Conversation }) {
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const reply = card?.claire?.reply
   return <>{reply ? `“${gist(reply)}”` : card?.claire ? `Asked ${ago(card.claire.askedAt, now)}` : gist(c.note ?? 'Asked')}</>
-}
-
-/** How long the customer has waited on the team, named in words, and whether it is past the target for its type. */
-function WaitTag({ c, fallback }: { c: Conversation; fallback?: boolean }) {
-  const { s } = useStore()
-  const now = useNow(30_000)
-  const w = waitOf(s, c, now)
-  if (!w) return fallback ? <span className="mono faint">{hhmm(c.at)}</span> : null
-  return <span className={`ib-wait ${w.over ? 'over' : ''}`} title={`Waiting since ${hhmm(w.since)} · ${dur(w.target)} target`}>Waiting {dur(w.waited)}{w.over ? ` · over ${dur(w.target)}` : ''}</span>
 }
 
 /** The post a filtered list is about. The rows say what Nova did with each comment. */
@@ -512,6 +523,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
   const [reply, setReply] = useState('')
   const [picked, setPicked] = useState<string>()
   const savedFrom = s.inbox.saved.find(r => r.id === c.savedFrom)
+  const contact = CONTACTS.find(k => k.id === c.contact)
   const others = s.inbox.convs.filter(x => x.contact && x.contact === c.contact && x.id !== c.id)
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const draftPlain = (c.draft ?? []).map(x => (typeof x === 'string' ? x : x.text)).join('')
@@ -562,7 +574,16 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
         <SocialAvatar name={c.author} network={c.network} size={40} />
         <div className="ib-panel-title">
           <h2 className="ellipsis">{c.author}</h2>
-          <div className="row tight"><TypeTag t={c.type} /><SentimentTag s={c.sentiment} /><span className="faint">on {NETWORK_LABEL[c.network]}{c.account && c.account !== c.network ? ` · ${accountById(c.account).name}` : ''} · {ago(c.at, now)}</span></div>
+          <p className="ib-meta-line"><Kind t={c.type} /><Mood s={c.sentiment} /><span>{NETWORK_LABEL[c.network]}{c.account && c.account !== c.network ? ` · ${accountById(c.account).name}` : ''}</span><span>{ago(c.at, now)}</span></p>
+          {/* The contact in one line; the Contact tab keeps the orders. */}
+          {contact && (
+            <p className="ib-meta-line ib-contact-line">
+              {contact.since ? <span>Customer since {contact.since}</span> : <span>Not a customer yet</span>}
+              {contact.orders.length > 0 && <span className="num">{contact.orders.length} order{contact.orders.length === 1 ? '' : 's'} · €{contact.orders.reduce((a, o) => a + o.total, 0)}</span>}
+              {contact.followers && <span className="num">{contact.followers} followers</span>}
+              {contact.tags.map(t => <Pill key={t} tone={t === 'At risk' ? 'caution' : undefined}>{t}</Pill>)}
+            </p>
+          )}
         </div>
         <Pill tone={statusOf(c).tone}>{statusOf(c).label}</Pill>
         <Btn variant="ghost" icon size="sm" aria-label="Close the conversation" title="Close (Esc)" onClick={onClose}><X size={16} /></Btn>
@@ -659,14 +680,14 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 {card && <Link to={`/?card=${card.id}`} className="link-btn t-xs push-end">Review on Desk</Link>}
               </div>
               {c.product && <ProductFound d={c.product} />}
-              {c.dm && <div className="ib-half">In public</div>}
+              {c.dm && <div className="ib-half"><MessageSquare size={14} aria-hidden />In public</div>}
               {editing ? <textarea className="textarea" rows={c.dm ? 2 : 4} value={text} onChange={e => setText(e.target.value)} aria-label={c.dm ? 'Edit the public reply' : 'Edit Nova’s draft'} autoFocus />
-                : <p className="ib-draft-text"><FlagText parts={c.draft ?? []} /></p>}
+                : <p className="ib-draft-text ib-bubble nova"><FlagText parts={c.draft ?? []} /></p>}
               {!editing && <English text={draftPlain} />}
               {c.dm && <>
-                <div className="ib-half">Then by DM</div>
+                <div className="ib-half"><Mail size={14} aria-hidden />Then by DM</div>
                 {editing ? <textarea className="textarea" rows={3} value={dmText} onChange={e => setDmText(e.target.value)} aria-label="Edit the DM" />
-                  : <p className="ib-draft-text">{c.dm}</p>}
+                  : <p className="ib-draft-text ib-bubble nova">{c.dm}</p>}
               </>}
               {!!c.attachments?.length && (
                 <ul className="ib-attach">
@@ -707,9 +728,9 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
             <div className="ib-draft">
               {c.trigger && <>
                 <div className="row tight ib-draft-by"><Mark agent="nova" />Nova escalated this to Claire with a holding reply<MoreInfo label="Why?" title="Why Nova escalated"><WhyEscalated c={c} fan={fanOf(s, c)} /></MoreInfo></div>
-                {c.dm && <div className="ib-half">In public</div>}
-                {!!c.draft?.length && <p className="ib-draft-text"><FlagText parts={c.draft} /></p>}
-                {c.dm && <><div className="ib-half">Then by DM</div><p className="ib-draft-text">{c.dm}</p></>}
+                {c.dm && <div className="ib-half"><MessageSquare size={14} aria-hidden />In public</div>}
+                {!!c.draft?.length && <p className="ib-draft-text ib-bubble nova"><FlagText parts={c.draft} /></p>}
+                {c.dm && <><div className="ib-half"><Mail size={14} aria-hidden />Then by DM</div><p className="ib-draft-text ib-bubble nova">{c.dm}</p></>}
               </>}
               <span className="muted">{card?.claire?.reply ? 'Claire answered: send it from the Desk.' : 'Waiting on Claire.'}</span>
               {card?.claire?.reply && <Link to={`/?card=${card.id}`} className="link-btn t-xs">Review on Desk</Link>}
@@ -791,27 +812,6 @@ function ContactTab({ c, others }: { c: Conversation; others: Conversation[] }) 
         </div>
       )}
     </div>
-  )
-}
-
-/** The words that made Nova escalate, marked in the customer's message. */
-function Trigger({ text, words }: { text: string; words: string }) {
-  const i = text.toLowerCase().indexOf(words.toLowerCase())
-  if (i < 0) return <>{text}</>
-  return <>{text.slice(0, i)}<mark className="ib-trigger">{text.slice(i, i + words.length)}</mark>{text.slice(i + words.length)}</>
-}
-
-/** Why Nova escalated: the rule, what matched and where, who the fan is, what she won't do. */
-function WhyEscalated({ c, fan }: { c: Conversation; fan?: string }) {
-  const rule = c.rules?.[0]
-  const open = PUBLIC.includes(c.type)
-  return (
-    <ul className="ib-why" aria-label="Why Nova escalated">
-      {rule && <li><b>Rule</b><span>{rule}</span></li>}
-      {c.trigger && <li><b>Why</b><span>“{c.trigger}” in {open ? `a public ${c.type}` : c.type === 'dm' ? 'a DM' : `a ${c.type}`}</span></li>}
-      {fan && <li><b>Who</b><span>{fan}</span></li>}
-      {open && <li><b>Never</b><span>Refunds or liability in public. The answer goes by DM.</span></li>}
-    </ul>
   )
 }
 
