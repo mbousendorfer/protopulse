@@ -20,7 +20,7 @@ export const SCRIPT: ScriptEvent[] = [
     handoff: { agent: 'sage', kind: 'decision', urgency: 'week', topic: 'Campaign', action: 'sage-plan',
       title: 'Trail Week is at 128% of its trajectory on day 2', context: '154 sign-ups vs 120 expected. TikTok drives 61% of them.',
       why: 'Goal changes are your call.', confidence: 79, link: '/strategy/campaigns/trail-week',
-      options: [{ label: 'Raise the goal from 300 to 360 sign-ups', recommended: true }, { label: 'Keep 300 and save the budget' }],
+      options: [{ label: 'Raise the goal from 300 to 360 sign-ups', recommended: true }, { label: 'Keep the goal at 300' }],
       sage: { campaign: 'trail-week', goal: 360 } },
   },
   {

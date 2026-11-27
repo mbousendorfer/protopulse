@@ -27,8 +27,6 @@
 .goal-big b { font-size: var(--t-2xl); color: var(--ink); font-weight: 600; }
 .bullets { display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
 .bullets li::before { content: '–'; color: var(--ink-3); margin-right: 8px; }
-.budget { margin-top: var(--s3); }
-.budget b { color: var(--ink); font-weight: 600; }
 
 /* Campaign: work on the left, the brief on the right; one column under 1100 px. */
 .campaign-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 340px); gap: var(--s5); align-items: start; }

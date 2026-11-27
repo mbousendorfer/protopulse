@@ -51,10 +51,10 @@ test('the plan follows the goal, the product, the season and Sage’s cadence', 
 test('v2 applies every request in the note and lists each change', async () => {
   const { revisePlan } = await import('./strategy')
   const c = generatePlan('b', 'Summit Bottle in September, 2,000 orders', now)
-  const v = revisePlan(c, 'More TikTok, cut the budget, and start a week later')
+  const v = revisePlan(c, 'More TikTok, no price, and start a week later')
   expect(v.version).toBe(2)
   expect(v.diff!.filter(x => /moved from .* to TikTok/.test(x.text))).toHaveLength(2)
-  expect(v.budget).toBeLessThan(c.budget)
+  expect(v.diff!.some(x => /price/i.test(x.text))).toBe(true)
   expect(v.start - c.start).toBe(7 * DAY)
   expect(v.posts[0].day - c.posts[0].day).toBe(7)
   const none = revisePlan(c, 'Make it feel warmer')

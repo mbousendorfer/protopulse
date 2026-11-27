@@ -211,7 +211,6 @@ function NewBrief() {
   const now = useNow()
   const nav = useNavigate()
   const [brief, setBrief] = useState(params.get('brief') ?? '')
-  const [budget, setBudget] = useState('')
   const cadence = targetsOf(s).cadence
   const [f, setF] = useState<Fields>({ product: '', launch: '', target: '', unit: 'orders', audience: '', networks: PUBLISH_NETWORKS.filter(n => (cadence[n] ?? 0) > 0) })
   const [more, setMore] = useState(false)
@@ -227,7 +226,7 @@ function NewBrief() {
 
   const fields = (): Partial<BriefInput> => ({
     product: f.product || undefined, launch: fromIso(f.launch), audience: f.audience.trim() || undefined, networks: f.networks,
-    goal: +f.target ? { target: +f.target, unit: f.unit } : undefined, budget: budget ? +budget : undefined,
+    goal: +f.target ? { target: +f.target, unit: f.unit } : undefined,
   })
   /** Build once nothing is missing: the last two thinking steps, then the plan. */
   const build = (input: BriefInput) => {
@@ -299,10 +298,6 @@ function NewBrief() {
                     <Menu align="start" trigger={<button type="button" className="select-btn" aria-label="Goal unit">{UNIT_LABEL[f.unit]}<ChevronDown size={14} /></button>}
                       items={GOAL_UNITS.map(u => ({ label: UNIT_LABEL[u], onSelect: () => setF(x => ({ ...x, unit: u })) }))} />
                   </div>
-                </div>
-                <div className="field">
-                  <label htmlFor="budget">Boost budget</label>
-                  <input id="budget" className="input" inputMode="numeric" placeholder="€600" value={budget} onChange={e => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
                 </div>
                 <div className="field span-2">
                   <label htmlFor="audience">Audience</label>
@@ -404,7 +399,7 @@ function CampaignView() {
       {changes && c.status === 'review' && (
         <form className="card pad stack" onSubmit={e => { e.preventDefault(); if (note.trim()) { d({ type: 'strategy/changes', id: c.id, feedback: note.trim() }); setNote(''); setChanges(false) } }}>
           <label htmlFor="changes" className="side-label">What should Sage change?</label>
-          <textarea id="changes" className="textarea" rows={3} autoFocus value={note} onChange={e => setNote(e.target.value)} placeholder="More TikTok, less budget, and no mention of price." />
+          <textarea id="changes" className="textarea" rows={3} autoFocus value={note} onChange={e => setNote(e.target.value)} placeholder="More TikTok, start a week later, and no mention of price." />
           <div className="row"><Btn variant="primary" type="submit" disabled={!note.trim()}>Send to Sage</Btn><Btn variant="ghost" onClick={() => setChanges(false)}>Cancel</Btn></div>
         </form>
       )}
@@ -471,7 +466,6 @@ function CampaignView() {
               <div className="section-title">Goal</div>
               <p className="goal-big"><b className="num">{fmtGoal(c, c.goal.target)}</b> {c.goal.label.replace(' (€)', '')}</p>
               <ul className="bullets">{c.kpis.map(k => <li key={k}>{k}</li>)}</ul>
-              <p className="budget">Boost budget <b className="num">€{c.budget.toLocaleString('en-GB')}</b></p>
             </div>
             <div>
               <div className="section-title">Key messages</div>
