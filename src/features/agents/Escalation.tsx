@@ -40,7 +40,7 @@ export default function Escalation() {
   const exists = s.playbook.escalate.some(r => r.label === label)
   return (
     <section className="card">
-      <div className="card-head"><div><h2>Always raised to a person</h2><span className="faint">Whatever the autonomy, these topics never go out without a human.</span></div></div>
+      <div className="card-head"><h2>Always raised to a person, whatever the autonomy</h2></div>
       <div className="card-body">
         <Filters label="Watched by" value={agent} onChange={v => { setParams(v === 'all' ? {} : { agent: v }, { replace: true }); pick(CONDITIONS.find(c => v === 'all' || c.agents.includes(v))) }}
           items={[{ value: 'all' as const, label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id, label: <><Mark agent={a.id} />{a.name}</> }))]} />

@@ -9,6 +9,7 @@ import { AGENTS, agentName } from '../../data/agents'
 import { checkMessage, voiceSample } from '../../data/playbook'
 import { Btn, Empty, Filters, Mark, Pill, Seg, Switch } from '../../ui'
 import { UndoBar } from '../../ui/Feedback'
+import { InfoPop } from '../../ui/More'
 import { appliesTo, proposalsFor, rulesFor, scopeLabel, type ScopedRule } from './rules'
 import './rules.css'
 
@@ -27,12 +28,12 @@ export default function SharedRules() {
   const facts = s.playbook.rules.filter(r => r.kind === 'fact')
   return (
     <>
-      <p className="muted pb-lede">Your Playbook: what every agent knows about Fernway and how it speaks. Edit anything here and every agent picks it up at once.</p>
       <Proposals />
       <TryMessage />
       <div className="row mb-3">
         <Seg name="pb-section" label="Section" value={section} onChange={v => setParams(v === 'rules' ? {} : { section: v }, { replace: true })}
           options={[{ value: 'rules', label: 'Rules' }, { value: 'facts', label: 'Facts' }, { value: 'words', label: 'Words' }, { value: 'voice', label: 'Voice' }]} />
+        <InfoPop label="What’s the Playbook?">Everything your agents know about Fernway and how it speaks. Edit anything here and every agent picks it up at once.</InfoPop>
       </div>
       {section === 'rules' && <RuleList items={rules} kinds />}
       {section === 'facts' && <RuleList items={facts} />}
@@ -168,8 +169,9 @@ function RuleList({ items, kinds, agent }: { items: PlaybookRule[] | ScopedRule[
                   {r.agents.map(a => <Mark key={a} agent={a} />)}
                   <span>{agent ? scopeLabel(scope, agent.name, agentName) : appliesTo(r.agents, TEAM, agentName)}</span>
                 </span>
-                <span>Used {r.uses} times in 30 days</span>
-                <span className="faint">{r.origin}{r.addedAt > t - 86_400_000 * 2 ? ` · ${ago(r.addedAt, t)}` : ''}</span>
+                {/* The count stays named; how it was counted and where the rule comes from are one click away. A new rule says it. */}
+                <InfoPop label={`${r.uses} use${r.uses === 1 ? '' : 's'}`}>Used {r.uses} time{r.uses === 1 ? '' : 's'} in the last 30 days. {r.origin === 'Onboarding' ? 'Set up during onboarding' : r.origin}.</InfoPop>
+                {r.addedAt > t - 86_400_000 * 2 && <span className="faint">{r.origin} · {ago(r.addedAt, t)}</span>}
                 {r.paused && <Pill tone="caution">Paused</Pill>}
               </div>
             </div>
@@ -189,7 +191,6 @@ function RuleList({ items, kinds, agent }: { items: PlaybookRule[] | ScopedRule[
       <div className="card-head pb-card-head">
         <div>
           <h2>{kinds ? `Rules ${agent.name} follows` : `Facts ${agent.name} cites`} <span className="faint num">{rows.length}</span></h2>
-          <span className="faint">{kinds ? 'A shared rule changes for every agent that follows it.' : `Products, prices and policies ${agent.name} quotes.`}</span>
         </div>
         {!adding && <Btn size="sm" onClick={() => setAdding(true)}><Plus size={14} />{kinds ? `Add a rule for ${agent.name}` : `Add a fact for ${agent.name}`}</Btn>}
       </div>

@@ -5,6 +5,7 @@ import type { AgentId } from '../../app/types'
 import { AGENTS } from '../../data/agents'
 import { Btn, Mark, Pill, Seg } from '../../ui'
 import { Foot, Head } from './parts'
+import { InfoPop } from '../../ui/More'
 import { QUESTIONS } from './day1'
 import { PRESETS, andList, connectedNets, levelCounts, levelFor, presetOf, validEmail } from './model'
 
@@ -14,13 +15,13 @@ type Ctx = { questions: number; faqAlone: boolean; watched: string[]; nets: numb
 /** What each agent will do, said honestly: what needs an account says so, what takes hours says when. */
 const FOR_YOU: Record<AgentId, (c: Ctx) => { text: string; needs?: boolean }> = {
   nova: c => !c.nets ? { text: 'Answers comments, DMs and reviews once a profile is connected.', needs: true }
-    : { text: c.questions ? `${c.questions} message${c.questions > 1 ? 's' : ''} ${c.questions > 1 ? 'are' : 'is'} waiting in your imported Inbox. Nova ${c.faqAlone ? `answers ${c.questions > 1 ? 'them' : 'it'} on her own` : `drafts the ${c.questions > 1 ? 'replies' : 'reply'} for you to send`}.` : 'Watches your Inbox and drafts replies from your Playbook.' },
-  atlas: () => ({ text: 'Writes your 3 first drafts from your Playbook, right after this screen.' }),
-  iris: c => ({ text: c.nets ? 'Writes your first report once your history is imported, later today. First morning brief tomorrow at 07:00.' : 'Writes your first morning brief tomorrow at 07:00. Reports start once a profile is connected.' }),
+    : { text: c.questions ? `${c.faqAlone ? 'Answers' : 'Drafts replies to'} the ${c.questions} message${c.questions > 1 ? 's' : ''} waiting in your imported Inbox${c.faqAlone ? ' on her own' : ''}.` : 'Watches your Inbox and drafts replies from your Playbook.' },
+  atlas: () => ({ text: 'Writes your 3 first drafts right after this screen.' }),
+  iris: c => ({ text: c.nets ? 'First report later today, once your history is imported, and a brief tomorrow at 07:00.' : 'First morning brief tomorrow at 07:00; reports start once a profile is connected.' }),
   echo: c => !c.nets ? { text: 'Watches your competitors once a profile is connected.', needs: true }
-    : { text: c.watched.length ? `Backfills ${andList(c.watched).replace(/\.$/, '')}. First topics in about 2 hours.` : 'Watches mentions of your brand. Add competitors any time.' },
-  sage: () => ({ text: 'Proposes your editorial pillars and a posting cadence from your Playbook.' }),
-  juno: c => ({ text: c.youtube ? 'Watches your YouTube channel and cuts each new video into captioned clips for you to review.' : 'Cuts your YouTube videos into clips once YouTube is connected.' }),
+    : { text: c.watched.length ? `Backfills ${andList(c.watched).replace(/\.$/, '')}: first topics in about 2 hours.` : 'Watches mentions of your brand; add competitors any time.' },
+  sage: () => ({ text: 'Proposes your editorial pillars and a posting cadence.' }),
+  juno: c => ({ text: c.youtube ? 'Cuts each new YouTube video into captioned clips for you to review.' : 'Cuts your YouTube videos into clips once YouTube is connected.' }),
 }
 
 export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
@@ -38,7 +39,7 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
   const team = Number(s.setup.teamSize ?? 1) >= 3
   return (
     <section className="onb-step">
-      <Head title="Meet your team" lede="Six agents, one per department. Here’s what each will do, and when." />
+      <Head title="Meet your team" lede="Here’s what each agent will do, and when." />
       <ul className="card rows onb-team">
         {AGENTS.map(a => {
           const line = FOR_YOU[a.id](ctx)
@@ -62,7 +63,7 @@ export function Team({ onBack, onDone }: { onBack: () => void; onDone: () => voi
           <div><dt>Actions on Draft</dt><dd className="num">{counts.draft}</dd></div>
           <div><dt>Actions on Act</dt><dd className="num">{counts.act}</dd></div>
         </dl>
-        <p className="muted t-sm">Press, legal and safety always come to you, whatever you pick. Agents ask for more autonomy when your approvals show they’ve earned it.</p>
+        <p className="muted t-sm">Press, legal and safety always come to you, whatever you pick. <InfoPop label="How autonomy grows">Agents ask for more autonomy when your approvals show they’ve earned it. You decide each request.</InfoPop></p>
         <button className="link-btn self-start" aria-expanded={perAgent} onClick={() => setPerAgent(o => !o)}>{perAgent ? 'Same setting for everyone' : 'Adjust per agent'}</button>
         {perAgent && (
           <ul className="rows onb-per-agent">
@@ -96,7 +97,7 @@ function Approver() {
   return (
     <div className="card pad onb-autonomy">
       <h2>Who approves what’s sensitive?</h2>
-      <p>You said 3 people or more handle social. Invite the person who signs off on press, legal and budget: agents send those to them.</p>
+      <p>Agents send press, legal and budget to the person you invite.</p>
       {invited ? (
         <p className="onb-sent"><Check size={14} aria-hidden className="ok" />Invitation sent to {invited} · Pending · <button className="link-btn" onClick={() => d({ type: 'setup/patch', patch: { validator: undefined } })}>Cancel invitation</button></p>
       ) : (

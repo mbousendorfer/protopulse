@@ -10,6 +10,7 @@ import {
 } from './model'
 import { ConnectModal } from './Connect'
 import { Field, Foot, Head, useElapsed } from './parts'
+import { InfoPop } from '../../ui/More'
 
 export function Playbook({ onBack, onDone }: { onBack: () => void; onDone: () => void }) {
   const { s } = useStore()
@@ -40,7 +41,7 @@ function Source({ onBack }: { onBack: () => void }) {
   }
   return (
     <section className="onb-step onb-narrow">
-      <Head title="Let’s understand your brand." lede="Point us at your website and we’ll capture what makes your brand yours, then shape it into a Playbook that keeps every post sounding like you." />
+      <Head title="Let’s understand your brand." lede="We’ll turn your website into a Playbook that keeps every post sounding like you." />
       <form className="onb-form" onSubmit={submit} noValidate>
         <div className="field">
           <label htmlFor="onb-site">What’s your website URL?</label>
@@ -82,7 +83,7 @@ function Interview() {
   }
   return (
     <section className="onb-step onb-narrow">
-      <Head title="A few quick questions" lede="No problem. Answer in your own words: we’ll turn it into your Playbook." />
+      <Head title="A few quick questions" lede="Answer in your own words: we’ll turn it into your Playbook." />
       <form className="onb-form" onSubmit={submit} noValidate>
         <Field id="onb-answer" label={<><span className="muted">Question {i + 1} of {INTERVIEW.length}</span><br /><b className="onb-question">{INTERVIEW[i]}</b></>} error={error ? 'Type an answer, or skip this question.' : undefined}>
           <textarea id="onb-answer" key={i} className="textarea" autoFocus placeholder="Type your answer…" value={text} rows={3}
@@ -131,7 +132,7 @@ function VoiceSourceStep() {
   )
   return (
     <section className="onb-step onb-narrow">
-      <Head title="How should we learn your voice?" lede={pb.noWebsite ? 'Thanks, that’s what we needed. Now we need a sample of how you write.' : 'Pick a source. Your own posts give the closest match.'} />
+      <Head title="How should we learn your voice?" lede={pb.noWebsite ? 'Now we need a sample of how you write.' : 'Your own posts give the closest match.'} />
       <ul className="onb-sources">
         {opt('profile', <UserRound size={18} aria-hidden />, 'Analyze a connected profile',
           connected.length ? <>Reads its last {POSTS_READ} posts <Pill tone="ok">Recommended</Pill></> : <>No connected profiles yet. <button type="button" className="link-btn" onClick={() => setConnecting(true)}>Connect one</button></>,
@@ -177,7 +178,7 @@ function Loading() {
   const started = s.setup.analysisAt ? Math.max(1, Math.round((appNow(s) - s.setup.analysisAt) / 60_000)) : 0
   return (
     <section className="onb-step onb-narrow">
-      <Head title="Crafting your Playbook" lede={prerun ? `We started reading ${pb.website} ${started} min ago, when your trial started. Nearly there.` : 'This usually takes about 10 seconds.'} />
+      <Head title="Crafting your Playbook" lede={prerun ? `We started reading ${pb.website} ${started} min ago, when your trial started.` : 'This usually takes about 10 seconds.'} />
       <ol className="onb-phases" aria-label="Building your Playbook">
         {stages.map((st, i) => {
           const state = i < at ? 'done' : i === at ? 'current' : 'todo'
@@ -231,6 +232,22 @@ function AddLine({ label, placeholder, onAdd }: { label: string; placeholder: st
   )
 }
 
+/** What each recap answer changes in the drafts: one click from the recap's lede, so the cards keep only their question. */
+function UsesList({ site }: { site: boolean }) {
+  return (
+    <dl className="onb-uses">
+      <dt>Playbook name</dt><dd>Shown next to the Playbook in chats and listings.</dd>
+      <dt>Primary audience</dt><dd>Posts speak to them first.</dd>
+      <dt>Objective</dt><dd>Agents favour angles that serve it.</dd>
+      <dt>Content action</dt><dd>Posts include a call to action that matches.</dd>
+      <dt>Where readers go next</dt><dd>The links agents weave into posts.</dd>
+      <dt>Content style</dt><dd>It guides the structure of every post.</dd>
+      <dt>Tone and voice profile</dt><dd>How your posts and replies read. Agents match it in every draft.</dd>
+      {site && <><dt>Competitors</dt><dd>Found from your website. Echo watches them for your topic feed.</dd></>}
+    </dl>
+  )
+}
+
 function Recap({ onDone }: { onDone: () => void }) {
   const { s, d } = useStore()
   const pb = s.setup.pb
@@ -242,15 +259,15 @@ function Recap({ onDone }: { onDone: () => void }) {
   const from = site ? 'From your website' : 'From your answers'
   return (
     <section className="onb-step">
-      <Head title={b.name.trim() ? `Here’s the ${b.name.trim()} Playbook` : 'Here’s your Playbook'} lede={`${site ? 'Pre-filled from your website' : 'Drafted from your answers'}. Edit anything: every agent writes from it.`} />
+      <Head title={b.name.trim() ? `Here’s the ${b.name.trim()} Playbook` : 'Here’s your Playbook'} lede={<>{site ? 'Pre-filled from your website' : 'Drafted from your answers'}: every agent writes from it. <InfoPop label="How agents use each answer"><UsesList site={!!site} /></InfoPop></>} />
 
       <div className="onb-group">
         <h2>Brand</h2>
         <div className="card onb-recap">
-          <Card title="Playbook name" sub="Shown next to the Playbook in chats and listings.">
+          <Card title="Playbook name">
             <input className="input" aria-label="Playbook name" value={b.name} onChange={e => put({ name: e.target.value })} />
           </Card>
-          <Card title="Does this describe your business correctly?" sub="Edit it directly if anything needs adjusting." from={from}>
+          <Card title="Does this describe your business correctly?" from={from}>
             <textarea className="textarea" aria-label="Business summary" rows={3} value={b.summary} onChange={e => put({ summary: e.target.value })} />
           </Card>
         </div>
@@ -259,7 +276,7 @@ function Recap({ onDone }: { onDone: () => void }) {
       <div className="onb-group">
         <h2>Audience and goals</h2>
         <div className="card onb-recap">
-          <Card title="Who is your primary audience?" sub="Posts speak to them first.">
+          <Card title="Who is your primary audience?">
             <div className="onb-radios" role="radiogroup" aria-label="Primary audience">
               {b.audiences.map(a => (
                 <div key={a} className="onb-radio-row">
@@ -270,13 +287,13 @@ function Recap({ onDone }: { onDone: () => void }) {
             </div>
             <AddLine label="Add an audience" placeholder="Add an audience" onAdd={v => put({ audiences: [...b.audiences, v], primary: b.primary ?? v })} />
           </Card>
-          <Card title="What’s your primary social media objective?" sub="Agents favour angles that serve it.">
+          <Card title="What’s your primary social media objective?">
             <Toggles label="Objective" items={b.objectives} onChange={objectives => put({ objectives })} />
           </Card>
-          <Card title="What action should your content drive?" sub="Posts include a call to action that matches.">
+          <Card title="What action should your content drive?">
             <Toggles label="Content action" items={b.actions} onChange={actions => put({ actions })} />
           </Card>
-          <Card title="Where should readers go next?" sub={site ? 'The links agents weave into posts.' : 'Optional without a website.'}>
+          <Card title="Where should readers go next?" sub={site ? undefined : 'Optional without a website.'}>
             {b.ctaUrls.map((u, i) => (
               <div key={i} className="row tight">
                 <input className="input grow" aria-label={`Link ${i + 1}`} value={u} onChange={e => put({ ctaUrls: b.ctaUrls.map((x, j) => (j === i ? e.target.value : x)) })} />
@@ -291,13 +308,13 @@ function Recap({ onDone }: { onDone: () => void }) {
       <div className="onb-group">
         <h2>Voice and style</h2>
         <div className="card onb-recap">
-          <Card title="What content style fits your brand?" sub="It guides the structure of every post.">
+          <Card title="What content style fits your brand?">
             <Toggles label="Content style" items={b.styles} onChange={styles => put({ styles })} />
           </Card>
-          <Card title="Tone of voice" sub={b.voiceSource === 'website' ? 'Agents match it in every draft.' : 'Agents match it in every draft. Optional: your voice profile already says it.'}>
+          <Card title="Tone of voice" sub={b.voiceSource === 'website' ? undefined : 'Optional: your voice profile already says it.'}>
             <Toggles label="Tone of voice" items={b.tones} onChange={tones => put({ tones })} />
           </Card>
-          <Card title="Voice profile" sub={b.voiceSource === 'custom' ? 'You wrote this voice yourself. Agents follow it exactly as written.' : 'How your posts and replies read.'} from={b.voiceFrom}>
+          <Card title="Voice profile" sub={b.voiceSource === 'custom' ? 'Agents follow it exactly as written.' : undefined} from={b.voiceFrom}>
             <textarea className="textarea" aria-label="Voice profile" rows={3} value={b.voice} onChange={e => put({ voice: e.target.value })} />
           </Card>
         </div>
@@ -305,7 +322,7 @@ function Recap({ onDone }: { onDone: () => void }) {
 
       {b.competitors.length > 0 && (
         <div className="onb-group">
-          <h2>Competitors <span className="muted">· found from your website. Echo watches them for your topic feed.</span></h2>
+          <h2>Competitors <span className="muted">· Echo watches them</span></h2>
           <ul className="card rows">
             {b.competitors.map((c, i) => (
               <li key={c.id} className={`onb-prop ${c.on ? '' : 'off'}`}>
@@ -319,7 +336,7 @@ function Recap({ onDone }: { onDone: () => void }) {
 
       {learned && (
         <div className="onb-group">
-          <h2>What Nova learned from your public replies <span className="muted">· in plain words. Untick what’s wrong, click a line to fix it.</span></h2>
+          <h2>What Nova learned from your public replies <span className="muted">· untick what’s wrong, click to fix</span></h2>
           <ul className="card rows">{PROPOSALS.map(p => <ProposalRow key={p.id} p={p} />)}</ul>
         </div>
       )}
