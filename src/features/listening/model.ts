@@ -332,17 +332,3 @@ export function listeningNeeds(s: State) {
   }
 }
 export const listeningNeedsCount = (s: State) => Object.values(listeningNeeds(s)).reduce((n, xs) => n + xs.length, 0)
-
-/** Mentions feed: rows that share their chips are grouped once they are this many in a row. */
-const RUN = 3
-/** Consecutive equal keys of RUN or more: the first row of a run gets its length, every row of it knows it's inside. */
-export function runsOf(keys: string[]) {
-  const out = keys.map(() => ({ start: false, inside: false, n: 0 }))
-  for (let i = 0; i < keys.length;) {
-    let j = i
-    while (j + 1 < keys.length && keys[j + 1] === keys[i]) j++
-    if (j - i + 1 >= RUN) for (let k = i; k <= j; k++) out[k] = { start: k === i, inside: true, n: j - i + 1 }
-    i = j + 1
-  }
-  return out
-}

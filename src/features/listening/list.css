@@ -1,0 +1,42 @@
+/*
+ * Standard list (matrix §14) for Listening, Strategy and Insights, on the Video › Clips model: one bar (Filters by
+ * state with counts, a second criterion in a Menu on the right), one card of DecisionRows, BulkBar during a selection.
+ */
+.sl-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s4); }
+.sl-bar > .filters { margin: 0; }
+.sl-menus { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.sl-list { padding: 0; overflow: hidden; }
+.sl-head { display: flex; align-items: center; gap: var(--s2); min-height: 48px; padding: 8px var(--s4); border-bottom: 1px solid var(--line); }
+.sl-head > .select-box { margin-left: calc(-1 * var(--s1)); }
+.sl-head .btn { flex: none; }
+.sl-list > .bulk-bar, .sl-list > .undo-bar { margin: var(--s2); }
+.sl-list .rows { list-style: none; margin: 0; padding: 0; }
+.sl-list .dec-row { padding: 10px var(--s4); }
+.sl-list .dec-row:has(.select-box input:checked) { background: var(--signal-wash); }
+.sl-list .dec-row[data-open] { cursor: pointer; transition: background-color var(--fast) var(--ease); }
+.sl-list .dec-row[data-open]:hover { background: var(--row-hover); }
+.sl-list .dec-title, .sl-list .dec-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-list .dec-title a, .sl-list .dec-title .link-title { color: var(--ink); font-weight: 600; text-decoration: none; background: none; border: 0; padding: 0; font-size: inherit; }
+.sl-list .dec-title a:hover, .sl-list .dec-title .link-title:hover { text-decoration: underline; text-underline-offset: 3px; }
+.sl-quote { font-weight: 400; margin-left: var(--s2); }
+.sl-list .dec-title .link-title.new { font-weight: 700; }
+.sl-lead-icon.urgent { background: var(--alert-tint); color: var(--alert-strong); }
+.sl-scope { font-size: var(--t-sm); color: var(--ink-2); margin: calc(-1 * var(--s2)) 0 var(--s3); }
+.sl-list .dec-line { display: flex; align-items: center; gap: 6px var(--s3); }
+.sl-list .dec-line > * { flex: none; }
+.sl-list .dec-line > .sl-gist { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-list .dec-acts { flex-wrap: nowrap; }
+.sl-list .dec-acts .btn .mark { width: 16px; height: 16px; }
+.sl-lead-icon { width: 32px; height: 32px; border-radius: var(--r-ctl); display: grid; place-items: center; background: var(--lift); color: var(--ink-2); }
+.sl-list > .dec-more { padding-left: var(--s4); }
+
+@media (max-width: 720px) {
+  .sl-list .dec-title, .sl-list .dec-line { white-space: normal; }
+  .sl-list .dec-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .sl-list .dec-line { flex-wrap: wrap; row-gap: 2px; }
+  .sl-list .dec-line > .sl-gist { flex: 1 1 100%; white-space: normal; }
+  .sl-list .dec-acts { flex-wrap: wrap; min-width: 0; }
+  /* A decision worded as a sentence wraps inside its button instead of leaving the card. */
+  .sl-list .dec-acts .btn { max-width: 100%; white-space: normal; height: auto; min-height: 30px; padding-block: 4px; text-align: left; }
+  .sl-head { flex-wrap: wrap; }
+}
