@@ -11,6 +11,8 @@ import { Spark } from '../../ui/charts'
 import Photo from '../../ui/Photo'
 import { SocialAvatar } from '../../ui/SocialAvatar'
 import { registry } from '../../app/agents-registry'
+import { MoreInfo } from '../../ui/More'
+import { gist } from '../inbox/gist'
 
 export const KIND_LABEL: Record<Kind, string> = { approval: 'Approval', decision: 'Decision', info: 'Missing info', alert: 'Alert', promotion: 'Autonomy request', news: 'Good news' }
 export const URGENCY_LABEL = { urgent: 'Urgent', today: 'Today', week: 'This week' } as const
@@ -120,16 +122,38 @@ export function WontGuess({ h }: { h: Handoff }) {
   return <p className="wont-guess">{h.agent[0].toUpperCase() + h.agent.slice(1)} won’t guess. Tell it once and it goes into the Playbook facts.</p>
 }
 
-export function WhyLine({ h }: { h: Handoff }) {
+/**
+ * One line of reason and the confidence (matrix §13). The full reasoning, the Playbook rules applied and the sources
+ * sit behind « Why? ».
+ */
+export function WhyLine({ h, sourcesShown }: { h: Handoff; sourcesShown?: boolean }) {
+  const short = gist(h.why, 18)
+  // No « Why? » when the panel would only repeat what the card already shows.
+  const more = short !== h.why || !!h.rules?.length || (!!h.sources?.length && !sourcesShown)
   return (
     <div className="why">
-      <span><span className="faint">Why you’re seeing this:</span> {h.why}</span>
+      <span>{short}{more && <>{' '}<MoreInfo label="Why?" title={`Why ${agentName(h.agent)} raised this`}><WhyPanel h={h} /></MoreInfo></>}</span>
+      <Confidence v={h.confidence} />
+    </div>
+  )
+}
+
+function WhyPanel({ h }: { h: Handoff }) {
+  return (
+    <div className="stack">
+      <p>{h.why}</p>
       <Confidence v={h.confidence} />
       {!!h.rules?.length && (
-        <span className="row tight">
-          <span className="faint">Playbook:</span>
-          {h.rules.map(r => <span key={r} className="chip">{r}</span>)}
-        </span>
+        <div>
+          <div className="section-title">Playbook rules applied</div>
+          <div className="row tight">{h.rules.map(r => <span key={r} className="chip">{r}</span>)}</div>
+        </div>
+      )}
+      {!!h.sources?.length && (
+        <div>
+          <div className="section-title">Sources</div>
+          <ul aria-label="Sources">{h.sources.map(x => <li key={x.label}>{x.label} <span className="faint">· {x.from}</span></li>)}</ul>
+        </div>
       )}
     </div>
   )

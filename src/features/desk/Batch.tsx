@@ -84,11 +84,12 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
         {b.urgency === 'urgent' ? <Pill tone="alert" dot>Includes urgent</Pill> : b.urgency === 'today' ? <Pill tone="caution">Today</Pill> : <Pill>This week</Pill>}
       </div>
       <h2 className="detail-title">{b.title}</h2>
-      <p className="handoff-ctx">{b.meta}. {b.id === 'nova' ? 'Nova sorted them: buying questions first, then the replies she’s sure of, then the ones to check.' : b.id === 'atlas' ? 'Atlas checked each one against the Playbook and Sage’s cadence.' : 'Add them all, or open one to read it in full.'}</p>
+      {/* The groups below say how the agent sorted them; the line only says what's ready. */}
+      <p className="handoff-ctx">{b.meta}.</p>
 
       <div className="batch-head row">
         <SelectAll sel={sel} label="Select every item" />
-        <span className="faint">{sel.count} of {b.items.length} selected · click a row to see it in full</span>
+        <span className="faint">{sel.count} of {b.items.length} selected</span>
       </div>
       {groups.map(g => (
         <section key={g.id} className="batch-group" aria-label={g.label}>
@@ -121,7 +122,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
           </ul>
         </section>
       ))}
-      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova also hid {hidden} spam on her own (set to Act). <button className="link-btn" onClick={() => nav('/inbox?view=hidden')}>See them</button></p>}
+      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova hid {hidden} spam on her own. <button className="link-btn" onClick={() => nav('/inbox?view=hidden')}>See them</button></p>}
 
       <footer className="detail-foot">
         <span className="faint">Nothing goes out until you confirm.</span>
