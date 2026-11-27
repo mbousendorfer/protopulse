@@ -6,6 +6,7 @@ import { dayLabel, hhmm } from '../../app/time'
 import { PHASES, PHASE_MS, TRANSCRIPT, WATCHING, type Source } from '../../data/video'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
+import { InfoPop } from '../../ui/More'
 import { WEEKLY_QUOTA, sentThisWeek, validUrl } from './slice'
 import { SESSION_BLOBS, ScoreBadge, SourceThumb, clipScore, fmt, playable, videoUrl } from './parts'
 import { ON_SCREEN, PEOPLE, mediaUrl, speakerName } from '../../data/video'
@@ -21,7 +22,6 @@ function Status({ src, now }: { src: Source; now: number }) {
     return <span className="muted t-sm">{PHASES[k]} · {Math.min(99, Math.round((el / (PHASES.length * PHASE_MS)) * 100))}%</span>
   }
   if (src.status === 'waiting') return <Btn size="sm" onClick={e => { e.stopPropagation(); d({ type: 'video/start', id: src.id }) }}>Make clips</Btn>
-  if (src.status === 'failed') return <Pill tone="alert">Couldn’t open it</Pill>
   const n = s.video.clips.filter(c => c.source === src.id && c.status !== 'dismissed').length
   return <span className="muted t-sm">{n} clip{n === 1 ? '' : 's'}</span>
 }
@@ -60,47 +60,56 @@ function AddVideo() {
   )
 }
 
+/** Juno's channel and auto-clipping: a setting, so it sits in the Video settings sheet. */
+export function Watching() {
+  const { s, d } = useStore()
+  const kit = s.video.kit
+  return (
+    <section className="stack" aria-labelledby="watching">
+      <h2 id="watching" className="section-title flush">Watching</h2>
+      <div className="row nowrap"><Net n="youtube" size={22} /><div><b>{WATCHING.channel}</b> <span className="muted">{WATCHING.handle} · checked every {WATCHING.checkedEvery}</span></div></div>
+      <Switch checked={kit.watchUploads} onChange={v => d({ type: 'video/kit', patch: { watchUploads: v } })} label="Clip new uploads" />
+      <Switch checked={kit.watchLives} onChange={v => d({ type: 'video/kit', patch: { watchLives: v } })} label="Clip recorded lives and webinars" />
+    </section>
+  )
+}
+
+/** Videos: add one, then every video as a row (matrix §14) that opens its transcript. */
 export default function Sources() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const now = useNow(1000)
-  const kit = s.video.kit
   return (
     <div className="stack lg">
       <Notice scope="video" />
-      <div className="src-top">
-        <section className="card pad stack" aria-labelledby="watching">
-          <h2 id="watching" className="section-title flush">Watching</h2>
-          <div className="row nowrap"><Net n="youtube" size={22} /><div><b>{WATCHING.channel}</b> <span className="muted">{WATCHING.handle} · {WATCHING.subscribers} subscribers</span><div className="muted t-sm">Juno checks it every {WATCHING.checkedEvery}.</div></div></div>
-          <Switch checked={kit.watchUploads} onChange={v => d({ type: 'video/kit', patch: { watchUploads: v } })} label="Clip new uploads" />
-          <Switch checked={kit.watchLives} onChange={v => d({ type: 'video/kit', patch: { watchLives: v } })} label="Clip recorded lives and webinars" />
-        </section>
-        <AddVideo />
-      </div>
-      <section aria-labelledby="all-sources">
-        <h2 id="all-sources" className="section-title">Videos</h2>
-        {!s.video.sources.length ? <Empty title="No videos yet" body="Paste a link or upload a file to get your first clips." /> : (
-          <div className="ideas-rows">
+      <AddVideo />
+      {!s.video.sources.length ? <Empty title="No videos yet" /> : (
+        <section className="card vq-list" aria-label="Videos">
+          <ul className="dq-rows">
             {s.video.sources.map(src => {
               const K = KIND[src.kind].icon
               return (
-                <article key={src.id} className="idea-row src-row" onClick={e => { if (!(e.target as Element).closest('a, button')) nav(`/video/sources/${src.id}`) }}>
+                <li key={src.id} className="dq-row is-source" onClick={e => { if (!(e.target as Element).closest('a, button')) nav(`/video/sources/${src.id}`) }}>
+                  <span className="dq-check" />
                   <SourceThumb source={src} />
-                  <div className="idea-text">
-                    <h3><Link className="idea-title" to={`/video/sources/${src.id}`}>{src.title}</Link></h3>
-                    <p className="idea-meta"><span className="row tight nowrap"><K size={14} aria-hidden />{KIND[src.kind].label}</span><span>{src.channel}</span><span>{dayLabel(src.at, now)}, {hhmm(src.at)}</span><span className="num">{lengthOf(src)}</span></p>
-                    {src.status === 'failed' && <p className="field-error"><TriangleAlert size={14} aria-hidden />{src.error}</p>}
+                  <div className="dq-main">
+                    <p className="dq-title"><Link className="dq-name" to={`/video/sources/${src.id}`}>{src.title}</Link></p>
+                    <p className="dq-line">
+                      {src.status === 'failed' && <><Pill tone="alert">Failed</Pill><InfoPop label="Why?">{src.error}</InfoPop></>}
+                      <span className="row tight nowrap" title={KIND[src.kind].label}><K size={14} aria-hidden />{dayLabel(src.at, now)}, {hhmm(src.at)}</span>
+                      <span className="num">{lengthOf(src)}</span>
+                      <span className="dq-src">{src.channel}</span>
+                    </p>
                   </div>
-                  <div className="idea-acts">
-                    <Status src={src} now={now} />
-                    {src.status === 'failed' && <Btn size="sm" onClick={() => d({ type: 'video/retry', id: src.id })}>Retry</Btn>}
+                  <div className="dq-acts">
+                    {src.status === 'failed' ? <Btn size="sm" onClick={() => d({ type: 'video/retry', id: src.id })}>Retry</Btn> : <Status src={src} now={now} />}
                   </div>
-                </article>
+                </li>
               )
             })}
-          </div>
-        )}
-      </section>
+          </ul>
+        </section>
+      )}
     </div>
   )
 }

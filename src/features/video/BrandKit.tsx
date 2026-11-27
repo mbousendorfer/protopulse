@@ -16,11 +16,10 @@ export function TemplatePicker({ value, captions, onChange, name }: { value: Cap
   return (
     <div className="tpl-grid" role="radiogroup" aria-label="Caption style">
       {TEMPLATES.map(t => (
-        <label key={t.id} className={`tpl ${value === t.id ? 'on' : ''}`}>
+        <label key={t.id} className={`tpl ${value === t.id ? 'on' : ''}`} title={t.note}>
           <input type="radio" className="sr-only" name={name} checked={value === t.id} onChange={() => onChange(t.id)} />
           <CaptionSample c={{ ...captions, template: t.id, upper: t.id === 'pop' || captions.upper }} label={`${t.label} captions`} />
           <span className="tpl-name">{t.label}</span>
-          <span className="muted t-xs">{t.note}</span>
         </label>
       ))}
     </div>
@@ -49,15 +48,14 @@ export default function BrandKit() {
   const langs: Exclude<Lang, 'en'>[] = ['fr', 'de', 'es', 'it']
   return (
     <div className="kit stack lg">
-      <p className="muted">New clips start from these settings. Clips Juno already cut keep their own.</p>
-      <section className="card pad stack" aria-labelledby="kit-cap">
+      <section className="stack" aria-labelledby="kit-cap">
         <h2 id="kit-cap" className="section-title flush">Captions</h2>
         <TemplatePicker name="kit-tpl" value={kit.captions.template} captions={kit.captions} onChange={template => cap({ template })} />
         <div className="kit-row"><span>Highlight colour</span><SwatchPicker name="kit-swatch" value={kit.captions.color} onChange={color => cap({ color })} /></div>
         <div className="kit-row"><span>Words per line</span><Seg name="kit-per" size="sm" label="Words per line" value={String(kit.captions.perLine)} onChange={v => cap({ perLine: +v })} options={['1', '2', '3', '4'].map(v => ({ value: v, label: v }))} /></div>
         <Switch checked={kit.captions.emoji} onChange={emoji => cap({ emoji })} label="Add an emoji after key words" />
       </section>
-      <section className="card pad stack" aria-labelledby="kit-brand">
+      <section className="stack" aria-labelledby="kit-brand">
         <h2 id="kit-brand" className="section-title flush">On every clip</h2>
         <Switch checked={kit.brand.logo} onChange={logo => brand({ logo })} label="Fernway logo in the corner" />
         <Switch checked={kit.brand.progress} onChange={progress => brand({ progress })} label="Progress bar" />
@@ -66,9 +64,9 @@ export default function BrandKit() {
         <label className="field"><span className="label">End card text</span><input className="input" value={kit.outro} onChange={e => set({ outro: e.target.value })} /></label>
         <div className="kit-row"><span>Music</span><Seg name="kit-music" size="sm" label="Music" value={kit.brand.music ?? 'none'} onChange={v => brand({ music: v === 'none' ? undefined : v })} options={[{ value: 'none', label: 'None' }, ...MUSIC.map(m => ({ value: m.id, label: m.label.split(' · ')[0] }))]} /></div>
       </section>
-      <section className="card pad stack" aria-labelledby="kit-lang">
+      <section className="stack" aria-labelledby="kit-lang">
         <h2 id="kit-lang" className="section-title flush">Language versions</h2>
-        <p className="muted">The languages Juno offers first in the editor. Each version keeps the speaker’s voice, and you review it before it goes out.</p>
+        <p className="muted t-sm">Offered first in the editor, in the speaker’s voice.</p>
         <div className="row">
           {langs.map(l => (
             <label key={l} className="check-row"><input type="checkbox" className="check" checked={kit.langs.includes(l)} onChange={e => set({ langs: e.target.checked ? [...kit.langs, l] : kit.langs.filter(x => x !== l) })} />{LANG_LABEL[l]}</label>

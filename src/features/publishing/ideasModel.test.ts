@@ -7,7 +7,7 @@ import { RULES } from '../../data/playbook'
 import type { PlaybookRule } from '../../app/types'
 import {
   LEARNED_ORIGIN, LEARN_RULES, MAX_OPEN, applyAngle, applyInstruction, capIdeas, diffWords, draftIdea, expireIdeas, gapDays, heldByRules,
-  gapSeed, ideaPosts, isOpen, learn, makeIdea, mixVariants, namesCompetitor, pickSlot, spotIdeas, summarize, variantsOf, wakeIdeas,
+  gapSeed, ideaPosts, isOpen, learn, makeIdea, mixVariants, namesCompetitor, pickSlot, spotIdeas, variantsOf, wakeIdeas,
 } from './ideasModel'
 import { checkPost } from './checks'
 
@@ -27,8 +27,6 @@ test('demo load: at least 6 ideas from the four sources, 2 ready, 1 series, 1 ex
   expect(ideas.filter(i => i.kind === 'series')).toHaveLength(1)
   expect(ideas.some(i => i.expires && i.expires.at - NOW < DAY)).toBe(true)
   for (const i of ideas) for (const s of i.sources) { expect(s.proof).toMatch(/\d/); expect(s.link).toMatch(/^\//) }
-  // 2, not 3: since Atlas reads Sage's cadence (X: 3 a week), the calendar gap idea is an X post, not a Community one.
-  expect(summarize(ideas)).toBe('2 of 7 ideas are for Community, the pillar furthest behind target.')
 })
 
 test('trend ideas stay suggestions on Suggest; recycle and fill get drafted on Draft', () => {

@@ -410,17 +410,6 @@ export function capIdeas(ideas: Idea[], incoming: Idea[]): { accepted: Idea[]; h
   return { accepted, held, retired }
 }
 
-/** Atlas's one line at the top of Ideas: only what the counts beside it don't already say. */
-export function summarize(ideas: Idea[], t: Targets = SEED): string {
-  const open = ideas.filter(isOpen)
-  if (!open.length) return 'No ideas waiting. Atlas brings the next one as soon as a signal is worth it.'
-  const behind = behindPillar(t).pillar
-  const inPillar = open.filter(i => i.pillar === behind).length
-  const soon = open.filter(i => i.expires && i.expires.at - Math.max(...open.map(x => x.at)) < DAY).length
-  if (inPillar) return `${inPillar} of ${open.length} ideas are for ${behind}, the pillar furthest behind target.`
-  return soon ? `${soon} idea${soon > 1 ? 's' : ''} won’t keep past today.` : `${open.length} idea${open.length > 1 ? 's' : ''} waiting.`
-}
-
 /** "Good until Thu 27", "Good until 21:00", or no deadline. */
 export function freshness(idea: Idea, now: number): { label: string; soon: boolean } {
   if (!idea.expires) return { label: 'No deadline', soon: false }
