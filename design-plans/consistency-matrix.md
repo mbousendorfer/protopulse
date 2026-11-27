@@ -229,7 +229,9 @@ public line and the DM stay visible.
 
 ## 14. Standard list (Matt, 27/11: « features tailored to our example make the interface too verbose »)
 
-**Rule.** A module's landing and every list of things to act on use one pattern, built only from existing primitives.
+**Rule.** Every **queue** (a list of things to act on, one after the other: Inbox, approvals, clips to send, the « Needs you »
+items of a module) uses one pattern, built only from existing primitives. Objects that are browsed, compared or
+followed (ideas, campaigns, competitors, reports, agents) are not queues: they take their own shape (§15).
 A rule that exists for one case of the demo (a weekly quota, one person's release, a hook trial, a flop) is a status
 on the row, never a group, banner, note or component of its own.
 
@@ -252,6 +254,32 @@ on the row, never a group, banner, note or component of its own.
 
 **Exemplar:** Video › Clips. **Supersedes** §12's summary line and decision groups: « Needs you » is the first filter
 of the list. §12's other rules (decisions on the row, empty state, rail badge) stand.
+
+## 15. The shape of the object (Matt, 27/11: « everything looks like a list of tickets now, you oversimplified »)
+
+**Rule.** §14 was applied to everything and turned ideas, campaigns, competitors, reports and agents into identical rows.
+A screen shows its objects in the shape they have in the user's head, keeps the gains of §13–14 (few tabs, little text,
+no demo-only blocks, decisions on the spot) and gives back what makes it a product: an overview, visuals, the agents'
+presence and a hierarchy.
+
+**Canonical**
+- Module overview: one short band at the top of the landing, above « Needs you »: 2–4 named key numbers or one small
+  chart, plus the agent's one-sentence read with its avatar. No paragraph, no tiles that repeat « Needs you ».
+- Object shapes:
+  - idea, draft → card with its visual or network preview, the angle in one line, its proof number, its pillar;
+  - campaign → card with period, goal and progress bar, post count;
+  - competitor → card with logo, its latest move and a trend;
+  - report → card with a small chart and the period;
+  - agent → card with avatar in its colour, state, what it is doing now, its pending request;
+  - clip → thumbnail grid or row with a large frame;
+  - calendar → grid;
+  - mention → feed item with avatar, network and sentiment visible.
+- Hierarchy: the most urgent or most promising object is set apart (first, larger card, or status colour); the rest are
+  calmer. Not every item weighs the same.
+- Queues stay §14: « Needs you » is a short queue above or beside the objects, never the whole page.
+- Still out: rule banners, group hints, demo-only sub-groups, text beyond §13.
+
+**Exemplars:** to come from the object-shape pass (Publishing › Ideas, Insights / Strategy, Listening / Agents).
 
 ## 11. Vocabulary
 
