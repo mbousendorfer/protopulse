@@ -87,6 +87,26 @@ Already a two-pane standard; nothing tailored to the demo except the lede.
 No route disappears. `?view=drafts` (gone) falls back to Needs you; `?view=claire|leo|yanis|mine|negative` keep working
 from the Views menu.
 
+## 6. Result (same data, 1440 × 900)
+
+Day 30 workspace, « Ask Atlas to fill » in Publishing › Queues, the six Nova events triggered; before measured on
+`origin/main`'s files with the same saved state.
+
+| Route | Words, all | First screen | Chrome on the first screen (not rows) | Where the list starts |
+|---|---|---|---|---|
+| `#/` before | 683 | 194 | 155 | 722 px (below the fold) |
+| `#/` after | 355 | 302 | 39 | 230 px |
+| `#/inbox` before | 471 | 367 | 136 (side bar 23 entries, 6 group headers) | — |
+| `#/inbox` after | 443 | 369 | 30 | — |
+| `#/chats` before | 152 | 152 | — | — |
+| `#/chats` after | 143 | 143 | — | — |
+
+The Desk's first screen has more words because it now shows the work: rows of the list instead of the brief.
+The Inbox's first screen holds as many words because the list is full width and shows more rows; its chrome drops
+from 136 to 30 words.
+
+Captures: `design-plans/previews/simplify-desk-inbox-chats-{before,after}-*.jpg`.
+
 ## 5. References
 
 Structure only (Mobbin, web):
