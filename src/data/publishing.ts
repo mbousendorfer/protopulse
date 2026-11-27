@@ -19,7 +19,10 @@ export type Post = {
   network: Network
   at: number
   text: string
+  /** The first visual, read everywhere a post shows one image. `assets` holds them all, in order. */
   media?: string
+  /** Every visual, in order, with its alt text. The composer keeps `media` = the first one. */
+  assets?: { src: string; alt?: string }[]
   status: PostStatus
   author: 'atlas' | 'you'
   pillar: Pillar
@@ -28,8 +31,12 @@ export type Post = {
   campaignId?: string
   /** Shared contract for every agent; no UI yet. */
   labels?: string[]
-  link?: { url: string; utm?: Record<string, string>; short?: string }
+  link?: { url: string; utm?: Record<string, string>; short?: string; card?: { title: string; description: string; image?: string } }
   format?: 'post' | 'carousel' | 'reel' | 'story' | 'short' | 'video' | 'document'
+  /** What the network asks beyond the caption (YouTube title, TikTok privacy, X thread…), see composerModel.ts. */
+  options?: Record<string, string | boolean | string[]>
+  /** Who on the team owns the post next. */
+  assignee?: 'sam' | 'claire' | 'leo' | 'yanis'
   /** Published as the first comment, on networks that allow it. */
   firstComment?: string
   stats?: { reach: number; er: number }
