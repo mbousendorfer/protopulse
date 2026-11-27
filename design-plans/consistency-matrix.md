@@ -247,8 +247,11 @@ on the row, never a group, banner, note or component of its own.
   list head, right, and gives way to `BulkBar` while rows are selected.
 - Empty: `Empty`, one line.
 - Gone: summary sentences above the list (the counts are the filters), agent sentences on the page (« I check your
-  channel every 15 minutes » belongs to the agent's profile), group headers and their hints, rule banners, sub-groups
-  by cause.
+  channel every 15 minutes » belongs to the agent's profile), group hints, rule banners, sub-groups by cause.
+- Group headers by gesture are allowed when a queue mixes gestures: a short header names the gesture and its count
+  (« Your call 2 », « To check 3 », « Ready to send 6 »), with the group's one primary action on the right (« Send
+  all 6 »). No hint sentence under or beside it. Exemplar: Inbox › Needs you (#176). A queue with one gesture has no
+  header.
 - One cause blocking several rows (Hugo's release) has no banner: its action is on each row it blocks (« Release
   signed ») and in `BulkBar`.
 
