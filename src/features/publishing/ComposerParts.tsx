@@ -79,12 +79,12 @@ export function CaptionTools({ field, value, onInsert, pillar, networks, campaig
   const over = !count.thread && count.n > count.limit
   return (
     <div className="cmp-tools">
-      <Pop align="start" trigger={<Btn size="sm" variant="ghost" aria-label="Emoji"><Smile size={14} />Emoji</Btn>}>
+      <Pop align="start" trigger={<Btn size="sm" variant="ghost" icon aria-label="Emoji" title="Emoji"><Smile size={16} /></Btn>}>
         <div className="cmp-emoji" role="group" aria-label="Emoji">
           {EMOJIS.map(e => <button key={e} type="button" onClick={() => put(e)} aria-label={`Insert ${e}`}>{e}</button>)}
         </div>
       </Pop>
-      <Pop align="start" trigger={<Btn size="sm" variant="ghost"><Hash size={14} />Hashtags</Btn>}>
+      <Pop align="start" trigger={<Btn size="sm" variant="ghost" icon aria-label="Hashtags" title="Hashtags"><Hash size={16} /></Btn>}>
         <div className="cmp-pick">
           <span className="label">Saved for {pillar}{campaignTag ? ', plus the campaign’s' : ''}</span>
           {tags.map(t => <button key={t} type="button" className="cmp-pick-row" onClick={() => put(t)}><span>{t}</span></button>)}
@@ -92,7 +92,7 @@ export function CaptionTools({ field, value, onInsert, pillar, networks, campaig
           <p className="t-xs muted">Playbook: three at most on Instagram, none on LinkedIn.</p>
         </div>
       </Pop>
-      <Pop align="start" trigger={<Btn size="sm" variant="ghost"><AtSign size={14} />Mention</Btn>}>
+      <Pop align="start" trigger={<Btn size="sm" variant="ghost" icon aria-label="Mention someone" title="Mention someone"><AtSign size={16} /></Btn>}>
         <div className="cmp-pick">
           <input className="input" placeholder="Search people" aria-label="Search people" value={who} onChange={e => setWho(e.target.value)} autoFocus />
           {people.slice(0, 8).map(m => {

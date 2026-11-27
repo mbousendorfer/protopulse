@@ -82,8 +82,8 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const [assets, setAssets] = useState<Asset[]>(() => (post ? assetsOf(post) : initial?.media ? [{ src: initial.media }] : []))
   const media = mediaOf(assets)
   const [pillar, setPillar] = useState<Pillar>(post?.pillar ?? 'Trail stories')
-  const [preview, setPreview] = useState<string>(home ?? initial?.network ?? 'instagram')
-  const [tab, setTab] = useState<string>('all')
+  // One network switch for the whole sheet: the caption on screen, that network's settings and the preview.
+  const [scope, setScope] = useState<string>('all')
   // Per profile, what you chose; otherwise Atlas's pick. A first comment you clear stays cleared.
   const [formats, setFormats] = useState<Partial<Record<string, Format>>>(post?.format ? { [home!]: post.format } : {})
   const [comments, setComments] = useState<Partial<Record<string, string>>>(post ? { [home!]: post.firstComment ?? '' } : {})
@@ -127,10 +127,10 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const commentFor = (a: string) => (a in comments ? comments[a]! : firstCommentFor(N(a), textFor(a), pillar) ?? '')
   const linkFor = (a: string) => track(link, { network: N(a), campaign, pillar })
   const cardNow = card ?? { title: cardTitle(link), description: sentences(text)[0] ?? '' }
-  // The profile on screen in the preview column (`acc`), and its network (`net`).
-  const acc = targets.includes(preview) ? preview : targets[0]
+  // The profile on screen (`acc`), and its network (`net`): the tab picked, or the first profile on "All networks".
+  const acc = targets.includes(scope) ? scope : targets[0]
   const net = acc ? N(acc) : 'instagram'
-  const capTab = targets.length > 1 && targets.includes(tab) ? tab : 'all'
+  const capTab = targets.length > 1 && targets.includes(scope) ? scope : 'all'
   // Atlas routes repair content on Instagram to Fernway Repair; it says so when you pick the main account.
   const suggestRepair = !inQueue && pillar === 'Repair & care' && accounts.includes('instagram') && !accounts.includes('ig-repair')
   const needsClaire = pricingToClaire(s) && PRICED.test(targets.map(textFor).join(' '))
@@ -175,8 +175,8 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
   const draftProblems = problems.filter(p => p.where === 'accounts' || p.text === 'Write the caption')
 
   const goTo = (p: Problem) => {
-    if (p.where === 'options') { setPreview(p.acc!); setSide('preview'); setOptsOpen(true) }
-    setPane(p.where === 'options' ? 'preview' : 'write')
+    if (p.where === 'options') { setScope(p.acc!); setOptsOpen(true) }
+    setPane('write')
     requestAnimationFrame(() => {
       const el = document.getElementById(`cmp-${p.where}`)
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -322,33 +322,30 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 : <ProfilePicker value={accounts} onChange={setAccounts} />}
             {suggestRepair && (
               <p className="cmp-atlas-says"><Mark agent="atlas" /><span>{ROUTE_REASON}</span>
-                <Btn size="xs" onClick={() => { setAccounts(a => a.map(x => (x === 'instagram' ? 'ig-repair' : x))); setPreview('ig-repair') }}>Use Fernway Repair</Btn></p>
+                <Btn size="xs" onClick={() => { setAccounts(a => a.map(x => (x === 'instagram' ? 'ig-repair' : x))); setScope('ig-repair') }}>Use Fernway Repair</Btn></p>
             )}
           </section>
 
           <section className="cmp-sec" id="cmp-caption" aria-labelledby="cmp-h-caption">
-            <div className="row between">
-              <h3 className="section-title flush" id="cmp-h-caption"><label htmlFor="cmp-text">Caption</label></h3>
-              <span className="row tight t-sm"><span className="muted">Pillar</span>
-                <Menu align="end" trigger={<button type="button" className="select-btn" aria-label={`Pillar: ${pillar}`}><span>{pillar}</span><ChevronDown size={14} /></button>}
-                  items={s.strategy.pillars.map(({ name: p }) => ({ label: p, onSelect: () => setPillar(p), icon: p === pillar ? <Check size={14} /> : undefined }))} />
-              </span>
-            </div>
             {targets.length > 1 && (
-              <div className="cmp-captabs">
-                <Tabs value={capTab} onChange={setTab} items={[{ value: 'all', label: 'All networks' }, ...targets.map(a => ({ value: a, label: <span className="row tight nowrap"><Net n={N(a)} size={14} />{accountById(a).main ? NETWORK_LABEL[N(a)] : accountById(a).name}{variants[a] !== undefined && <span className="muted">· own</span>}</span> }))]} />
+              <div className="cmp-scope">
+                <Tabs value={capTab} onChange={setScope} items={[{ value: 'all', label: 'All networks' }, ...targets.map(a => ({ value: a, label: <span className="row tight nowrap"><Net n={N(a)} size={14} />{accountById(a).main ? NETWORK_LABEL[N(a)] : accountById(a).name}</span> }))]} />
               </div>
             )}
-            <textarea ref={field} id="cmp-text" className="textarea" rows={6} value={capValue} onChange={e => setCap(e.target.value)} placeholder="Packing the Ridge 28L for 3 days on the Tour du Mont Blanc."
-              aria-label={capTab === 'all' ? undefined : `${L(capTab)} caption`} />
-            {capTab !== 'all' && (
-              <p className="cmp-hint">{variants[capTab] !== undefined
-                ? <>Own caption on {L(capTab)}. <button type="button" className="link-btn" onClick={() => setVariants(v => ({ ...v, [capTab]: undefined }))}>Reset to shared</button></>
-                : <>Same as the shared caption. Type here to give {L(capTab)} its own.</>}</p>
-            )}
-            {countOn && <CaptionTools field={field} value={capValue} onInsert={setCap} pillar={pillar} networks={targets.map(N)}
-              campaignTag={campaign ? `#${campaign.replace(/[^\p{L}\p{N}]+/gu, '')}` : undefined}
-              count={{ n: capValue.length, limit: LIMIT[N(countOn)] ?? 2000, on: L(countOn), thread: threadOf(countOn)?.length }} />}
+            <div className="row between">
+              <h3 className="section-title flush" id="cmp-h-caption"><label htmlFor="cmp-text">{capTab === 'all' ? 'Caption' : `${L(capTab)} caption`}</label></h3>
+              <span className="muted t-sm">{capTab === 'all'
+                ? (targets.length > 1 ? `Shared by ${names(targets.filter(a => variants[a] === undefined))}` : '')
+                : variants[capTab] !== undefined
+                  ? <>Own caption · <button type="button" className="link-btn" onClick={() => setVariants(v => ({ ...v, [capTab]: undefined }))}>Reset to shared</button></>
+                  : 'Same as the shared caption until you type'}</span>
+            </div>
+            <div className="cmp-field">
+              <textarea ref={field} id="cmp-text" rows={6} value={capValue} onChange={e => setCap(e.target.value)} placeholder="Packing the Ridge 28L for 3 days on the Tour du Mont Blanc." />
+              {countOn && <CaptionTools field={field} value={capValue} onInsert={setCap} pillar={pillar} networks={targets.map(N)}
+                campaignTag={campaign ? `#${campaign.replace(/[^\p{L}\p{N}]+/gu, '')}` : undefined}
+                count={{ n: capValue.length, limit: LIMIT[N(countOn)] ?? 2000, on: L(countOn), thread: threadOf(countOn)?.length }} />}
+            </div>
 
             <div className="cmp-atlas" aria-label="Atlas copilot">
               <Mark agent="atlas" />
@@ -357,7 +354,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 : <>
                     <Btn size="sm" variant="ghost" onClick={() => { setBusy('Writing 3 variants'); setTimeout(() => { setIdeas(variantsOf(text, { pillar, network: net, words, rules: s.playbook.rules ?? [] })); setBusy(null) }, 700) }}><Sparkles size={14} />3 variants</Btn>
                     <Btn size="sm" variant="ghost" onClick={() => think('Shortening', 'Atlas shortened the caption', () => setText(shorten(text)))}><Scissors size={14} />Shorten</Btn>
-                    {!inQueue && <Btn size="sm" variant="ghost" title="Adds a LinkedIn version: no emoji, one line of context, a question to close." onClick={() => think('Adapting for LinkedIn', 'Atlas added a LinkedIn version', () => { setAccounts(a => (a.includes('linkedin') ? a : [...a, 'linkedin'])); setVariants(v => ({ ...v, linkedin: forLinkedIn(text) })); setPreview('linkedin'); setTab('linkedin') })}><Wand2 size={14} />Adapt for LinkedIn</Btn>}
+                    {!inQueue && <Btn size="sm" variant="ghost" title="Adds a LinkedIn version: no emoji, one line of context, a question to close." onClick={() => think('Adapting for LinkedIn', 'Atlas added a LinkedIn version', () => { setAccounts(a => (a.includes('linkedin') ? a : [...a, 'linkedin'])); setVariants(v => ({ ...v, linkedin: forLinkedIn(text) })); setScope('linkedin') })}><Wand2 size={14} />Adapt for LinkedIn</Btn>}
                   </>}
             </div>
             {undo && <UndoBar onUndo={restore} onDismiss={() => setUndo(null)}>{undo.label}.</UndoBar>}
@@ -407,6 +404,45 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                 </div>
               )}
             </div>
+
+            {acc && (capTab !== 'all' || targets.length === 1 ? (
+              <div className="cmp-sub" aria-labelledby="cmp-h-net">
+                <h4 className="cmp-sub-title" id="cmp-h-net"><Net n={net} size={14} />{L(acc)} settings</h4>
+                {(FORMATS[net]?.length ?? 0) > 1 ? (
+                  <div className="field">
+                    <span className="label">Format{!(acc in formats) && <span className="muted"> · picked by Atlas</span>}</span>
+                    <Seg name={`fmt-${acc}`} label={`${L(acc)} format`} size="sm" value={formatOf(acc)} onChange={v => setFormats(f => ({ ...f, [acc]: v }))} options={FORMATS[net]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
+                  </div>
+                ) : <p className="row tight t-sm"><span className="muted">Format</span>{FORMAT_LABEL[formatOf(acc)]}</p>}
+                {net === 'instagram' && formatOf(acc) === 'story' && <p className="cmp-hint"><Smartphone size={14} aria-hidden /><Pill>Mobile reminder</Pill>Stories with stickers go out from your phone: you get a push at the time.</p>}
+                {FIRST_COMMENT.includes(net) && (
+                  <div className="field">
+                    <label htmlFor="cmp-first">First comment <span className="muted">· optional{!(acc in comments) && commentFor(acc) ? ', suggested by Atlas' : ''}</span></label>
+                    <input id="cmp-first" className="input" placeholder="Published right under the post" value={commentFor(acc)} onChange={e => setComments(c => ({ ...c, [acc]: e.target.value }))} />
+                  </div>
+                )}
+                {net === 'x' && <Thread text={textFor(acc)} value={threadOf(acc)} onChange={v => setOpts(o => ({ ...o, [acc]: { ...o[acc], thread: v as string[] } }))} />}
+                <NetworkOptions network={net} label={L(acc)} format={formatOf(acc)} value={optsFor(acc)} onChange={v => setOpts(o => ({ ...o, [acc]: v }))}
+                  open={optsOpen} onToggle={setOptsOpen} missing={missingOptions(net, formatOf(acc), optsFor(acc))} />
+              </div>
+            ) : (
+              <div className="cmp-sub" aria-labelledby="cmp-h-net">
+                <h4 className="cmp-sub-title" id="cmp-h-net">Per network</h4>
+                <ul className="cmp-netlist">
+                  {targets.map(a => {
+                    const miss = missingOptions(N(a), formatOf(a), optsFor(a))
+                    const says = [FORMAT_LABEL[formatOf(a)], variants[a] !== undefined && 'own caption', FIRST_COMMENT.includes(N(a)) && commentFor(a).trim() && 'first comment', threadOf(a) && `thread of ${threadOf(a)!.length}`].filter(Boolean).join(', ')
+                    return (
+                      <li key={a}>
+                        <Net n={N(a)} size={14} /><b>{L(a)}</b><span className="muted">{says}</span>
+                        {miss.length > 0 && <span className="cmp-over"><AlertTriangle size={14} aria-hidden />{miss.join(', ')} needed</span>}
+                        <Btn size="xs" variant="ghost" onClick={() => setScope(a)}>Edit</Btn>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
           </section>
 
           <section className="cmp-sec" id="cmp-visual" aria-labelledby="cmp-h-visual">
@@ -439,7 +475,7 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
               <>
                 {[at, ...more].map((t, i) => (
                   <div key={i} className="row cmp-when">
-                    <p className="cmp-slot"><b>{dayLabel(t)}</b>, <span className="mono">{hhmm(t)}</span></p>
+                    <p className="cmp-slot"><b>{dayLabel(t)}</b>, <span className="mono">{hhmm(t)}</span>{i === 0 && <span className="muted t-sm"> {TZ.split('/').pop()!.replace('_', ' ')} time</span>}</p>
                     <Pop align="start" open={moving === i} onOpenChange={o => setMoving(o ? i : null)} trigger={<Btn size="sm">Change</Btn>}>
                       <div className="field">
                         <label htmlFor={`cmp-at-${i}`}>Date and time</label>
@@ -449,9 +485,9 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                     {i > 0 && <Btn size="sm" variant="ghost" icon aria-label={`Remove ${dayLabel(t)}`} onClick={() => setMore(m => m.filter((_, j) => j !== i - 1))}><X size={14} /></Btn>}
                   </div>
                 ))}
+                {more.length < 4 && !editing && <Btn size="sm" variant="ghost" className="cmp-addtime" onClick={() => setMore(m => [...m, (m.at(-1) ?? at) + 7 * DAY])}><Plus size={14} />Add another time</Btn>}
                 <div className="row tight">
-                  {more.length < 4 && !editing && <Btn size="sm" variant="ghost" onClick={() => setMore(m => [...m, (m.at(-1) ?? at) + 7 * DAY])}><Plus size={14} />Add another time</Btn>}
-                  {bestTimes.length > 0 && <span className="muted t-sm">Best times:</span>}
+                  {bestTimes.length > 0 && <span className="muted t-sm">Best times</span>}
                   {bestTimes.map(b => (
                     <Btn key={b.n} size="xs" title={`Iris: ${b.reason}`} onClick={() => setAt(nextOn(now, b.day, b.time))}><Net n={b.n} size={12} />{b.dayName.slice(0, 3)} {b.time}</Btn>
                   ))}
@@ -467,13 +503,12 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
             )}
             {quiet.length > 0 && <p className="cmp-hint"><AlertTriangle size={14} aria-hidden />{quiet[0].text}: a quiet day on the calendar.</p>}
             {alert && slotAt - now < DAY && slotAt >= now && <p className="cmp-hint"><AlertTriangle size={14} aria-hidden />{alert.label} is open: Atlas holds posts due in the next 24 hours until it’s over.</p>}
-            {when === 'schedule' && <p className="cmp-hint">Times in {TZ.replace('_', ' ')}.</p>}
           </section>
 
-          <section className="cmp-sec" aria-label="Labels, campaign and assignee">
+          <section className="cmp-sec" aria-label="Pillar, labels, campaign and assignee">
             <details className="cmp-more">
-              <summary><ChevronRight size={14} aria-hidden />Labels · Campaign · Assignee
-                <span className="muted">{[labels.length ? `${labels.length} label${labels.length > 1 ? 's' : ''}` : '', campaign ?? '', assignee ? ROSTER[assignee].short : ''].filter(Boolean).join(' · ') || 'none yet'}</span></summary>
+              <summary><ChevronRight size={14} aria-hidden />Pillar, labels, campaign, assignee
+                <span className="muted">{[pillar, labels.length ? `${labels.length} label${labels.length > 1 ? 's' : ''}` : '', campaign ?? '', assignee ? `assigned to ${ROSTER[assignee].short}` : ''].filter(Boolean).join(', ')}</span></summary>
               <div className="cmp-opts">
                 <div className="field">
                   <span className="label">Labels</span>
@@ -486,6 +521,9 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
                   </div>
                 </div>
                 <div className="row">
+                  <div className="field"><span className="label">Pillar</span>
+                    <Menu align="start" trigger={<button type="button" className="select-btn" aria-label={`Pillar: ${pillar}`}><span>{pillar}</span><ChevronDown size={14} /></button>}
+                      items={s.strategy.pillars.map(({ name: p }) => ({ label: p, onSelect: () => setPillar(p), icon: p === pillar ? <Check size={14} /> : undefined }))} /></div>
                   <div className="field"><span className="label">Campaign</span>
                     <Menu align="start" trigger={<button type="button" className="select-btn" aria-label={`Campaign: ${campaign ?? 'none'}`}><span>{campaign ?? 'None'}</span><ChevronDown size={14} /></button>}
                       items={[{ label: 'None', onSelect: () => setCampaign(undefined) }, ...s.strategy.campaigns.map(c => ({ label: c.name, onSelect: () => setCampaign(c.name) }))]} /></div>
@@ -506,31 +544,10 @@ export default function Composer({ open, onClose, post, initial }: { open: boole
           {side === 'comments' && live ? <PostComments post={live} onAdd={addComment} />
             : side === 'history' && live ? <PostHistory post={live} />
             : <>
-          {targets.length > 1 && (
-            <Seg name="pv" label="Preview profile" size="sm" value={acc} onChange={setPreview}
-              options={targets.map(a => ({ value: a, label: <><Net n={N(a)} size={14} />{targets.length <= 3 && (accountById(a).main ? NETWORK_LABEL[N(a)] : accountById(a).name)}</> }))} />
-          )}
           {acc ? (
             <>
-              <div className="cmp-net">
-                {targets.length === 1 && <p className="row tight"><Net n={net} /><b>{L(acc)}</b></p>}
-                {(FORMATS[net]?.length ?? 0) > 1 ? (
-                  <div className="field">
-                    <span className="label">Format{!(acc in formats) && <span className="muted"> · picked by Atlas</span>}</span>
-                    <Seg name={`fmt-${acc}`} label={`${L(acc)} format`} size="sm" value={formatOf(acc)} onChange={v => setFormats(f => ({ ...f, [acc]: v }))} options={FORMATS[net]!.map(f => ({ value: f, label: FORMAT_LABEL[f] }))} />
-                  </div>
-                ) : <p className="row tight t-sm"><span className="muted">Format</span>{FORMAT_LABEL[formatOf(acc)]}</p>}
-                {net === 'instagram' && formatOf(acc) === 'story' && <p className="cmp-hint"><Smartphone size={14} aria-hidden /><Pill>Mobile reminder</Pill>Stories with stickers go out from your phone: you get a push at the time.</p>}
-                {FIRST_COMMENT.includes(net) && (
-                  <div className="field">
-                    <label htmlFor="cmp-first">First comment <span className="muted">· optional{!(acc in comments) && commentFor(acc) ? ', suggested by Atlas' : ''}</span></label>
-                    <input id="cmp-first" className="input" placeholder="Published right under the post" value={commentFor(acc)} onChange={e => setComments(c => ({ ...c, [acc]: e.target.value }))} />
-                  </div>
-                )}
-                {net === 'x' && <Thread text={textFor(acc)} value={threadOf(acc)} onChange={v => setOpts(o => ({ ...o, [acc]: { ...o[acc], thread: v as string[] } }))} />}
-                <NetworkOptions network={net} label={L(acc)} format={formatOf(acc)} value={optsFor(acc)} onChange={v => setOpts(o => ({ ...o, [acc]: v }))}
-                  open={optsOpen} onToggle={setOptsOpen} missing={missingOptions(net, formatOf(acc), optsFor(acc))} />
-              </div>
+              <p className="cmp-pv-head"><Net n={net} size={14} /><b>{L(acc)}</b><span className="muted">{FORMAT_LABEL[formatOf(acc)]} · {when === 'now' && !inQueue ? 'now' : `${dayLabel(slotAt)}, ${hhmm(slotAt)}`}</span></p>
+              {capTab === 'all' && targets.length > 1 && <p className="cmp-hint">Pick a network above the caption to see its version.</p>}
               {textFor(acc).trim() || media
                 ? <>
                     <NetworkPreview network={net} who={accountById(acc)} text={captionOf({ text: threadOf(acc)?.[0] ?? textFor(acc), network: net, link: linkFor(acc) })} media={media} words={words} at={slotAt} format={formatOf(acc)}
