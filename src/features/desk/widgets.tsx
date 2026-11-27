@@ -5,10 +5,13 @@ import type { AgentId } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, left, MIN } from '../../app/time'
-import { Btn, Mark } from '../../ui'
+import { Btn, Delta, Mark } from '../../ui'
+import { Spark } from '../../ui/charts'
 import { MoreInfo } from '../../ui/More'
 import { BriefScene } from '../../ui/Illustrations'
-import { visibleMentions } from '../listening/model'
+import { AGENTS } from '../../data/agents'
+import { change, fmt, kpi, reachSeries } from '../insights/metrics'
+import { shareOfVoice, sovTrend, visibleMentions } from '../listening/model'
 
 type S = ReturnType<typeof useStore>['s']
 
@@ -22,38 +25,89 @@ const AGENT_LINE: Record<AgentId, (s: S) => string> = {
   juno: s => (s.phase === 'day1' ? 'Watching your YouTube channel for the next video' : s.handoffs.some(h => h.agent === 'juno' && !h.lane) ? 'New clips are ready for you' : 'No new video since yesterday'),
 }
 
+/** What needs you on the Desk, for one agent or all. */
+export const needCount = (s: S, agent?: AgentId) => s.handoffs.filter(h => !h.lane && groupOf(h) === 'need' && (!agent || h.agent === agent)).length
+
 /**
- * The Desk's one block above the list: hello, what needs you, what the agents did alone. The agents' detail (each one's
- * line, the 24 h Shift board, the last actions with Undo) is one click away in a panel.
+ * The morning in one band (matrix §15): hello and the moment's scene, two to four named numbers, then the six agents
+ * with what each has for you. Their night in detail (each one's line, the 24 h Shift board, the last actions with
+ * Undo) is one click away.
  */
-export function Hello({ title, line, extra, panel, agentLine }: { title: string; line: ReactNode; extra?: ReactNode; panel: string; agentLine?: (id: AgentId) => string }) {
+export function Band({ title, children, panel, agentLine }: { title: string; children: ReactNode; panel: string; agentLine?: (id: AgentId) => string }) {
   const { s } = useStore()
   const now = useNow()
   const say = agentLine ?? ((id: AgentId) => AGENT_LINE[id](s))
   return (
-    <header className="brief-top desk-hello">
-      <div>
-        <h1 className="hello">{title}</h1>
-        <p className="story">{line} <MoreInfo title={panel}><AgentsPanel line={say} /></MoreInfo></p>
-        {extra}
+    <section className="card desk-band" aria-label="Your morning">
+      <div className="band-top">
+        <div className="band-hello">
+          <span className="band-scene"><BriefScene hour={new Date(now).getHours()} /></span>
+          <h1 className="hello">{title}</h1>
+        </div>
+        {children}
       </div>
-      <div className="brief-scene"><BriefScene hour={new Date(now).getHours()} /></div>
-    </header>
+      <div className="band-agents">
+        <ul aria-label="Your agents">
+          {s.agents.map(a => {
+            const n = needCount(s, a.id)
+            return (
+              <li key={a.id}>
+                <Link to={AGENTS.find(x => x.id === a.id)?.route ?? `/agents/${a.id}`} title={a.status === 'on' ? say(a.id) : undefined}>
+                  <Mark agent={a.id} size="md" state={a.status === 'on' ? 'on' : 'paused'} />
+                  <span className="band-agent"><b>{a.name}</b><span className={n ? 'band-for' : ''}>{a.status !== 'on' ? 'Paused' : n ? `${n} for you` : 'On shift'}</span></span>
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+        <MoreInfo label="What they did" title={panel}><AgentsPanel line={say} /></MoreInfo>
+      </div>
+    </section>
   )
 }
 
-/** Day 30: the morning brief, in one line. */
+/** One named number of the band. */
+export function Stat({ k, v, sub, tone }: { k: ReactNode; v: ReactNode; sub?: ReactNode; tone?: 'alert' }) {
+  return (
+    <div className="band-stat">
+      <span className="band-k">{k}</span>
+      <b className="num band-v">{v}</b>
+      {sub && <span className={`band-sub ${tone ?? ''}`}>{sub}</span>}
+    </div>
+  )
+}
+
+/** One fact from an agent's module, as a small card: who, the named number, its change and its trend. */
+function Fact({ agent, to, k, v, delta, down, series }: { agent: AgentId; to: string; k: string; v: string; delta: string; down?: boolean; series: number[] }) {
+  return (
+    <Link className="band-fact" to={to}>
+      <span className="band-k"><Mark agent={agent} />{k}</span>
+      <span className="band-fact-v"><b className="num">{v}</b><Delta v={delta} down={down} /></span>
+      <Spark data={series} w={150} h={30} color={`var(--a-${agent})`} label={`${k}, trend`} />
+    </Link>
+  )
+}
+
+/** Day 30: the morning brief as a band. */
 export function Brief() {
   const { s } = useStore()
   const now = useNow()
   const since = s.brief.since
   const handled = (s.phase === 'day1' ? 0 : 214) + s.log.filter(l => l.at > since && l.status === 'done').length
-  const need = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need').length
+  const need = needCount(s)
+  const urgent = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need' && h.urgency === 'urgent').length
   const hour = new Date(now).getHours()
   const hello = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
+  // Iris's reach and Echo's share of voice: the facts the Insights and Listening bands lead with.
+  const reach = kpi('reach'), dReach = change(reach)
+  const trend = sovTrend(s).fernway, dSov = trend[trend.length - 1] - trend[0]
   return (
-    <Hello title={`${hello}, Sam.`} panel={`What your agents did since ${hhmm(since)} yesterday`}
-      line={<><b className="num">{need || 'Nothing'}</b> {need ? 'need' : 'needs'} you. Your agents handled <b className="num">{handled}</b> on their own.</>} />
+    <Band title={`${hello}, Sam.`} panel={`What your agents did since ${hhmm(since)} yesterday`}>
+      <Stat k="Need you" v={need || 'None'} sub={urgent ? `${urgent} urgent` : undefined} tone="alert" />
+      <Stat k="Handled alone" v={handled} sub={`since ${hhmm(since)} yesterday`} />
+      <Fact agent="iris" to="/insights" k="Reach · 7 days" v={fmt.k(reach.value)} delta={fmt.signed(dReach)} down={dReach < 0} series={reachSeries({ days: 28, offset: 0 })} />
+      <Fact agent="echo" to="/listening" k="Share of voice" v={`${shareOfVoice(s).fernway}%`} delta={`${dSov > 0 ? '+' : ''}${dSov} pts`} down={dSov < 0} series={trend} />
+    </Band>
   )
 }
 

@@ -11,6 +11,7 @@ import Detail from './Detail'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NetworkPreview } from '../publishing/Previews'
 import { SocialAvatar } from '../../ui/SocialAvatar'
+import Photo from '../../ui/Photo'
 import { draftText, isLead } from './parts'
 
 export type { Batch }
@@ -88,7 +89,7 @@ export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk
             <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
               <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
                 <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
-                {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
+                {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={32} /> : p?.type === 'post' && p.media ? <span className="day-thumb sm"><Photo name={p.media} /></span> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={28} />}
                 <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
                 <span>{status(h)}</span>
                 <ChevronDown size={14} className="faint chev" aria-hidden />

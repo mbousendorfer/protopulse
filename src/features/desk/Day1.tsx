@@ -4,10 +4,10 @@ import { Check, ChevronDown, ChevronRight, Clock, Sunrise } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
 import { hhmm } from '../../app/time'
-import { Btn } from '../../ui'
+import { Btn, Pill, TopicIcon } from '../../ui'
 import type { AgentId } from '../../app/types'
 import { ConnectModal } from '../onboarding/Connect'
-import { Hello } from './widgets'
+import { Band, Stat } from './widgets'
 import { checklist, firstBriefAt, type CheckItem } from '../onboarding/day1'
 
 /** Day 1 replaces the morning brief until the first one is written: who started, and when the brief lands. */
@@ -28,52 +28,65 @@ export function Welcome() {
     return first(id)?.text ?? (id === 'juno' ? 'Starts with your next YouTube video' : 'Starts working tonight')
   }
   return (
-    <Hello title={`Welcome aboard${s.setup.first ? `, ${s.setup.first}` : ''}.`} panel={`Your agents since ${hhmm(started)}`} agentLine={line}
-      line={connected
-        ? <><b className="num">{need || 'Nothing'}</b> {need ? 'need' : 'needs'} you. Your team started at {hhmm(started)}.</>
-        : <>Atlas wrote 3 first drafts. Connect a profile to schedule them.</>}
-      extra={<p className="day1-promise"><Sunrise size={16} aria-hidden />Your first morning brief arrives tomorrow at {hhmm(firstBriefAt(started))}.</p>} />
+    <Band title={`Welcome aboard${s.setup.first ? `, ${s.setup.first}` : ''}.`} panel={`Your agents since ${hhmm(started)}`} agentLine={line}>
+      <Stat k="Need you" v={need || 'None'} />
+      <Stat k="Team started" v={hhmm(started)} sub="today" />
+      <Stat k="First morning brief" v={hhmm(firstBriefAt(started))} sub={<span className="row tight"><Sunrise size={14} aria-hidden />tomorrow</span>} />
+    </Band>
   )
 }
 
-/** What's left to set up, what's done, what each step unlocks. Folds to one line. */
-export function Checklist({ side }: { side?: boolean }) {
+/** Each step's icon, in the colour of the agent it wakes up. */
+const STEP: Record<string, { agent: AgentId | 'claire'; topic: string }> = {
+  connect: { agent: 'claire', topic: 'start' }, schedule: { agent: 'atlas', topic: 'plan' }, reply: { agent: 'nova', topic: 'reply' },
+  report: { agent: 'iris', topic: 'report' }, playbook: { agent: 'sage', topic: 'playbook' },
+}
+
+/** What's left to set up, one card per step: what it takes, what it unlocks, its one action. Folds to one line. */
+export function Checklist() {
   const { s, d } = useStore()
   const now = useNow(5000)
   const items = checklist(s, now)
   const done = items.filter(i => i.done).length
+  const next = items.find(i => !i.done && i.action)
   const open = s.setup.checklistOpen
   const toggle = () => d({ type: 'setup/patch', patch: { checklistOpen: !open } })
   return (
-    <section className={`card checklist ${open ? 'open' : ''} ${side ? 'side' : ''}`} aria-labelledby="checklist-title">
+    <section className={`checklist ${open ? 'open' : ''}`} aria-labelledby="checklist-title">
       <button className="checklist-head" aria-expanded={open} aria-controls="checklist-items" onClick={toggle}>
         {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
         <h2 id="checklist-title">{done === items.length ? 'You’re all set' : 'Getting started'}</h2>
         <span className="faint num">{done} of {items.length} done</span>
         <span className="checklist-bar" aria-hidden><i style={{ transform: `scaleX(${done / items.length})` }} /></span>
       </button>
-      {open && <ol id="checklist-items" className="checklist-items">{items.map(i => <Item key={i.id} i={i} />)}</ol>}
+      {open && <ol id="checklist-items" className="checklist-items">{items.map((i, n) => <Item key={i.id} i={i} n={n + 1} next={i === next} />)}</ol>}
     </section>
   )
 }
 
-function Item({ i }: { i: CheckItem }) {
+function Item({ i, n, next }: { i: CheckItem; n: number; next: boolean }) {
   const nav = useNavigate()
   const [connecting, setConnecting] = useState(false)
   const run = () => {
     if (i.action?.connect) setConnecting(true)
     else if (i.action?.to) nav(i.action.to)
   }
+  const step = STEP[i.id] ?? { agent: 'claire', topic: 'info' }
   return (
-    <li className={`check-item ${i.done ? 'done' : ''}`}>
-      <span className="check-mark" aria-hidden>{i.done ? <Check size={12} /> : i.at ? <Clock size={12} /> : null}</span>
-      <div className="grow">
-        <b>{i.label}</b><span className="sr-only">{i.done ? ' (done)' : ''}</span>
-        {/* A done step only needs its name; an open one says what it takes and what it unlocks. */}
-        {!i.done && <p className="muted">{i.detail}</p>}
-        {i.unlocks && !i.done && <p className="check-unlocks">{i.unlocks}</p>}
+    <li className={`card check-item ${i.done ? 'done' : ''} ${next ? 'next' : ''}`}>
+      <div className="check-top">
+        <TopicIcon agent={step.agent} topic={step.topic} size={36} />
+        <span className="check-mark" aria-hidden>{i.done ? <Check size={12} /> : i.at ? <Clock size={12} /> : <span className="num">{n}</span>}</span>
       </div>
-      {i.action && !i.done && <Btn size="sm" onClick={run}>{i.action.label}</Btn>}
+      <b>{i.label}</b><span className="sr-only">{i.done ? ' (done)' : ''}</span>
+      {/* A done step only needs its name; an open one says what it takes and what it unlocks. */}
+      <p className="muted">{i.done ? i.detail.replace(/\.$/, '') : i.detail}</p>
+      {i.unlocks && !i.done && <p className="check-unlocks">{i.unlocks}</p>}
+      <div className="check-act">
+        {i.done ? <Pill tone="ok">Done</Pill>
+          : i.action ? <Btn size="sm" variant={next ? 'primary' : 'secondary'} onClick={run}>{i.action.label}</Btn>
+          : i.at ? <span className="faint t-sm">About {hhmm(i.at)}</span> : null}
+      </div>
       {i.action?.connect && <ConnectModal open={connecting} onOpenChange={setConnecting} why="Your agents read and reply through it. Its history imports as soon as it’s connected." />}
     </li>
   )

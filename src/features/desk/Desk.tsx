@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Check, ChevronDown, Focus as FocusIcon } from 'lucide-react'
 import type { AgentId, Decision, DoneItem, Handoff } from '../../app/types'
@@ -6,7 +6,12 @@ import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { groupOf } from '../../app/reducer'
 import { AGENTS, agentName } from '../../data/agents'
-import { Btn, Filters, Menu, TopicIcon } from '../../ui'
+import { Btn, Filters, Mark, Menu, TopicIcon } from '../../ui'
+import { Spark } from '../../ui/charts'
+import Photo from '../../ui/Photo'
+import { SocialAvatar } from '../../ui/SocialAvatar'
+import { gist } from '../../ui/gist'
+import { ClipThumb, useClip } from '../video/parts'
 import Detail from './Detail'
 import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
@@ -26,6 +31,12 @@ const SHOW_LABEL: Record<Show, string> = { need: 'Needs you', look: 'Worth a loo
 type Entry = { key: string; group: Exclude<Show, 'done'>; h?: Handoff; b?: Batch }
 const size = (e: Entry) => (e.b ? e.b.items.length : 1)
 const groupOfCard = (h: Handoff): Entry['group'] => h.lane === 'claire' ? 'claire' : h.lane === 'snoozed' ? 'later' : groupOf(h)
+const RANK = { urgent: 0, today: 1, week: 2 }
+const urgencyOf = (e: Entry) => e.b?.urgency ?? e.h!.urgency
+/** Needs you, by gesture (matrix §14): a choice or an answer only you can give, then what to approve. */
+type Gesture = 'call' | 'approve'
+const GESTURE: Record<Gesture, string> = { call: 'Your call', approve: 'To approve' }
+const gestureOf = (e: Entry): Gesture => (e.b || e.h!.kind === 'approval' ? 'approve' : 'call')
 
 export default function Desk() {
   const { s, d } = useStore()
@@ -39,10 +50,9 @@ export default function Desk() {
     const mine = s.handoffs.filter(h => agent === 'all' || h.agent === agent)
     const open = mine.filter(h => !h.lane).sort(byPriority)
     const { batches, rest } = batchesOf(open.filter(h => groupOf(h) === 'need'))
-    // Needs you: batches and single cards, ordered by urgency.
-    const rank = { urgent: 0, today: 1, week: 2 }
+    // Needs you: batches and single cards, by gesture, then by urgency.
     const need: Entry[] = [...batches.map((b): Entry => ({ key: `b:${b.id}`, group: 'need', b })), ...rest.map((h): Entry => ({ key: `h:${h.id}`, group: 'need', h }))]
-      .sort((x, y) => rank[(x.b?.urgency ?? x.h!.urgency)] - rank[(y.b?.urgency ?? y.h!.urgency)])
+      .sort((x, y) => Number(gestureOf(x) === 'approve') - Number(gestureOf(y) === 'approve') || RANK[urgencyOf(x)] - RANK[urgencyOf(y)])
     const one = (h: Handoff): Entry => ({ key: `h:${h.id}`, group: groupOfCard(h), h })
     return [...need, ...open.filter(h => groupOf(h) !== 'need').map(one), ...mine.filter(h => h.lane === 'claire' || h.lane === 'snoozed').map(one)]
   }, [s.handoffs, agent])
@@ -51,7 +61,10 @@ export default function Desk() {
   const counts = Object.fromEntries((Object.keys(SHOW_LABEL) as Show[]).map(k => [k, k === 'done' ? done.length : entries.filter(e => e.group === k).reduce((n, e) => n + size(e), 0)])) as Record<Show, number>
   const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'need' || counts[k] > 0)
   const show = shown.includes(pick) ? pick : 'need'
-  const rows = show === 'done' ? [] : entries.filter(e => e.group === show)
+  // The decision to take first is set apart above the list (matrix §15): the most urgent single card, then the oldest.
+  const needs = entries.filter(e => e.group === 'need')
+  const hero = show === 'need' && needs.length > 1 ? needs.filter(e => e.h).sort((x, y) => byPriority(x.h!, y.h!))[0] : undefined
+  const rows = show === 'done' ? [] : entries.filter(e => e.group === show && e !== hero)
   const keys = show === 'done' ? done.map(x => `d:${x.id}`) : rows.map(e => e.key)
 
   // Links from other pages ("Review on Desk") open that card directly, in its state; a card in a batch opens its batch.
@@ -70,6 +83,7 @@ export default function Desk() {
   const current = entries.find(e => e.key === selected && e.group === show)
   const doneSel = show === 'done' ? done.find(x => `d:${x.id}` === selected) : undefined
   useEffect(() => {
+    if (cardParam) return // the link's card wins over the default selection
     if (selected && keys.includes(selected)) { setLastIndex(keys.indexOf(selected)); return }
     const next = keys[Math.min(lastIndex, keys.length - 1)] ?? null
     if (next !== selected) setSelected(next)
@@ -105,6 +119,7 @@ export default function Desk() {
   }
   const tomorrow = SNOOZE(useHandoffActions().now()).find(x => x.label.startsWith('tomorrow'))
 
+  const headed = new Set(rows.map(gestureOf)).size > 1
   const nowT = useNow(60000)
   const idx = keys.indexOf(selected ?? '')
   const position = idx >= 0 ? `${idx + 1} of ${keys.length}` : undefined
@@ -112,9 +127,8 @@ export default function Desk() {
 
   return (
     <div className="page today">
-      {s.phase === 'day1' && nowT < firstBriefAt(s.setup.startedAt ?? nowT)
-        ? <div className="day1-top"><Welcome /><Checklist side /></div>
-        : <><Brief />{s.phase === 'day1' && <Checklist />}</>}
+      {s.phase === 'day1' && nowT < firstBriefAt(s.setup.startedAt ?? nowT) ? <Welcome /> : <Brief />}
+      {s.phase === 'day1' && <Checklist />}
 
       <div className="day-bar">
         <Filters label="Your day" value={show} onChange={v => { setShow(v); setLastIndex(0); setSelected(null) }}
@@ -125,6 +139,12 @@ export default function Desk() {
         <Btn size="sm" variant="ghost" onClick={() => nav('/focus')} disabled={!counts.need} kbd="F"><FocusIcon size={13} />Focus</Btn>
       </div>
       <Notice scope="desk" />
+
+      {hero?.h && (
+        <section className={`card desk-feature ${hero.h.urgency}`} aria-label="Decide first">
+          <Detail key={hero.h.id} h={hero.h} keys={false} feature onDiscuss={setThread} />
+        </section>
+      )}
 
       <div className="today-grid">
         <nav className="day-list card" aria-label={SHOW_LABEL[show]}>
@@ -146,8 +166,20 @@ export default function Desk() {
                   </button>
                 </li>
               ))
-              : rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)}
-                  select={pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined} />)}
+              : rows.map((e, i) => {
+                  const select = pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined
+                  const g = gestureOf(e)
+                  // A short header where the gesture changes, only when Needs you mixes both (matrix §14).
+                  const head = show === 'need' && headed && (i === 0 || gestureOf(rows[i - 1]) !== g)
+                  return (
+                    <Fragment key={e.key}>
+                      {head && <li className="day-group" role="presentation"><span>{GESTURE[g]}</span><span className="faint num">{rows.filter(x => gestureOf(x) === g).reduce((n, x) => n + size(x), 0)}</span></li>}
+                      {(show === 'look' || show === 'good') && e.h
+                        ? <Tile e={e} active={e.key === selected} onClick={() => setSelected(e.key)} select={select} />
+                        : <Row e={e} active={e.key === selected} onClick={() => setSelected(e.key)} select={select} />}
+                    </Fragment>
+                  )
+                })}
           </ul>
           {!keys.length && <p className="day-empty faint">{agent !== 'all' ? <>Nothing from {agentName(agent)} here. <button className="link-btn" onClick={() => setAgent('all')}>All agents</button></> : 'Nothing needs you.'}</p>}
         </nav>
@@ -179,24 +211,78 @@ function Row({ e, active, onClick, select }: { e: Entry; active: boolean; onClic
     <li className={`day-li ${select?.checked ? 'picked' : ''}`}>
       {box}
       <button className={`day-row ${active ? 'active' : ''}`} onClick={onClick}>
-        <TopicIcon agent={e.b.agent} topic={e.b.id === 'rules' ? 'rule' : e.b.id === 'nova' ? 'reply' : 'post'} />
-        <span className="txt"><span className="ellipsis">{e.b.title}</span><span className="faint ellipsis">{e.b.meta}</span></span>
-        {e.b.urgency === 'urgent' && <span className="dot urgent" aria-label="Contains urgent items" />}
-        <CountBadge n={e.b.items.length} label={`${e.b.items.length} items`} />
+        <TopicIcon agent={e.b.agent} topic={e.b.id === 'rules' ? 'rule' : e.b.id === 'nova' ? 'reply' : 'post'} size={32} />
+        <span className="txt">
+          <span className="day-title">{e.b.title}</span>
+          <span className="day-meta"><Mark agent={e.b.agent} /><Urgency u={e.b.urgency} /><span className="ellipsis">{e.b.meta}</span></span>
+        </span>
+        {/* A batch reads as its small cards: the first few people or visuals, stacked. */}
+        <span className="day-stack" aria-label={`${e.b.items.length} items`}>
+          {e.b.items.slice(0, 3).map(h => <Thumb key={h.id} h={h} small />)}
+          <CountBadge n={e.b.items.length} />
+        </span>
       </button>
     </li>
   )
   const h = e.h!
+  const meta = e.group === 'later' && h.snoozedUntil ? `Back at ${hhmm(h.snoozedUntil)}` : e.group === 'claire' ? (h.claire?.reply ? 'Claire answered' : 'Claire is looking') : gist(h.context, 10)
   return (
     <li className={`day-li ${select?.checked ? 'picked' : ''}`}>
       {box}
       <button className={`day-row ${active ? 'active' : ''} ${h.fresh ? 'fresh' : ''}`} onClick={onClick}>
-        <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} />
+        <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={32} />
         <span className="txt">
-          <span className="ellipsis">{h.title}</span>
-          <span className="faint ellipsis">{e.group === 'later' && h.snoozedUntil ? `Back at ${hhmm(h.snoozedUntil)}` : e.group === 'claire' ? (h.claire?.reply ? 'Claire answered' : 'Claire is looking') : `${agentName(h.agent)} · ${h.topic}`}</span>
+          <span className="day-title">{h.title}</span>
+          <span className="day-meta"><Mark agent={h.agent} />{e.group === 'need' && <Urgency u={h.urgency} />}<span className="ellipsis">{meta}</span></span>
         </span>
-        {h.urgency === 'urgent' && e.group === 'need' && <span className="dot urgent" aria-label="Urgent" />}
+        <Thumb h={h} />
+      </button>
+    </li>
+  )
+}
+
+/** Urgent and Today, named; this week stays quiet. */
+export function Urgency({ u }: { u: Handoff['urgency'] }) {
+  return u === 'week' ? null : <b className={`day-urg ${u}`}>{u === 'urgent' ? 'Urgent' : 'Today'}</b>
+}
+
+/** The object in miniature: the post's visual, the person who wrote, the metric's curve, the clip's frame. */
+function Thumb({ h, small }: { h: Handoff; small?: boolean }) {
+  const p = h.preview
+  if (p?.type === 'post' && p.media) return <span className="day-thumb"><Photo name={p.media} /></span>
+  if (p?.type === 'reply') return <span className="day-thumb face"><SocialAvatar name={p.author.split(' · ')[0]} network={small ? undefined : p.network} size={small ? 24 : 32} /></span>
+  if (p?.type === 'metric' && !small) return <span className="day-thumb spark"><Spark data={p.series} w={56} h={26} tone={p.down ? 'alert' : 'ink'} color={`var(--a-${h.agent})`} label={p.label} /></span>
+  if (p?.type === 'clip') return <ClipMini id={(p as { clip: string }).clip} />
+  return null
+}
+
+function ClipMini({ id }: { id: string }) {
+  const found = useClip(id)
+  return found ? <span className="day-thumb clip"><ClipThumb clip={found.clip} source={found.source} size="sm" /></span> : null
+}
+
+/**
+ * Worth a look and Good news keep a shape of their own: a small card led by its number or its visual, not a row.
+ * A good news without a metric shows the figure its title leads with.
+ */
+function Tile({ e, active, onClick, select }: { e: Entry; active: boolean; onClick: () => void; select?: RowSelect }) {
+  const h = e.h!
+  const p = h.preview
+  const good = h.kind === 'news'
+  const fig = p?.type === 'metric' ? p.value : good ? h.title.match(/\d[\d.,]*(?:k|×|%)?/)?.[0] : undefined
+  return (
+    <li className={`day-li ${select?.checked ? 'picked' : ''}`}>
+      {select && <SelectBox checked={select.checked} visible={select.any} onToggle={select.toggle} label={`Select ${h.title}`} />}
+      <button className={`day-tile ${good ? 'good' : ''} ${active ? 'active' : ''} ${h.fresh ? 'fresh' : ''}`} onClick={onClick}>
+        <span className="day-meta"><Mark agent={h.agent} /><b>{agentName(h.agent)}</b><span className="ellipsis">{h.topic}</span></span>
+        {(fig || p?.type === 'post') && (
+          <span className="tile-fig">
+            {fig && <span className="tile-num"><b className="num">{fig}</b>{p?.type === 'metric' && <span className={`delta ${p.down ? 'down' : 'up'}`}>{p.delta}</span>}</span>}
+            {p?.type === 'metric' ? <Spark data={p.series} w={110} h={34} tone={p.down ? 'alert' : 'ink'} color={`var(--a-${h.agent})`} label={p.label} />
+              : <Thumb h={h} />}
+          </span>
+        )}
+        <span className="day-title">{h.title}</span>
       </button>
     </li>
   )
