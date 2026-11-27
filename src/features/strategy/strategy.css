@@ -61,7 +61,7 @@
 .pillar { display: flex; flex-direction: column; gap: 6px; }
 .pillar b { font-weight: 600; }
 .pbar { position: relative; height: 8px; border-radius: 4px; background: var(--sunk); }
-.pbar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--ink-2); }
+.pbar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--a-sage); }
 .pbar i.off { background: var(--caution); }
 /* Off target, either way: worded, caution tone, never green or red (status colours stay for status). */
 .off-target { font-size: var(--t-sm); font-weight: 500; color: var(--caution); }
@@ -105,3 +105,34 @@
 .pillars-grid .pillars { grid-template-columns: minmax(0, 1fr); gap: var(--s4); }
 .pillars-grid .span-all { grid-column: 1 / -1; }
 .pillars-grid > .card > .row.between { flex-wrap: wrap; row-gap: var(--s2); }
+
+/* Landing (matrix §15): the overview's pillar mix, a short queue, then the campaigns as cards — the live one large. */
+.st-mix { display: flex; flex-direction: column; gap: 6px; color: var(--ink-2); border-radius: var(--r-ctl); }
+.st-mix:hover { text-decoration: none; color: var(--ink-2); }
+.st-mix:hover > .t-sm { color: var(--action-ink); }
+.st-mix-row { display: grid; grid-template-columns: minmax(0, 104px) minmax(0, 1fr) 36px; gap: var(--s2); align-items: center; font-size: var(--t-sm); color: var(--ink); }
+.st-mix-row b { text-align: right; font-weight: 500; }
+.st-mix .pbar { height: 6px; }
+.sl-foot { padding: 10px var(--s4); border-top: 1px solid var(--line); }
+
+.campaigns { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: var(--s4); }
+.campaigns > li { display: flex; min-width: 0; }
+.campaigns > li.wide { grid-column: span 2; }
+@media (max-width: 720px) { .campaigns > li.wide { grid-column: auto; } }
+.campaign-card { flex: 1; min-width: 0; padding: var(--s4) var(--s5); display: grid; gap: var(--s5); color: var(--ink); transition: border-color var(--fast) var(--ease); }
+.campaign-card:hover { color: var(--ink); }
+.campaign-card.live { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); align-items: center; }
+@media (max-width: 1100px) { .campaign-card.live { grid-template-columns: minmax(0, 1fr); } }
+.campaign-main { display: flex; flex-direction: column; gap: var(--s2); min-width: 0; }
+.campaign-card h3 { font-size: var(--t-lg); font-weight: 600; }
+.campaign-card.live h3 { font-size: var(--t-2xl); letter-spacing: -0.02em; }
+.campaign-goal { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s2); color: var(--ink-2); }
+.campaign-goal b { font-size: var(--t-xl); font-weight: 600; color: var(--ink); }
+.campaign-card.live .campaign-goal b { font-size: var(--t-3xl); letter-spacing: -0.02em; }
+.campaign-meta { color: var(--ink-2); }
+.goal-bar { position: relative; display: block; height: 8px; border-radius: 4px; background: var(--sunk); }
+.goal-bar i { position: absolute; inset: 0 auto 0 0; border-radius: 4px; background: var(--a-sage); }
+.goal-bar i.off { background: var(--caution); }
+.goal-bar .target { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); border-radius: 1px; }
+.progress-card .goal-bar { margin-bottom: var(--s4); }
+@media (max-width: 640px) { .st-mix { display: none; } }

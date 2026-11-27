@@ -77,3 +77,66 @@
 .roi-sold .hbars { gap: var(--s3); }
 .roi-sold .hbar { grid-template-columns: minmax(0, 1fr) 64px; row-gap: 4px; }
 .roi-sold .hbar > span:first-child { grid-column: 1 / -1; white-space: normal; overflow: visible; color: var(--ink); }
+
+/* Module overview (matrix §15): the agent's read on top, named numbers and one small chart under it. Shared with Strategy. */
+.ov { padding: var(--s4) var(--s5); display: flex; flex-direction: column; gap: var(--s4); }
+.ov-read { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; color: var(--ink); font-size: var(--t-lg); font-weight: 500; }
+.ov-read .link-btn { margin-left: var(--s2); }
+.ov-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 360px); gap: var(--s5); align-items: end; }
+.ov-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 0; }
+.ov-kpi { display: flex; flex-direction: column; gap: 4px; padding: 0 var(--s4); border-left: 1px solid var(--line); min-width: 0; }
+.ov-kpi:first-child { padding-left: 0; border-left: 0; }
+.ov-kpi dt { color: var(--ink-2); font-size: var(--t-sm); }
+.ov-kpi dd { margin: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.ov-kpi b { font-size: var(--t-2xl); font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+.ov-chart { display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
+@media (max-width: 1100px) { .ov-body { grid-template-columns: minmax(0, 1fr); } }
+/* A phone: the read, then the numbers on two rows; the chart is in Explore. */
+@media (max-width: 640px) {
+  .ov { padding: var(--s4); }
+  .ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--s3); }
+  .ov-kpi:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .ov-kpi b { font-size: var(--t-xl); }
+  .ov-chart { display: none; }
+}
+
+/* Needs you: the anomaly to decide first, beside the rest of the queue. */
+.reports { gap: var(--s6); }
+.in-sec { gap: var(--s4); }
+.in-needs { display: grid; gap: var(--s4); align-items: start; }
+.in-needs.split { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .in-needs.split { grid-template-columns: minmax(0, 1fr); } }
+.in-feature { padding: var(--s5); display: flex; flex-direction: column; gap: var(--s3); }
+.in-feature h3 { font-size: var(--t-xl); font-weight: 600; letter-spacing: -0.01em; }
+.in-feature-fig { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s5); align-items: end; }
+.in-feature-num { margin: 0; }
+.in-feature-num dt { color: var(--ink-2); }
+.in-feature-num dd { margin: 0; display: flex; align-items: baseline; gap: 8px; }
+.in-feature-num b { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.02em; color: var(--ink); }
+.in-feature-why { display: flex; gap: var(--s2); align-items: flex-start; color: var(--ink); }
+.in-row-spark { width: 32px; display: grid; place-items: center; }
+/* Beside the featured anomaly the queue is narrow: the decision goes under its line. */
+.in-needs.split .dec-row { grid-template-columns: 32px minmax(0, 1fr); align-items: start; }
+.in-needs.split .dec-acts { grid-column: 2; justify-content: flex-start; }
+@media (max-width: 640px) { .in-feature { padding: var(--s4); } .in-feature-fig { grid-template-columns: minmax(0, 1fr); gap: var(--s2); } }
+
+/* Reports: cards with their chart; the one to approve goes first and wider. */
+.in-report-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: var(--s4); }
+.in-report-grid > li { display: flex; min-width: 0; }
+.in-report-grid > li.wide { grid-column: span 2; }
+@media (max-width: 640px) { .in-report-grid > li.wide { grid-column: auto; } }
+.in-report { flex: 1; min-width: 0; padding: var(--s4); display: flex; flex-direction: column; gap: var(--s2); color: var(--ink); transition: border-color var(--fast) var(--ease); }
+.in-report:hover { color: var(--ink); }
+.in-report h3 { font-size: var(--t-md); font-weight: 600; }
+.in-report.draft h3 { font-size: var(--t-xl); }
+.in-report > .t-sm:first-child, .in-report .row > .t-sm { color: var(--ink-2); }
+.in-sched-acts { margin-top: auto; padding-top: var(--s2); }
+
+/* Explore: daily reach beside its split by network; a bar behind a table's key number. */
+.in-reach { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: var(--s4); align-items: stretch; }
+@media (max-width: 1100px) { .in-reach { grid-template-columns: minmax(0, 1fr); } }
+.in-databar { display: inline-flex; align-items: center; justify-content: flex-end; gap: var(--s2); }
+.in-databar .track { width: 56px; height: 6px; border-radius: 3px; background: var(--lift); overflow: hidden; }
+.in-databar > .num { min-width: 7ch; text-align: right; }
+.in-databar .track i { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--a-iris) 70%, transparent); }
+@media (max-width: 640px) { .in-databar .track { display: none; } }
