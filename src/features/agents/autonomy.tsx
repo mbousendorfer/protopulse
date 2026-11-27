@@ -97,7 +97,7 @@ export function AutonomyList({ agent, levelOf = x => x.autonomy, onChange }: { a
                         {AUTONOMY.map(l => <li key={l} className={l === level ? 'cur' : ''}><b>{AUTONOMY_LABEL[l]}</b>{x.says[l]}</li>)}
                       </ul>
                       <p className="arow-stats">
-                        About {fmt(x.perWeek ?? 0)} a week{x.approvedUnchanged !== undefined && <> · {x.approvedUnchanged}% approved unchanged</>}
+                        About {fmt(x.perWeek ?? 0)} a week{x.reviewed !== undefined && <> · {fmt(x.reviewed)} reviewed by you</>}{x.approvedUnchanged !== undefined && <> · {x.approvedUnchanged}% approved unchanged</>}
                       </p>
                     </div>
                   )}

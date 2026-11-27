@@ -159,7 +159,7 @@ export function ShiftBoard() {
                 <line x1={padL} x2={W - 16} y1={y} y2={y} stroke="var(--line)" />
                 {s.log.filter(l => l.agent === a.id && l.at >= from && l.at <= now).map(l => (
                   <line className="pointer" key={l.id} x1={x(l.at)} x2={x(l.at)} y1={y - 6} y2={y + 6} stroke={hover === l.id ? 'var(--ink)' : l.status === 'undone' ? 'var(--ink-off)' : `var(--a-${a.id})`} strokeWidth={3} strokeLinecap="round"
-                    onMouseEnter={() => setHover(l.id)} onMouseLeave={() => setHover(null)} onClick={() => nav('/activity')}>
+                    onMouseEnter={() => setHover(l.id)} onMouseLeave={() => setHover(null)} onClick={() => nav('/agents/activity')}>
                     <title>{`${hhmm(l.at)} · ${l.text}`}</title>
                   </line>
                 ))}
@@ -187,7 +187,7 @@ export function LiveFeed() {
   const items = s.log.slice(0, 9)
   return (
     <section className="card">
-      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/activity')}>See all activity</Btn></div>
+      <div className="card-head"><h2 className="row tight"><span className="live-dot" aria-hidden />Live</h2><Btn size="xs" variant="ghost" onClick={() => nav('/agents/activity')}>See all activity</Btn></div>
       <ul className="feed">
         {items.map(l => {
           const canUndo = l.undoUntil && l.undoUntil > now && l.status !== 'undone'

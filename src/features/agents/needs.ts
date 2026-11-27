@@ -27,9 +27,6 @@ export const departmentNeeds = (s: State, agent: AgentId) =>
 /** The Agents rail badge: what is decided on Agents itself. Department items already badge their own rail entry. */
 export const agentsNeedsCount = (s: State) => autonomyRequests(s.handoffs).length + ruleProposals(s.handoffs).length
 
-/** “Inbox”, “Publishing”… from the agent's route. */
-export const departmentOf = (a: Agent) => a.route.replace(/^\//, '').replace(/^./, c => c.toUpperCase())
-
 /** Trust, in words: “92% approved unchanged”, then volume and undos. */
 export function trustOf(a: Agent) {
   const r = a.record
