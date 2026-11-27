@@ -54,7 +54,7 @@ export default function PublishingPage() {
 
   return (
     <div className="page pub-page">
-      <PageHead agent="atlas" title="Publishing" lede="Atlas plans, writes and schedules; you approve the plan, not each post.">
+      <PageHead agent="atlas" title="Publishing" lede="Atlas writes the week’s posts; you approve the plan, not each post.">
         {s.publishing.hold
           ? <Btn onClick={() => d({ type: 'publishing/resumeAll' })}><Play size={14} />Resume publishing</Btn>
           : <Btn onClick={() => d({ type: 'publishing/pauseAll' })}><Pause size={14} />Pause all publishing</Btn>}
@@ -216,7 +216,7 @@ function Calendar() {
               <section key={day} className={`cal-day ${today ? 'today' : ''} ${past ? 'past' : ''} ${over === day ? 'over' : ''}`} aria-label={`${dayLong(day)}${today ? ', today' : ''}`}
                 onDragOver={e => { if (!past) { e.preventDefault(); setOver(day) } }} onDragLeave={() => setOver(o => (o === day ? null : o))} onDrop={e => drop(e, day)}>
                 <DayNotes day={day} past={past} head={
-                  <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{today && <span className="sr-only">, today</span>}{items.length > 0 && <span className="cal-day-n">{items.length} post{items.length > 1 ? 's' : ''}</span>}</h3>
+                  <h3><span>{new Date(day).toLocaleDateString('en-GB', { weekday: 'short' })}</span> <b className="num">{new Date(day).getDate()}</b>{today && <span className="sr-only">, today</span>}{items.length > 0 && <span className="sr-only">, {items.length} post{items.length > 1 ? 's' : ''}</span>}</h3>
                 }>
                   <Themes day={day} />
                 </DayNotes>
@@ -358,10 +358,14 @@ function CalendarFilters({ value, onChange }: { value: CalFilters; onChange: (f:
   )
 }
 
+/** A reason cut to its first clause: « X refused it: the short link… » → « X refused it ». */
+const gist = (t: string) => t.split(/[:.](?:\s|$)/)[0]
+
 /** The one line under a post's words: why it needs a look, how it did, or what Atlas changed. Never all three. */
 function postLine(p: Post, shared?: string): { text: string; kind: 'reason' | 'stats' | 'atlas' } | undefined {
   // A pause the calendar already explains once isn't repeated on the card.
-  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note, kind: 'reason' }
+  // The gist only (« X refused it », « Missing visual »): the whole reason is in the post's panel, one click away.
+  if (p.note && (p.status === 'needs' || p.status === 'failed' || p.status === 'unapproved' || (p.status === 'paused' && !shared))) return { text: gist(p.status === 'paused' ? p.note.replace(/^Paused:\s*/, 'During ') : p.note), kind: 'reason' }
   if (p.stats) return { text: `${k(p.stats.reach)} reach · ${p.stats.er}% engagement`, kind: 'stats' }
   const moved = p.note?.match(/^Moved from (\S+) to \S+ by Atlas/)
   if (moved) return { text: `Moved by Atlas from ${moved[1]}`, kind: 'atlas' }
@@ -497,6 +501,7 @@ function MediaLibrary() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const now = useNow(60000)
+  const openPost = useOpenPost()
   const [tag, setTag] = useState('All')
   const [open, setOpen] = useState<Media | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -537,8 +542,10 @@ function MediaLibrary() {
                 <li key={p.id} className="media-missing">
                   <ImageOff size={16} aria-hidden />
                   <div className="grow">
-                    <b>A visual for {when}’s {NETWORK_LABEL[p.network]} post</b>
-                    <p className="muted t-sm">“{p.text}” {m ? `Atlas would use “${m.title}”. It never uses stock photos.` : 'No photo in Media fits, and Atlas never uses stock photos.'}</p>
+                    {/* The title opens the post: its words were here, and stay one click away. */}
+                    <button className="media-missing-title" onClick={() => openPost(p.id)}>A visual for {when}’s {NETWORK_LABEL[p.network]} post</button>
+                    {/* Atlas's pick is the button's label; the line only speaks when there's no pick. */}
+                    {!m && <p className="muted t-sm">No photo in Media fits, and Atlas never uses stock photos.</p>}
                   </div>
                   <span className="media-missing-acts">
                     {card && m && <Btn size="sm" onClick={() => d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? `Use ${m.title}` } })}>Use “{m.title}”</Btn>}
@@ -554,8 +561,9 @@ function MediaLibrary() {
                 <li key={e.media.id} className="media-missing">
                   <CalendarX size={16} aria-hidden />
                   <div className="grow">
-                    <b>The licence for “{e.media.title}” ends on {new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</b>
-                    <p className="muted t-sm">{e.media.rights}. Used by {e.posts.map(p => `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${NETWORK_LABEL[p.network]}`).join(', ')}.{e.swap ? ` Atlas would put “${e.swap.title}” instead.` : ''}</p>
+                    {/* The title opens the photo's sheet, where its rights are. The swap is the button's label. */}
+                    <button className="media-missing-title" onClick={() => setOpen(e.media)}>The licence for “{e.media.title}” ends on {new Date(e.ends).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</button>
+                    <p className="muted t-sm">Used by {e.posts.map(p => `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })} ${NETWORK_LABEL[p.network]}`).join(', ')}.</p>
                   </div>
                   {e.swap && <span className="media-missing-acts"><Btn size="sm" onClick={() => (card ? d({ type: 'core/resolve', id: card.id, decision: { kind: 'option', index: 0, option: card.options?.[0]?.label ?? 'Swap' } }) : d({ type: 'publishing/swapMedia', from: e.media.name, to: e.swap!.name }))}>Swap for “{e.swap.title}”</Btn></span>}
                 </li>
@@ -575,7 +583,7 @@ function MediaLibrary() {
           <li key={m.id}>
             <button className="media-tile" onClick={() => setOpen(m)}>
               <span className="media-photo"><Photo name={m.name} alt={m.title} /></span>
-              <span className="media-meta"><b className="ellipsis">{m.title}</b><span><span className="nowrap">Used {useCount(m)} time{useCount(m) === 1 ? '' : 's'}</span> · <span className="nowrap">added {m.added}</span></span>{endsOf(m) && <span className="media-ends"><CalendarX size={12} aria-hidden />Licence ends {endsOf(m)}</span>}</span>
+              <span className="media-meta"><b className="ellipsis">{m.title}</b><span className="nowrap">Used {useCount(m)} time{useCount(m) === 1 ? '' : 's'}</span>{endsOf(m) && <span className="media-ends"><CalendarX size={12} aria-hidden />Licence ends {endsOf(m)}</span>}</span>
             </button>
           </li>
         ))}

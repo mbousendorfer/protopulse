@@ -12,6 +12,7 @@ import { accountLastWeek, labelStats, labelWords, lastWeekOf, launchBlock, mixOf
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Tabs, Thinking } from '../../ui'
 import { CountBadge, Notice, Reopen } from '../../ui/Feedback'
 import { LineChart } from '../../ui/charts'
+import { MoreInfo } from '../../ui/More'
 import './strategy.css'
 import '../listening/needs.css'
 
@@ -25,6 +26,8 @@ const fmtRange = (a: number, b: number) => {
   if (x.toDateString() === y.toDateString()) return fmtDate(a)
   return x.getMonth() === y.getMonth() ? `${x.getDate()}–${fmtDate(b)}` : `${fmtDate(a)} – ${fmtDate(b)}`
 }
+/** “Reason. Move.” → [move, reason]. One sentence stays whole. */
+const moveFirst = (t: string): [string, string] => { const p = t.split(/(?<=\.)\s+/); return p.length > 1 ? [p[p.length - 1], p.slice(0, -1).join(' ').replace(/\.$/, '')] : [t, ''] }
 const fmtGoal = (c: Campaign, v: number) => (c.goal.label.includes('€') ? `€${v.toLocaleString('en-GB')}` : v.toLocaleString('en-GB'))
 
 export default function StrategyPage() {
@@ -34,7 +37,7 @@ export default function StrategyPage() {
   const tab = seg === 'pillars' ? 'pillars' : 'campaigns'
   return (
     <div className="page strategy">
-      <PageHead agent="sage" title="Strategy" lede="Sage turns a brief into a plan and keeps the pillars and cadence on track.">
+      <PageHead agent="sage" title="Strategy" lede="Sage plans your campaigns and keeps the mix on track.">
         {/* Only on the lists: on the brief it would point to itself, in a campaign it would compete with Approve. */}
         {(seg === '' || seg === 'pillars') && <Btn variant="primary" onClick={() => nav('/strategy/new')}><Sparkles size={14} />New campaign brief</Btn>}
       </PageHead>
@@ -56,9 +59,9 @@ type Need = 'plans' | 'moments' | 'changes'
 const NEED_LABEL: Record<Need, [string, string]> = { plans: ['Plan to approve', 'Plans to approve'], moments: ['Moment to decide', 'Moments to decide'], changes: ['Change to apply', 'Changes to apply'] }
 const NEED_ICON: Record<Need, typeof Check> = { plans: ClipboardCheck, moments: CalendarDays, changes: SlidersHorizontal }
 const NEED_WHY: Record<Need, string> = {
-  plans: 'Sage built these from a brief. Approving puts every post in Atlas’s calendar.',
-  moments: 'Sage raises each date 3 weeks before. Adding one gives Atlas its ideas.',
-  changes: 'Sage proposes, nothing changes until you apply. Undo stays in the journal.',
+  plans: 'Approving puts every post in Atlas’s calendar',
+  moments: 'Adding one gives Atlas its ideas',
+  changes: 'Nothing changes until you apply',
 }
 
 function Campaigns() {
@@ -77,8 +80,9 @@ function Campaigns() {
     plans: needs.plans.map(c => <PlanRow key={c.id} c={c} />),
     moments: needs.moments.map(m => <MomentRow key={m.id} m={m} />),
     changes: [
-      ...needs.adjustments.map(({ c, a }) => <ChangeRow key={a.id} text={a.text} why={`${c.name}, live campaign · Sage’s adjustment`}
-        apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} />),
+      // Sage writes “reason. move.”: the move is the row's title, the reason its line.
+      ...needs.adjustments.map(({ c, a }) => { const [move, reason] = moveFirst(a.text); return <ChangeRow key={a.id} text={move} why={`${c.name}${reason ? ` · ${reason}` : ''}`}
+        apply={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: true }} decline={{ type: 'strategy/adjust', id: c.id, adj: a.id, accept: false }} /> }),
       ...needs.proposals.map(p => <ChangeRow key={p.id} text={p.text} why={p.why}
         apply={{ type: 'strategy/proposal', id: p.id, accept: true }} decline={{ type: 'strategy/proposal', id: p.id, accept: false }} />),
     ],
@@ -140,7 +144,6 @@ function CampaignCard({ c }: { c: Campaign }) {
         <h3>{c.name}</h3>
         <Pill tone={STATUS[c.status].tone} dot={c.status === 'live'}>{STATUS[c.status].label}</Pill>
       </div>
-      <p className="muted">{c.brief}</p>
       <div className="campaign-meta">
         <span className="mono faint">{fmtDate(c.start)} – {fmtDate(c.end)}</span>
         <span className="faint">{c.posts.length} posts · €{c.budget} boost budget</span>
@@ -161,7 +164,7 @@ function PlanRow({ c }: { c: Campaign }) {
   return (
     <li className="need-row">
       <div className="need-main">
-        <p className="need-title"><Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link><span className="need-quote">{c.version > 1 ? `Version ${c.version} · ` : ''}“{c.brief}”</span></p>
+        <p className="need-title"><Link to={`/strategy/campaigns/${c.id}`}>{c.name}</Link>{c.version > 1 && <span className="need-quote">Version {c.version}</span>}</p>
         {block
           ? <p className="need-line need-wrap"><Lock size={12} aria-hidden /> {block}</p>
           : <p className="need-line">Goal {fmtGoal(c, c.goal.target)} {c.goal.label.replace(' (€)', '')} · {c.posts.length} posts · {fmtRange(c.start, c.end)} · €{c.budget.toLocaleString('en-GB')} boost budget</p>}
@@ -180,13 +183,26 @@ function MomentRow({ m }: { m: Moment }) {
     <li className="need-row">
       <div className="need-main">
         <p className="need-title"><b>{m.name}</b><span className="mono need-quote">{fmtRange(m.start, m.end)}</span></p>
-        <p className="need-line">{m.why} · {m.ideas.length} ideas for Atlas · {m.pillars.join(', ')}</p>
+        <p className="need-line need-reason"><span className="ellipsis">{m.why}</span>
+          <MoreInfo label="Why?" title={`Why Sage raised ${m.name}`}><MomentWhy m={m} /></MoreInfo></p>
       </div>
       <div className="need-acts">
         <Btn size="sm" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}><CalendarPlus size={14} />Add to the calendar</Btn>
         <Btn size="sm" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: false })}>Not this year</Btn>
       </div>
     </li>
+  )
+}
+
+/** Behind « Why? » on a moment: Sage's reason, where it comes from, the pillars and the ideas Atlas would get. */
+function MomentWhy({ m }: { m: Moment }) {
+  return (
+    <div className="stack">
+      <p>{m.why}</p>
+      <p className="faint">Source: {m.source} · {fmtRange(m.start, m.end)} · {m.pillars.join(', ')}</p>
+      <div className="section-title flush">Ideas for Atlas</div>
+      <ul className="bullets">{m.ideas.map(i => <li key={i.title}>{i.title}</li>)}</ul>
+    </div>
   )
 }
 
@@ -210,10 +226,10 @@ function ChangeRow({ text, why, apply, decline }: { text: string; why: string; a
 function Later({ list }: { list: Moment[] }) {
   const { d } = useStore()
   return (
-    <ul className="later">
+    <ul className="later" aria-label="Coming up">
       {list.map(m => (
         <li key={m.id}>
-          <span className="muted">Coming up: <b>{m.name}</b>, {fmtRange(m.start, m.end)}. Sage raises it on {fmtDate(m.start - MOMENT_LEAD)}.</span>
+          <span className="muted">Coming up: <b>{m.name}</b>, {fmtRange(m.start, m.end)} <span className="faint">· Sage raises it {fmtDate(m.start - MOMENT_LEAD)}</span></span>
           <Btn size="xs" variant="ghost" onClick={() => d({ type: 'strategy/moment', id: m.id, add: true })}>Add it now</Btn>
         </li>
       ))}
@@ -539,7 +555,7 @@ function CampaignView() {
       </div>
 
       <section className="card pad">
-        <div className="section-title">Who does what <span className="faint">· drag a task to another agent, or use its menu</span></div>
+        <div className="section-title">Who does what <span className="faint">· drag a task to reassign it</span></div>
         <DelegateBoard c={c} />
       </section>
 

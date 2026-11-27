@@ -10,6 +10,7 @@ import { Btn, Confidence, Mark, Menu, Modal, Net, Pill, Seg, Sheet, type MenuIte
 import { BulkBar, type Selection } from '../../ui/Selection'
 import { Notice, UndoBar } from '../../ui/Feedback'
 import { SocialAvatar } from '../../ui/SocialAvatar'
+import { InfoPop } from '../../ui/More'
 import { NetworkPreview } from './Previews'
 import type { BulkOp } from './slice'
 import { RETRY_OPTIONS, failureCardOf, type Retry } from './failures'
@@ -203,7 +204,7 @@ export function PostPreview() {
               d(fail ? { type: 'core/resolve', id: fail.id, decision: { kind: 'option', index: i, option: RETRY_OPTIONS[i].label } } : { type: 'publishing/retry', id: p.id, mode })
             }
             head = p.failure ? `${net} refused it at ${hhmm(p.failure.at)}` : 'Publishing failed'
-            body = <p className="pd-say"><Mark agent="atlas" /><span>{p.failure?.text ?? p.note} {fail?.why}</span></p>
+            body = <p className="pd-say"><Mark agent="atlas" /><span>{p.failure?.text ?? p.note}{fail?.why && <> <InfoPop label="Why?">{fail.why}</InfoPop></>}</span></p>
             acts = <>
               <Btn variant="primary" onClick={() => retry('fix')}><RotateCw size={14} />{RETRY_OPTIONS[0].label}</Btn>
               <Btn onClick={() => retry('nolink')}>{RETRY_OPTIONS[1].label}</Btn>
@@ -240,14 +241,17 @@ export function PostPreview() {
             body = <>
               <p className="pd-say">
                 <span className="pd-chain">{chain.map((a, i) => <Mark key={a + i} agent={a} />)}</span>
-                <span><b>{chain.map(agentName).join(' → ')}:</b> {card.context} {card.why}{card.kind === 'approval' && p.at > now && <> It goes out <b>{longWhen(p.at)}</b> once you approve.</>}</span>
+                <span><b>{chain.map(agentName).join(' → ')}:</b> {card.context}{card.kind === 'approval' && p.at > now && <> It goes out <b>{longWhen(p.at)}</b> once you approve.</>}
+                  {/* The setting, the Playbook rule and the confidence: one click away, not in the band (matrix §13). Already in a sheet, so a popover. */}
+                  {(card.why || !!card.rules?.length || !!card.confidence) && <> <InfoPop label="Why?">
+                    <div className="stack">
+                      {card.why && <p>{card.why}</p>}
+                      {!!card.rules?.length && <p className="pd-rules"><BookOpen size={14} aria-hidden />Playbook: {card.rules.map(r => `“${r}”`).join(' · ')}</p>}
+                      {!!card.confidence && <Confidence v={card.confidence} />}
+                    </div>
+                  </InfoPop></>}
+                </span>
               </p>
-              {(!!card.rules?.length || !!card.confidence) && (
-                <p className="pd-why">
-                  {!!card.rules?.length && <span className="pd-rules"><BookOpen size={14} aria-hidden />Playbook: {card.rules.map(r => `“${r}”`).join(' · ')}</span>}
-                  {!!card.confidence && <Confidence v={card.confidence} />}
-                </p>
-              )}
               {last?.from === 'agent' && card.thread!.some(m => m.from === 'you') && <p className="pd-say" aria-live="polite"><Mark agent={card.agent} /><span><b>{agentName(card.agent)}:</b> {last.text}</span></p>}
             </>
             if (card.field) {

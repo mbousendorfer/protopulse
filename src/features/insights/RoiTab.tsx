@@ -5,6 +5,7 @@ import { useStore } from '../../app/store'
 import { NETWORK_LABEL } from '../../data/agents'
 import { Btn, Mark, Net, Seg } from '../../ui'
 import { HBars } from '../../ui/charts'
+import { InfoPop } from '../../ui/More'
 import { bestReturn, postsByRevenue, roiByNetwork, roiCampaigns, roiTotals } from './roi'
 
 const eur = (v: number) => `€${Math.round(v).toLocaleString('en-GB')}`
@@ -21,7 +22,7 @@ export default function Roi() {
     <div className="stack lg">
       <div className="row explore-bar">
         <Seg name="roi-period" label="Period" value={days} onChange={setDays} options={[{ value: '7', label: '7 days' }, { value: '30', label: '30 days' }, { value: '90', label: '90 days' }]} />
-        <span className="faint">Google Analytics 4 · UTM source = social</span>
+        <InfoPop label="Source">Google Analytics 4: sessions whose UTM source is social, matched to the link clicks in Explore.</InfoPop>
       </div>
       <dl className="kpi-grid">
         {[['Sessions from social', int(t.sessions)], ['Orders', int(t.conversions)], ['Revenue', eur(t.revenue)], ['Revenue per link click', `€${t.perClick.toFixed(2)}`]].map(([k, v]) => (

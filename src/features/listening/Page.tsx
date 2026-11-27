@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import ManageCompetitors from './Manage'
 import NeedsYou, { EventNeedRow, IMPACT_TONE } from './Needs'
 import { Link, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -13,7 +13,7 @@ import {
 } from '../../data/listening'
 import { MENTION_NET, type MentionOp } from './slice'
 import { RULE_LABEL, ruleText, type TagDef, type TagRule } from './tags'
-import { eventState, listeningNeedsCount, openEvents, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
+import { runsOf, eventState, listeningNeedsCount, openEvents, seenOf, unseenNeeds, benchNetworks, networkRead, networkRows, ourTop, theirTop, COLLAB_MIN_REACH, CREATOR_MIN_REACH, creatorsOf, type Creator, inSearch, searchLive, searchMentions, searchRead, moodCount, share, BACKFILL_MS, competitorName, competitorOf, competitorReady, competitorsOf, eventsOf, shareOfVoice, activeSearches, allMentions, searchCap, searchVolume, sentimentOf } from './model'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { downloadFile, toCSV } from '../insights/alerts'
 import { Btn, Empty, Filters, Mark, Menu, Modal, Net, PageHead, Pill, Sheet, Switch, Tabs } from '../../ui'
@@ -21,6 +21,7 @@ import { CountBadge, Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import { StackBar } from '../../ui/charts'
 import './listening.css'
 import { SocialAvatar } from '../../ui/SocialAvatar'
+import { InfoPop } from '../../ui/More'
 
 
 type Tab = 'needs' | 'competitors' | 'mentions' | 'creators' | 'trends' | 'searches'
@@ -34,7 +35,7 @@ export default function ListeningPage() {
   const tab: Tab = (['competitors', 'mentions', 'creators', 'trends', 'searches'] as Tab[]).includes(seg as Tab) ? (seg as Tab) : 'needs'
   return (
     <div className="page listening">
-      <PageHead agent="echo" title="Listening" lede={`Echo watches ${s.listening.watch.filter(w => w.tracking).length} competitors, your mentions and trends, and turns signals into moves.`} />
+      <PageHead agent="echo" title="Listening" lede="Echo turns what she hears into moves." />
       <Tabs value={tab} onChange={v => nav(v === 'needs' ? '/listening' : `/listening/${v}`)} items={[
         { value: 'needs', label: 'Needs you', count: listeningNeedsCount(s) },
         { value: 'competitors', label: 'Competitors', count: eventsOf(s).filter(e => s.listening.watch.some(w => w.tracking && w.id === e.competitor)).length },
@@ -95,9 +96,9 @@ function Events() {
         items={[{ label: 'All competitors', onSelect: () => setComp('all') }, ...watched.map(w => ({ label: w.name, hint: comp === w.id ? <Check size={14} aria-label="Current" /> : undefined, onSelect: () => setComp(w.id) }))]} />
       {undo && <UndoBar onUndo={() => { undo.run(); setUndo(null) }} onDismiss={() => setUndo(null)}>{undo.text}</UndoBar>}
       <section className="card needs" aria-label="Needs a move">
-        <header className="need-head"><h2>Needs a move</h2><CountBadge n={open.length} /><span className="faint need-why">Echo picked a move for each. Anything public stays yours to publish.</span></header>
+        <header className="need-head"><h2>Needs a move</h2><CountBadge n={open.length} /><span className="faint need-why">Anything public stays yours to publish</span></header>
         {open.length ? <ul>{open.map(e => <EventNeedRow key={e.id} e={e} onUndo={setUndo} />)}</ul>
-          : <p className="need-empty">Every move{who ? ` from ${who}` : ''} has an answer. Echo raises launches, price changes, campaigns and viral posts as they happen.</p>}
+          : <p className="need-empty">Nothing needs a move{who ? ` from ${who}` : ''}. Echo watches for launches, price cuts, campaigns and viral posts.</p>}
       </section>
       {handled.length > 0 && (
         <section className="card">
@@ -238,8 +239,7 @@ function Benchmark() {
               <li key={l.id} className={`lesson ${st ?? ''}`}>
                 <div>
                   <b>{l.text}</b>
-                  <p className="muted">{l.evidence}</p>
-                  <p className="faint">Idea: {l.idea}</p>
+                  <p className="muted">Idea: {l.idea} <InfoPop label="Proof">{l.evidence}</InfoPop></p>
                 </div>
                 {st === 'tested' ? <Pill tone="signal">Test on your Desk</Pill> : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'lessons', id: l.id })} /> : (
                   <div className="row nowrap">
@@ -328,6 +328,7 @@ function Profile() {
 }
 
 /* ---------- Mentions ---------- */
+const PAGE = 20
 const SENT_LABEL: Record<Sentiment, string> = { positive: 'Positive', neutral: 'Neutral', negative: 'Negative' }
 
 /** The mention feed. `scope` narrows it to one search (search page). */
@@ -349,7 +350,12 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
   const list = all.filter(m => (sent === 'all' || mood(m) === sent) && (product === 'all' || m.product === product) && (!risk || m.risk) && (tag === 'all' || (s.listening.tags[m.id] ?? []).includes(tag))).sort((a, b) => b.at - a.at)
   const count = (x: Sentiment) => all.filter(m => mood(m) === x).length
   const products = [...new Set(feed.map(m => m.product).filter(Boolean))] as string[]
-  const ids = useMemo(() => list.map(m => m.id), [list.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
+  // A page of rows: the feed reads like a list, not a wall. The rest is one click away; Select all takes what's shown.
+  const [page, setPage] = useState(PAGE)
+  const shown = list.slice(0, page)
+  const sig = (m: Mention) => [mood(m), s.listening.sentiment[m.id] ? 1 : 0, m.product, m.risk ? 1 : 0, (s.listening.tags[m.id] ?? []).join()].join('|')
+  const runs = runsOf(shown.map(sig))
+  const ids = useMemo(() => shown.map(m => m.id), [shown.map(m => m.id).join()]) // eslint-disable-line react-hooks/exhaustive-deps
   const sel = useSelection(ids, `${sent}-${product}-${risk}-${hidden}`)
   const run = (op: MentionOp, extra: { tag?: string; sentiment?: Sentiment } = {}, which = [...sel.selected]) => { d({ type: 'listening/mentions', ids: which, op, ...extra }); sel.clear() }
   const exportCSV = () => downloadFile(`fernway-mentions-${new Date(now).toISOString().slice(0, 10)}.csv`, toCSV([
@@ -397,32 +403,41 @@ function Mentions({ scope }: { scope?: (m: Mention) => boolean } = {}) {
             </span>
           </div>
           <ul className="ls-mentions">
-            {list.map(m => {
+            {shown.map((m, i) => {
               const st = s.listening.mentions[m.id]
               const tags = s.listening.tags[m.id] ?? []
               const md = mood(m)
+              // What a run of rows shares (sentiment, product, risk, tags) is said once, above the run (matrix §13).
+              const grp = runs[i]
+              const chips = <>
+                <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
+                {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
+                {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}
+              </>
               return (
-                <li key={m.id} className={`${sel.has(m.id) ? 'ls-picked' : ''} ${seenOf(s, m) ? '' : 'ls-unseen'}`}>
+                <Fragment key={m.id}>
+                {grp.start && <li className="ls-run"><span aria-hidden /><span className="row tight">{chips}<span className="faint">· {grp.n} mentions</span></span></li>}
+                <li className={`${sel.has(m.id) ? 'ls-picked' : ''} ${seenOf(s, m) ? '' : 'ls-unseen'}`}>
                   <SelectBox checked={sel.has(m.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(m.id, shift)} label={`Select ${m.author}’s mention`} />
                   <button className="mention-main ls-open" onClick={e => (e.shiftKey || sel.count ? sel.toggle(m.id, e.shiftKey) : (setOpenId(m.id), d({ type: 'listening/seen', ids: [m.id] })))}>
                     <span className="row tight"><SocialAvatar name={m.author} network={MENTION_NET[m.network]} org={!m.author.startsWith('@')} size={24} /><b>{m.author}</b><span className="faint">{m.network}</span>
-                      <span className={`ls-mood ${md}`}>{SENT_LABEL[md]}{s.listening.sentiment[m.id] ? ' · corrected' : ''}</span>
-                      {m.product && <span className="chip">{m.product}</span>}{m.risk && <Pill tone="alert"><TriangleAlert size={12} />At risk</Pill>}
-                      {tags.map(t => <span key={t} className="chip ls-tag">{t}</span>)}</span>
+                      {!grp.inside && chips}</span>
                     <span className="ls-text">{m.text}</span>
                     <span className="mono faint">{ago(m.at, now)} · reach {m.reach.toLocaleString('en-GB')}</span>
                   </button>
                   <div className="row nowrap">
                     {(s.listening.pendingTags[m.id] ?? []).map(t => <Btn key={t} size="xs" variant="ghost" aria-label={`Add Echo’s suggested tag ${t}`} onClick={() => d({ type: 'listening/tagAccept', id: m.id, tag: t })}><Plus size={12} />{t}</Btn>)}
                     {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill> : (
-                      <Btn size="xs" onClick={() => run('nova', {}, [m.id])}><MessageSquareReply size={12} />Ask Nova to reply</Btn>
+                      <Btn size="xs" onClick={() => run('nova', {}, [m.id])} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>
                     )}
                     <Btn size="xs" variant="ghost" icon aria-label={hidden ? `Unhide ${m.author}’s mention` : `Hide ${m.author}’s mention`} onClick={() => run(hidden ? 'unhide' : 'hide', {}, [m.id])}>{hidden ? <Eye size={12} /> : <EyeOff size={12} />}</Btn>
                   </div>
                 </li>
+                </Fragment>
               )
             })}
           </ul>
+          {list.length > page && <button type="button" className="need-more" onClick={() => setPage(p => p + PAGE)}>Show {Math.min(PAGE, list.length - page)} more of {list.length - page}<ChevronDown size={14} /></button>}
         </section>
       )}
 
@@ -477,7 +492,7 @@ function Trends() {
               </div>
               <p className="mono faint">{t.networks} · {t.growth}</p>
               <p className="muted">{t.fitWhy}</p>
-              <ul className="examples">{t.examples.map(x => <li key={x} className="faint">{x}</li>)}</ul>
+              <InfoPop label={`${t.examples.length} examples`}><ul className="stack gap-2">{t.examples.map(x => <li key={x}>{x}</li>)}</ul></InfoPop>
               <div className="row">
                 {st === 'handed' ? <Pill tone="signal"><Check size={12} />With Atlas · draft on your Desk</Pill>
                   : st === 'dismissed' ? <Reopen onUndo={() => d({ type: 'listening/reopen', kind: 'trends', id: t.id })} /> : (
@@ -506,7 +521,7 @@ function Searches() {
   return (
     <div className="stack">
       <div className="row between">
-        <p className="muted">Echo checks every search every 15 minutes across social networks, news, blogs and forums. <span className="num">{activeSearches(s)} of {searchCap(s)}</span> search slots in use.</p>
+        <p className="muted"><span className="num">{activeSearches(s)} of {searchCap(s)}</span> search slots in use <InfoPop label="How Echo searches">Echo checks every search every 15 minutes across social networks, news, blogs and forums.</InfoPop></p>
         <Btn variant="primary" onClick={() => setEdit(blank)} disabled={activeSearches(s) >= searchCap(s)}><Plus size={14} />New search</Btn>
       </div>
       <section className="card">
@@ -613,10 +628,10 @@ function Creators() {
       <section className="card pad echo-read">
         <Mark agent="echo" />
         <div><div className="section-title mb-1">Echo’s read</div>
-          <p>{fits.length ? `${fits.length} creator${fits.length > 1 ? 's' : ''} worth a collab: ${fits.map(c => c.handle).join(' and ')}. Positive about Fernway, unpaid, ${COLLAB_MIN_REACH / 1000}k people or more.` : 'No new creator worth a collab. Echo tells you when one shows up.'}</p></div>
+          <p>{fits.length ? `${fits.length} creator${fits.length > 1 ? 's' : ''} worth a collab: ${fits.map(c => c.handle).join(' and ')}.` : 'No new creator worth a collab. Echo tells you when one shows up.'} <InfoPop label="Who counts">Positive about Fernway, not paid by a brand, and reaching {COLLAB_MIN_REACH.toLocaleString('en-GB')} people or more.</InfoPop></p></div>
       </section>
       <section className="card">
-        <div className="card-head"><h2>{list.length} creators talk about Fernway</h2><span className="faint">Authors reaching {CREATOR_MIN_REACH.toLocaleString('en-GB')} people or more</span></div>
+        <div className="card-head"><h2>{list.length} creators talk about Fernway</h2><span className="faint">{CREATOR_MIN_REACH.toLocaleString('en-GB')}+ people reached</span></div>
         <ul className="rows">
           {list.map(c => {
             const st = s.listening.creators[c.handle]

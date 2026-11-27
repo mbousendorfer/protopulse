@@ -59,7 +59,7 @@ export function fillQueues(s: State, opts: { queue?: string; days?: number; from
       if (level !== 'act') {
         next = pushHandoff(next, {
           agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Queue', action: 'atlas-fill', ref: post.id, link: `/publishing/queues`,
-          title: `${q.name}: ${when(at)}`, context: `Atlas filled the ${q.name} slot from the queue’s ${q.pillar} tips.`,
+          title: `${q.name}: ${when(at)}`, context: `From the queue’s ${q.pillar} tips.`,
           why: `${opts.why} Filling empty slots is set to ${level === 'suggest' ? 'Suggest' : 'Draft'}.`, confidence: 84,
           preview: { type: 'post', network: q.network, slot: when(at), text: [text], media: q.media },
         })

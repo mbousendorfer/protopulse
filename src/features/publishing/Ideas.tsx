@@ -14,10 +14,11 @@ import { CountBadge, Notice, Reopen, UndoBar } from '../../ui/Feedback'
 import Photo from '../../ui/Photo'
 import { NetworkPreview } from './Previews'
 import { checkPost } from './checks'
-import { ANGLES, diffWords, freshness, isOpen, mixVariants, summarize, variantText, variantsOf, type Angle, type Variant } from './ideasModel'
+import { ANGLES, diffWords, sentences, freshness, isOpen, mixVariants, summarize, variantText, variantsOf, type Angle, type Variant } from './ideasModel'
 import { targetsOf } from '../strategy/slice'
 import { slotComment } from './slice'
 import { PublishingNeeds } from './Needs'
+import { MoreInfo } from '../../ui/More'
 
 /*
  * Three levels, so the list can be scanned:
@@ -186,6 +187,41 @@ const evidence = (x: IdeaSource) => ({
   measure: x.measure ?? `${x.label}: ${x.proof}`,
 })
 
+function Evidence({ list }: { list: IdeaSource[] }) {
+  return (
+    <ul className="idea-evidence">
+      {list.map(x => {
+        const e = evidence(x)
+        const I = iconOf(x)
+        return (
+          <li key={x.label}>
+            <I size={14} aria-hidden />
+            <span>{e.value && <b>{e.value} </b>}{e.measure}</span>
+            <Link to={x.link} aria-label={`Open in ${ORIGIN[x.type]}: ${x.label}`}>{ORIGIN[x.type]}<ArrowUpRight size={12} aria-hidden /></Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/** Behind « Why? »: Atlas's whole reasoning, every source, who found it and when, the pillar and the rule it follows. */
+function IdeaWhy({ i, now }: { i: Idea; now: number }) {
+  const found = finders(i)
+  const fresh = freshness(i, now)
+  return (
+    <div className="stack">
+      <p>{i.why}</p>
+      <Evidence list={i.sources} />
+      <p className="muted t-sm">
+        {found.length ? <>Spotted by {found.map(agentName).join(' and ')}</> : <>Found by Atlas</>} {ago(i.at, now)} · {i.confidence}% confident · {i.pillar} pillar
+        {fresh.label !== 'No deadline' && <> · {fresh.label}</>}
+        {i.followsRule && <> · follows your rule “{i.followsRule}”</>}
+      </p>
+    </div>
+  )
+}
+
 function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
   const { s, d } = useStore()
   const nav = useNavigate()
@@ -249,23 +285,12 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
         {/* 1. Why: Atlas speaking, on its own colour */}
         <section className="idea-zone idea-why" aria-labelledby={`why-${i.id}`}>
           <h3 className="idea-zone-title" id={`why-${i.id}`}><Mark agent="atlas" />Why Atlas suggests this</h3>
-          <p className="idea-say">{i.why}</p>
-          <ul className="idea-evidence">
-            {i.sources.map(x => {
-              const e = evidence(x)
-              return (
-                <li key={x.label}>
-                  {(() => { const I = iconOf(x); return <I size={14} aria-hidden /> })()}
-                  <span>{e.value && <b>{e.value} </b>}{e.measure}</span>
-                  <Link to={x.link} aria-label={`Open in ${ORIGIN[x.type]}: ${x.label}`}>{ORIGIN[x.type]}<ArrowUpRight size={12} aria-hidden /></Link>
-                </li>
-              )
-            })}
-          </ul>
+          {/* Visible: Atlas's first sentence and the strongest proof. The whole reasoning, every source and the rule sit behind « Why? ». */}
+          <p className="idea-say">{sentences(i.why)[0]} <MoreInfo label="Why?" title="Why Atlas suggests this"><IdeaWhy i={i} now={now} /></MoreInfo></p>
+          <Evidence list={i.sources.slice(0, 1)} />
           <p className="idea-why-foot">
-            {found.length ? <>Spotted by {found.map(agentName).join(' and ')}</> : <>Found by Atlas</>} {ago(i.at, now)} · {i.confidence}% confident · {i.pillar}
+            {found.length ? <>Spotted by {found.map(agentName).join(' and ')}</> : <>Found by Atlas</>} · {i.confidence}% confident
             {fresh.label !== 'No deadline' && <> · {fresh.label}</>}
-            {i.followsRule && <> · follows your rule “{i.followsRule}”</>}
           </p>
         </section>
 
@@ -285,7 +310,7 @@ function IdeaPanel({ i, onClose }: { i: Idea; onClose: () => void }) {
               <div className="idea-stage">
                 <div className="idea-pv"><NetworkPreview network={shownNet} text={editing ? text : shownText} media={draft?.media ?? i.media} words={words} at={draft?.at} slides={Number(fmt?.match(/(\d+) slides/)?.[1]) || undefined} /></div>
               </div>
-              {!draft && <p className="faint t-sm idea-note">Atlas’s first take, not written yet. Draft it to get the final caption, the visual check and the slot.</p>}
+              {!draft && <p className="faint t-sm idea-note">Atlas’s first take. Draft it for the final caption, visual and slot.</p>}
 
               {editing && draft && (
                 <div className="idea-edit">

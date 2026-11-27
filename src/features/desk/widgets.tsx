@@ -4,7 +4,6 @@ import { ArrowRight, Sunrise, Undo2 } from 'lucide-react'
 import type { AgentId, Handoff } from '../../app/types'
 import { groupOf } from '../../app/reducer'
 import { Spark } from '../../ui/charts'
-import { SocialAvatar } from '../../ui/SocialAvatar'
 import { useNow, useStore } from '../../app/store'
 import { ago, hhmm, left, MIN, DEMO_START } from '../../app/time'
 import { agentName } from '../../data/agents'
@@ -55,7 +54,8 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
       <div className="brief-top">
         <div>
           <h1 id="brief-title" className="hello">{hello}, Sam.</h1>
-          <p className="story">Your agents handled <b className="num">{handled}</b> things while you were away. <b className="num">{need}</b> need you.</p>
+          {/* What needs you first: it's why you opened the Desk. What the agents did alone comes second. */}
+          <p className="story"><b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you. Your agents handled <b className="num">{handled}</b> on their own.</p>
         </div>
         <div className="brief-scene"><BriefScene hour={hour} /></div>
       </div>
@@ -79,8 +79,6 @@ export function Brief({ onPick }: { onPick: (key: string) => void }) {
                 ) : plan ? (
                   // The plan's own numbers, named: total posts, then posts per network.
                   <span className="hl-metric"><span><b className="num">{plan.total}</b> <span className="muted">posts next week</span><br /><span className="faint">{plan.line}</span></span></span>
-                ) : h.topic === 'Competitor' ? (
-                  <span className="hl-comp"><SocialAvatar name={h.title.split(' ')[0]} org size={32} /><span className="faint">{h.context}</span></span>
                 ) : null}
                 <span className="hl-title">{h.title}</span>
                 <span className="hl-go">Review<ArrowRight size={14} aria-hidden /></span>
@@ -197,7 +195,7 @@ export function LiveFeed() {
             <li key={l.id} className={l.status === 'undone' ? 'undone' : ''}>
               <Mark agent={l.agent} />
               <div>
-                <p>{l.text}</p>
+                <p title={l.text}>{l.text}</p>
                 <span className="mono faint">{ago(l.at, now)}{l.status === 'undone' ? ' · undone' : canUndo ? ` · undo · ${left(l.undoUntil!, now)}` : ''}</span>
               </div>
               {canUndo && <Btn size="xs" variant="ghost" icon aria-label={`Undo: ${l.text}`} onClick={() => d({ type: 'core/undo', id: l.id })}><Undo2 size={13} /></Btn>}

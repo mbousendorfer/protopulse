@@ -24,6 +24,7 @@ import { fill, toTemplate } from './saved'
 import { thenText, whenText } from './rules'
 import './inbox.css'
 import { MoreInfo } from '../../ui/More'
+import { gist } from './gist'
 
 type View = 'needs' | 'review' | 'leo' | 'yanis' | 'drafts' | 'handled' | 'hidden' | 'all' | 'claire' | 'mine' | 'negative'
 /** Views that are one person's work. */
@@ -219,7 +220,7 @@ export default function InboxPage() {
 
   return (
     <div className="page ib-page">
-      <PageHead agent="nova" title="Inbox" lede="Nova answers every comment, message and review she can, and leaves the rest for you.">
+      <PageHead agent="nova" title="Inbox" lede="Nova answers what she can. The rest waits here.">
         <Btn variant="ghost" onClick={() => setSaved(true)}><MessageSquareText size={14} />Saved replies</Btn>
         <Btn variant="ghost" onClick={() => setRules(true)}><ListChecks size={14} />Rules<span className="num faint">{s.inbox.rules.filter(r => r.on).length}</span></Btn>
       </PageHead>
@@ -338,8 +339,8 @@ export default function InboxPage() {
           )}
 
           {!list.length ? (
-            view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you" body="Nova is handling every conversation right now." />
-              : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="Nova reviews what she handles on her own. New conversations land here until someone looks at them." />
+            view === 'needs' && !filtersOn ? <Empty icon={<Check size={18} />} title="Nothing needs you here" body="Nova is watching your inboxes." />
+              : view === 'review' && !filtersOn ? <Empty icon={<CheckCheck size={18} />} title="Everything is reviewed" body="New conversations land here until someone looks at them." />
               : <Empty title="No conversations here" body="Try another view or clear the filters." action={filtersOn ? <Btn size="sm" onClick={clear}>Clear filters</Btn> : undefined} />
           ) : view === 'needs' && !label ? (
             <NeedsList list={list} sel={sel} currentId={id} onOpen={(cid, edit) => nav(`/inbox/${cid}`, { state: edit ? { edit: true } : undefined })} />
@@ -380,10 +381,10 @@ const needOf = (c: Conversation): Need => c.assignee && TEAMMATES.includes(c.ass
 const NEEDS: { id: Need; title: string; hint: string }[] = [
   { id: 'ready', title: 'Ready to send', hint: 'Nova is sure of the facts and the tone.' },
   { id: 'check', title: 'One passage to check', hint: 'Nova marked what she is unsure about.' },
-  { id: 'call', title: 'Your call', hint: 'Locked topics Nova never answers herself.' },
+  { id: 'call', title: 'Your call', hint: 'Topics Nova never answers herself.' },
   { id: 'yours', title: 'You’re replying', hint: 'You took these over. Nova stays out.' },
-  { id: 'claire', title: 'Waiting on Claire', hint: 'You asked her. Nothing to do until she answers.' },
-  { id: 'team', title: 'With your team', hint: 'Assigned to Léo or Yanis. They answer; you don’t have to.' },
+  { id: 'claire', title: 'Waiting on Claire', hint: 'Nothing to do until she answers.' },
+  { id: 'team', title: 'With your team', hint: 'Léo or Yanis answer these.' },
 ]
 
 const NEED_ICON: Record<Need, typeof Send> = { ready: Send, check: CircleHelp, call: Lock, yours: Hand, claire: UserRound, team: Users }
@@ -429,27 +430,25 @@ function NeedRow({ c, need, sel, current, onOpen }: { c: Conversation; need: Nee
   // A single send goes through the group action so it gets the same 10-second Undo strip as Send all.
   const send = () => d({ type: 'inbox/bulk', ids: [c.id], op: 'approve' })
   const extras = (c.attachments ?? []).filter(a => !a.removed).map(a => a.label.split(':')[0]).join(' · ')
+  // The row says the gist: who, what they asked, what Nova answers. The full texts are one click away, in the conversation.
+  const first = c.messages.find(m => m.from === 'them')?.text ?? lastText(c)
   return (
     <li className={`ib-need ${current ? 'current' : ''} ${sel.has(c.id) ? 'picked' : ''}`} onClick={e => (e.shiftKey || e.metaKey) ? sel.toggle(c.id, e.shiftKey) : onOpen()}>
       <SelectBox checked={sel.has(c.id)} visible={sel.count > 0} onToggle={shift => sel.toggle(c.id, shift)} label={`Select the conversation with ${c.author}`} />
       <SocialAvatar name={c.author} network={c.network} size={32} />
       <div className="ib-need-main">
-        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{c.messages.find(m => m.from === 'them')?.text ?? lastText(c)}”{translate(c.messages.find(m => m.from === 'them')?.text ?? '') && <span className="faint"> · {translate(c.messages.find(m => m.from === 'them')!.text)!.lang}</span>}</span></p>
-        {need === 'ready' && <p className="ib-need-line"><span className="ib-need-by">Nova</span>{draft}{extras && <span className="faint"> · with {extras}</span>}</p>}
-        {need === 'check' && <>
-          <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{flags[0].note}</p>
-          {/* "Send as is" sends this whole text, so it is on the row. */}
-          <p className="ib-need-line ib-need-draft"><span className="ib-need-by">Nova</span>{draft}</p>
-        </>}
+        <p className="ib-need-them"><Link to={`/inbox/${c.id}`} className="ib-need-who" onClick={e => e.stopPropagation()}>{c.author}</Link><span className="ib-need-quote">“{gist(first)}”{translate(first) && <span className="faint"> · {translate(first)!.lang}</span>}</span></p>
+        {need === 'ready' && <p className="ib-need-line"><span className="ib-need-by">Nova</span>{gist(draft)}{extras && <span className="faint"> · with {extras}</span>}</p>}
+        {/* The passage Nova doubts is what "Send as is" decides; the rest of the draft is what she is sure of. */}
+        {need === 'check' && <p className="ib-need-line"><span className="ib-need-by">Check “{flags[0].text}”</span>{gist(flags[0].note)}</p>}
         {need === 'call' && (() => {
           const [by, ...rest] = (c.note ?? 'Locked topic').split(' · ')
           const why = rest.join(' · ')
           // An escalation quotes its Playbook rule before the holding reply.
-          return <p className="ib-need-line"><span className="ib-need-by">{by}</span>{why.startsWith('rule') && <>{cap(why)}. </>}{c.draft ? <>Holding reply: {draft}</> : cap(why)}</p>
+          return <p className="ib-need-line"><span className="ib-need-by">{by}</span>{why.startsWith('rule') && <>{cap(why)}. </>}{c.draft ? <>Holding reply: {gist(draft, 10)}</> : cap(why)}</p>
         })()}
-        {need === 'yours' && <p className="ib-need-line">You took this over. Nova stays out until you reply.</p>}
         {need === 'claire' && <ClaireLine c={c} />}
-        {need === 'team' && <p className="ib-need-line"><span className="ib-need-by">{ROSTER[c.assignee!].short}</span>{c.draft?.length ? 'Has Nova’s draft and will send it.' : `Is replying. ${ROSTER[c.assignee!].role.split(' · ')[0]}.`}</p>}
+        {need === 'team' && <p className="ib-need-line"><span className="ib-need-by">{ROSTER[c.assignee!].short}</span>{c.draft?.length ? 'Sends Nova’s draft' : `Replying · ${ROSTER[c.assignee!].role.split(' · ')[0]}`}</p>}
       </div>
       <div className="ib-need-acts" onClick={e => e.stopPropagation()}>
         <WaitTag c={c} fallback />
@@ -476,7 +475,7 @@ function ClaireLine({ c }: { c: Conversation }) {
   const now = useNow(10000)
   const card = c.handoff ? s.handoffs.find(h => h.id === c.handoff) : undefined
   const reply = card?.claire?.reply
-  return <p className="ib-need-line"><span className="ib-need-by">Claire</span>{reply ? `“${reply}”` : card?.claire ? `Asked ${ago(card.claire.askedAt, now)}. She usually answers within a minute.` : c.note ?? 'Asked. She usually answers within a minute.'}</p>
+  return <p className="ib-need-line"><span className="ib-need-by">Claire</span>{reply ? `“${gist(reply)}”` : card?.claire ? `Asked ${ago(card.claire.askedAt, now)}` : gist(c.note ?? 'Asked')}</p>
 }
 
 /** How long the customer has waited on the team, named in words, and whether it is past the target for its type. */
@@ -677,7 +676,8 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
               </div>
             ))}
             {c.choice?.did === 'like' && c.status === 'auto' && <div className="row tight ib-note"><Heart size={14} fill="currentColor" aria-hidden /><span className="grow">Nova liked it instead of answering: {c.choice.why}.</span><Btn size="xs" onClick={() => d({ type: 'inbox/answerThis', id: c.id })}>Answer this one</Btn></div>}
-            {c.note && <p className="ib-note faint">{c.note}{PUBLIC.includes(c.type) && s.inbox.convs.some(x => x.id === dmId(c.id)) && <> · <Link className="link-btn" to={`/inbox/${dmId(c.id)}`}>Open the DM</Link></>}</p>}
+            {/* An escalation's note says its rule, already behind « Why? » on the draft. */}
+            {c.note && !(c.trigger && (c.status === 'escalated' || c.status === 'claire')) && <p className="ib-note faint">{c.note}{PUBLIC.includes(c.type) && s.inbox.convs.some(x => x.id === dmId(c.id)) && <> · <Link className="link-btn" to={`/inbox/${dmId(c.id)}`}>Open the DM</Link></>}</p>}
             {card?.claire?.reply && (
               <div className="ib-claire"><Mark agent="claire" /><div><b>Claire {card.claire.verdict === 'changes' ? 'asked for changes' : 'declined'}</b><p>“{card.claire.reply}”</p></div></div>
             )}
@@ -742,7 +742,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 {!!c.draft?.length && <p className="ib-draft-text"><FlagText parts={c.draft} /></p>}
                 {c.dm && <><div className="ib-half">Then by DM</div><p className="ib-draft-text">{c.dm}</p></>}
               </>}
-              <span className="muted">{card?.claire?.reply ? 'Claire answered: send it from the Desk.' : 'Waiting on Claire. She usually replies in about a minute.'}</span>
+              <span className="muted">{card?.claire?.reply ? 'Claire answered: send it from the Desk.' : 'Waiting on Claire.'}</span>
               {card?.claire?.reply && <Link to={`/?card=${card.id}`} className="link-btn t-xs">Review on Desk</Link>}
             </div>
           )}
@@ -767,7 +767,7 @@ function ConversationPanel({ c, labels, onClose, onSaveReply, onPost }: { c: Con
                 <Menu align="start" trigger={<Btn size="sm" variant="ghost"><MessageSquareText size={14} />Saved replies<ChevronDown size={12} /></Btn>}
                   items={s.inbox.saved.map(r => ({ label: r.name, hint: <span className="num faint">{r.uses}</span>, onSelect: () => { setReply(fill(r, c)); setPicked(r.id) } }))} />
               )}
-              <span className="faint t-xs">{mode === 'note' || !canReply ? 'Only your team sees notes.' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
+              <span className="faint t-xs">{mode === 'note' || !canReply ? '' : c.status === 'takeover' ? 'Nova won’t reply in this conversation.' : c.status === 'auto' ? 'Nova answered. You can add to it.' : ''}</span>
               <span className="spacer" />
               {/* A note is never the panel's main action: only a reply to the customer is orange. */}
               <Btn variant={mode === 'note' || !canReply ? undefined : 'primary'} size="sm" type="submit" disabled={!reply.trim()} onClick={() => { if (!canReply) setMode('note') }}>
@@ -846,14 +846,21 @@ function WhyEscalated({ c, fan }: { c: Conversation; fan?: string }) {
   )
 }
 
-/** What Nova found for "which one is it?": the product, the runner-up she ruled out, the tracked link, the campaign offer. */
+/**
+ * What Nova found for "which one is it?". The product is what Sam checks before Send; the runner-up she ruled out,
+ * the tracked link and the campaign offer sit behind « More info ».
+ */
 function ProductFound({ d }: { d: NonNullable<Conversation['product']> }) {
   return (
-    <ul className="ib-why" aria-label="The product Nova found">
-      <li><b>Product</b><span>{d.name} · €{d.price} · {d.match}% match</span></li>
-      {d.other && <li><b>Not</b><span>{d.other.name}: {d.other.why}</span></li>}
-      <li><b>Link</b><span>{d.link} · tracked as utm_campaign={d.utm}</span></li>
-      {d.offer && <li><b>Offer</b><span>{d.offer}</span></li>}
-    </ul>
+    <p className="ib-product t-sm"><b>{d.name}</b> · €{d.price} · {d.match}% match{' '}
+      <MoreInfo title="The product Nova found">
+        <ul className="ib-why" aria-label="The product Nova found">
+          <li><b>Product</b><span>{d.name} · €{d.price} · {d.match}% match</span></li>
+          {d.other && <li><b>Not</b><span>{d.other.name}: {d.other.why}</span></li>}
+          <li><b>Link</b><span>{d.link} · tracked as utm_campaign={d.utm}</span></li>
+          {d.offer && <li><b>Offer</b><span>{d.offer}</span></li>}
+        </ul>
+      </MoreInfo>
+    </p>
   )
 }

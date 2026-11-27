@@ -31,7 +31,6 @@
 /* Today: the date in a filled ink disc (static, so not blue). */
 .cal-day.today h3 b { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 6px; border-radius: 999px; background: var(--ink); color: var(--panel); align-self: center; }
 .cal-today { font-size: var(--t-xs); font-weight: 600; color: var(--ink); }
-.cal-day-n { margin-left: auto; font-size: var(--t-xs); color: var(--ink-2); white-space: nowrap; }
 .cal-post { position: relative; border-radius: var(--r-ctl); background: var(--panel); border: 1px solid var(--line); transition: border-color var(--fast) var(--ease); }
 .cal-post:hover { border-color: var(--signal); }
 .cal-post[draggable='true'] { cursor: grab; }
@@ -122,6 +121,8 @@
 .media-missing { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3) var(--s4); flex-wrap: wrap; }
 .media-missing > svg { flex: none; margin-top: 2px; color: var(--caution); }
 .media-missing > .grow { flex: 1 1 320px; min-width: 0; }
+.media-missing-title { display: block; padding: 0; border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; }
+.media-missing-title:hover { color: var(--action-ink); text-decoration: underline; text-underline-offset: 3px; }
 .media-missing-acts { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s2); }
 .media-bar { display: flex; align-items: flex-start; gap: var(--s3); }
 .media-bar > .grow { min-width: 0; }
@@ -582,7 +583,6 @@
 .pd-chain { display: inline-flex; flex: none; }
 .pd-chain .mark + .mark { margin-left: -7px; }
 .pd-chain .mark svg { border-radius: 50%; box-shadow: 0 0 0 2px var(--lift); }
-.pd-why { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s1) var(--s4); font-size: var(--t-sm); color: var(--ink-2); }
 .pd-rules { display: inline-flex; align-items: flex-start; gap: 6px; }
 .pd-rules > svg { flex: none; margin-top: 2px; }
 .pd-metrics { display: flex; flex-wrap: wrap; gap: var(--s3) var(--s8); margin: 0; }
