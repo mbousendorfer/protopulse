@@ -278,3 +278,25 @@ export const COMP_NETWORKS: Record<CompetitorId, Partial<Record<Network, NetStat
   trailkind: { tiktok: { followers: 180000, perWeek: 21, er: 6.8 }, instagram: { followers: 70000, perWeek: 8, er: 4.1 }, x: { followers: 10000, perWeek: 2, er: 0.8 } },
   basecamp: { facebook: { followers: 60000, perWeek: 7, er: 0.6 }, instagram: { followers: 30000, perWeek: 4, er: 1.2 }, x: { followers: 5000, perWeek: 1, er: 0.3 } },
 }
+
+/* ---------- Listening overview and competitor cards (object-shape pass) ---------- */
+
+/** Brand mentions per day, the last 7 days, oldest first. Sums to the Brand search's 7-day volume (1,840). */
+export const BRAND_DAYS = [238, 251, 262, 244, 279, 276, 290]
+
+/** Raw share of voice per week, the last 6 weeks, oldest first. The last week is each brand's `sov`. */
+export const SOV_WEEKS: Record<CompetitorId | 'fernway', number[]> = {
+  fernway: [28, 29, 28, 30, 30, 31],
+  peakline: [24, 24, 25, 25, 28, 27],
+  norro: [24, 23, 23, 22, 22, 22],
+  trailkind: [9, 10, 10, 11, 11, 12],
+  basecamp: [11, 10, 10, 9, 8, 8],
+}
+
+/** How people talk about each competitor, last 30 days: % positive and % negative of their mentions (neutral is the rest). */
+export const COMP_MOOD: Record<CompetitorId, { positive: number; negative: number }> = {
+  peakline: { positive: 41, negative: 22 },
+  norro: { positive: 58, negative: 9 },
+  trailkind: { positive: 52, negative: 14 },
+  basecamp: { positive: 30, negative: 31 },
+}
