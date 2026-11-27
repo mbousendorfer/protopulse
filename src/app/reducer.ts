@@ -347,7 +347,7 @@ function reduceCore(s: State, a: CoreAction): State {
     case 'core/autonomy': {
       const next = setLevel(s, a.agent, a.action, a.level)
       const n = s.handoffs.filter(h => !next.handoffs.some(x => x.id === h.id)).length
-      return n ? notify(next, 'agents', `${n} card${n > 1 ? 's' : ''} left your Desk. ${agentOf(s, a.agent).name} handles ${n > 1 ? 'them' : 'it'} now.`, { link: { to: '/activity', label: 'See in Activity' } }) : next
+      return n ? notify(next, 'agents', `${n} card${n > 1 ? 's' : ''} left your Desk. ${agentOf(s, a.agent).name} handles ${n > 1 ? 'them' : 'it'} now.`, { link: { to: '/agents/activity', label: 'See in Activity' } }) : next
     }
 
     case 'core/preset': {
