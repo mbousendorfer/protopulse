@@ -4,8 +4,8 @@ import { ChevronDown, ChevronRight, Redo2, Undo2 } from 'lucide-react'
 import type { AgentId, LogEntry, LogStatus } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { dayLabel, hhmm, left } from '../../app/time'
-import { AGENTS } from '../../data/agents'
-import { Btn, Empty, Filters, Mark, PageHead, Pill, Switch } from '../../ui'
+import { AGENTS, agentName } from '../../data/agents'
+import { Btn, Empty, Filters, Mark, Menu, Pill } from '../../ui'
 import './activity.css'
 
 const STATUS: Record<LogStatus, { label: string; tone?: 'ok' | 'caution' | 'alert' }> = {
@@ -13,28 +13,40 @@ const STATUS: Record<LogStatus, { label: string; tone?: 'ok' | 'caution' | 'aler
   rejected: { label: 'Rejected', tone: 'alert' }, undone: { label: 'Undone', tone: 'caution' }, redone: { label: 'Redone' }, dismissed: { label: 'Dismissed' },
 }
 
-type StatusFilter = 'all' | 'alone' | 'you' | 'undone'
+type StatusFilter = 'all' | 'undo' | 'alone' | 'you' | 'undone'
+const FILTER_LABEL: Record<StatusFilter, string> = { all: 'Everything', undo: 'Can undo', alone: 'Done alone', you: 'Your decisions', undone: 'Undone' }
+const FILTERS = Object.keys(FILTER_LABEL) as StatusFilter[]
+
+/** Which state filter an entry falls in. */
+export function inFilter(l: LogEntry, f: StatusFilter, now: number) {
+  if (f === 'all') return true
+  if (f === 'undo') return !!l.undoUntil && l.undoUntil > now && l.status !== 'undone'
+  if (f === 'alone') return l.status === 'done' || l.status === 'redone'
+  if (f === 'you') return ['approved', 'edited', 'rejected', 'dismissed'].includes(l.status)
+  return l.status === 'undone'
+}
 
 /** A day shows its latest entries; the rest wait behind “Show N more”, like the Inbox groups. */
 export const DAY_CAP = 8
 export const visibleRows = <T,>(rows: T[], open: boolean) => (open || rows.length <= DAY_CAP + 2 ? rows : rows.slice(0, DAY_CAP))
 
+/** Agents › Activity: the journal of every agent action (PROMPT §6.8). State filters with counts, the agent in a menu. */
 export default function Activity() {
   const { s, d } = useStore()
   const now = useNow(10000)
-  const [params] = useSearchParams()
-  const [agent, setAgent] = useState<'all' | AgentId>((params.get('agent') as AgentId) || 'all')
-  const [status, setStatus] = useState<StatusFilter>('all')
-  const [reversible, setReversible] = useState(false)
+  const [params, setParams] = useSearchParams()
+  const qa = params.get('agent') as AgentId
+  const agent: 'all' | AgentId = AGENTS.some(a => a.id === qa) ? qa : 'all'
+  const qs = params.get('status') as StatusFilter
+  const status: StatusFilter = FILTERS.includes(qs) ? qs : 'all'
+  const set = (k: string, v: string) => { const next = new URLSearchParams(params); if (v === 'all') next.delete(k); else next.set(k, v); setParams(next, { replace: true }) }
   const [open, setOpen] = useState<string | null>(null)
   const [full, setFull] = useState<string[]>([])
 
-  const canUndo = (l: LogEntry) => !!l.undoUntil && l.undoUntil > now && l.status !== 'undone'
-  const items = s.log.filter(l =>
-    (agent === 'all' || l.agent === agent) &&
-    (status === 'all' || (status === 'alone' && (l.status === 'done' || l.status === 'redone')) || (status === 'you' && ['approved', 'edited', 'rejected', 'dismissed'].includes(l.status)) || (status === 'undone' && l.status === 'undone')) &&
-    (!reversible || canUndo(l)),
-  ).sort((a, b) => b.at - a.at)
+  const canUndo = (l: LogEntry) => inFilter(l, 'undo', now)
+  const mine = s.log.filter(l => agent === 'all' || l.agent === agent)
+  const counts = Object.fromEntries(FILTERS.map(f => [f, mine.filter(l => inFilter(l, f, now)).length])) as Record<StatusFilter, number>
+  const items = mine.filter(l => inFilter(l, status, now)).sort((a, b) => b.at - a.at)
 
   const groups = useMemo(() => {
     const m = new Map<string, LogEntry[]>()
@@ -43,20 +55,15 @@ export default function Activity() {
   }, [items, now])
 
   return (
-    <div className="page narrow">
-      <PageHead title="Activity" lede="Everything your agents did, why, and what you can still undo." />
+    <div>
       <div className="act-filters">
-        <Filters label="Agent" value={agent} onChange={setAgent} items={[{ value: 'all', label: 'All agents' }, ...AGENTS.map(a => ({ value: a.id as AgentId, label: <><Mark agent={a.id} />{a.name}</> }))]} />
-        <div className="row">
-          <Filters label="Status" value={status} onChange={setStatus} items={[
-            { value: 'all', label: 'Everything' }, { value: 'alone', label: 'Done alone' }, { value: 'you', label: 'Your decisions' }, { value: 'undone', label: 'Undone' },
-          ]} />
-          <span className="spacer" />
-          <Switch checked={reversible} onChange={setReversible} label="Reversible only" />
-        </div>
+        <Filters label="Show" value={status} onChange={v => set('status', v)}
+          items={FILTERS.filter(f => f === 'all' || f === status || counts[f] > 0).map(f => ({ value: f, label: FILTER_LABEL[f], count: f === 'all' ? undefined : counts[f] }))} />
+        <Menu align="end" trigger={<Btn size="sm" variant="ghost">{agent !== 'all' && <Mark agent={agent} />}{agent === 'all' ? 'All agents' : agentName(agent)}<ChevronDown size={12} /></Btn>}
+          items={[{ label: 'All agents', onSelect: () => set('agent', 'all') }, ...AGENTS.map(a => ({ label: a.name, icon: <Mark agent={a.id} />, hint: a.dept, onSelect: () => set('agent', a.id) }))]} />
       </div>
 
-      {!items.length && <Empty title="Nothing matches" body="Try another agent or status." action={<Btn onClick={() => { setAgent('all'); setStatus('all'); setReversible(false) }}>Clear filters</Btn>} />}
+      {!items.length && <Empty title="Nothing matches" action={<Btn onClick={() => setParams({}, { replace: true })}>Clear filters</Btn>} />}
 
       {groups.map(([day, rows]) => (
         <section key={day} className="act-day">

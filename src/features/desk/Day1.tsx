@@ -7,17 +7,15 @@ import { hhmm } from '../../app/time'
 import { Btn } from '../../ui'
 import type { AgentId } from '../../app/types'
 import { ConnectModal } from '../onboarding/Connect'
-import { BriefScene } from '../../ui/Illustrations'
-import { AgentTiles } from './widgets'
+import { Hello } from './widgets'
 import { checklist, firstBriefAt, type CheckItem } from '../onboarding/day1'
 
-/** Day 1 replaces the morning brief until the first one is written: who started, what they found, when the brief lands. */
-export function Welcome({ onPick }: { onPick: (key: string) => void }) {
+/** Day 1 replaces the morning brief until the first one is written: who started, and when the brief lands. */
+export function Welcome() {
   const { s } = useStore()
   const now = useNow()
   const started = s.setup.startedAt ?? now
-  const open = s.handoffs.filter(h => !h.lane)
-  const need = open.filter(h => groupOf(h) === 'need').length
+  const need = s.handoffs.filter(h => !h.lane && groupOf(h) === 'need').length
   // The latest thing each agent did since it started.
   const first = (agent: string) => s.log.find(l => l.agent === agent && l.status === 'done' && !l.text.startsWith('You ') && l.at >= started - 60_000)
   const connected = s.setup.connected.length > 0
@@ -30,19 +28,11 @@ export function Welcome({ onPick }: { onPick: (key: string) => void }) {
     return first(id)?.text ?? (id === 'juno' ? 'Starts with your next YouTube video' : 'Starts working tonight')
   }
   return (
-    <section className="brief card day1" aria-labelledby="welcome-title">
-      <div className="brief-top">
-        <div>
-          <h1 id="welcome-title" className="hello">Welcome aboard{s.setup.first ? `, ${s.setup.first}` : ''}.</h1>
-          <p className="story">{connected
-            ? <><b className="num">{need || 'Nothing'}</b> {need === 1 ? 'thing needs' : need ? 'things need' : 'needs'} you. Your team started at {hhmm(started)}.</>
-            : <>Atlas wrote 3 first drafts from your Playbook. Connect a profile to schedule them: Nova and Echo start once one is connected.</>}</p>
-          <p className="day1-promise"><Sunrise size={16} aria-hidden />Your first morning brief arrives tomorrow at {hhmm(firstBriefAt(started))}.</p>
-        </div>
-        <div className="brief-scene"><BriefScene hour={new Date(now).getHours()} /></div>
-      </div>
-      <AgentTiles onPick={onPick} line={id => line(id as AgentId)} />
-    </section>
+    <Hello title={`Welcome aboard${s.setup.first ? `, ${s.setup.first}` : ''}.`} panel={`Your agents since ${hhmm(started)}`} agentLine={line}
+      line={connected
+        ? <><b className="num">{need || 'Nothing'}</b> {need ? 'need' : 'needs'} you. Your team started at {hhmm(started)}.</>
+        : <>Atlas wrote 3 first drafts. Connect a profile to schedule them.</>}
+      extra={<p className="day1-promise"><Sunrise size={16} aria-hidden />Your first morning brief arrives tomorrow at {hhmm(firstBriefAt(started))}.</p>} />
   )
 }
 

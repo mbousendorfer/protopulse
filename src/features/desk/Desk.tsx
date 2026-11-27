@@ -1,98 +1,86 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, Check, ChevronDown, ChevronRight, Clock, Focus as FocusIcon, ListFilter } from 'lucide-react'
-import type { AgentId, Decision, DoneItem, Handoff, Kind, Urgency } from '../../app/types'
+import { ArrowRight, Check, ChevronDown, Focus as FocusIcon } from 'lucide-react'
+import type { AgentId, Decision, DoneItem, Handoff } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { groupOf } from '../../app/reducer'
 import { AGENTS, agentName } from '../../data/agents'
-import { Btn, Kbd, Menu, TopicIcon } from '../../ui'
+import { Btn, Filters, Menu, TopicIcon } from '../../ui'
 import Detail from './Detail'
 import BatchDetail, { batchesOf, type Batch } from './Batch'
 import Thread from './Thread'
-import { KIND_LABEL, SNOOZE, byPriority, useHandoffActions } from './parts'
+import { SNOOZE, byPriority, useHandoffActions } from './parts'
 import { BulkBar, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice, UndoBar } from '../../ui/Feedback'
-import { Brief, LiveFeed, ShiftBoard, Team } from './widgets'
+import { Brief } from './widgets'
 import './desk.css'
 import './today.css'
 import { AllClearScene } from '../../ui/Illustrations'
 import { Checklist, Welcome } from './Day1'
 import { firstBriefAt } from '../onboarding/day1'
 
-type Entry = { key: string; group: 'need' | 'look' | 'good' | 'claire' | 'later'; h?: Handoff; b?: Batch }
-const GROUPS: { id: Entry['group']; label: string }[] = [
-  { id: 'need', label: 'Needs you' }, { id: 'look', label: 'Worth a look' }, { id: 'good', label: 'Good news' },
-  { id: 'claire', label: 'Waiting on Claire' }, { id: 'later', label: 'Later' },
-]
+/** The list's states (matrix §14): one Filters row with counts, the empty ones hidden. */
+type Show = 'need' | 'look' | 'good' | 'claire' | 'later' | 'done'
+const SHOW_LABEL: Record<Show, string> = { need: 'Needs you', look: 'Worth a look', good: 'Good news', claire: 'Waiting on Claire', later: 'Later', done: 'Done' }
+type Entry = { key: string; group: Exclude<Show, 'done'>; h?: Handoff; b?: Batch }
+const size = (e: Entry) => (e.b ? e.b.items.length : 1)
+const groupOfCard = (h: Handoff): Entry['group'] => h.lane === 'claire' ? 'claire' : h.lane === 'snoozed' ? 'later' : groupOf(h)
 
 export default function Desk() {
   const { s, d } = useStore()
   const nav = useNavigate()
   const [agent, setAgent] = useState<'all' | AgentId>('all')
-  const [kind, setKind] = useState<'all' | Kind>('all')
-  const [urgency, setUrgency] = useState<'all' | Urgency>('all')
   const [selected, setSelected] = useState<string | null>(null)
-  // Links from other pages ("Review on Desk") open that card directly.
+  const [thread, setThread] = useState<string | null>(null)
+  const [pick, setShow] = useState<Show>('need')
+
+  const entries = useMemo(() => {
+    const mine = s.handoffs.filter(h => agent === 'all' || h.agent === agent)
+    const open = mine.filter(h => !h.lane).sort(byPriority)
+    const { batches, rest } = batchesOf(open.filter(h => groupOf(h) === 'need'))
+    // Needs you: batches and single cards, ordered by urgency.
+    const rank = { urgent: 0, today: 1, week: 2 }
+    const need: Entry[] = [...batches.map((b): Entry => ({ key: `b:${b.id}`, group: 'need', b })), ...rest.map((h): Entry => ({ key: `h:${h.id}`, group: 'need', h }))]
+      .sort((x, y) => rank[(x.b?.urgency ?? x.h!.urgency)] - rank[(y.b?.urgency ?? y.h!.urgency)])
+    const one = (h: Handoff): Entry => ({ key: `h:${h.id}`, group: groupOfCard(h), h })
+    return [...need, ...open.filter(h => groupOf(h) !== 'need').map(one), ...mine.filter(h => h.lane === 'claire' || h.lane === 'snoozed').map(one)]
+  }, [s.handoffs, agent])
+  const done = s.desk.done
+
+  const counts = Object.fromEntries((Object.keys(SHOW_LABEL) as Show[]).map(k => [k, k === 'done' ? done.length : entries.filter(e => e.group === k).reduce((n, e) => n + size(e), 0)])) as Record<Show, number>
+  const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'need' || counts[k] > 0)
+  const show = shown.includes(pick) ? pick : 'need'
+  const rows = show === 'done' ? [] : entries.filter(e => e.group === show)
+  const keys = show === 'done' ? done.map(x => `d:${x.id}`) : rows.map(e => e.key)
+
+  // Links from other pages ("Review on Desk") open that card directly, in its state; a card in a batch opens its batch.
   const [params, setParams] = useSearchParams()
   const cardParam = params.get('card')
   useEffect(() => {
     if (!cardParam) return
     const h = s.handoffs.find(x => x.id === cardParam)
-    // A card that sits in a batch opens its batch.
-    if (h && !h.lane) { setTab(groupOf(h)); setSelected(entries.find(e => e.b?.items.some(x => x.id === h.id))?.key ?? `h:${h.id}`) }
+    if (h) { setAgent('all'); setShow(groupOfCard(h)); setSelected(entries.find(e => e.b?.items.some(x => x.id === h.id))?.key ?? `h:${h.id}`) }
     setParams({}, { replace: true })
   }, [cardParam]) // eslint-disable-line react-hooks/exhaustive-deps
-  const [thread, setThread] = useState<string | null>(null)
-  const [shift, setShift] = useState(false)
-  const [showDone, setShowDone] = useState(false)
-  const [tab, setTab] = useState<'need' | 'look' | 'good'>('need')
-
-  const entries = useMemo(() => {
-    const mine = s.handoffs.filter(h => (agent === 'all' || h.agent === agent) && (kind === 'all' || h.kind === kind) && (urgency === 'all' || h.urgency === urgency))
-    const open = mine.filter(h => !h.lane).sort(byPriority)
-    const needOpen = open.filter(h => groupOf(h) === 'need')
-    const { batches, rest } = batchesOf(needOpen)
-    const out: Entry[] = []
-    // Needs you: batches and single cards, ordered by urgency.
-    const rank = { urgent: 0, today: 1, week: 2 }
-    const need: Entry[] = [...batches.map((b): Entry => ({ key: `b:${b.id}`, group: 'need', b })), ...rest.map((h): Entry => ({ key: `h:${h.id}`, group: 'need', h }))]
-      .sort((x, y) => rank[(x.b?.urgency ?? x.h!.urgency)] - rank[(y.b?.urgency ?? y.h!.urgency)])
-    out.push(...need)
-    out.push(...open.filter(h => groupOf(h) === 'look').map(h => ({ key: `h:${h.id}`, group: 'look' as const, h })))
-    out.push(...open.filter(h => groupOf(h) === 'good').map(h => ({ key: `h:${h.id}`, group: 'good' as const, h })))
-    out.push(...mine.filter(h => h.lane === 'claire').map(h => ({ key: `h:${h.id}`, group: 'claire' as const, h })))
-    out.push(...mine.filter(h => h.lane === 'snoozed').map(h => ({ key: `h:${h.id}`, group: 'later' as const, h })))
-    return out
-  }, [s.handoffs, agent, kind, urgency])
-
-  const filtering = agent !== 'all' || kind !== 'all' || urgency !== 'all'
-  const clearFilters = () => { setAgent('all'); setKind('all'); setUrgency('all') }
-  const actionable = entries.filter(e => e.group === 'need' || e.group === 'look' || e.group === 'good' || e.group === 'claire')
-  const needCount = entries.filter(e => e.group === 'need').reduce((n, e) => n + (e.b ? e.b.items.length : 1), 0)
-  const done = s.desk.done
 
   // Keep a valid selection: if the selected item left the list, take the one now at the same position.
+  // Nothing needs you: All clear shows until the user picks another state.
   const [lastIndex, setLastIndex] = useState(0)
-  const current = entries.find(e => e.key === selected)
-  const doneSel = selected?.startsWith('d:') ? done.find(x => `d:${x.id}` === selected) : undefined
+  const current = entries.find(e => e.key === selected && e.group === show)
+  const doneSel = show === 'done' ? done.find(x => `d:${x.id}` === selected) : undefined
   useEffect(() => {
-    if (current || doneSel) { setLastIndex(Math.max(0, actionable.findIndex(e => e.key === selected))); return }
-    // Nothing needs you: show All clear until the user picks something to look at.
-    if (!needCount) { if (selected) setSelected(null); return }
-    const pool = actionable.filter(e => e.group !== 'claire')
-    setSelected(pool[Math.min(lastIndex, pool.length - 1)]?.key ?? null)
-  }, [current, doneSel, actionable, lastIndex, selected, needCount])
+    if (selected && keys.includes(selected)) { setLastIndex(keys.indexOf(selected)); return }
+    const next = keys[Math.min(lastIndex, keys.length - 1)] ?? null
+    if (next !== selected) setSelected(next)
+  }, [keys.join(), selected, lastIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ↑/↓ stay inside the tab on screen, so the highlighted row is always visible.
+  // ↑/↓, J/K move inside the state on screen. Decisions are handled by the detail pane; F opens Focus (app shortcut).
   const move = useCallback((dir: 1 | -1) => {
-    const list = entries.filter(e => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(e.group))
-    const i = list.findIndex(e => e.key === selected)
-    const n = list[Math.max(0, Math.min(list.length - 1, i + dir))]
-    if (n) setSelected(n.key)
-  }, [entries, selected, tab])
-
-  // ↑/↓, J/K to move; F for full-screen Focus. Decisions are handled by the detail pane.
+    const i = keys.indexOf(selected ?? '')
+    const n = keys[Math.max(0, Math.min(keys.length - 1, i + dir))]
+    if (n) setSelected(n)
+  }, [keys, selected])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target instanceof Element ? e.target : null
@@ -103,22 +91,12 @@ export default function Desk() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [move, nav])
-
-  // From the brief: jump to an agent's first item (its batch if any) or to a given card.
-  const pick = useCallback((key: string) => {
-    const k = key.startsWith('agent:') ? entries.find(e => e.group === 'need' && (e.b?.agent === key.slice(6) || e.h?.agent === key.slice(6)))?.key ?? entries.find(e => e.h?.agent === key.slice(6))?.key : key
-    if (k) {
-      const g = entries.find(e => e.key === k)?.group
-      if (g === 'need' || g === 'look' || g === 'good') setTab(g)
-      setSelected(k); document.querySelector('.today-grid')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }, [entries])
+  }, [move])
 
   // Multi-select over the open items (a batch row selects all its cards).
-  const pickable = useMemo(() => entries.filter(e => e.group === 'need' || e.group === 'look' || e.group === 'good').map(e => e.key), [entries])
-  const sel = useSelection(pickable, `${agent}|${kind}|${urgency}`)
-  const picked = entries.filter(e => sel.has(e.key)).flatMap(e => (e.b ? e.b.items : [e.h!]))
+  const pickable = useMemo(() => (['need', 'look', 'good'].includes(show) ? rows.map(e => e.key) : []), [rows.map(e => e.key).join(), show]) // eslint-disable-line react-hooks/exhaustive-deps
+  const sel = useSelection(pickable, `${agent}|${show}`)
+  const picked = rows.filter(e => sel.has(e.key)).flatMap(e => (e.b ? e.b.items : [e.h!]))
   const approvable = picked.filter(h => (h.kind === 'approval' || h.kind === 'promotion' || h.kind === 'news') && !h.field && !h.options)
   const runBulk = (ids: string[], extra: { decision?: Decision; snooze?: { until: number; label: string }; claire?: boolean }, summary: string) => {
     if (!ids.length) return
@@ -128,46 +106,28 @@ export default function Desk() {
   const tomorrow = SNOOZE(useHandoffActions().now()).find(x => x.label.startsWith('tomorrow'))
 
   const nowT = useNow(60000)
-  const position = current ? `${Math.max(1, actionable.indexOf(current) + 1)} of ${actionable.length}` : undefined
+  const idx = keys.indexOf(selected ?? '')
+  const position = idx >= 0 ? `${idx + 1} of ${keys.length}` : undefined
+  const next = rows[idx + 1]
 
   return (
     <div className="page today">
       {s.phase === 'day1' && nowT < firstBriefAt(s.setup.startedAt ?? nowT)
-        ? <div className="day1-top"><Welcome onPick={pick} /><Checklist side /></div>
-        : <>{<Brief onPick={pick} />}{s.phase === 'day1' && <Checklist />}</>}
-      <div className="shift-wrap">
-        <button className="lane-toggle" aria-expanded={shift} onClick={() => setShift(o => !o)}>
-          {shift ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Shift board <span className="faint">· last 24 h</span>
-        </button>
-        {shift && <ShiftBoard />}
+        ? <div className="day1-top"><Welcome /><Checklist side /></div>
+        : <><Brief />{s.phase === 'day1' && <Checklist />}</>}
+
+      <div className="day-bar">
+        <Filters label="Your day" value={show} onChange={v => { setShow(v); setLastIndex(0); setSelected(null) }}
+          items={shown.map(k => ({ value: k, label: SHOW_LABEL[k], count: counts[k] }))} />
+        <span className="spacer" />
+        <Menu align="end" trigger={<Btn size="sm" variant="ghost">{agent === 'all' ? 'All agents' : agentName(agent)}<ChevronDown size={12} /></Btn>}
+          items={[{ label: 'All agents', onSelect: () => setAgent('all') }, ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) }))]} />
+        <Btn size="sm" variant="ghost" onClick={() => nav('/focus')} disabled={!counts.need} kbd="F"><FocusIcon size={13} />Focus</Btn>
       </div>
+      <Notice scope="desk" />
 
       <div className="today-grid">
-        <nav className="day-list card" aria-label="Your day">
-          <div className="day-head">
-            <h2>Your day</h2>
-            <span className="faint num">{done.length} done</span>
-            <span className="spacer" />
-            <Btn size="xs" variant="ghost" onClick={() => nav('/focus')} disabled={!needCount} title="Process what needs you one at a time, full screen (F)"><FocusIcon size={13} />Focus</Btn>
-            <Menu align="end" trigger={<Btn size="xs" variant="ghost" aria-label="Filter the list"><ListFilter size={13} />{[agent !== 'all' && agentName(agent), kind !== 'all' && KIND_LABEL[kind], urgency !== 'all' && (urgency === 'week' ? 'This week' : urgency === 'today' ? 'Today' : 'Urgent')].filter(Boolean).join(' · ') || 'Filter'}</Btn>}
-              items={[
-                { heading: 'Agent' }, { label: 'All agents', onSelect: () => setAgent('all') }, ...AGENTS.map(a => ({ label: a.name, hint: a.dept, onSelect: () => setAgent(a.id) })), 'sep',
-                { heading: 'Type' }, { label: 'All types', onSelect: () => setKind('all') }, ...(Object.keys(KIND_LABEL) as Kind[]).map(k => ({ label: KIND_LABEL[k], onSelect: () => setKind(k) })), 'sep',
-                { heading: 'Urgency' }, { label: 'Any urgency', onSelect: () => setUrgency('all') }, { label: 'Urgent', onSelect: () => setUrgency('urgent') }, { label: 'Today', onSelect: () => setUrgency('today') }, { label: 'This week', onSelect: () => setUrgency('week') },
-              ]} />
-          </div>
-          <div className="day-tabs" role="tablist" aria-label="Your day">
-            {([['need', 'Needs you'], ['look', 'Worth a look'], ['good', 'Good news']] as const).map(([id, label]) => {
-              const n = entries.filter(e => e.group === id).reduce((k, e) => k + (e.b ? e.b.items.length : 1), 0)
-              return (
-                <button key={id} role="tab" aria-selected={tab === id} className={`day-tab ${tab === id ? 'on' : ''} ${id}`} onClick={() => { setTab(id); const first = entries.find(e => e.group === id); if (first) setSelected(first.key) }}>
-                  {label}<CountBadge n={n} needs={id === 'need' && n > 0} />
-                </button>
-              )
-            })}
-          </div>
-          <Notice scope="desk" />
-
+        <nav className="day-list card" aria-label={SHOW_LABEL[show]}>
           <BulkBar count={picked.length} noun={picked.length === 1 ? 'item' : 'items'} onClear={sel.clear} actions={[
             { label: approvable.length < picked.length ? `Approve ${approvable.length} of ${picked.length}` : `Approve ${picked.length}`, primary: true, disabled: !approvable.length,
               note: approvable.length < picked.length ? 'decisions and missing info need you one by one' : undefined,
@@ -176,69 +136,35 @@ export default function Desk() {
             { label: 'Ask Claire', onRun: () => runBulk(picked.map(h => h.id), { claire: true }, `Asked Claire about ${picked.length} items`) },
             { label: 'Reject', onRun: () => { const ids = picked.filter(h => !h.options).map(h => h.id); runBulk(ids, { decision: { kind: 'reject', reason: 'Not now' } }, `Rejected ${ids.length} items`) } },
           ]} />
-          {GROUPS.filter(g => (tab === 'need' ? ['need', 'claire', 'later'] : [tab]).includes(g.id)).map(g => {
-            const rows = entries.filter(e => e.group === g.id)
-            if (!rows.length) return null
-            const count = rows.reduce((n, e) => n + (e.b ? e.b.items.length : 1), 0)
-            return (
-              <section key={g.id} className="day-group">
-                {g.id !== tab && <h3>{g.label}<span className="faint num">{count}</span></h3>}
-                <ul>
-                  {rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)}
-                    select={pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined} />)}
-                </ul>
-              </section>
-            )
-          })}
-
-          {filtering && !entries.some(e => e.group === tab) && (
-            <div className="day-empty faint">No item matches this filter. <button className="link-btn" onClick={clearFilters}>Clear filters</button></div>
-          )}
-          {!filtering && tab !== 'need' && !entries.some(e => e.group === tab) && (
-            <p className="day-empty faint">{tab === 'look' ? 'Nothing to look at right now. Signals from Iris and Echo land here.' : 'No good news yet today. Your agents post wins here as they happen.'}</p>
-          )}
-          {tab === 'need' && done.length > 0 && (
-            <section className="day-group">
-              <button className="lane-toggle" aria-expanded={showDone} onClick={() => setShowDone(o => !o)}>
-                {showDone ? <ChevronDown size={14} /> : <ChevronRight size={14} />}Done <span className="faint num">{done.length}</span>
-              </button>
-              {showDone && (
-                <ul>
-                  {done.map(x => (
-                    <li key={x.id}>
-                      <button className={`day-row done ${selected === `d:${x.id}` ? 'active' : ''}`} onClick={() => setSelected(`d:${x.id}`)}>
-                        <span className="check" aria-hidden><Check size={12} /></span>
-                        <span className="txt"><span className="ellipsis">{x.title}</span><span className="faint ellipsis">{x.text}</span></span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-          <div className="day-foot faint"><Kbd>↑</Kbd><Kbd>↓</Kbd> move{current?.h && !current.h.field && current.h.lane !== 'claire' && <> · <Kbd>A</Kbd> {current.h.options ? 'recommended option' : 'approve'}</>}{needCount > 0 && <> · <Kbd>F</Kbd> full screen</>}</div>
+          <ul className="day-rows">
+            {show === 'done'
+              ? done.map(x => (
+                <li key={x.id}>
+                  <button className={`day-row done ${selected === `d:${x.id}` ? 'active' : ''}`} onClick={() => setSelected(`d:${x.id}`)}>
+                    <span className="check" aria-hidden><Check size={12} /></span>
+                    <span className="txt"><span className="ellipsis">{x.title}</span><span className="faint ellipsis">{x.text}</span></span>
+                  </button>
+                </li>
+              ))
+              : rows.map(e => <Row key={e.key} e={e} active={e.key === selected} onClick={() => setSelected(e.key)}
+                  select={pickable.includes(e.key) ? { checked: sel.has(e.key), any: sel.count > 0, toggle: (shift: boolean) => sel.toggle(e.key, shift) } : undefined} />)}
+          </ul>
+          {!keys.length && <p className="day-empty faint">{agent !== 'all' ? <>Nothing from {agentName(agent)} here. <button className="link-btn" onClick={() => setAgent('all')}>All agents</button></> : 'Nothing needs you.'}</p>}
         </nav>
 
         <section className="day-pane card" aria-live="polite">
-          {doneSel ? <DoneView x={doneSel} onNext={() => setSelected(null)} />
+          {doneSel ? <DoneView x={doneSel} onNext={idx < keys.length - 1 ? () => move(1) : undefined} />
             : current?.b ? <>
                 <BatchDetail b={current.b} onBulk={() => setSelected(null)} onDiscuss={setThread} />
-                <NextLink e={actionable.slice(actionable.indexOf(current) + 1).find(e => e.group === current.group)} onPick={setSelected} />
+                <NextLink e={next} onPick={setSelected} />
               </>
             : current?.h ? <>
                 <Detail key={current.h.id} h={current.h} position={position} onDiscuss={setThread} onSettled={() => setSelected(null)} />
-                <NextLink e={actionable.slice(actionable.indexOf(current) + 1).find(e => e.group === current.group)} onPick={setSelected} />
+                <NextLink e={next} onPick={setSelected} />
               </>
-            : filtering && !needCount ? <div className="day-empty faint">Nothing in Needs you matches this filter. <button className="link-btn" onClick={clearFilters}>Clear filters</button></div>
-            : <AllClear />}
+            : show === 'need' && agent === 'all' ? <AllClear />
+            : <p className="day-empty faint">Nothing to show.</p>}
         </section>
-
-      </div>
-
-      {/* What the agents are doing right now: useful, but below the work that needs you. */}
-      <div className="desk-bottom">
-        <LiveFeed />
-        <Team />
       </div>
 
       <Thread id={thread} onClose={() => setThread(null)} />
@@ -271,7 +197,6 @@ function Row({ e, active, onClick, select }: { e: Entry; active: boolean; onClic
           <span className="faint ellipsis">{e.group === 'later' && h.snoozedUntil ? `Back at ${hhmm(h.snoozedUntil)}` : e.group === 'claire' ? (h.claire?.reply ? 'Claire answered' : 'Claire is looking') : `${agentName(h.agent)} · ${h.topic}`}</span>
         </span>
         {h.urgency === 'urgent' && e.group === 'need' && <span className="dot urgent" aria-label="Urgent" />}
-        {e.group === 'later' && <Clock size={12} className="faint" aria-hidden />}
       </button>
     </li>
   )
@@ -287,11 +212,11 @@ function NextLink({ e, onPick }: { e?: Entry; onPick: (key: string) => void }) {
   )
 }
 
-function DoneView({ x, onNext }: { x: DoneItem; onNext: () => void }) {
+function DoneView({ x, onNext }: { x: DoneItem; onNext?: () => void }) {
   const act = useHandoffActions()
   return (
     <div className="done-view">
-      <UndoBar onUndo={() => act.restore(x.h)} action={<Btn size="xs" variant="ghost" onClick={onNext}>Next item</Btn>}>
+      <UndoBar onUndo={() => act.restore(x.h)} action={onNext && <Btn size="xs" variant="ghost" onClick={onNext}>Next item</Btn>}>
         <b>{x.text}</b> <span className="faint">· settled at {hhmm(x.at)}</span>
       </UndoBar>
       <div className="dimmed" aria-hidden><Detail h={x.h} keys={false} /></div>
@@ -308,7 +233,6 @@ export function AllClear({ action }: { action?: ReactNode }) {
   const ms = decisions.reduce((a, t) => a + Number((t.detail as { ms?: number })?.ms ?? 0), 0)
   const alone = s.log.filter(l => l.at > s.brief.since && l.at <= now && (l.status === 'done' || l.status === 'redone')).length
   const mins = Math.max(0, Math.round(ms / 60000)), secs = Math.round((ms % 60000) / 1000)
-  const left = s.handoffs.filter(h => !h.lane && groupOf(h) !== 'need').length
   return (
     <div className="all-clear">
       <div className="all-clear-scene"><AllClearScene /></div>
@@ -319,7 +243,6 @@ export function AllClear({ action }: { action?: ReactNode }) {
         <div><dt>Your time</dt><dd className="num">{mins ? `${mins} min ` : ''}{secs} s</dd></div>
         <div><dt>Handled by your agents</dt><dd className="num">{alone}</dd></div>
       </dl>
-      {left > 0 && <p className="faint">{left} still worth a look in the list.</p>}
       {action}
     </div>
   )

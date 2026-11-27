@@ -14,7 +14,7 @@ export function SavedSheet({ open, onOpenChange, seed }: { open: boolean; onOpen
   return (
     <Sheet open={open} onOpenChange={o => { onOpenChange(o); if (!o) setEditing(null) }} title="Saved replies" wide>
       <div className="stack">
-        <p className="muted">Nova starts her drafts from the closest one and says which. <code>{'{name}'}</code> becomes the customer’s first name.</p>
+        <p className="muted"><code>{'{name}'}</code> becomes the customer’s first name.</p>
         {removed && <UndoBar onUndo={() => { d({ type: 'inbox/savedRestore', ...removed }); setRemoved(null) }} onDismiss={() => setRemoved(null)}>Deleted “{removed.reply.name}”</UndoBar>}
         {form === 'new' && <SavedForm text={seed} onDone={() => { setEditing(null); if (seed !== undefined) onOpenChange(false) }} />}
         <ul className="ib-rules" aria-label="Saved replies">

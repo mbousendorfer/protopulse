@@ -8,6 +8,7 @@ import { NETWORK_LABEL } from '../../data/agents'
 import type { PlanItem } from '../../data/publishing'
 import { targetsOf } from '../strategy/slice'
 import { Btn, Empty, Mark, Modal, Net, Pill, Thinking } from '../../ui'
+import { MoreInfo } from '../../ui/More'
 import { HBars } from '../../ui/charts'
 import Photo from '../../ui/Photo'
 import { PLAN_MONDAY } from './slice'
@@ -57,9 +58,15 @@ export default function PlanReview() {
           <div>
             <div className="row tight t-sm muted"><Mark agent="atlas" /><span>Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
-            <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks.</p>
+            <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks · <MoreInfo label="Pillars and mix" title="Next week’s plan, by pillar and mix">
+              <div className="stack">
+                <div className="section-title">Pillars <span className="faint">· posts included</span></div>
+                <HBars items={PILLARS.map(p => ({ label: p, value: included.filter(i => i.pillar === p).length }))} format={v => `${v} post${v === 1 ? '' : 's'}`} />
+                <div className="section-title">Mix</div>
+                <ul className="mix">{(['Campaign', 'Recycled', 'Trend', 'New'] as const).map(t => <li key={t}><span>{t}</span><b className="num">{included.filter(i => i.tag === t).length}</b></li>)}</ul>
+              </div>
+            </MoreInfo></p>
           </div>
-          <Pill tone="caution">Waiting for you</Pill>
         </div>
         <div className="plan-stats">
           <div>
@@ -70,14 +77,6 @@ export default function PlanReview() {
                 return <li key={n} className={c < t ? 'under' : ''}><Net n={n} /><span>{NETWORK_LABEL[n]}</span><b className="num">{c} of {t}</b>{c >= t ? <Check size={13} /> : <AlertTriangle size={13} />}</li>
               })}
             </ul>
-          </div>
-          <div>
-            <div className="section-title">Pillars <span className="faint">· posts included</span></div>
-            <HBars items={PILLARS.map(p => ({ label: p, value: included.filter(i => i.pillar === p).length }))} format={v => `${v} post${v === 1 ? '' : 's'}`} />
-          </div>
-          <div>
-            <div className="section-title">Mix</div>
-            <ul className="mix">{(['Campaign', 'Recycled', 'Trend', 'New'] as const).map(t => <li key={t}><span>{t}</span><b className="num">{included.filter(i => i.tag === t).length}</b></li>)}</ul>
           </div>
         </div>
         {warnings.length > 0 && (

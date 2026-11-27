@@ -75,7 +75,6 @@
 .dq-row .progress { margin-top: 4px; }
 .dq-rest { margin-bottom: var(--s4); }
 .dq-rest .card-head { min-height: 44px; }
-.idea-row.src-row { grid-template-columns: 80px minmax(0, 1fr) auto; }
 .progress { height: 6px; border-radius: 999px; background: var(--lift-2); margin-top: var(--s2); overflow: hidden; max-width: 320px; }
 .progress > span { display: block; height: 100%; background: var(--chart); border-radius: inherit; transition: width var(--base) linear; }
 
@@ -86,7 +85,6 @@
 .clip-play { position: absolute; inset: 0; display: grid; place-items: center; color: var(--on-media); filter: drop-shadow(0 1px 3px var(--media-shadow)); }
 
 /* Sources */
-.src-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .add-link { display: flex; gap: var(--s2); align-items: center; }
 .field-error { display: flex; gap: 6px; align-items: flex-start; color: var(--alert-strong); font-size: var(--t-sm); margin-top: 4px; }
 .field-error svg { flex: none; margin-top: 2px; }
@@ -286,7 +284,7 @@
   .editor { grid-template-columns: 260px minmax(0, 1fr) 340px; }
 }
 @media (max-width: 1100px) {
-  .src-top, .src-body { grid-template-columns: minmax(0, 1fr); }
+  .src-body { grid-template-columns: minmax(0, 1fr); }
   .editor { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: 'head' 'notice' 'stage' 'panes' 'tr' 'insp' 'tl'; height: auto; min-height: 0; }
   .ed-panes { display: block; grid-area: panes; }
   .ed-panes .tabs { margin: 0; }
@@ -304,8 +302,6 @@
   .dq-title, .dq-todo, .dq-why { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .dq-line { flex-wrap: wrap; row-gap: 2px; white-space: normal; }
   .dq-line > .dq-proof { flex: 1 1 100%; order: 5; white-space: normal; }
-  .idea-row.src-row { grid-template-columns: 64px minmax(0, 1fr); }
-  .idea-row.src-row .idea-acts { grid-column: 2; padding: var(--s2) 0 0; }
   .src-thumb { width: 64px; height: 36px; }
   .ed-title { flex-basis: 100%; order: 10; }
   .ed-acts { order: 11; flex-basis: 100%; justify-content: flex-end; }

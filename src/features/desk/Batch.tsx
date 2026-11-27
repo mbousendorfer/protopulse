@@ -5,9 +5,8 @@ import type { Handoff, Urgency } from '../../app/types'
 import { registry } from '../../app/agents-registry'
 import type { Batch, BatchDef } from '../../app/agent-module'
 import { useStore } from '../../app/store'
-import { NETWORK_LABEL, agentName } from '../../data/agents'
-import { Btn, Mark, Net, Pill, Sheet, Tabs, TopicIcon } from '../../ui'
-import HandoffCard from './HandoffCard'
+import { agentName } from '../../data/agents'
+import { Btn, Mark, Net, Pill, TopicIcon } from '../../ui'
 import Detail from './Detail'
 import { SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { NetworkPreview } from '../publishing/Previews'
@@ -41,107 +40,71 @@ export function batchesOf(open: Handoff[]): { batches: Batch[]; rest: Handoff[] 
   return { batches, rest }
 }
 
-type Lane = 'all' | 'leads' | 'ready' | 'decide'
-
+/**
+ * A batch as one standard list (matrix §14): ready items start selected, a status only on the rows that differ
+ * (« Wants to buy », « Passage to check »), each row opens inline on its card, one primary in the list head.
+ */
 export default function BatchDetail({ b, onBulk, onDiscuss }: { b: Batch; onBulk: () => void; onDiscuss: (id: string) => void }) {
-  const { s, d } = useStore()
+  const { d } = useStore()
   const nav = useNavigate()
-  const [review, setReview] = useState<Lane | null>(null)
   const [open, setOpen] = useState<string | null>(null)
-  // Ready items start selected; the ones to decide wait for a look.
   const sel = useSelection(b.items.map(h => h.id), b.id)
   // Re-seeded whenever none of the shown items is selected (a new batch, or the same batch rebuilt after a reset).
   const itemsKey = b.items.map(h => h.id).join()
   useEffect(() => { if (!b.items.some(h => sel.has(h.id))) sel.set(b.ready.map(h => h.id)) }, [b.id, itemsKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const chosen = b.items.filter(h => sel.has(h.id))
-  const decide = b.items.filter(h => !b.ready.includes(h))
-  const leads = b.items.filter(isLead)
-  const hidden = ((s.inbox as { convs?: { status: string }[] }).convs ?? []).filter(c => c.status === 'hidden').length
+  const leads = b.id === 'nova' ? b.items.filter(isLead) : []
+  // In the order the agent sorted them: people about to buy, then what's ready, then what to decide.
+  const rows = [...leads, ...b.ready.filter(h => !leads.includes(h)), ...b.items.filter(h => !b.ready.includes(h) && !leads.includes(h))]
+  const status = (h: Handoff) => leads.includes(h) ? <Pill tone="signal">Wants to buy</Pill>
+    : !b.ready.includes(h) ? <Pill tone="caution">{b.id === 'nova' ? 'Passage to check' : 'To decide'}</Pill> : null
 
-  const bulk = (items: Handoff[], summary: string) => {
-    if (!items.length) return
-    d({ type: 'core/bulk', ids: items.map(h => h.id), decision: { kind: 'approve' }, summary, agent: b.agent })
+  const bulk = () => {
+    if (!chosen.length) return
+    d({ type: 'core/bulk', ids: chosen.map(h => h.id), decision: { kind: 'approve' }, summary: b.verb.done(chosen.length), agent: b.agent })
     onBulk()
   }
-
-  // One primary per batch: the footer acts on the selection (ready items start selected). The list is grouped in the
-  // order the agent sorted it, so the sentence above is what you see; empty groups don't show.
-  const lead = b.id === 'nova' ? leads : []
-  const groups: { id: Lane; label: string; note: string; items: Handoff[] }[] = (b.id === 'rules'
-    ? [{ id: 'all' as Lane, label: 'Proposed', note: 'Each comes from edits you repeated', items: b.items }]
-    : [
-      { id: 'leads' as Lane, label: 'Want to buy', note: 'Asking before they buy', items: lead },
-      { id: 'ready' as Lane, label: 'Ready', note: b.id === 'nova' ? 'Sure of the facts and the tone' : 'Checked against the Playbook', items: b.ready.filter(h => !lead.includes(h)) },
-      { id: 'decide' as Lane, label: 'To decide', note: `${agentName(b.agent)} marked a passage to check`, items: decide.filter(h => !lead.includes(h)) },
-    ]).filter(g => g.items.length)
-
-  const shown = review === 'leads' ? leads : review === 'ready' ? b.ready : review === 'decide' ? decide : b.items
 
   return (
     <article className="detail batch" aria-label={b.title}>
       <div className="handoff-top">
-        <div className="slip"><span className="chain">{[...new Set(b.items.map(h => h.agent))].map(a => <Mark key={a} agent={a} />)}</span><span><b>{b.id === 'rules' ? 'Your agents' : agentName(b.agent)}</b> {b.id === 'rules' ? 'suggest rules' : 'prepared a batch'}</span><span className="faint">· {b.items.length} items</span></div>
+        <div className="slip"><span className="chain">{[...new Set(b.items.map(h => h.agent))].map(a => <Mark key={a} agent={a} />)}</span><span><b>{b.id === 'rules' ? 'Your agents' : agentName(b.agent)}</b> {b.id === 'rules' ? 'suggest rules' : 'prepared a batch'}</span></div>
         {b.urgency === 'urgent' ? <Pill tone="alert" dot>Includes urgent</Pill> : b.urgency === 'today' ? <Pill tone="caution">Today</Pill> : <Pill>This week</Pill>}
       </div>
       <h2 className="detail-title">{b.title}</h2>
-      {/* The groups below say how the agent sorted them; the line only says what's ready. */}
-      <p className="handoff-ctx">{b.meta}.</p>
 
       <div className="batch-head row">
         <SelectAll sel={sel} label="Select every item" />
         <span className="faint">{sel.count} of {b.items.length} selected</span>
-      </div>
-      {groups.map(g => (
-        <section key={g.id} className="batch-group" aria-label={g.label}>
-          <h3>{g.label}<span className="n">{g.items.length}</span><span className="note">· {g.note}</span>
-            <Btn size="xs" variant="ghost" onClick={() => setReview(g.id)} aria-label={`Review ${g.label} one by one`}>Review</Btn></h3>
-          <ul className="batch-rows">
-            {g.items.map(h => {
-              const isOpen = open === h.id
-              const p = h.preview
-              return (
-                <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
-                  <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
-                    <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
-                    {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
-                    <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
-                    <span className="faint">{p?.type === 'post' ? NETWORK_LABEL[p.network] : ''}</span>
-                    <ChevronDown size={14} className="faint chev" aria-hidden />
-                  </div>
-                  {isOpen && (
-                    <div className="batch-open">
-                      {p?.type === 'post' && (
-                        <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} at={p.slot} /></div>
-                      )}
-                      <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      ))}
-      {b.id === 'nova' && hidden > 0 && <p className="batch-note faint">Nova hid {hidden} spam on her own. <button className="link-btn" onClick={() => nav('/inbox?view=hidden')}>See them</button></p>}
-
-      <footer className="detail-foot">
-        <span className="faint">Nothing goes out until you confirm.</span>
         <span className="spacer" />
         {b.id === 'nova' && <Btn size="sm" variant="ghost" onClick={() => nav('/inbox')}><ArrowUpRight size={14} />Inbox</Btn>}
-        {/* The footer action stays in place with nothing selected, so the batch always says how it ends. */}
-        <Btn variant="primary" disabled={!chosen.length} title={chosen.length ? undefined : 'Select at least one item'} onClick={() => bulk(chosen, b.verb.done(chosen.length))}>{b.verb.many(chosen.length)}</Btn>
-      </footer>
-
-      <Sheet open={!!review} onOpenChange={o => !o && setReview(null)} title={b.title} wide>
-        <Tabs value={review ?? 'all'} onChange={v => setReview(v)} items={[
-          { value: 'all' as Lane, label: 'All', count: b.items.length },
-          ...(b.id === 'nova' ? [{ value: 'leads' as Lane, label: 'Want to buy', count: leads.length }] : []),
-          ...(b.id !== 'rules' ? [{ value: 'ready' as Lane, label: 'Ready', count: b.ready.length }, { value: 'decide' as Lane, label: 'To decide', count: decide.length }] : []),
-        ]} />
-        <div className="cards">
-          {shown.length ? shown.map(h => <HandoffCard key={h.id} h={h} onDiscuss={id => { setReview(null); onDiscuss(id) }} />) : <p className="faint">Nothing left in this lane.</p>}
-        </div>
-      </Sheet>
+        <Btn size="sm" variant="primary" disabled={!chosen.length} title={chosen.length ? undefined : 'Select at least one item'} onClick={bulk}>{b.verb.many(chosen.length)}</Btn>
+      </div>
+      <ul className="batch-rows">
+        {rows.map(h => {
+          const isOpen = open === h.id
+          const p = h.preview
+          return (
+            <li key={h.id} className={`${isOpen ? 'open' : ''} ${sel.has(h.id) ? 'picked' : ''}`}>
+              <div className="batch-row" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : h.id)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : h.id) } }}>
+                <SelectBox checked={sel.has(h.id)} visible onToggle={shift => sel.toggle(h.id, shift)} label={`Select ${h.title}`} />
+                {p?.type === 'reply' ? <SocialAvatar name={p.author.split(' · ')[0]} network={p.network} size={24} /> : p?.type === 'post' ? <Net n={p.network} /> : <TopicIcon agent={h.agent} kind={h.kind} topic={h.topic} size={22} />}
+                <span className="ellipsis">“{h.proposal?.text ?? (p?.type === 'reply' ? p.text : draftText(h)) ?? h.title}”</span>
+                <span>{status(h)}</span>
+                <ChevronDown size={14} className="faint chev" aria-hidden />
+              </div>
+              {isOpen && (
+                <div className="batch-open">
+                  {p?.type === 'post' && (
+                    <div className="batch-pv"><NetworkPreview network={p.network} text={draftText(h)} media={p.media} words={[]} at={p.slot} /></div>
+                  )}
+                  <Detail h={h} keys={false} onDiscuss={onDiscuss} onSettled={() => setOpen(null)} />
+                </div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
     </article>
   )
 }

@@ -1,46 +1,52 @@
 import { useMemo, useState, type MouseEvent, type ReactNode } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
-import { ChevronDown, Plus } from 'lucide-react'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { ChevronDown, Plus, Settings2 } from 'lucide-react'
 import { useNow, useStore } from '../../app/store'
 import { hhmm } from '../../app/time'
 import { PHASES, PHASE_MS, TRANSCRIPT, type Source } from '../../data/video'
-import { Btn, Empty, Filters, Menu, Net, PageHead, Pill, Tabs } from '../../ui'
+import { Btn, Empty, Filters, Menu, Net, PageHead, Pill, Sheet, Tabs } from '../../ui'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { CountBadge, Notice } from '../../ui/Feedback'
 import { InfoPop } from '../../ui/More'
 import { LANG_LABEL, NETWORK_FIT, captionSlips, winnerOf, type Clip } from './model'
 import { ClipThumb, ScoreBadge, SourceThumb, clipScore } from './parts'
 import { flopOf, holdReason, recutOf, unreleased, vetClips, videoNeeds, WEEKLY_QUOTA } from './slice'
-import Sources, { SourceDetail } from './Sources'
+import Sources, { SourceDetail, Watching } from './Sources'
 import BrandKit from './BrandKit'
 import Editor from './Editor'
 import './video.css'
 
-type Tab = 'clips' | 'sources' | 'brand'
+type Tab = 'clips' | 'sources'
 export const DISMISS_REASONS = ['Off-brand', 'Weak moment', 'Already covered', 'Wrong speaker']
 
+/**
+ * Video: Clips (the landing list) and Sources (`/video/sources`, the videos). What Juno watches and the brand kit are setup, used
+ * rarely: one Settings sheet over the clips (`/video/settings`; `/video/brand` redirects there).
+ */
 export default function VideoPage() {
   const { s } = useStore()
   const nav = useNavigate()
   const rest = (useParams()['*'] ?? '').split('/')
   if (rest[0] === 'clips' && rest[1]) return <Editor key={rest[1]} id={rest[1]} />
-  const tab: Tab = rest[0] === 'sources' ? 'sources' : rest[0] === 'brand' ? 'brand' : 'clips'
+  if (rest[0] === 'brand') return <Navigate to="/video/settings" replace />
+  const tab: Tab = rest[0] === 'sources' ? 'sources' : 'clips'
   const needs = videoNeeds(s).count
-  const working = s.video.sources.filter(x => x.status === 'processing').length
 
   return (
     <div className="page video-page">
       <PageHead agent="juno" title="Video" lede="Juno cuts your videos into clips; you review, Atlas schedules.">
-        <Btn variant="primary" onClick={() => nav('/video/sources')}><Plus size={14} />Add a video</Btn>
+        <Btn onClick={() => nav('/video/settings')}><Settings2 size={14} />Settings</Btn>
+        <Btn variant="primary" onClick={() => nav('/video/sources#add')}><Plus size={14} />Add a video</Btn>
       </PageHead>
       <Tabs value={tab} onChange={t => nav(t === 'clips' ? '/video' : `/video/${t}`)} items={[
         { value: 'clips', label: <>Clips{needs > 0 && <CountBadge n={needs} needs label={`${needs} need you`} />}</> },
-        { value: 'sources', label: <>Sources{working > 0 && <span className="faint t-xs">· {working} in progress</span>}</> },
-        { value: 'brand', label: 'Brand kit' },
+        { value: 'sources', label: 'Sources' },
       ]} />
       {tab === 'clips' && <Clips />}
       {tab === 'sources' && (rest[1] ? <SourceDetail id={rest[1]} /> : <Sources />)}
-      {tab === 'brand' && <BrandKit />}
+      <Sheet open={rest[0] === 'settings'} onOpenChange={o => !o && nav('/video')} title="Video settings">
+        <div className="stack lg"><Watching /><BrandKit /></div>
+      </Sheet>
     </div>
   )
 }

@@ -1,23 +1,8 @@
-/* Brief */
-.brief { padding: var(--s5) var(--s6); }
-.brief-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s3); }
-.brief-head b { color: var(--ink); font-weight: 600; }
-.brief .hello { font-size: var(--t-3xl); font-weight: 600; letter-spacing: -0.025em; }
-.brief .story { margin-top: var(--s2); color: var(--ink-2); font-size: var(--t-lg); line-height: 1.6; max-width: 72ch; }
-.brief .story b { color: var(--ink); font-weight: 600; }
-.brief-folded { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; border-radius: var(--r-card); border: 1px dashed var(--line-strong); background: transparent; color: var(--ink-2); font-size: var(--t-md); text-align: left; }
-.brief-folded:hover { border-color: var(--line-loud); color: var(--ink); }
 
 /* Shift board */
 .legend i.legend-tick { width: 3px; height: 10px; border-radius: 2px; background: var(--a-nova); }
-.shift .card-body { padding: var(--s3) var(--s4) var(--s2); }
-
-.lane-toggle { display: flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; color: var(--ink-2); font-weight: 600; margin-bottom: var(--s3); }
-.cards { display: flex; flex-direction: column; gap: var(--s3); }
 
 /* Handoff card */
-.handoff { padding: var(--s4); transition: border-color var(--fast) var(--ease); }
-.handoff.fresh { animation: arrive var(--slow) var(--ease); }
 @keyframes arrive { from { opacity: 0.2; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
 .handoff-top { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s2); }
 .slip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--ink-2); font-size: var(--t-sm); }
@@ -41,24 +26,16 @@
 .plan-lines { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; color: var(--ink-2); }
 .plan-lines li::before { content: '–'; color: var(--ink-3); margin-right: 8px; }
 .why { display: flex; flex-wrap: wrap; gap: 6px var(--s4); align-items: center; margin-top: var(--s3); font-size: var(--t-sm); color: var(--ink-2); }
-.acts { margin-top: var(--s4); }
 .options { display: flex; flex-direction: column; gap: 6px; }
 /* A decision is never cut: its label wraps. */
 .choice-label { flex: 1; min-width: 0; }
 .choice.rec { border-color: var(--signal-edge); }
-.handoff.stamped { display: flex; align-items: center; gap: var(--s3); padding: 12px var(--s4); border-radius: var(--r-card); border: 1px dashed var(--line-strong); color: var(--ink-2); animation: stamp 520ms var(--ease) forwards; }
-.handoff.stamped .mono { color: var(--ok); }
-@keyframes stamp { 0% { opacity: 1; transform: none; } 70% { opacity: 1; } 100% { opacity: 0; transform: translateX(16px); } }
 .claire-note { display: flex; gap: 10px; margin-top: var(--s3); padding: 10px 12px; border-radius: var(--r-ctl); background: var(--caution-wash); }
 .claire-note.decline { background: var(--alert-wash); }
 .claire-note b { font-weight: 600; font-size: var(--t-sm); }
 .claire-note p { color: var(--ink); }
 
-/* Side column */
-.live-dot { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); display: inline-block; }
-/* Ambient "live" ring: a slow loop by nature, drawn with transform and opacity only. */
-.live-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--ok); animation: pulse 2.2s var(--ease) infinite; }
-@keyframes pulse { from { transform: scale(1); opacity: 0.5; } 70%, to { transform: scale(2.6); opacity: 0; } }
+/* The latest actions and the team, in the Desk header panel */
 .feed { padding: 4px var(--s4) var(--s2); }
 .feed li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); align-items: start; animation: arrive var(--slow) var(--ease); }
 .feed li:first-child { border-top: 0; }
@@ -67,17 +44,12 @@
 .feed li.undone p, .struck { color: var(--ink-3); text-decoration: line-through; }
 .feed .mono { font-size: var(--t-xs); }
 .team { padding: 4px var(--s2) var(--s2); }
-.team button { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px; border-radius: var(--r-ctl); background: none; border: 0; text-align: left; line-height: 1.4; }
-.team button:hover { background: var(--row-hover); }
+.team a { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 8px; border-radius: var(--r-ctl); background: none; border: 0; text-align: left; line-height: 1.4; }
+.team a:hover { background: var(--row-hover); }
 .team b { font-weight: 600; }
 .team .now { font-size: var(--t-sm); }
-.team-foot { display: flex; align-items: center; gap: 8px; padding: var(--s2) var(--s4) var(--s3); border-top: 1px solid var(--line); font-size: var(--t-sm); }
 
 /* Thread */
 /* The card thread is a compact chat (chats.css) under the card it discusses. */
 .thread { gap: var(--s4); min-height: 100%; }
 
-@media (max-width: 820px) {
-  .brief { padding: var(--s4); }
-  .brief .hello { font-size: var(--t-2xl); }
-}

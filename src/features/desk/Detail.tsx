@@ -5,7 +5,7 @@ import type { Handoff } from '../../app/types'
 import { useNow, useStore } from '../../app/store'
 import { ago } from '../../app/time'
 import { agentName } from '../../data/agents'
-import { Btn, Kbd, Thinking } from '../../ui'
+import { Btn, Thinking } from '../../ui'
 import { ClaireNote, PreviewBlock, REJECT_REASONS, SNOOZE, Slip, Sources, UrgencyPill, WhyLine, WontGuess, draftText, editable, useHandoffActions } from './parts'
 import { useDecisionKeys, type Mode, type Outcome } from './keys'
 
@@ -45,7 +45,6 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
   useDecisionKeys({ h, enabled: keys && !waiting && !stamp, mode, setMode, draft, startEdit, finish })
 
   const publicFacts = h.preview?.type === 'reply' || h.preview?.type === 'post'
-  const hasFlags = h.preview && (h.preview.type === 'reply' ? h.preview.draft : h.preview.type === 'post' ? h.preview.text : []).some(x => typeof x !== 'string')
 
   return (
     <article className={`detail ${big ? 'big' : ''} ${stamp ? 'leaving' : ''}`} aria-label={h.title} data-mode={mode}>
@@ -60,7 +59,6 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
       {publicFacts && <Sources h={h} />}
       <WhyLine h={h} sourcesShown={publicFacts} />
       <WontGuess h={h} />
-      {hasFlags && keys && <p className="faint flags-hint">Marked: where {agentName(h.agent)} is unsure. Hover or <Kbd>Tab</Kbd> for the note.</p>}
 
       <div className="detail-acts">
         {waiting ? (
@@ -121,8 +119,6 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
       </div>
 
       <footer className="detail-foot">
-        <span className="faint">{h.kind === 'news' ? 'Nothing to approve here.' : 'Nothing goes out until you confirm.'}</span>
-        <span className="spacer" />
         {!waiting && h.kind !== 'news' && mode === 'idle' && <>
           <Btn size="sm" variant="ghost" onClick={() => setMode('snooze')} kbd="S">Snooze</Btn>
           <Btn size="sm" variant="ghost" onClick={() => finish('claire', 'Asked Claire', () => act.claire(h))} kbd="C" title="If Claire approves, it goes out">Ask Claire</Btn>

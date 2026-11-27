@@ -2,37 +2,36 @@ import { expect, test } from 'vitest'
 import type { AgentId, Handoff, PlaybookRule } from '../../app/types'
 import { AGENTS, agentName } from '../../data/agents'
 import { FACTS, RULES } from '../../data/playbook'
-import { appliesTo, playbookTarget, proposalsFor, rulesFor, scopeLabel, scopeOf } from './rules'
+import { appliesTo, playbookTarget, profileTab, proposalsFor, rulesFor } from './rules'
 
 const TEAM = AGENTS.map(a => a.id)
 const rule = (id: string, agents: AgentId[], kind: PlaybookRule['kind'] = 'do'): PlaybookRule => ({ id, kind, text: id, agents, origin: 'Added by you', uses: 0, addedAt: 0 })
 
 test('agent ids never collide with the Agents tab routes', () => {
-  expect((TEAM as string[]).filter(id => id === 'rules' || id === 'escalation')).toEqual([])
+  expect((TEAM as string[]).filter(id => ['rules', 'escalation', 'activity'].includes(id))).toEqual([])
 })
 
-test('scope: all agents, this agent only, or shared with named others', () => {
-  expect(scopeOf(rule('a', TEAM), 'nova', TEAM)).toEqual({ kind: 'all' })
-  expect(scopeOf(rule('b', ['nova']), 'nova', TEAM)).toEqual({ kind: 'only' })
-  expect(scopeOf(rule('c', ['nova', 'atlas']), 'nova', TEAM)).toEqual({ kind: 'some', others: ['atlas'] })
-  expect(scopeLabel({ kind: 'all' }, 'Nova', agentName)).toBe('Shared · all agents')
-  expect(scopeLabel({ kind: 'only' }, 'Nova', agentName)).toBe('Nova only')
-  expect(scopeLabel({ kind: 'some', others: ['atlas', 'echo'] }, 'Nova', agentName)).toBe('Shared with Atlas and Echo')
+test('old profile tabs land on the tab that holds them now', () => {
+  for (const t of [null, 'overview', 'autonomy', 'guardrails', 'escalation']) expect(profileTab(t)).toBe('how')
+  expect(profileTab('activity')).toBe('record')
+  expect(profileTab('record')).toBe('record')
+  expect(profileTab('rules')).toBe('rules')
+  expect(profileTab('alerts')).toBe('alerts')
 })
 
 test('rulesFor keeps only what the agent applies, splits rules from facts, keeps paused ones', () => {
   const all = [rule('r1', ['nova']), { ...rule('r2', ['nova', 'atlas'], 'dont'), paused: true }, rule('r3', ['atlas']), rule('f1', ['nova'], 'fact'), rule('w', ['nova'], 'word')]
-  const got = rulesFor(all, 'nova', TEAM)
-  expect(got.rules.map(x => x.rule.id)).toEqual(['r1', 'r2'])
-  expect(got.facts.map(x => x.rule.id)).toEqual(['f1'])
+  const got = rulesFor(all, 'nova')
+  expect(got.rules.map(x => x.id)).toEqual(['r1', 'r2'])
+  expect(got.facts.map(x => x.id)).toEqual(['f1'])
 })
 
 test('on the demo data every agent with rules gets them, and Sage gets none', () => {
   const pb = [...RULES, ...FACTS]
-  const nova = rulesFor(pb, 'nova', TEAM)
+  const nova = rulesFor(pb, 'nova')
   expect(nova.rules.length).toBe(RULES.filter(r => r.agents.includes('nova')).length)
-  expect(nova.facts.every(x => x.rule.kind === 'fact' && x.rule.agents.includes('nova'))).toBe(true)
-  expect(rulesFor(pb, 'sage', TEAM)).toEqual({ rules: [], facts: [] })
+  expect(nova.facts.every(x => x.kind === 'fact' && x.agents.includes('nova'))).toBe(true)
+  expect(rulesFor(pb, 'sage')).toEqual({ rules: [], facts: [] })
 })
 
 test('proposalsFor: open proposals raised by or applying to the agent', () => {

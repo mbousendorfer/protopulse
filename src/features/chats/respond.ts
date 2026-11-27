@@ -34,7 +34,7 @@ export function respond(r: Route, s: State, chat: Chat): ChatAnswer {
 
     case 'overnight': {
       const items = s.log.filter(l => l.agent === i.agent).slice(0, 5)
-      return { replies: [{ from: i.agent, text: `Here’s what I did since yesterday evening, most recent first:`, card: { type: 'list', items: items.map(l => ({ title: l.text, agent: l.agent, meta: l.reason, link: l.link ?? '/activity' })) } }], effects: [] }
+      return { replies: [{ from: i.agent, text: `Here’s what I did since yesterday evening, most recent first:`, card: { type: 'list', items: items.map(l => ({ title: l.text, agent: l.agent, meta: l.reason, link: l.link ?? '/agents/activity' })) } }], effects: [] }
     }
 
     case 'pause':

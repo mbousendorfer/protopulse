@@ -22,7 +22,7 @@ type Run = { query: string; intent: Intent; agent: AgentId; phase: 'thinking' | 
 
 const PAGES: { label: string; to: string; keywords?: string[] }[] = [
   { label: 'Desk', to: '/' }, { label: 'Inbox', to: '/inbox' }, { label: 'Publishing', to: '/publishing' }, { label: 'Insights', to: '/insights' },
-  { label: 'Listening', to: '/listening' }, { label: 'Strategy', to: '/strategy' }, { label: 'Agents', to: '/agents' }, { label: 'Activity', to: '/activity' },
+  { label: 'Listening', to: '/listening' }, { label: 'Strategy', to: '/strategy' }, { label: 'Agents', to: '/agents' }, { label: 'Activity', to: '/agents/activity' },
   { label: 'Shared rules', to: '/agents/rules', keywords: ['Playbook'] }, { label: 'Escalation', to: '/agents/escalation' }, { label: 'Settings', to: '/settings' },
 ]
 
@@ -175,9 +175,9 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
       const exists = s.playbook.rules.some(r => r.text.toLowerCase() === i.rule.toLowerCase())
       return {
         text: exists ? `That rule is already in the Playbook: “${i.rule}”.` : `Understood. As a rule for ${agentName(i.agent)}: “${i.rule}”. Add it to the Playbook so every draft follows it?`,
-        ctas: exists ? [{ label: `Open ${agentName(i.agent)}’s rules`, run: () => go(`/agents/${i.agent}?tab=rules`) }] : [
+        ctas: exists ? [{ label: `Open ${agentName(i.agent)}’s rules`, run: () => go(`/agents/rules?agent=${i.agent}`) }] : [
           { label: 'Add to Playbook', icon: <BookPlus size={14} />, primary: true, run: () => d({ type: 'playbook/addRule', kind: 'dont', text: i.rule, agents: [i.agent], origin: 'Added by you from the command bar' }) },
-          { label: `Open ${agentName(i.agent)}’s rules`, run: () => go(`/agents/${i.agent}?tab=rules`) },
+          { label: `Open ${agentName(i.agent)}’s rules`, run: () => go(`/agents/rules?agent=${i.agent}`) },
         ],
       }
     }
@@ -198,7 +198,7 @@ function answerFor(i: Intent, s: State, d: (a: Action) => void, go: (to: string)
       return {
         text: items.length ? `Since ${hhmm(s.brief.since)} yesterday, ${agentName(i.agent)} did ${items.length} thing${items.length > 1 ? 's' : ''} on ${pronoun(i.agent)} own. Here are the latest.` : `${agentName(i.agent)} didn’t act alone since ${hhmm(s.brief.since)} yesterday.`,
         visual: items.length ? <ul className="cmdk-list-mini">{items.map(l => <li key={l.id}><span className="mono faint">{hhmm(l.at)}</span><span className="ellipsis">{l.text}</span>{l.status === 'undone' && <span className="faint">undone</span>}</li>)}</ul> : undefined,
-        ctas: [{ label: 'Open Activity', run: () => go('/activity') }],
+        ctas: [{ label: 'Open Activity', run: () => go(`/agents/activity?agent=${i.agent}`) }],
       }
     }
     default:
