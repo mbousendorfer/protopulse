@@ -9,7 +9,7 @@ import './moderator.css'
 
 const PRESETS: { id: Preset; label: string; note: string }[] = [
   { id: 'calm', label: 'Calm morning', note: '4 cards' },
-  { id: 'busy', label: 'Busy morning', note: '14 cards' },
+  { id: 'busy', label: 'Busy morning', note: '15 cards' },
   { id: 'competitor', label: 'Competitor day', note: 'Peakline, Trailkind, Norrø, Basecamp' },
   { id: 'trust', label: 'Trust test', note: '2 promotions, 1 step back, 1 rule' },
 ]
