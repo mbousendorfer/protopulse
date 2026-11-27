@@ -57,7 +57,7 @@ export default function PlanReview() {
           <div>
             <div className="row tight t-sm muted"><Mark agent="atlas" /><span>Atlas · plan v{plan.version} · built with Echo and Sage</span></div>
             <h2>Week of 1 December · Trail Week</h2>
-            <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks. Uncheck what you don’t want, then approve the week in one go.</p>
+            <p className="muted">{plan.items.length} posts on {new Set(plan.items.map(i => i.network)).size} networks.</p>
           </div>
           <Pill tone="caution">Waiting for you</Pill>
         </div>

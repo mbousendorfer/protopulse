@@ -12,6 +12,7 @@ import { campaignFor, canTrial, holdReason, noRelease, unreleased } from './slic
 import { BANNED } from '../../data/playbook'
 import { Btn, Empty, Mark, Net, Pill, Seg, Switch, Tabs, Thinking } from '../../ui'
 import { Notice } from '../../ui/Feedback'
+import { InfoPop, MoreInfo } from '../../ui/More'
 import { checkPost } from '../publishing/checks'
 import { diffWords, type DiffPart } from '../publishing/ideasModel'
 import {
@@ -451,6 +452,16 @@ function AudioTab({ clip, pb, edit }: { clip: Clip; pb: Playback; edit: (p: Part
   )
 }
 
+/** Behind « Why? » on the score: each part, its number and Juno's reason, then the track record. */
+function ScoreWhy({ score }: { score: ReturnType<typeof rescore> }) {
+  return (
+    <dl className="ed-score-why">
+      {(Object.keys(SCORE_LABEL) as ScoreKey[]).map(k => <div key={k}><dt>{SCORE_LABEL[k]} <span className="num">{score.score[k]}</span></dt><dd>{score.reasons[k]}</dd></div>)}
+      {score.track && <div><dt>Track record <span className="num">{score.track.delta > 0 ? `+${score.track.delta}` : score.track.delta}</span></dt><dd>{score.track.why}</dd></div>}
+    </dl>
+  )
+}
+
 function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Clip>) => void; score: ReturnType<typeof rescore>; dur: number }) {
   const { s, d } = useStore()
   const open = clip.status === 'ready' || clip.status === 'snoozed'
@@ -474,18 +485,17 @@ function PostTab({ clip, edit, score, dur }: { clip: Clip; edit: (p: Partial<Cli
           {who.map(p => <Btn key={p} size="xs" onClick={() => d({ type: 'video/release', person: p, signed: true })}>{PEOPLE[p].name}’s release is signed</Btn>)}
         </div>
       )}
+      {/* Visible: each part of the score, named, with its number. Juno's reason for each sits behind « Why? ». */}
       <div className="ed-score">
-        <div className="row between"><b>Virality score</b><b className="num ed-score-total">{score.total}</b></div>
+        <div className="row between"><b>Virality score</b><span className="row tight"><MoreInfo label="Why?" title={`Why Virality ${score.total}`}><ScoreWhy score={score} /></MoreInfo><b className="num ed-score-total">{score.total}</b></span></div>
         {(Object.keys(SCORE_LABEL) as ScoreKey[]).map(k => (
           <div key={k} className="ed-score-row">
             <span>{SCORE_LABEL[k]}</span><span className="ed-bar"><span style={{ width: `${score.score[k]}%` }} /></span><span className="num">{score.score[k]}</span>
-            <p className="muted t-sm">{score.reasons[k]}</p>
           </div>
         ))}
         {score.track && (
           <div className="ed-score-row">
             <span className="ed-score-wide">Track record</span><span className="num">{score.track.delta > 0 ? `+${score.track.delta}` : score.track.delta}</span>
-            <p className="muted t-sm">{score.track.why}</p>
           </div>
         )}
       </div>
@@ -564,7 +574,7 @@ function TrialField({ clip, edit }: { clip: Clip; edit: (p: Partial<Clip>) => vo
     <Field label="Hook trial">
       {clip.status === 'trial' && t ? (
         <>
-          <p className="t-sm">On Instagram Reels since {hhmm(t.from)}, each hook shown to non-followers first. Results {day(t.until)} at {hhmm(t.until)}; nothing reaches your followers before.</p>
+          <p className="t-sm">On Reels since {hhmm(t.from)} · results {day(t.until)} {hhmm(t.until)} <InfoPop label="How it works">Each hook is shown to non-followers first on Instagram Reels. Nothing reaches your followers before the results.</InfoPop></p>
           <ul className="ed-list">{pair.map((h, i) => <li key={h}><span>“{h}”</span><span className="muted t-sm">{i === 0 ? 'Current hook' : 'Challenger'}</span></li>)}</ul>
           <Btn size="sm" variant="ghost" className="self-start" onClick={() => d({ type: 'video/trialStop', id: clip.id })}>Stop the trial</Btn>
         </>
@@ -575,11 +585,12 @@ function TrialField({ clip, edit }: { clip: Clip; edit: (p: Partial<Clip>) => vo
         </>
       ) : (
         <>
-          <p className="t-sm"><Mark agent="juno" /> Juno would test “{pair[0]}” against “{pair[1]}”{hasNumber(pair[0]) !== hasNumber(pair[1]) && s.video.trials.length ? ` One opens on a number, the other doesn’t: a hook with a number won ${wins} of your ${s.video.trials.length} trials so far.` : ''}</p>
+          <p className="t-sm"><Mark agent="juno" /> Juno would test “{pair[0]}” against “{pair[1]}”{hasNumber(pair[0]) !== hasNumber(pair[1]) && s.video.trials.length ? <> <InfoPop label="Why these two?">One opens on a number, the other doesn’t: a hook with a number won {wins} of your {s.video.trials.length} trials so far.</InfoPop></> : ''}</p>
           {ok === true ? <Btn size="sm" className="self-start" onClick={() => d({ type: 'video/trial', id: clip.id })}>Trial 2 hooks first</Btn> : <p className="muted t-sm">Can’t trial it now: {ok.charAt(0).toLowerCase()}{ok.slice(1)}.</p>}
         </>
       )}
-      <p className="muted t-sm">{TRIAL_LEVEL[level]}</p>
+      {/* The setting is named; what it means is a popover (matrix §13). */}
+      <p className="t-sm"><InfoPop label={`Hook trials: ${level === 'act' ? 'Act' : level === 'draft' ? 'Draft' : 'Suggest'}`}>{TRIAL_LEVEL[level]}</InfoPop></p>
     </Field>
   )
 }

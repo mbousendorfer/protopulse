@@ -445,7 +445,7 @@ export function tickLicences(s: State): State {
     const p = e.posts[0]
     next = pushHandoff(next, {
       agent: 'atlas', kind: 'approval', urgency: 'week', topic: 'Licence', action: 'atlas-fill', ref: e.media.name, link: '/publishing/media',
-      title: `The licence for “${e.media.title}” ends on ${end}`, context: `${e.media.rights}. Used by ${e.posts.length} post${e.posts.length > 1 ? 's' : ''} still to go out.`,
+      title: `The licence for “${e.media.title}” ends on ${end}`, context: `Used by ${e.posts.length} post${e.posts.length > 1 ? 's' : ''} still to go out. ${e.media.rights}.`,
       why: 'Atlas never publishes a photo without rights. It found one of yours to put instead.', confidence: 90,
       options: [{ label: `Swap for “${e.swap!.title}”`, recommended: true }, { label: 'Keep it: the posts go out before then' }],
       preview: { type: 'post', network: p.network, slot: `${new Date(p.at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' })}, ${hhmm(p.at)}`, text: [p.text], media: e.swap!.name },

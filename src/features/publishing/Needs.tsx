@@ -10,6 +10,7 @@ import { CountBadge } from '../../ui/Feedback'
 import { PAUSE_TOPIC } from './guards'
 import { RETRY_OPTIONS } from './failures'
 import { useOpenPost } from './Bulk'
+import { sentences } from './ideasModel'
 
 /*
  * Decisions first (PROMPT §3.9, matrix §12): Publishing opens on what waits for Sam. The block holds exactly Atlas's
@@ -18,11 +19,11 @@ import { useOpenPost } from './Bulk'
  */
 type Gesture = 'fix' | 'paused' | 'approve' | 'answer' | 'plan'
 const GROUPS: { id: Gesture; title: string; hint: string; Icon: typeof Pause; one: string; many: string }[] = [
-  { id: 'fix', title: 'Failed to publish', hint: 'The network refused them. Atlas has a fix ready.', Icon: TriangleAlert, one: 'failed', many: 'failed' },
+  { id: 'fix', title: 'Failed to publish', hint: '', Icon: TriangleAlert, one: 'failed', many: 'failed' },
   { id: 'paused', title: 'Paused by Atlas', hint: '', Icon: Pause, one: 'paused', many: 'paused' },
-  { id: 'approve', title: 'Ready to approve', hint: 'Atlas prepared them. Approving schedules them.', Icon: Check, one: 'to approve', many: 'to approve' },
-  { id: 'answer', title: 'Atlas asks you', hint: 'One answer each, then Atlas finishes the post.', Icon: CircleHelp, one: 'question', many: 'questions' },
-  { id: 'plan', title: 'Next week’s plan', hint: 'Built from Sage’s cadence. Approve the week, not each post.', Icon: CalendarDays, one: 'plan', many: 'plans' },
+  { id: 'approve', title: 'Ready to approve', hint: 'Approving schedules them.', Icon: Check, one: 'to approve', many: 'to approve' },
+  { id: 'answer', title: 'Atlas asks you', hint: '', Icon: CircleHelp, one: 'question', many: 'questions' },
+  { id: 'plan', title: 'Next week’s plan', hint: '', Icon: CalendarDays, one: 'plan', many: 'plans' },
 ]
 export const gestureOf = (h: Handoff): Gesture =>
   h.topic === 'Publishing failed' ? 'fix' : h.topic === PAUSE_TOPIC ? 'paused' : h.preview?.type === 'plan' ? 'plan' : h.field || h.options?.length ? 'answer' : 'approve'
@@ -141,7 +142,8 @@ function NeedRow({ h, g }: { h: Handoff; g: Gesture }) {
         {h.ref && g === 'fix'
           ? <button className="pub-need-title" onClick={() => open(h.ref!)}>{h.title}</button>
           : <Link className="pub-need-title" to={`/?card=${h.id}`}>{h.title}</Link>}
-        <p className="pub-need-why">{post && <span className="mono">{post.slot}</span>}{post && ' · '}{h.context}</p>
+        {/* One line of reason, its first sentence; the title opens the whole card (or the failed post). */}
+        <p className="pub-need-why">{post && !h.title.includes(post.slot) && <><span className="mono">{post.slot}</span> · </>}{h.context && sentences(h.context)[0]}</p>
       </div>
       <span className="pub-need-acts">{acts}</span>
     </li>
