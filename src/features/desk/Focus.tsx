@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Undo2 } from 'lucide-react'
 import { useStore } from '../../app/store'
 import { groupOf } from '../../app/reducer'
-import { Btn, Kbd, TopicIcon } from '../../ui'
+import { Btn, Kbd, Mark, TopicIcon } from '../../ui'
+import { agentName } from '../../data/agents'
 import Detail from './Detail'
-import { AllClear } from './Desk'
+import { AllClear, Urgency } from './Desk'
 import { byPriority, useHandoffActions } from './parts'
 import './desk.css'
 import './today.css'
@@ -70,9 +71,11 @@ export default function Focus() {
             {queue.map((x, i) => (
               <li key={x.id}>
                 <button aria-current={x.id === h.id} onClick={() => setCurrentId(x.id)}>
-                  <TopicIcon agent={x.agent} kind={x.kind} topic={x.topic} size={24} />
-                  <span className="ellipsis">{x.title}</span>
-                  {x.urgency === 'urgent' && <span className="dot urgent" aria-label="Urgent" />}
+                  <TopicIcon agent={x.agent} kind={x.kind} topic={x.topic} size={28} />
+                  <span className="txt">
+                    <span className="ellipsis">{x.title}</span>
+                    <span className="day-meta"><Mark agent={x.agent} /><Urgency u={x.urgency} /><span className="ellipsis">{agentName(x.agent)}</span></span>
+                  </span>
                   <span className="mono faint">{i + 1}</span>
                 </button>
               </li>
