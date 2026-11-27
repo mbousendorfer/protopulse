@@ -1,40 +1,13 @@
-/* Decisions first (matrix §12). Same anatomy as Inbox › Needs you: a shaded group head, two-line rows, decisions on the right. */
-.decisions { overflow: hidden; }
-.dec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--s3); padding: var(--s4) var(--s4) var(--s3); }
-.dec-head h2 { font-size: var(--t-lg); font-weight: 600; }
-.dec-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 0; font-size: var(--t-md); }
-.dec-item { white-space: nowrap; }
-.dec-sep { margin: 0 var(--s2); color: var(--ink-2); }
-/* A count is a filter: interactive, so blue; the one applied is bold and underlined. */
-.dec-count { background: none; border: 0; padding: 0; color: var(--action-ink); font-weight: 500; }
-.dec-count:hover { text-decoration: underline; text-underline-offset: 3px; }
-.dec-count[aria-pressed='true'] { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
-.dec-all { margin-left: var(--s3); font-size: var(--t-sm); }
-.decisions > .undo-bar { margin: 0 var(--s4) var(--s3); }
-.dec-empty { padding: 0 var(--s4) var(--s4); color: var(--ink); }
-.dec-empty p + p { margin-top: 2px; font-size: var(--t-sm); color: var(--ink-2); }
+/* One decision on a row: who, what, why in one line, the decision on the right. */
 
-.dec-group { border-top: 1px solid var(--line); }
-.dec-group-head { display: flex; align-items: center; gap: var(--s2); padding: 10px var(--s4); background: var(--sunk); border-bottom: 1px solid var(--line); min-height: 48px; }
-.dec-group-head h3 { font-size: var(--t-md); font-weight: 600; white-space: nowrap; }
-.dec-icon { width: 24px; height: 24px; border-radius: var(--r-ctl); display: grid; place-items: center; flex: none; background: var(--lift-2); color: var(--ink-2); }
-.dec-icon svg { width: 14px; height: 14px; }
-.dec-hint { font-size: var(--t-sm); color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dec-action { margin-left: auto; flex: none; }
 .dec-row { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: var(--s3); align-items: center; padding: 12px var(--s4); }
-.dec-group ul > .dec-row + .dec-row { border-top: 1px solid var(--line); }
 .dec-lead { display: grid; place-items: center; }
 .dec-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .dec-title { font-weight: 600; color: var(--ink); }
 .dec-line { font-size: var(--t-sm); color: var(--ink-2); }
 .dec-acts { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
-.dec-more { display: flex; align-items: center; gap: 4px; width: 100%; padding: 8px var(--s4) 10px calc(32px + var(--s3) + var(--s4)); border: 0; border-top: 1px solid var(--line); background: none; color: var(--action-ink); font-weight: 600; font-size: var(--t-sm); text-align: left; cursor: pointer; }
-.dec-more:hover { text-decoration: underline; text-underline-offset: 3px; }
-.dec-more[aria-expanded='true'] svg { transform: rotate(180deg); }
 
 @media (max-width: 720px) {
-  .dec-group-head { flex-wrap: wrap; }
-  .dec-hint { flex-basis: 100%; order: 5; white-space: normal; }
   .dec-row { grid-template-columns: 32px minmax(0, 1fr); align-items: start; }
   .dec-acts { grid-column: 2; justify-content: flex-start; }
 }
