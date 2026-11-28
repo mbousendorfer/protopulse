@@ -11,7 +11,7 @@ import { TRENDS, type CompEvent, type Move, type Trend } from '../../data/listen
 import { NETWORK_LABEL } from '../../data/agents'
 import { Btn, Empty, Filters, Mark, Menu, Pill, Sheet } from '../../ui'
 import { Ask, ObjectBody, Props, Timeline } from '../../ui/ObjectPanel'
-import { DecisionRow } from '../../ui/Decisions'
+import { CardActs, DecisionRow } from '../../ui/Decisions'
 import { Reopen, UndoBar } from '../../ui/Feedback'
 import { BulkBar, SelectAll, SelectBox, useSelection } from '../../ui/Selection'
 import { SocialAvatar } from '../../ui/SocialAvatar'
@@ -209,20 +209,12 @@ function EventDoneRow({ e }: { e: CompEvent }) {
 }
 
 function UrgentRow({ h }: { h: ReturnType<typeof listeningNeeds>['urgent'][number] }) {
-  const { d } = useStore()
-  const opts = h.options ?? []
-  const rec = Math.max(0, opts.findIndex(o => o.recommended))
-  const choose = (i: number) => d({ type: 'core/resolve', id: h.id, decision: { kind: 'option', option: opts[i].label, index: i } })
   return (
     <DecisionRow lead={<span className="sl-lead-icon urgent" aria-hidden><Flame size={14} /></span>}
       title={<Link to={h.link ?? '/listening/mentions'}>{h.title}</Link>}
       line={<><Status label="Urgent" tone="alert" /><span className="sl-gist">{gist(h.why)}</span>
         <MoreInfo label="Why?" title="Why Echo stopped here"><p>{h.why}</p>{h.context && <p className="muted">{h.context}</p>}</MoreInfo></>}
-      acts={opts.length ? <>
-        <Btn size="sm" onClick={() => choose(rec)}>{opts[rec].label}</Btn>
-        {opts.length > 1 && <Menu trigger={<Btn size="sm" variant="ghost">Other options<ChevronDown size={12} /></Btn>}
-          items={opts.map((o, i) => ({ label: o.label, hint: i === rec ? 'Recommended' : undefined, onSelect: () => choose(i) }))} />}
-      </> : <Link to={`/?card=${h.id}`} className="btn sm">Review on Desk</Link>} />
+      acts={<CardActs h={h} />} />
   )
 }
 
@@ -241,7 +233,7 @@ function MentionRow({ m, onUndo, check }: { m: ReturnType<typeof listeningNeeds>
       </>}
       acts={<>
         <Btn size="sm" onClick={() => d({ type: 'listening/mentions', ids: [m.id], op: 'nova' })} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>
-        <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${m.author}’s mention`}><ChevronDown size={14} /></Btn>} items={[
+        <Menu trigger={<Btn size="sm" variant="ghost" aria-label={`More for ${m.author}’s mention`}>More<ChevronDown size={12} /></Btn>} items={[
           { label: 'Mark seen', onSelect: seen },
           { label: 'Hand to Atlas', onSelect: () => d({ type: 'listening/mentions', ids: [m.id], op: 'atlas' }) },
           { label: 'Hide', onSelect: () => d({ type: 'listening/mentions', ids: [m.id], op: 'hide' }) },

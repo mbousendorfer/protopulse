@@ -11,3 +11,5 @@
   .dec-row { grid-template-columns: 32px minmax(0, 1fr); align-items: start; }
   .dec-acts { grid-column: 2; justify-content: flex-start; }
 }
+.dec-answer { display: flex; align-items: center; gap: var(--s2); }
+.dec-answer .input { width: 140px; height: 32px; }

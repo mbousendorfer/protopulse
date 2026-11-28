@@ -419,7 +419,7 @@ function Mentions() {
                   <div className="ls-item-acts">
                     {st === 'replied' ? <Pill tone="ok"><Check size={12} />Reply on your Desk</Pill> : st === 'handed' ? <Pill tone="signal">With Atlas</Pill>
                       : <Btn size="sm" onClick={() => run('nova', {}, [m.id])} aria-label={`Ask Nova to reply to ${m.author}`}><Mark agent="nova" />Reply</Btn>}
-                    <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${m.author}’s mention`}><ChevronDown size={14} /></Btn>} items={[
+                    <Menu trigger={<Btn size="sm" variant="ghost" aria-label={`More for ${m.author}’s mention`}>More<ChevronDown size={12} /></Btn>} items={[
                       { label: 'Open', onSelect: openIt },
                       { label: hidden ? 'Unhide' : 'Hide', onSelect: () => run(hidden ? 'unhide' : 'hide', {}, [m.id]) },
                       ...(st ? [] : [{ label: 'Hand to Atlas', onSelect: () => run('atlas', {}, [m.id]) }]),
