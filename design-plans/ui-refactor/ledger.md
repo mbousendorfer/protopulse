@@ -14,6 +14,9 @@ scalability at 10× volume, consistency.
 Shared surfaces first (their refactor propagates), then by complexity.
 
 1. `cross-decision`: one Desk-card decision rendered in 7 places → one decision component, one place to decide.
+   - 28/11 pass 1: Desk hero removed (the real duplicate). The department « Needs you » rows stay: matrix §12/§14
+     want the decision on the row, and they all go through `core/resolve`. Next: one shared row-decision component
+     (`publishing/Needs.tsx` NeedRow, `insights` CardDecision, listening rows) — status `todo`.
 2. `cross-post-sheet`: two post sheets (Publishing `PostPreview`, Insights `PostSheet`) → one post sheet.
 3. `desk`: Detail rendered twice (hero + pane), briefing + triage + KPIs mixed.
 4. `inbox-list` + `inbox-conversation-panel`
@@ -42,7 +45,7 @@ Then every remaining `todo` row, lowest score first.
 | shortcut-help | ? | Shell.tsx | 1 | – | – | todo | |
 | moderator-panel | ⇧D | moderator/Moderator.tsx | tester only | ~30 | – | todo | |
 | moreinfo-sheet / infopop | "Why?" | ui/More.tsx | 1 | – | – | todo | |
-| desk | #/ | desk/Desk.tsx, parts, widgets, Detail, Batch | 3 (brief, triage, bulk) | ~12 (+ Detail ×2) | – | todo | |
+| desk | #/ | desk/Desk.tsx, parts, widgets, Detail, Batch | 3 (brief, triage, bulk) | ~12 (Detail ×1, was ×2) | 2→3.5 | done pass 1 (hero) — brief band still todo | desk-one-decision |
 | desk-brief-band | Desk top | desk/widgets.tsx | 2 | 11 | – | todo | |
 | desk-band-what-they-did | band › What they did | widgets.tsx | 3 | – | – | todo | |
 | desk-welcome-day1 | Desk Day 1 | desk/Day1.tsx | 1 | 5 | – | todo | |
@@ -131,7 +134,7 @@ Then every remaining `todo` row, lowest score first.
 
 | goal | entry | current path ~ | target |
 |---|---|---|---|
-| Clear what needs me this morning | Desk | 1 screen, read band + hero + list; same Detail twice | 1 screen, one list, one Detail |
+| Clear what needs me this morning | Desk | **measured 28/11**: before, 1440×900 showed 2 decision cards, list at 86 % of the fold, keys acted on the lower card; after, 1 card, list from 38 %, keys act on what you see (1 key per decision) | done pass 1 |
 | Send Nova's ready replies | Desk or Inbox | 2 competing places (Desk batch vs Inbox state) | one place, 1 click |
 | Answer one negative review | Inbox | list → row → panel (~14 actions) → Edit → Send: 4 clicks, 3 decisions | ≤ 3 clicks |
 | Reschedule Thursday's post | Publishing | Publishing → Calendar tab → drag (or sheet ⋯ › Reschedule › modal) | 2 steps |

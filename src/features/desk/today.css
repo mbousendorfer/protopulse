@@ -153,22 +153,6 @@ div.sources ul { display: flex; flex-direction: column; gap: 2px; min-width: 0; 
   .band-agents a { padding: 3px; }
 }
 
-/* ---------- The decision to take first, set apart: reason and decisions beside the object ---------- */
-.desk-feature { padding: var(--s5) var(--s6); }
-.desk-feature.urgent { border-color: var(--alert-edge); }
-.detail.feature { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto auto auto auto 1fr; column-gap: var(--s6); }
-.detail.feature > * { grid-column: 1; }
-.detail.feature > .feature-object { grid-column: 2; grid-row: 1 / -1; }
-.feature-object > :first-child { margin-top: 0; }
-.detail.feature .detail-title { font-size: var(--t-2xl); }
-.detail.feature .preview { font-size: var(--t-md); }
-@media (max-width: 1100px) {
-  .detail.feature { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .detail.feature > .feature-object { grid-column: 1; grid-row: auto; }
-  .feature-object > :first-child { margin-top: var(--s3); }
-}
-@media (max-width: 720px) { .desk-feature { padding: var(--s4); } .detail.feature .detail-title { font-size: var(--t-xl); } }
-
 /* ---------- Your day: cards with their agent, urgency and the object in miniature ---------- */
 .day-group { display: flex; align-items: baseline; gap: 6px; padding: var(--s3) 10px var(--s1); font-size: var(--t-sm); font-weight: 600; color: var(--ink); }
 .day-group:first-child { padding-top: var(--s1); }
