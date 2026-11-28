@@ -221,7 +221,7 @@ L'écran où Sam passe ses 10 minutes du matin. Disposition **liste + détail** 
 **Brief du matin** (rédigé par Iris, en haut, repliable en une ligne après « Got it ») : « Good morning, Sam. » avec une illustration du moment (montagne et lac, aube / jour / soir), 2-3 phrases rédigées sur la nuit, des compteurs **nommés en texte** (Handled alone · Need you · With Claire · Undone by you) et des lignes « Needs you / Done » avec une action chacune. Le **Shift board** (24 h d'activité des agents, une ligne colorée par agent) est repliable sous le brief.
 
 **Liste « Your day »** (colonne de gauche), en **trois onglets toujours visibles avec leur compteur** (Needs you · Worth a look · Good news), pour que les signaux et les bonnes nouvelles ne soient jamais cachés sous une longue liste de décisions ; changer d'onglet ouvre son premier élément :
-- **Needs you** : les décisions, triées par urgence. Les remontées semblables sont regroupées en **lots** (voir plus bas).
+- **Needs you** : les décisions, triées par urgence ; la première est ouverte dans le panneau à l'arrivée (jamais de seconde carte de décision au-dessus de la liste). Les remontées semblables sont regroupées en **lots** (voir plus bas).
 - **Worth a look** : signaux à lire sans décision obligatoire (anomalies, concurrents, tendances).
 - **Good news** : ce qui a marché, avec une action utile (« Add to the weekly report », « Make a similar post »).
 - Dans l'onglet Needs you, en bas : **Waiting on Claire**, **Later** (reportés, « Back at 14:00 ») et **Done** (coche + ce qui a été fait, cliquable pour revoir ou annuler).

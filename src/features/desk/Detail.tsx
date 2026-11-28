@@ -13,14 +13,13 @@ import { useDecisionKeys, type Mode, type Outcome } from './keys'
  * One Desk card, full width, driven by the keyboard. Used by the Desk detail pane and by Focus.
  * `onSettled` fires once the decision is applied, so the caller can move to the next item.
  */
-export default function Detail({ h, position, keys = true, onSettled, onDiscuss, big, feature }: {
+export default function Detail({ h, position, keys = true, onSettled, onDiscuss, big }: {
   h: Handoff
   position?: string
   keys?: boolean
   onSettled?: (outcome: Outcome, ms: number) => void
   onDiscuss?: (id: string) => void
   big?: boolean
-  feature?: boolean
 }) {
   const act = useHandoffActions()
   const { d } = useStore()
@@ -53,8 +52,6 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
     {/* Facts that go out in public stay under the draft; other sources are behind « Why? ». */}
     {publicFacts && <Sources h={h} />}
   </>
-  // The Desk's featured card puts the object (post, conversation, metric) beside the reason and the decisions.
-  const split = feature && (!!h.preview || !!h.proposal)
   const head = <>
     <div className="handoff-top"><Slip h={h} /><span className="row tight">{position && <span className="mono faint">{position}</span>}<UrgencyPill h={h} /></span></div>
     <h2 className="detail-title">{h.title}</h2>
@@ -62,9 +59,9 @@ export default function Detail({ h, position, keys = true, onSettled, onDiscuss,
   </>
 
   return (
-    <article className={`detail ${big ? 'big' : ''} ${split ? 'feature' : ''} ${stamp ? 'leaving' : ''}`} aria-label={h.title} data-mode={mode}>
+    <article className={`detail ${big ? 'big' : ''} ${stamp ? 'leaving' : ''}`} aria-label={h.title} data-mode={mode}>
       {stamp && <div className="detail-stamp" role="status"><Check size={16} />{stamp}</div>}
-      {split ? <><div className="feature-head">{head}</div><div className="feature-object">{object}</div></> : <>{head}{object}</>}
+      {head}{object}
       <WhyLine h={h} sourcesShown={publicFacts} />
       <WontGuess h={h} />
 

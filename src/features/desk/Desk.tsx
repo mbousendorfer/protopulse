@@ -61,10 +61,8 @@ export default function Desk() {
   const counts = Object.fromEntries((Object.keys(SHOW_LABEL) as Show[]).map(k => [k, k === 'done' ? done.length : entries.filter(e => e.group === k).reduce((n, e) => n + size(e), 0)])) as Record<Show, number>
   const shown = (Object.keys(SHOW_LABEL) as Show[]).filter(k => k === 'need' || counts[k] > 0)
   const show = shown.includes(pick) ? pick : 'need'
-  // The decision to take first is set apart above the list (matrix §15): the most urgent single card, then the oldest.
-  const needs = entries.filter(e => e.group === 'need')
-  const hero = show === 'need' && needs.length > 1 ? needs.filter(e => e.h).sort((x, y) => byPriority(x.h!, y.h!))[0] : undefined
-  const rows = show === 'done' ? [] : entries.filter(e => e.group === show && e !== hero)
+  // The decision to take first is set apart by being first in the list and open in the detail pane (matrix §15).
+  const rows = show === 'done' ? [] : entries.filter(e => e.group === show)
   const keys = show === 'done' ? done.map(x => `d:${x.id}`) : rows.map(e => e.key)
 
   // Links from other pages ("Review on Desk") open that card directly, in its state; a card in a batch opens its batch.
@@ -140,11 +138,6 @@ export default function Desk() {
       </div>
       <Notice scope="desk" />
 
-      {hero?.h && (
-        <section className={`card desk-feature ${hero.h.urgency}`} aria-label="Decide first">
-          <Detail key={hero.h.id} h={hero.h} keys={false} feature onDiscuss={setThread} />
-        </section>
-      )}
 
       <div className="today-grid">
         <nav className="day-list card" aria-label={SHOW_LABEL[show]}>

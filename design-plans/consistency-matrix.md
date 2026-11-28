@@ -278,7 +278,9 @@ presence and a hierarchy.
   - calendar → grid;
   - mention → feed item with avatar, network and sentiment visible.
 - Hierarchy: the most urgent or most promising object is set apart (first, larger card, or status colour); the rest are
-  calmer. Not every item weighs the same.
+  calmer. Not every item weighs the same. On a list + detail screen (Desk), set apart = first in the list and open in
+  the detail pane; never a second copy of the detail above the list (UI refactor, 28/11: two decision cards on one
+  screen, the keyboard acted on the lower one, the list fell below the fold).
 - Queues stay §14: « Needs you » is a short queue above or beside the objects, never the whole page.
 - Still out: rule banners, group hints, demo-only sub-groups, text beyond §13.
 
