@@ -20,6 +20,8 @@ Shared surfaces first (their refactor propagates), then by complexity.
      `cross-decision.md`). Left: Agents › Requests keep their own 3 verbs (Allow / Try for a week / Not yet) on
      purpose; `.dq-row` vs `DecisionRow` are still two row primitives (todo, with `cross-row`).
 2. `cross-post-sheet`: two post sheets (Publishing `PostPreview`, Insights `PostSheet`) → one post sheet.
+   **blocked 28/11**: needs the two published-post datasets reconciled (contradictory numbers). See
+   `cross-post-sheet.md`; waiting on Matt.
 3. `desk`: Detail rendered twice (hero + pane), briefing + triage + KPIs mixed.
 4. `inbox-list` + `inbox-conversation-panel`
 5. `composer`
@@ -82,7 +84,7 @@ Then every remaining `todo` row, lowest score first.
 | insights-closed-anomalies | ?show=closed | insights/Page.tsx | 1 | 2 | – | todo | |
 | insights-report-view | #/insights/reports/:id | insights/Page.tsx ReportView | 4 (read, edit, share, Q&A) | ~12 + 4/section | – | todo | |
 | insights-explore | #/insights/explore | insights/Page.tsx Explore | 1 | ~5 | – | todo | |
-| insights-post-sheet | Explore › row | insights/Page.tsx PostSheet | 1 (duplicate of post-sheet) | 0 | – | todo | |
+| insights-post-sheet | Explore › row | insights/Page.tsx PostSheet | 1 (duplicate of post-sheet) | 0 | 1.5 | blocked (data) | |
 | insights-audience | #/insights/audience | insights/AudienceTab.tsx | 1 | per tip | – | todo | |
 | insights-roi | #/insights/roi | insights/RoiTab.tsx | 1 | 1 | – | todo | |
 | alerts-tab | #/agents/iris?tab=alerts | insights/alerts.tsx | 1 | per rule | – | todo | |
