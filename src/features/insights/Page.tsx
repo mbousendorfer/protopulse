@@ -13,7 +13,7 @@ import {
   type Cited, type Kpi, type NetFilter, type PostRow, type Report,
 } from '../../data/insights'
 import { Btn, Confidence, Empty, Filters, Mark, Menu, Net, PageHead, Pill, Seg, Sheet, Tabs, Tip } from '../../ui'
-import { DecisionRow } from '../../ui/Decisions'
+import { CardActs, DecisionRow } from '../../ui/Decisions'
 import { Metrics, ObjectBody, Props, Section } from '../../ui/ObjectPanel'
 import { actionOf } from '../../app/core'
 import { nextRun } from './reports'
@@ -25,7 +25,6 @@ import { bestTime, heat, rangeKpis, reachSeries, type Range } from './metrics'
 import { anomalyList } from './slice'
 import { insightsNeeds } from './needs'
 import type { Anomaly } from '../../data/insights'
-import type { Handoff } from '../../app/types'
 import { reportList } from './reports'
 import { roiByNetwork, roiTotals } from './roi'
 import type { State } from '../../app/state'
@@ -141,7 +140,7 @@ function Reports() {
     ...cards.map(h => <DecisionRow key={h.id} lead={<span className="sl-lead-icon" aria-hidden><FileText size={14} /></span>}
       title={h.link ? <Link to={h.link}>{h.title}</Link> : h.title}
       line={<><span className="sl-gist">{h.context}</span>{h.why && <MoreInfo label="Why?" title={`Why Iris asks: ${h.title}`}><p>{h.why}</p><Confidence v={h.confidence} /></MoreInfo>}</>}
-      acts={<CardDecision h={h} onDecide={decision => d({ type: 'core/resolve', id: h.id, decision })} />} />),
+      acts={<CardActs h={h} primary={h.topic === 'Weekly report' ? <><Send size={14} />Share with Claire</> : undefined} />} />),
   ]
 
   return (
@@ -247,7 +246,7 @@ function AnomalyFeature({ a, now }: { a: Anomaly; now: number }) {
       <div className="row tight">
         {a.actions[0] && <Btn variant="primary" size="sm" onClick={() => act(a.actions[0])}>{a.actions[0]}</Btn>}
         {a.actions.slice(1).map(x => <Btn key={x} size="sm" onClick={() => act(x)}>{x}</Btn>)}
-        <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${a.title}`}><ChevronDown size={14} /></Btn>} items={[
+        <Menu trigger={<Btn size="sm" variant="ghost" aria-label={`More for ${a.title}`}>More<ChevronDown size={12} /></Btn>} items={[
           ...(desk ? [{ label: 'Review on Desk', onSelect: () => nav(`/?card=${a.handoff}`) }, 'sep' as const] : []),
           { label: 'Mark handled', onSelect: () => d({ type: 'insights/anomalies', ids: [a.id], op: 'handle' }) },
           { label: 'Snooze a week', onSelect: () => d({ type: 'insights/anomalies', ids: [a.id], op: 'snooze' }) },
@@ -255,22 +254,6 @@ function AnomalyFeature({ a, now }: { a: Anomaly; now: number }) {
       </div>
     </article>
   )
-}
-
-/** The quick decision on one of Iris's Desk cards, right here: its options, or approve. The Desk keeps the Undo. */
-function CardDecision({ h, onDecide }: { h: Handoff; onDecide: (d: { kind: 'approve' } | { kind: 'option'; option: string; index: number }) => void }) {
-  if (h.options?.length) {
-    const rec = Math.max(0, h.options.findIndex(o => o.recommended))
-    return <>
-      <Btn size="sm" onClick={() => onDecide({ kind: 'option', option: h.options![rec].label, index: rec })}>{h.options[rec].label}</Btn>
-      {h.options.length > 1 && <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label="Other options"><ChevronDown size={14} /></Btn>}
-        items={h.options.map((o, i) => ({ label: o.label, onSelect: () => onDecide({ kind: 'option', option: o.label, index: i }) }))} />}
-    </>
-  }
-  return <>
-    <Btn size="sm" onClick={() => onDecide({ kind: 'approve' })}>{h.topic === 'Weekly report' ? <><Send size={14} />Share with Claire</> : 'Approve'}</Btn>
-    <Link to={`/?card=${h.id}`} className="btn sm ghost">Review on Desk</Link>
-  </>
 }
 
 /** KPI tiles: the number, its trend, and the previous period, always named. */
@@ -600,7 +583,7 @@ function AnomalyRow({ a, now }: { a: Anomaly; now: number }) {
         <MoreInfo label="Why?" title={`Why Iris raised “${a.title}”`}><AnomalyWhy a={a} now={now} /></MoreInfo></>}
       acts={<>
         {a.actions[0] && <Btn size="sm" onClick={() => act(a.actions[0])}>{a.actions[0]}</Btn>}
-        <Menu trigger={<Btn size="sm" variant="ghost" icon aria-label={`More for ${a.title}`}><ChevronDown size={14} /></Btn>} items={[
+        <Menu trigger={<Btn size="sm" variant="ghost" aria-label={`More for ${a.title}`}>More<ChevronDown size={12} /></Btn>} items={[
           ...a.actions.slice(1).map(x => ({ label: x, onSelect: () => act(x) })),
           ...(desk ? [{ label: 'Review on Desk', onSelect: () => nav(`/?card=${a.handoff}`) }] : []),
           'sep',

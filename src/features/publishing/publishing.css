@@ -630,8 +630,6 @@
 .pub-needs-more .flip { transform: rotate(180deg); }
 .pub-need-row { cursor: default; }
 .pub-need-lead { display: grid; place-items: center; width: 40px; }
-.pub-need-answer { display: flex; align-items: center; gap: var(--s2); }
-.pub-need-answer .input { width: 140px; height: 32px; }
 button.dq-name { padding: 0; border: 0; background: none; font: inherit; font-weight: 600; text-align: left; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 .pub-objects-head { display: flex; align-items: center; gap: var(--s3); margin-top: var(--s2); }
 .pub-objects-head .section-title { margin: 0; }

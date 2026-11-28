@@ -243,6 +243,10 @@ on the row, never a group, banner, note or component of its own.
   (named key number, networks, short proof), a `Pill` only when the row's state differs from the filter's
   (« Held », « Next week », « Below usual », « Failed ») followed by « Why? » (`InfoPop`), then the row's actions: one
   visible decision, the rest in a `Menu`.
+  The menu's trigger is a ghost button with a label and a chevron: « More ▾ », or the name of what it holds
+  (« Moves ▾ », « Not now ▾ »); never an icon-only chevron. A Desk card shown on a department row always uses
+  `CardActs` (`ui/Decisions.tsx`): the recommended answer visible, the other answers, Reject and « Review on Desk » in
+  « More » (UI refactor, 28/11: 5 different triggers for the same card decision).
 - Selection: `useSelection` + `SelectAll` + `BulkBar`. The filter's primary action (« Send 13 to Atlas ») sits in the
   list head, right, and gives way to `BulkBar` while rows are selected.
 - Empty: `Empty`, one line.

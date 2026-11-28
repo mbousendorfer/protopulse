@@ -16,7 +16,9 @@ Shared surfaces first (their refactor propagates), then by complexity.
 1. `cross-decision`: one Desk-card decision rendered in 7 places → one decision component, one place to decide.
    - 28/11 pass 1: Desk hero removed (the real duplicate). The department « Needs you » rows stay: matrix §12/§14
      want the decision on the row, and they all go through `core/resolve`. Next: one shared row-decision component
-     (`publishing/Needs.tsx` NeedRow, `insights` CardDecision, listening rows) — status `todo`.
+     (`publishing/Needs.tsx` NeedRow, `insights` CardDecision, listening rows) — **done 28/11** (`CardActs`, see
+     `cross-decision.md`). Left: Agents › Requests keep their own 3 verbs (Allow / Try for a week / Not yet) on
+     purpose; `.dq-row` vs `DecisionRow` are still two row primitives (todo, with `cross-row`).
 2. `cross-post-sheet`: two post sheets (Publishing `PostPreview`, Insights `PostSheet`) → one post sheet.
 3. `desk`: Detail rendered twice (hero + pane), briefing + triage + KPIs mixed.
 4. `inbox-list` + `inbox-conversation-panel`
@@ -118,7 +120,7 @@ Then every remaining `todo` row, lowest score first.
 
 | id | today | candidate direction (to confirm by measurement) |
 |---|---|---|
-| cross-decision | Same card decision in Desk pane, Desk hero, Focus, post-sheet Ask, Publishing/Insights/Listening Needs rows, Agents Requests | One decision component; department pages link to the Desk or open the same Detail, no re-implemented verbs |
+| cross-decision (done pass 1) | Same card decision in Desk pane, Desk hero, Focus, post-sheet Ask, Publishing/Insights/Listening Needs rows, Agents Requests | One decision component; department pages link to the Desk or open the same Detail, no re-implemented verbs |
 | cross-post-sheet | Publishing `PostPreview` vs Insights `PostSheet` | One post sheet with Overview / Results / Activity tabs |
 | cross-ask-agent | ⌘K, Chats, desk-thread, idea-panel dock, report Ask Iris + Studio ask, clip-editor Ask Juno | ⌘K for one-shot, Chats for conversation; in-context asks open the same thread |
 | cross-journal | bell, Activity, Desk band, profile Record | Activity is the log; bell = last few + link; band and profile filter Activity |
